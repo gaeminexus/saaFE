@@ -7,8 +7,10 @@
   .full {
     grid-column: 1 / -1;
   }
-  .table-wrapper {
+  // La tabla scrollea, no la página: mismo patrón que mayor-analitico-v2.
+  .table-scroll {
     margin-top: 8px;
+    height: calc(100vh - 400px);
     overflow: auto;
   }
   .full-width {

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AfterViewChecked, Component, OnInit, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,10 +7,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../../shared/services/app-state.service';
 import { DetalleRubro } from '../../../../../../shared/model/detalle-rubro';
@@ -41,6 +43,8 @@ const RUBRO_ESTADO_CHEQUE = 26;
     MatIconModule,
     MatCardModule,
     MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatSnackBarModule,
@@ -48,7 +52,7 @@ const RUBRO_ESTADO_CHEQUE = 26;
   templateUrl: './consultas-cheques.component.html',
   styleUrls: ['./consultas-cheques.component.scss'],
 })
-export class ConsultasChequesComponent implements OnInit {
+export class ConsultasChequesComponent implements OnInit, AfterViewChecked {
   private chequeService = inject(ChequeService);
   private cuentaService = inject(CuentaBancariaService);
   private detalleRubroService = inject(DetalleRubroService);
@@ -71,6 +75,37 @@ export class ConsultasChequesComponent implements OnInit {
   total = computed(() => this.rows().reduce((s, r) => s + (Number(r.valor) || 0), 0));
 
   readonly columnas = ['numero', 'beneficiario', 'cuenta', 'fecha', 'tipoPago', 'referencia', 'valor', 'estado', 'acciones'];
+
+  readonly dataSource = new MatTableDataSource<ChequeListado>([]);
+  @ViewChild(MatSort) sort?: MatSort;
+  @ViewChild(MatPaginator) paginator?: MatPaginator;
+
+  constructor() {
+    // Mantiene la MatTableDataSource sincronizada con el signal — matSort/paginator
+    // siguen funcionando sin depender de dataSource.filter (el filtro real ya lo
+    // aplica el backend en buscar()).
+    effect(() => { this.dataSource.data = this.rows(); });
+
+    this.dataSource.sortingDataAccessor = (item: ChequeListado, property: string) => {
+      switch (property) {
+        case 'fecha': {
+          const raw = (item as any).fechaUso ?? (item as any).fechaImpresion ?? (item as any).fechaEntrega ?? null;
+          const d = this.funcionesDatos.convertirFechaDesdeBackend(raw);
+          return d ? d.getTime() : 0;
+        }
+        case 'cuenta': return this.cuentaBanco(item);
+        case 'referencia': return (item as any).referenciaPago || '';
+        case 'estado': return this.etiquetaEstado(item.estado);
+        case 'tipoPago': return this.etiquetaTipoPago(item.tipoPago);
+        default: return (item as any)[property] ?? '';
+      }
+    };
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.sort && this.dataSource.sort !== this.sort) this.dataSource.sort = this.sort;
+    if (this.paginator && this.dataSource.paginator !== this.paginator) this.dataSource.paginator = this.paginator;
+  }
 
   ngOnInit(): void {
     this.cargarCuentas();

@@ -9,6 +9,9 @@
   }
   .table-wrapper {
     margin-top: 8px;
+    // La tabla scrollea, no la página: alto propio + encabezado sticky (mismo
+    // patrón que mayor-analitico-v2).
+    height: calc(100vh - 380px);
     overflow: auto;
   }
   .full-width {

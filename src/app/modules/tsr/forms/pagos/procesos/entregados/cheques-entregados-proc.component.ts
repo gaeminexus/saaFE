@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AfterViewChecked, Component, OnInit, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,10 +7,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../../shared/services/app-state.service';
 import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
@@ -40,6 +42,8 @@ const ESTADO_ENTREGADO = 6;
     MatIconModule,
     MatCardModule,
     MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatSnackBarModule,
@@ -47,7 +51,7 @@ const ESTADO_ENTREGADO = 6;
   templateUrl: './cheques-entregados-proc.component.html',
   styleUrls: ['./cheques-entregados-proc.component.scss'],
 })
-export class ChequesEntregadosProcComponent implements OnInit {
+export class ChequesEntregadosProcComponent implements OnInit, AfterViewChecked {
   private chequeService = inject(ChequeService);
   private cuentaService = inject(CuentaBancariaService);
   private detalleRubroService = inject(DetalleRubroService);
@@ -68,9 +72,34 @@ export class ChequesEntregadosProcComponent implements OnInit {
 
   readonly columnas = ['numero', 'beneficiario', 'cuenta', 'fecha', 'tipoPago', 'referencia', 'valor', 'estado', 'acciones'];
 
+  readonly dataSource = new MatTableDataSource<ChequeListado>([]);
+  @ViewChild(MatSort) sort?: MatSort;
+  @ViewChild(MatPaginator) paginator?: MatPaginator;
+
+  constructor() {
+    effect(() => { this.dataSource.data = this.rows(); });
+    this.dataSource.sortingDataAccessor = (item, property) => {
+      switch (property) {
+        case 'fecha': return this.fechaGiroRaw(item);
+        case 'valor': return Number(item.valor) || 0;
+        case 'cuenta': return this.cuentaBanco(item);
+        default: return (item as any)[property] ?? '';
+      }
+    };
+  }
+
   ngOnInit(): void {
     this.cargarCuentas();
     this.buscar();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.sort && this.dataSource.sort !== this.sort) {
+      this.dataSource.sort = this.sort;
+    }
+    if (this.paginator && this.dataSource.paginator !== this.paginator) {
+      this.dataSource.paginator = this.paginator;
+    }
   }
 
   private cargarCuentas(): void {
@@ -135,6 +164,13 @@ export class ChequesEntregadosProcComponent implements OnInit {
     const fecha = row.fechaUso ?? row.fechaImpresion ?? row.fechaEntrega ?? null;
     if (!fecha) return '—';
     return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+  }
+
+  /** Valor crudo para ordenar por fecha: el string formateado ("10/01" antes que "02/12") ordena mal. */
+  private fechaGiroRaw(row: ChequeListado): number {
+    const fecha = row.fechaUso ?? row.fechaImpresion ?? row.fechaEntrega ?? null;
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
+    return d ? d.getTime() : 0;
   }
 
   cuentaBanco(row: ChequeListado): string {

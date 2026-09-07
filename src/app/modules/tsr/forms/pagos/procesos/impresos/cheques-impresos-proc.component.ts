@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AfterViewChecked, Component, OnInit, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -8,10 +8,12 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../../shared/services/app-state.service';
 import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
@@ -41,6 +43,8 @@ const ESTADO_IMPRESO = 4;
     MatIconModule,
     MatCardModule,
     MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
     MatCheckboxModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
@@ -49,7 +53,7 @@ const ESTADO_IMPRESO = 4;
   templateUrl: './cheques-impresos-proc.component.html',
   styleUrls: ['./cheques-impresos-proc.component.scss'],
 })
-export class ChequesImpresosProcComponent implements OnInit {
+export class ChequesImpresosProcComponent implements OnInit, AfterViewChecked {
   private chequeService = inject(ChequeService);
   private cuentaService = inject(CuentaBancariaService);
   private detalleRubroService = inject(DetalleRubroService);
@@ -57,6 +61,10 @@ export class ChequesImpresosProcComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+
+  @ViewChild(MatSort) sort?: MatSort;
+  @ViewChild(MatPaginator) paginator?: MatPaginator;
+  readonly dataSource = new MatTableDataSource<ChequeListado>([]);
 
   cuentas = signal<CuentaBancaria[]>([]);
   idCuentaFiltro = signal<number | null>(null);
@@ -74,9 +82,32 @@ export class ChequesImpresosProcComponent implements OnInit {
 
   readonly columnas = ['check', 'numero', 'beneficiario', 'cuenta', 'fecha', 'tipoPago', 'referencia', 'valor', 'estado', 'acciones'];
 
+  constructor() {
+    // Sincroniza la MatTableDataSource con el signal para que matSort y el
+    // paginador funcionen (mismo patrón que mayor-analitico-v2.component.ts).
+    effect(() => { this.dataSource.data = this.rows(); });
+
+    this.dataSource.sortingDataAccessor = (row: ChequeListado, property: string) => {
+      switch (property) {
+        case 'fecha':     return this.fechaGiroTimestamp(row);
+        case 'valor':     return Number(row.valor) || 0;
+        case 'cuenta':    return this.cuentaBanco(row);
+        case 'referencia': return row.referenciaPago || '';
+        case 'tipoPago':  return this.etiquetaTipoPago(row.tipoPago);
+        case 'estado':    return row.estado ?? 0;
+        default:          return (row as any)[property] ?? '';
+      }
+    };
+  }
+
   ngOnInit(): void {
     this.cargarCuentas();
     this.buscar();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.sort && this.dataSource.sort !== this.sort) this.dataSource.sort = this.sort;
+    if (this.paginator && this.dataSource.paginator !== this.paginator) this.dataSource.paginator = this.paginator;
   }
 
   private cargarCuentas(): void {
@@ -175,9 +206,19 @@ export class ChequesImpresosProcComponent implements OnInit {
   }
 
   fechaGiro(row: ChequeListado): string {
-    const fecha = row.fechaUso ?? row.fechaImpresion ?? row.fechaEntrega ?? null;
+    const fecha = this.fechaGiroRaw(row);
     if (!fecha) return '—';
     return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+  }
+
+  private fechaGiroRaw(row: ChequeListado): unknown {
+    return row.fechaUso ?? row.fechaImpresion ?? row.fechaEntrega ?? null;
+  }
+
+  /** Valor crudo (timestamp) para que matSort ordene por la fecha real, no por el string formateado. */
+  private fechaGiroTimestamp(row: ChequeListado): number {
+    const d = this.funcionesDatos.convertirFechaDesdeBackend(this.fechaGiroRaw(row));
+    return d ? d.getTime() : 0;
   }
 
   cuentaBanco(row: ChequeListado): string {

@@ -9,6 +9,10 @@
   }
   .table-wrapper {
     margin-top: 8px;
+    // La tabla scrollea, no la página: altura propia + encabezado sticky
+    // (mismo patrón que cnt/forms/mayor-analitico-v2).
+    height: calc(100vh - 420px);
+    min-height: 240px;
     overflow: auto;
   }
   .full-width {
