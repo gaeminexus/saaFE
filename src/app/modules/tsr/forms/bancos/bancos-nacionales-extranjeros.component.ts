@@ -286,9 +286,10 @@ export class BancosNacionalesExtranjerosComponent implements OnInit {
   updatePageData(): void {
     const filtroTxt = this.filtro().toLowerCase();
     const filtered = this.allData().filter((item) => {
-      const tarjetaTxt = (item as any).tarjetaCredito ? 'si' : 'no';
+      const codigoBce = (item as any).tarjetaCredito ?? (item as any).tarjeta;
+      const codigoBceTxt = codigoBce === null || codigoBce === undefined ? '' : String(codigoBce);
       const base =
-        `${(item as any).codigo ?? ''} ${(item as any).nombre ?? ''} ${tarjetaTxt}`.toLowerCase();
+        `${(item as any).codigo ?? ''} ${(item as any).nombre ?? ''} ${codigoBceTxt}`.toLowerCase();
       return base.includes(filtroTxt);
     });
 
