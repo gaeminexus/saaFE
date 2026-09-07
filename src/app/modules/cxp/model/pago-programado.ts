@@ -132,14 +132,29 @@ export interface GenerarLoteRequest {
   idUsuario: number;
 }
 
-/** Respuesta de POST /pgtr/lote y de GET /pgtr/lote/{id}/archivo. */
+/**
+ * Respuesta de POST /pgtr/lote y de GET /pgtr/lote/{id}/archivo.
+ *
+ * Regla de descarga (docs/pagos/API-PAGOS-TESORERIA.md §3): si viene
+ * `contenidoBase64` se usa ese, decodificado a bytes según `mimeType`; si no
+ * viene, se cae a `contenido` como texto. Nunca los dos. Como
+ * `contenidoBase64` viene siempre, en la práctica es el camino de los dos
+ * formatos — `contenido` queda de respaldo por si un formateador futuro no
+ * lo mandara.
+ */
 export interface LoteGeneradoResponse {
   exito?: boolean;
   mensaje?: string;
   idLote: number;
   nombreArchivo: string;
-  /** Texto plano del archivo que se sube al banco; el frontend lo descarga. */
-  contenido: string;
+  /** Texto plano del archivo. Solo en formatos de texto; null en binarios como el .xlsx del Pacífico. */
+  contenido: string | null;
+  /** Contenido crudo del archivo en Base64. Viene SIEMPRE, incluido el Internacional. */
+  contenidoBase64?: string | null;
+  /** text/plain, o application/vnd.openxmlformats-officedocument.spreadsheetml.sheet */
+  mimeType?: string;
+  /** INTERNACIONAL, PACIFICO, ... Se muestra en pantalla: dos formatos van a dos portales distintos. */
+  formatoBanco?: string;
   valorTotal?: number;
   numeroPagos?: number;
 }

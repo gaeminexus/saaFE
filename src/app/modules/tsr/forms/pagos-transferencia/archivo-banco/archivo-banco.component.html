@@ -108,6 +108,13 @@
               <span>{{ lote.numeroPagos }} transferencia(s)</span>
               <span>Total: {{ lote.valorTotal | number: '1.2-2' }}</span>
             </div>
+            <div class="archivo-generado">
+              <mat-icon>insert_drive_file</mat-icon>
+              <span>{{ lote.nombreArchivo }}</span>
+              @if (lote.formatoBanco) {
+                <span class="formato-banco-chip">Formato {{ lote.formatoBanco }}</span>
+              }
+            </div>
             <div class="acciones-lote">
               <button mat-stroked-button (click)="redescargarLote(lote.idLote)">
                 <mat-icon>download</mat-icon>

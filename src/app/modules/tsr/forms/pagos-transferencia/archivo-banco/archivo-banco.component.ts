@@ -166,10 +166,30 @@ export class ArchivoBancoComponent implements OnInit {
     });
   }
 
-  /** Dispara la descarga en el navegador a partir del contenido del lote. */
+  /**
+   * Dispara la descarga en el navegador a partir del contenido del lote.
+   *
+   * Regla del contrato (docs/pagos/API-PAGOS-TESORERIA.md §3): si viene
+   * `contenidoBase64` se usa ese — decodificado a bytes, nunca como string
+   * pelado, porque el texto del Internacional es ANSI (windows-1252) y
+   * `atob()` a secas se reinterpreta como UTF-8 y rompe tildes/ñ. Si no
+   * viene, se cae a `contenido` como texto (respaldo).
+   */
   descargarArchivo(lote: LoteGeneradoResponse): void {
-    if (!lote?.contenido) return;
-    const blob = new Blob([lote.contenido], { type: 'text/plain' });
+    let blob: Blob;
+
+    if (lote?.contenidoBase64) {
+      const binario = atob(lote.contenidoBase64);
+      const bytes = new Uint8Array(binario.length);
+      for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+      blob = new Blob([bytes], { type: lote.mimeType || 'application/octet-stream' });
+    } else if (lote?.contenido) {
+      blob = new Blob([lote.contenido], { type: lote.mimeType || 'text/plain' });
+    } else {
+      this.snackBar.open('El lote no trae contenido para descargar.', 'Cerrar', { duration: 5000 });
+      return;
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

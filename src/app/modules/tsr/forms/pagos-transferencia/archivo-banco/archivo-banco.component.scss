@@ -40,4 +40,32 @@
     gap: 0.6rem;
     margin-top: 0.75rem;
   }
+
+  .archivo-generado {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #334155;
+
+    mat-icon {
+      font-size: 1.1rem;
+      height: 1.1rem;
+      width: 1.1rem;
+      color: #64748b;
+    }
+  }
+
+  // El usuario tiene que saber a qué portal va cada archivo: dos formatos que
+  // se confunden es un lote de pagos mal enviado (docs/pagos/API-PAGOS-TESORERIA.md §3).
+  .formato-banco-chip {
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: #e0e7ff;
+    color: #3730a3;
+  }
 }
