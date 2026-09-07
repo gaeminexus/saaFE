@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -17,6 +18,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { MotivoDialogComponent } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
@@ -64,6 +66,7 @@ import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.s
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatSnackBarModule,
+    MatDialogModule,
   ],
   templateUrl: './aprobacion-pagos.component.html',
   styleUrls: ['./aprobacion-pagos.component.scss'],
@@ -74,6 +77,7 @@ export class AprobacionPagosComponent implements OnInit {
   private appState = inject(AppStateService);
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
+  private dialog = inject(MatDialog);
 
   readonly FormaPagoAplicacion = FormaPagoAplicacion;
   readonly origenOptions = (Object.entries(ORIGEN_PAGO_LABELS) as [OrigenPago, string][]).map(
@@ -91,7 +95,10 @@ export class AprobacionPagosComponent implements OnInit {
   cargando = signal(false);
   errorCarga = signal('');
 
-  columnas = ['sel', 'origen', 'beneficiario', 'concepto', 'valor', 'fechaSolicitada'];
+  columnas = ['sel', 'origen', 'beneficiario', 'concepto', 'valor', 'fechaSolicitada', 'acciones'];
+
+  /** Id del pago cuya anulación está en curso — deshabilita solo el botón de esa fila. */
+  anulando = signal<number | null>(null);
 
   totalSeleccionado = computed(() => {
     const sel = this.seleccionados();
@@ -311,5 +318,41 @@ export class AprobacionPagosComponent implements OnInit {
 
   cerrarResultado(): void {
     this.resultado.set(null);
+  }
+
+  /**
+   * Anula un pago ingresado desde CxP que todavía no se aprobó. `POST /pgtr/anular/{id}` ya
+   * existe y libera sola la factura de origen: `selectVigentesByFactura` no cuenta los pagos
+   * ANULADO entre los vigentes, así que vuelve a quedar disponible para pagar sin un paso más.
+   *
+   * El backend rechaza (con mensaje) si el pago ya no admite anulación — no se duplica esa
+   * regla acá: se muestra el mensaje tal cual llega.
+   */
+  anularPago(pago: PagoPorAprobar): void {
+    const ref = this.dialog.open(MotivoDialogComponent, {
+      width: '480px',
+      data: {
+        titulo: 'Anular pago',
+        advertencia: 'Anular libera la factura: vuelve a quedar disponible para pagar.',
+        textoConfirmar: 'Anular pago',
+      },
+    });
+
+    ref.afterClosed().subscribe((motivo) => {
+      if (!motivo) return;
+
+      this.anulando.set(pago.id);
+      this.pagoS.anular(pago.id, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+        next: () => {
+          this.anulando.set(null);
+          this.snackBar.open('Pago anulado.', 'Cerrar', { duration: 5000, panelClass: ['snackbar-success'] });
+          this.buscar();
+        },
+        error: (err) => {
+          this.anulando.set(null);
+          this.snackBar.open(mensajeDeError(err, 'No se pudo anular el pago'), 'Cerrar', { duration: 6000 });
+        },
+      });
+    });
   }
 }
