@@ -588,19 +588,41 @@ export class GastosCajaChicaComponent implements OnInit {
     return m.estado == null || Number(m.estado) === 1;
   }
 
-  esGasto(m: MovimientoCajaChica): boolean {
-    return this.tipoDeMovimiento(m) === TipoMovimientoCajaChica.GASTO;
+  /**
+   * Gasto, reposición y apertura se pueden anular (ver API-ANULACION-CAJA-CHICA.md §4): el backend
+   * resuelve gasto igual que hoy, y reposición/apertura delegando en el pago programado detrás.
+   * Ajuste +/− sigue sin poder anularse: no existe hoy ningún endpoint que los cree.
+   */
+  puedeAnular(m: MovimientoCajaChica): boolean {
+    const t = this.tipoDeMovimiento(m);
+    return this.estaActivo(m)
+      && (t === TipoMovimientoCajaChica.GASTO
+        || t === TipoMovimientoCajaChica.REPOSICION
+        || t === TipoMovimientoCajaChica.APERTURA);
   }
 
-  puedeAnular(m: MovimientoCajaChica): boolean {
-    return this.esGasto(m) && this.estaActivo(m);
+  private esReposicionOApertura(m: MovimientoCajaChica): boolean {
+    const t = this.tipoDeMovimiento(m);
+    return t === TipoMovimientoCajaChica.REPOSICION || t === TipoMovimientoCajaChica.APERTURA;
+  }
+
+  tooltipAnular(m: MovimientoCajaChica): string {
+    return this.esReposicionOApertura(m) ? `Anular ${this.infoTipo(m).texto.toLowerCase()}` : 'Anular gasto';
   }
 
   confirmarAnulacion(m: MovimientoCajaChica): void {
+    const esReposicionOApertura = this.esReposicionOApertura(m);
+    const tipoTexto = this.infoTipo(m).texto.toLowerCase();
+
     const data: MotivoDialogData = {
-      titulo: `Anular gasto N° ${m.codigo}`,
-      advertencia: 'Se anulará el gasto y su valor volverá a estar disponible en el saldo de la caja. '
-        + 'Si el gasto ya quedó dentro de un cierre confirmado, el backend rechazará la anulación.',
+      titulo: `Anular ${tipoTexto} N° ${m.codigo}`,
+      // Reposición/apertura no liberan saldo al anularse: al revés que un gasto, ahí se reversa un
+      // pago al banco y su asiento contable, y el saldo de la caja BAJA (ver API-ANULACION-CAJA-CHICA.md §5).
+      advertencia: esReposicionOApertura
+        ? `Se anulará la ${tipoTexto}: se reversará el pago al banco y su asiento contable. `
+          + 'El saldo de la caja BAJARÁ, no subirá. Si el movimiento ya quedó dentro de un cierre, el backend rechazará la anulación.'
+        : 'Se anulará el gasto y su valor volverá a estar disponible en el saldo de la caja. '
+          + 'Si el gasto ya quedó dentro de un cierre confirmado, el backend rechazará la anulación.',
       textoConfirmar: 'Sí, anular',
     };
 
@@ -609,9 +631,11 @@ export class GastosCajaChicaComponent implements OnInit {
 
       this.anulandoId.set(m.codigo);
       this.movimientoS.anular(m.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
-        next: () => {
+        next: (resp: any) => {
           this.anulandoId.set(null);
-          this.snackBar.open('Gasto anulado correctamente.', 'Cerrar', { duration: 4000 });
+          // El backend devuelve un mensaje distinto según el tipo (p.ej. "Reposición anulada: se
+          // reversó el pago N° 812 y su asiento."); se muestra tal cual, sin texto fijo.
+          this.snackBar.open(resp?.mensaje || `${tipoTexto[0].toUpperCase()}${tipoTexto.slice(1)} anulado correctamente.`, 'Cerrar', { duration: 5000 });
           this.cargarMovimientos();
           const caja = this.cajaSeleccionada();
           if (caja) this.cargarSaldo(caja.codigo);

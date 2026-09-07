@@ -51,12 +51,25 @@
       </ng-container>
 
       <ng-container matColumnDef="alerta">
-        <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+        <th mat-header-cell *matHeaderCellDef>ALERTA DE SALDO</th>
         <td mat-cell *matCellDef="let f">
           @if (tieneAlerta(f)) {
             <span class="badge badge-alerta"><mat-icon>warning</mat-icon> Reponer</span>
           } @else {
             <span class="badge badge-ok">OK</span>
+          }
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>ESTADO</th>
+        <td mat-cell *matCellDef="let f">
+          @if (estaDadaDeBaja(f)) {
+            <span class="badge badge-baja" [matTooltip]="f.caja.motivoAnulacion || 'Sin motivo registrado'">
+              <mat-icon>block</mat-icon> Dada de baja
+            </span>
+          } @else {
+            <span class="badge badge-ok">Activa</span>
           }
         </td>
       </ng-container>
@@ -67,6 +80,25 @@
           <button mat-icon-button color="primary" (click)="editarCaja(f)" matTooltip="Editar">
             <mat-icon>edit</mat-icon>
           </button>
+          @if (estaDadaDeBaja(f)) {
+            <button mat-icon-button color="primary" matTooltip="Reactivar"
+                    [disabled]="procesandoEstado() === f.caja.codigo" (click)="$event.stopPropagation(); reactivar(f)">
+              @if (procesandoEstado() === f.caja.codigo) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>restart_alt</mat-icon>
+              }
+            </button>
+          } @else {
+            <button mat-icon-button color="warn" matTooltip="Dar de baja"
+                    [disabled]="procesandoEstado() === f.caja.codigo" (click)="$event.stopPropagation(); darDeBaja(f)">
+              @if (procesandoEstado() === f.caja.codigo) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <mat-icon>block</mat-icon>
+              }
+            </button>
+          }
         </td>
       </ng-container>
 

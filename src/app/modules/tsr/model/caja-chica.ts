@@ -29,6 +29,11 @@ export interface CajaChica {
   custodio?: Usuario | null;
   observacion?: string | null;
   estado?: number;
+  /**
+   * Motivo de la baja (`CJCHMTAN`). Se llena al dar de baja la caja
+   * (`POST /cjch/anular/{id}`) y se limpia al reactivarla (`POST /cjch/activar/{id}`).
+   */
+  motivoAnulacion?: string | null;
 }
 
 /**

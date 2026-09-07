@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { PlanCuentaSelectorDialogComponent } from '../../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
@@ -43,6 +44,8 @@ export class CajasChicasComponent implements OnInit {
   loading = signal(false);
   guardando = signal(false);
   filas = signal<FilaCajaChica[]>([]);
+  /** Código de la caja sobre la que hay una baja/reactivación en curso (deshabilita el botón de su fila). */
+  procesandoEstado = signal<number | null>(null);
 
   modoEdicion = signal(false);
   codigoEdicion = signal<number | null>(null);
@@ -61,7 +64,10 @@ export class CajasChicasComponent implements OnInit {
   /** Solo se usa (y se envía) al crear; nunca al editar. */
   saldoInicialMigrado: string | number = '';
 
-  readonly columnas = ['nombre', 'fondo', 'saldo', 'disponible', 'alerta', 'acciones'];
+  readonly columnas = ['nombre', 'fondo', 'saldo', 'disponible', 'alerta', 'estado', 'acciones'];
+
+  /** `CJCHESTD`: 1 = activa, 2 = dada de baja (`com.saa.rubros.EstadoCajaChica`, no hay estado "ANULADA"). */
+  private static readonly ESTADO_INACTIVA = 2;
 
   estaCreando = computed(() => this.modoEdicion() && this.codigoEdicion() === null);
 
@@ -263,5 +269,54 @@ export class CajasChicasComponent implements OnInit {
 
   tieneAlerta(fila: FilaCajaChica): boolean {
     return fila.saldo?.alerta === true;
+  }
+
+  estaDadaDeBaja(fila: FilaCajaChica): boolean {
+    return Number(fila.caja.estado) === CajasChicasComponent.ESTADO_INACTIVA;
+  }
+
+  /** Dar de baja: exige motivo y falla si la caja tiene saldo o pagos/cierres pendientes (backend valida). */
+  darDeBaja(fila: FilaCajaChica): void {
+    const caja = fila.caja;
+    const data: MotivoDialogData = {
+      titulo: `Dar de baja "${caja.nombre}"`,
+      advertencia: 'La caja debe estar en cero y sin pagos ni cierres en curso. No se reversa contabilidad de '
+        + 'meses anteriores: los movimientos históricos quedan como están. La caja dejará de aparecer para '
+        + 'registrar gastos, reposiciones y cierres.',
+      textoConfirmar: 'Sí, dar de baja',
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
+      if (!motivo) return;
+
+      this.procesandoEstado.set(caja.codigo);
+      this.cajaChicaS.anular(caja.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+        next: (resp) => {
+          this.procesandoEstado.set(null);
+          this.snackBar.open('✓ ' + resp.mensaje, 'Cerrar', { duration: 4000, panelClass: ['snackbar-success'] });
+          this.cargarCajas();
+        },
+        error: (err) => {
+          this.procesandoEstado.set(null);
+          this.snackBar.open('✗ ' + CajaChicaService.mensajeError(err), 'Cerrar', { duration: 6000, panelClass: ['snackbar-error'] });
+        },
+      });
+    });
+  }
+
+  reactivar(fila: FilaCajaChica): void {
+    const caja = fila.caja;
+    this.procesandoEstado.set(caja.codigo);
+    this.cajaChicaS.activar(caja.codigo, { idUsuario: this.appState.getIdUsuario() }).subscribe({
+      next: (resp) => {
+        this.procesandoEstado.set(null);
+        this.snackBar.open('✓ ' + resp.mensaje, 'Cerrar', { duration: 4000, panelClass: ['snackbar-success'] });
+        this.cargarCajas();
+      },
+      error: (err) => {
+        this.procesandoEstado.set(null);
+        this.snackBar.open('✗ ' + CajaChicaService.mensajeError(err), 'Cerrar', { duration: 6000, panelClass: ['snackbar-error'] });
+      },
+    });
   }
 }

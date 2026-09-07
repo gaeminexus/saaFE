@@ -39,6 +39,20 @@ export class CajaChicaService {
     return this.http.get<SaldoCajaChica>(`${ServiciosTsr.RS_CJCH}/saldo/${idCaja}`);
   }
 
+  /** Da de baja la caja (exige saldo cero y sin pagos/cierres en curso; ver API-ANULACION-CAJA-CHICA.md). */
+  anular(idCaja: number, datos: { motivo: string; idUsuario: number }): Observable<{ idCaja: number; nombre: string; estado: number; mensaje: string }> {
+    return this.http.post<{ idCaja: number; nombre: string; estado: number; mensaje: string }>(
+      `${ServiciosTsr.RS_CJCH}/anular/${idCaja}`, datos, this.httpOptions
+    );
+  }
+
+  /** Reactiva una caja dada de baja. */
+  activar(idCaja: number, datos: { idUsuario: number }): Observable<{ idCaja: number; nombre: string; estado: number; mensaje: string }> {
+    return this.http.post<{ idCaja: number; nombre: string; estado: number; mensaje: string }>(
+      `${ServiciosTsr.RS_CJCH}/activar/${idCaja}`, datos, this.httpOptions
+    );
+  }
+
   /** Saldo de todas las cajas de la empresa; es lo que alimenta el semáforo de alertas. */
   saldos(idEmpresa: number): Observable<SaldoCajaChica[]> {
     return this.http.get<SaldoCajaChica[]>(`${ServiciosTsr.RS_CJCH}/saldos/${idEmpresa}`);

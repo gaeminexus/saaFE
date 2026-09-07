@@ -411,7 +411,7 @@
                     <mat-icon>attach_file</mat-icon>
                   </button>
                   @if (puedeAnular(m)) {
-                    <button mat-icon-button color="warn" matTooltip="Anular gasto"
+                    <button mat-icon-button color="warn" [matTooltip]="tooltipAnular(m)"
                             [disabled]="anulandoId() === m.codigo" (click)="confirmarAnulacion(m)">
                       @if (anulandoId() === m.codigo) {
                         <mat-spinner diameter="18"></mat-spinner>
