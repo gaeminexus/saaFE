@@ -412,12 +412,6 @@ export const routes: Routes = [
         data: { title: 'Consulta - Cheques' },
       },
       {
-        path: 'procesos/pagos/procesos/solicitud-pagos',
-        loadComponent: () => import('./modules/tsr/forms/pagos/procesos/solicitud/solicitud-pagos.component').then((m) => m.SolicitudPagosComponent),
-        canActivate: [authGuard],
-        data: { title: 'Procesos - Solicitud Pagos' },
-      },
-      {
         path: 'procesos/pagos/procesos/cheques-generados',
         loadComponent: () => import('./modules/tsr/forms/pagos/procesos/generados/cheques-generados.component').then((m) => m.ChequesGeneradosComponent),
         canActivate: [authGuard],

@@ -353,12 +353,6 @@ export class MenutesoreriaComponent implements OnInit {
           idPermiso: 830,
           children: [
             {
-              displayName: 'Solicitud de pago',
-              iconName: 'playlist_add',
-              idPermiso: 830,
-              route: '/menutesoreria/procesos/pagos/procesos/solicitud-pagos',
-            },
-            {
               displayName: 'Cheques generados',
               iconName: 'done_all',
               idPermiso: 830,
