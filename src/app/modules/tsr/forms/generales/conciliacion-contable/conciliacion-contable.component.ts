@@ -6,8 +6,10 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { Periodo } from '../../../../cnt/model/periodo';
@@ -26,6 +28,7 @@ import { ConciliacionContableService } from '../../../service/conciliacion-conta
 import { ControlExtractoBancarioService } from '../../../service/control-extracto-bancario.service';
 import { GrupoConciliacionAsientoService } from '../../../service/grupo-conciliacion-asiento.service';
 import { GrupoConciliacionExtractoService } from '../../../service/grupo-conciliacion-extracto.service';
+import { ReportesTesoreria } from '../descarga-reporte';
 import { textoDeError } from '../texto-error';
 
 const TOLERANCIA_MONETARIA = 0.01;
@@ -57,6 +60,11 @@ export class ConciliacionContableComponent implements OnInit {
   isConfirmandoTodas = false;
   isCerrandoMes = false;
   isReabriendoMes = false;
+
+  // ── Reportes Jasper de conciliación (2026-09-08) ──
+  isImprimiendoGeneral = false;
+  /** `CNBCCDGO` de la cuenta cuyo reporte individual se está generando desde el resumen — `null` si ninguna. */
+  imprimiendoCuenta: number | null = null;
 
   /**
    * Registro de control de TSR (ControlExtractoBancario) para el período
@@ -90,7 +98,8 @@ export class ConciliacionContableComponent implements OnInit {
     private usuarioService: UsuarioService,
     private snackBar: MatSnackBar,
     private funcionesDatosService: FuncionesDatosService,
-    private exportService: ExportService
+    private exportService: ExportService,
+    private jasperService: JasperReportesService
   ) {}
 
   ngOnInit(): void {
@@ -697,6 +706,78 @@ export class ConciliacionContableComponent implements OnInit {
 
   formatearSoloFecha(fecha: any): string {
     return this.funcionesDatosService.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+  }
+
+  /**
+   * `RPRT_CNCL_GNRL` (`docs/logica-negocio/tsr/DISENO-REPORTES-CONCILIACION-BANCARIA.md`,
+   * saaBE) — todas las cuentas activas del período, PDF o Excel.
+   */
+  imprimirConciliacionGeneral(formato: 'PDF' | 'EXCEL'): void {
+    const empresa = this.appStateService.getEmpresa();
+    if (!empresa?.codigo || !this.periodoSeleccionado || this.isImprimiendoGeneral) {
+      return;
+    }
+
+    this.isImprimiendoGeneral = true;
+    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    this.jasperService
+      .generar(
+        'tsr',
+        ReportesTesoreria.CONCILIACION_GENERAL,
+        { P_PJRQ_CODIGO: empresa.codigo, P_PRDO_CODIGO: this.periodoSeleccionado, P_USUARIO: usuario },
+        formato,
+      )
+      .subscribe({
+        next: (blob) => {
+          this.isImprimiendoGeneral = false;
+          const periodoLabel = this.periodoActual?.nombre || String(this.periodoSeleccionado);
+          const extension = formato === 'EXCEL' ? 'xlsx' : 'pdf';
+          guardarArchivo(blob, `conciliacion-general-${periodoLabel}.${extension}`);
+        },
+        error: (error) => {
+          this.isImprimiendoGeneral = false;
+          mensajeReporteFallido(error).then((mensaje) => {
+            this.snackBar.open(mensaje, 'Cerrar', { duration: 8000 });
+          });
+        },
+      });
+  }
+
+  /**
+   * `RPRT_CNCL_CNTA` disparado desde el ícono de impresión de una fila del resumen — mismo
+   * reporte que usa `conciliacion-cierre`, sólo que acá se dispara con la cuenta de la fila en
+   * vez de la seleccionada en un combo. `evento.stopPropagation()` es necesario: la fila entera
+   * tiene `(click)="seleccionarCuenta(fila)"`, y sin cortar la propagación el ícono también
+   * abriría el detalle de la cuenta.
+   */
+  imprimirConciliacionCuenta(fila: ResumenConciliacionCuenta, evento: Event): void {
+    evento.stopPropagation();
+    if (!this.periodoSeleccionado || this.imprimiendoCuenta !== null) {
+      return;
+    }
+
+    const codigo = fila.cuentaBancaria.codigo;
+    this.imprimiendoCuenta = codigo;
+    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    this.jasperService
+      .generar('tsr', ReportesTesoreria.CONCILIACION_CUENTA, {
+        P_CNBC_CODIGO: codigo,
+        P_PRDO_CODIGO: this.periodoSeleccionado,
+        P_USUARIO: usuario,
+      })
+      .subscribe({
+        next: (blob) => {
+          this.imprimiendoCuenta = null;
+          const periodoLabel = this.periodoActual?.nombre || String(this.periodoSeleccionado);
+          guardarArchivo(blob, `conciliacion-${fila.cuentaBancaria.numeroCuenta}-${periodoLabel}.pdf`);
+        },
+        error: (error) => {
+          this.imprimiendoCuenta = null;
+          mensajeReporteFallido(error).then((mensaje) => {
+            this.snackBar.open(mensaje, 'Cerrar', { duration: 8000 });
+          });
+        },
+      });
   }
 
   /**

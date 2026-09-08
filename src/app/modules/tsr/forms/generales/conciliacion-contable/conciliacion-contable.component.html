@@ -58,6 +58,31 @@
           Exportar CSV
         </button>
 
+        <button
+          mat-stroked-button
+          color="primary"
+          [matMenuTriggerFor]="menuConciliacionGeneral"
+          [disabled]="isImprimiendoGeneral"
+          matTooltip="Reporte de conciliación de todas las cuentas del período"
+        >
+          @if (isImprimiendoGeneral) {
+          <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+          <mat-icon>print</mat-icon>
+          }
+          Conciliación general
+        </button>
+        <mat-menu #menuConciliacionGeneral="matMenu">
+          <button mat-menu-item (click)="imprimirConciliacionGeneral('PDF')">
+            <mat-icon>picture_as_pdf</mat-icon>
+            PDF
+          </button>
+          <button mat-menu-item (click)="imprimirConciliacionGeneral('EXCEL')">
+            <mat-icon>table_view</mat-icon>
+            Excel
+          </button>
+        </mat-menu>
+
         @if (periodoActualCerrado) {
         <button mat-stroked-button color="warn" [disabled]="isReabriendoMes" (click)="reabrirMes()">
           @if (isReabriendoMes) {
@@ -112,6 +137,18 @@
           }
         </div>
         <span class="badge" [ngClass]="estadoResumenClase(fila)">{{ estadoResumenTexto(fila) }}</span>
+        <button
+          mat-icon-button
+          [disabled]="imprimiendoCuenta !== null"
+          matTooltip="Imprimir conciliación de esta cuenta"
+          (click)="imprimirConciliacionCuenta(fila, $event)"
+        >
+          @if (imprimiendoCuenta === fila.cuentaBancaria.codigo) {
+          <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+          <mat-icon>print</mat-icon>
+          }
+        </button>
         <mat-icon class="cuenta-resumen-flecha">chevron_right</mat-icon>
       </div>
       } @empty {

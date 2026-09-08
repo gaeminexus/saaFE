@@ -50,7 +50,23 @@
 
   @if (cuentaSeleccionada() && periodoSeleccionado()) {
     <mat-card class="historico-card">
-      <mat-card-title>Histórico de cierres de esta cuenta/período</mat-card-title>
+      <div class="historico-header">
+        <mat-card-title>Histórico de cierres de esta cuenta/período</mat-card-title>
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="imprimirConciliacion()"
+          [disabled]="!puedeImprimirConciliacion()"
+          matTooltip="Genera el reporte de conciliación de esta cuenta y período (PDF)"
+        >
+          @if (imprimiendo()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>print</mat-icon>
+          }
+          Imprimir conciliación
+        </button>
+      </div>
       <mat-card-content>
         @if (cargandoHistorico()) {
           <div class="empty-state"><mat-spinner diameter="24"></mat-spinner></div>

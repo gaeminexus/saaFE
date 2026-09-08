@@ -20,6 +20,9 @@ import { Router } from '@angular/router';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import {
   MotivoDialogComponent,
@@ -53,6 +56,7 @@ import {
   coeficienteTransito,
 } from '../../../model/conciliacion-cierre';
 import { ConciliacionCierreService } from '../../../service/conciliacion-cierre.service';
+import { ReportesTesoreria } from '../descarga-reporte';
 
 /** Tolerancia de la ecuación clásica — la misma que usa el cierre de caja chica y conciliarGrupo. */
 const TOLERANCIA_DIFERENCIA = 0.01;
@@ -142,6 +146,7 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
   private periodoS = inject(PeriodoService);
   private appState = inject(AppStateService);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private jasperS = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -165,6 +170,9 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
   historicoCierres = signal<Conciliacion[]>([]);
   cargandoHistorico = signal(false);
   anulandoCierre = signal<number | null>(null);
+
+  // ── Reporte Jasper de conciliación de la cuenta (2026-09-08) ──
+  imprimiendo = signal(false);
 
   onCuentaChange(cuenta: CuentaBancaria | null): void {
     this.cuentaSeleccionada.set(cuenta);
@@ -410,6 +418,41 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
         this.cargandoHistorico.set(false);
       },
     });
+  }
+
+  /**
+   * `RPRT_CNCL_CNTA` (`docs/logica-negocio/tsr/DISENO-REPORTES-CONCILIACION-BANCARIA.md`,
+   * saaBE). Habilitado en cuanto hay cuenta y período elegidos — sin cierre, el reporte imprime
+   * igual el estado "pendiente" (§2.3 del diseño), que también sirve.
+   */
+  puedeImprimirConciliacion(): boolean {
+    return !!this.cuentaSeleccionada() && !!this.periodoSeleccionado() && !this.imprimiendo();
+  }
+
+  imprimirConciliacion(): void {
+    const cuenta = this.cuentaSeleccionada();
+    const periodo = this.periodoSeleccionado();
+    if (!cuenta || !periodo || !this.puedeImprimirConciliacion()) return;
+
+    this.imprimiendo.set(true);
+    this.jasperS
+      .generar('tsr', ReportesTesoreria.CONCILIACION_CUENTA, {
+        P_CNBC_CODIGO: cuenta.codigo,
+        P_PRDO_CODIGO: periodo.codigo,
+        P_USUARIO: usuarioSesion(),
+      })
+      .subscribe({
+        next: (blob) => {
+          this.imprimiendo.set(false);
+          guardarArchivo(blob, `conciliacion-${cuenta.numeroCuenta}-${periodo.nombre || periodo.codigo}.pdf`);
+        },
+        error: (err) => {
+          this.imprimiendo.set(false);
+          mensajeReporteFallido(err).then((mensaje) => {
+            this.errorMsg.set(mensaje);
+          });
+        },
+      });
   }
 
   estadoCierreLabel(estado: number | null | undefined): string {
