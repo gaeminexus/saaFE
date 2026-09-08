@@ -30,6 +30,11 @@
     <button mat-icon-button matTooltip="Buscar" (click)="buscar()" [disabled]="isLoading">
       <mat-icon>search</mat-icon>
     </button>
+
+    <button mat-stroked-button matTooltip="Exportar el listado con los filtros actuales" (click)="exportarListadoCSV()">
+      <mat-icon>download</mat-icon>
+      Exportar CSV
+    </button>
   </div>
 
   @if (isLoading) {

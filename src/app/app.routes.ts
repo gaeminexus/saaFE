@@ -1003,6 +1003,16 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Existía en disco pero nunca se registró (enlace de menú muerto, ítem 3.1 del lote 3).
+        // Verificado antes de registrarla: es funcional, no un mock — arma la proposición de pago
+        // de una cuota financiada de Factura/Liquidación/NC/ND/Retención de compra (5 llamadas
+        // reales a selectByCriteria) y persiste contra POST /prpd (ProposicionPagoXCuotaRest, real).
+        path: 'procesos/proposicion-pago',
+        loadComponent: () => import('./modules/cxp/forms/procesos/proposicion-pago/proposicion-pago.component').then((m) => m.ProposicionPagoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Proposición de Pago' },
+      },
+      {
         path: 'procesos/nota-venta-compra-manual',
         loadComponent: () => import('./modules/cxp/forms/procesos/nota-venta-compra-manual/nota-venta-compra-manual.component').then((m) => m.NotaVentaCompraManualComponent),
         canActivate: [authGuard],

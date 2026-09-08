@@ -53,6 +53,11 @@
 
         <span class="resumen-general-spacer"></span>
 
+        <button mat-stroked-button [disabled]="resumenOrdenado.length === 0" (click)="exportarCSV()">
+          <mat-icon>download</mat-icon>
+          Exportar CSV
+        </button>
+
         @if (periodoActualCerrado) {
         <button mat-stroked-button color="warn" [disabled]="isReabriendoMes" (click)="reabrirMes()">
           @if (isReabriendoMes) {

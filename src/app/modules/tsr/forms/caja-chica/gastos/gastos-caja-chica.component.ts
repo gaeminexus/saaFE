@@ -10,8 +10,10 @@ import { TitularSelectorDialogComponent } from '../../../../../shared/components
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 
 import {
   DocumentoCruceProveedor,
@@ -71,6 +73,7 @@ export class GastosCajaChicaComponent implements OnInit {
   private productoS = inject(ProductoPagoService);
   private aplicacionPagoS = inject(AplicacionPagoCxpService);
   private fileService = inject(FileService);
+  private exportService = inject(ExportService);
   private appState = inject(AppStateService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
@@ -660,5 +663,30 @@ export class GastosCajaChicaComponent implements OnInit {
     const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
     if (!d) return '—';
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  /** Exporta lo que se está viendo (con los filtros de fecha/tipo ya aplicados), no la tabla entera. */
+  exportarCSV(): void {
+    const rows = this.movimientos();
+    if (!rows.length) {
+      this.snackBar.open('No hay movimientos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = rows.map((m) => ({
+      fecha: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(m.fecha)),
+      tipo: this.infoTipo(m).texto,
+      descripcion: m.descripcion || '',
+      beneficiario: this.nombreBeneficiarioFila(m),
+      documento: this.documentoFila(m),
+      valor: Number(m.valor || 0),
+      estado: this.estaActivo(m) ? 'Activo' : 'Anulado',
+    }));
+
+    const headers = ['Fecha', 'Tipo', 'Descripción', 'Beneficiario', 'Documento', 'Valor', 'Estado'];
+    const keys = ['fecha', 'tipo', 'descripcion', 'beneficiario', 'documento', 'valor', 'estado'];
+    const caja = this.cajaSeleccionada();
+    const nombreArchivo = `movimientos_caja_chica_${caja?.codigo ?? ''}_${fechaCsv(new Date())}`;
+    this.exportService.exportToCSV(plano, nombreArchivo, headers, keys);
   }
 }

@@ -6,8 +6,10 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { ConciliacionContable, EstadoConciliacionContable } from '../../../model/conciliacion-contable';
@@ -87,7 +89,8 @@ export class ConciliacionContableComponent implements OnInit {
     private appStateService: AppStateService,
     private usuarioService: UsuarioService,
     private snackBar: MatSnackBar,
-    private funcionesDatosService: FuncionesDatosService
+    private funcionesDatosService: FuncionesDatosService,
+    private exportService: ExportService
   ) {}
 
   ngOnInit(): void {
@@ -694,5 +697,34 @@ export class ConciliacionContableComponent implements OnInit {
 
   formatearSoloFecha(fecha: any): string {
     return this.funcionesDatosService.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA);
+  }
+
+  /**
+   * Exporta el resumen del período seleccionado (ítem 3.3 del lote 3 — el inventario marcaba
+   * esta pantalla como la única de `tsr`/`cxc` que le faltaba). El único "filtro" real de esta
+   * pantalla es el período elegido — se exporta `resumenOrdenado`, la misma lista que se ve en
+   * pantalla, en el mismo orden (pendientes primero).
+   */
+  exportarCSV(): void {
+    const rows = this.resumenOrdenado;
+    if (!rows.length) {
+      this.snackBar.open('No hay cuentas para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = rows.map((f) => ({
+      banco: f.cuentaBancaria?.banco?.nombre || '',
+      cuenta: f.cuentaBancaria?.numeroCuenta || '',
+      estado: this.estadoResumenTexto(f),
+      pendientesExtracto: Number(f.totalPendientesExtracto || 0),
+      pendientesAsiento: Number(f.totalPendientesAsiento || 0),
+      usuarioVerifica: f.usuarioVerifica || '',
+      fechaVerificacion: fechaCsv(this.funcionesDatosService.convertirFechaDesdeBackend(f.fechaVerificacion)),
+    }));
+
+    const headers = ['Banco', 'Cuenta', 'Estado', 'Pendientes extracto', 'Pendientes asiento', 'Verificado por', 'Fecha verificación'];
+    const keys = ['banco', 'cuenta', 'estado', 'pendientesExtracto', 'pendientesAsiento', 'usuarioVerifica', 'fechaVerificacion'];
+    const periodoLabel = this.periodoActual?.nombre || String(this.periodoSeleccionado ?? '');
+    this.exportService.exportToCSV(plano, `conciliacion_contable_${periodoLabel}_${fechaCsv(new Date())}`, headers, keys);
   }
 }

@@ -344,6 +344,10 @@
             <mat-icon>refresh</mat-icon>
             Actualizar
           </button>
+          <button mat-stroked-button (click)="exportarCSV()">
+            <mat-icon>download</mat-icon>
+            Exportar CSV
+          </button>
         </div>
 
         @if (cargandoMovimientos()) {

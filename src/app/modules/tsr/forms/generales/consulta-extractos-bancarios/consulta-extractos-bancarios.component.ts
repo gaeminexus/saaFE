@@ -14,6 +14,7 @@ import { DetalleExtractoBancario } from '../../../model/detalle-extracto-bancari
 import { EstadoCargaExtracto, ExtractoBancario } from '../../../model/extracto-bancario';
 import { DetalleExtractoBancarioService } from '../../../service/detalle-extracto-bancario.service';
 import { ExtractoBancarioService } from '../../../service/extracto-bancario.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { textoDeError } from '../texto-error';
 
 const TODOS_LOS_PERIODOS = -1;
@@ -254,6 +255,34 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
 
   formatearFechaHora(fecha: any): string {
     return this.funcionesDatosService.formatoFecha(fecha, FuncionesDatosService.FECHA_HORA);
+  }
+
+  /**
+   * Exporta el LISTADO de extractos que se está viendo (con período y texto ya aplicados) — no
+   * confundir con `descargarCSV()`, que exporta los movimientos DENTRO de un extracto elegido.
+   * Ítem 3.3 del lote 3: esta pantalla solo tenía la exportación de detalle, no la del listado.
+   */
+  exportarListadoCSV(): void {
+    if (!this.extractosFiltrados.length) {
+      this.snackBar.open('No hay extractos para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = this.extractosFiltrados.map((e) => ({
+      banco: e.cuentaBancaria?.banco?.nombre ?? '',
+      cuenta: e.cuentaBancaria?.numeroCuenta ?? '',
+      periodo: e.periodo?.nombre ?? '',
+      saldoInicial: Number(e.saldoInicial || 0),
+      saldoFinal: Number(e.saldoFinal || 0),
+      estado: this.obtenerEstadoInfo(e.estadoCarga).texto,
+      archivo: e.archivoNombre ?? '',
+      usuario: e.usuarioCreacion ?? '',
+      fechaCreacion: fechaCsv(this.funcionesDatosService.convertirFechaDesdeBackend(e.fechaCreacion)),
+    }));
+
+    const headers = ['Banco', 'Cuenta', 'Período', 'Saldo inicial', 'Saldo final', 'Estado', 'Archivo', 'Usuario', 'Fecha de carga'];
+    const keys = ['banco', 'cuenta', 'periodo', 'saldoInicial', 'saldoFinal', 'estado', 'archivo', 'usuario', 'fechaCreacion'];
+    this.exportService.exportToCSV(plano, `extractos_bancarios_${fechaCsv(new Date())}`, headers, keys);
   }
 
   obtenerEstadoInfo(estadoCarga: number): { texto: string; clase: string } {

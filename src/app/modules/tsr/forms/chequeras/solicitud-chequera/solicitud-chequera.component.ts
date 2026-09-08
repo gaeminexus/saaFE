@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,6 +11,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import {
+  MotivoDialogComponent,
+  MotivoDialogData,
+} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
@@ -19,6 +25,9 @@ import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { BancoService } from '../../../service/banco.service';
 import { ChequeraService } from '../../../service/chequera.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+
+/** Rubro 25: estado de chequera. 1 = ACTIVA (mismo criterio que la pantalla «Chequera»). */
+const ESTADO_CHEQUERA_ACTIVA = 1;
 
 @Component({
   selector: 'app-solicitud-chequera',
@@ -35,6 +44,7 @@ import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service'
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatDialogModule,
   ],
   templateUrl: './solicitud-chequera.component.html',
   styleUrls: ['./solicitud-chequera.component.scss'],
@@ -81,6 +91,8 @@ export class SolicitudChequeraComponent implements OnInit {
     private chequeraService: ChequeraService,
     private detalleRubroService: DetalleRubroService,
     private funcionesDatos: FuncionesDatosService,
+    private appState: AppStateService,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -268,20 +280,49 @@ export class SolicitudChequeraComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  eliminar(row: any): void {
-    const codigo = row.codigo;
-    if (!confirm(`¿Está seguro de eliminar la solicitud #${codigo}?`)) return;
+  /**
+   * Antes usaba `DELETE /chqr/{id}` (borrado físico, sin motivo ni validación alguna — ni
+   * siquiera revisaba si la chequera tenía cheques ya generados/impresos/entregados). Se
+   * confirmó leyendo `ChequeraServiceImpl.anularChequera()` en saaBE que el camino semántico
+   * (`POST /chqr/anular/{id}`, ya usado correctamente por la pantalla «Chequera») exige motivo,
+   * rechaza si algún cheque está en uso, y si pasa, anula en cascada los cheques ACTIVOS de la
+   * chequera y deja la chequera en estado ANULADA — nunca borra la fila. Mismo patrón que
+   * `ChequeraComponent.anularChequera()` (ítem 3.2 del lote 3).
+   */
+  chequeraEstaActiva(row: any): boolean {
+    return (row as any).rubroEstadoChequeraH === ESTADO_CHEQUERA_ACTIVA;
+  }
 
-    this.loading.set(true);
-    this.chequeraService.delete(codigo).subscribe({
-      next: () => {
-        this.successMsg.set('Solicitud eliminada');
-        this.cargarSolicitudes();
-      },
-      error: () => {
-        this.errorMsg.set('No se pudo eliminar la solicitud');
-        this.loading.set(false);
-      },
+  anularChequera(row: any): void {
+    const codigo = row.codigo;
+
+    if (!this.chequeraEstaActiva(row)) {
+      this.errorMsg.set('Solo se pueden anular solicitudes de chequera ACTIVAS');
+      return;
+    }
+
+    const data: MotivoDialogData = {
+      titulo: `Anular solicitud de chequera #${codigo}`,
+      advertencia: 'Se anulará la chequera y, en cascada, todos los cheques que aún estén disponibles en ella. No se puede anular si ya tiene cheques generados, impresos o entregados.',
+      textoConfirmar: 'Sí, anular chequera',
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo: string | null) => {
+      if (!motivo) return;
+
+      this.loading.set(true);
+      this.errorMsg.set('');
+      this.successMsg.set('');
+      this.chequeraService.anular(codigo, motivo, this.appState.getIdUsuario()).subscribe({
+        next: () => {
+          this.successMsg.set('Solicitud de chequera anulada correctamente');
+          this.cargarSolicitudes();
+        },
+        error: (err) => {
+          this.errorMsg.set(ChequeraService.mensajeError(err));
+          this.loading.set(false);
+        },
+      });
     });
   }
 

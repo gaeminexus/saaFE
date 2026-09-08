@@ -97,18 +97,6 @@ export class MenucuentaxpagarComponent {
       ],
     },
     {
-      displayName: 'Consultas',
-      iconName: 'search',
-      route: '/menucuentaxpagar/consultas',
-      children: [
-        {
-          displayName: 'Consulta de CxP',
-          iconName: 'list_alt',
-          route: '/menucuentaxpagar/consultas/cxp',
-        },
-      ],
-    },
-    {
       displayName: 'Reportes',
       iconName: 'assessment',
       route: '/menucuentaxpagar/reportes',

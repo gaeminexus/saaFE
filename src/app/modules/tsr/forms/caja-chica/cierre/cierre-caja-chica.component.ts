@@ -20,7 +20,9 @@ import {
   PlanCuentaSelectorDialogData,
 } from '../../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { PlanCuenta } from '../../../../cnt/model/plan-cuenta';
 
 import { CajaChica } from '../../../model/caja-chica';
@@ -61,6 +63,7 @@ export class CierreCajaChicaComponent implements OnInit {
   private cierreS = inject(CierreCajaChicaService);
   private appState = inject(AppStateService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private exportService = inject(ExportService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -412,5 +415,32 @@ export class CierreCajaChicaComponent implements OnInit {
     const mes = String(d.getMonth() + 1).padStart(2, '0');
     const dia = String(d.getDate()).padStart(2, '0');
     return `${d.getFullYear()}-${mes}-${dia}`;
+  }
+
+  /** Exporta el histórico de la caja seleccionada — lo que se está viendo, no todas las cajas. */
+  exportarCSV(): void {
+    const rows = this.cierres();
+    if (!rows.length) {
+      this.snackBar.open('No hay cierres para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = rows.map((c) => ({
+      codigo: c.codigo,
+      fecha: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(c.fecha)),
+      saldoInicial: Number(c.saldoInicial || 0),
+      totalGastos: Number(c.totalGastos || 0),
+      totalReposiciones: Number(c.totalReposiciones || 0),
+      saldoLibros: Number(c.saldoLibros || 0),
+      saldoFisico: c.saldoFisico != null ? Number(c.saldoFisico) : '',
+      diferencia: c.diferencia != null ? Number(c.diferencia) : '',
+      estado: this.etiquetaEstadoCierre(c),
+      observacion: c.observacion || '',
+    }));
+
+    const headers = ['Código', 'Fecha', 'Saldo inicial', 'Total gastos', 'Total reposiciones', 'Saldo libros', 'Saldo físico', 'Diferencia', 'Estado', 'Observación'];
+    const keys = ['codigo', 'fecha', 'saldoInicial', 'totalGastos', 'totalReposiciones', 'saldoLibros', 'saldoFisico', 'diferencia', 'estado', 'observacion'];
+    const idCaja = this.selectedCajaId();
+    this.exportService.exportToCSV(plano, `cierres_caja_chica_${idCaja ?? ''}_${fechaCsv(new Date())}`, headers, keys);
   }
 }

@@ -36,6 +36,10 @@
     <div class="table-card">
       <header class="panel-header">
         <h3>Histórico de cierres</h3>
+        <button mat-stroked-button (click)="exportarCSV()">
+          <mat-icon>download</mat-icon>
+          Exportar CSV
+        </button>
         <button mat-raised-button color="primary" (click)="abrirNuevo()" [disabled]="mostrarNuevo()">
           <mat-icon>add</mat-icon>
           Nuevo cierre
