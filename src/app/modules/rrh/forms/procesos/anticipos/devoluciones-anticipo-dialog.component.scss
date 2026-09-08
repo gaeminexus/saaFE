@@ -1,0 +1,74 @@
+.contenido {
+  min-width: 700px;
+  max-width: 96vw;
+}
+
+.encabezado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.spinner-wrap {
+  text-align: center;
+  padding: 24px;
+}
+
+.tabla-devoluciones {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th {
+    text-align: left;
+    padding: 6px 8px;
+    color: #666;
+    font-size: 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+  }
+
+  .al-derecha {
+    text-align: right;
+  }
+
+  .vacio {
+    text-align: center;
+    color: #888;
+    padding: 24px;
+  }
+
+  .fila-anulada {
+    opacity: 0.6;
+  }
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e6f4ea;
+  color: #1e4620;
+
+  &.chip-anulada {
+    background: #fdecea;
+    color: #611a15;
+  }
+}
+
+.motivo-anulacion {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #888;
+  font-style: italic;
+}

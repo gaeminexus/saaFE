@@ -111,7 +111,17 @@
                   <mat-icon>cancel</mat-icon>
                 </button>
               }
-              @if (!puedeAprobar(r) && !puedeAnular(r)) {
+              @if (puedeRegistrarDevolucion(r)) {
+                <button mat-icon-button color="primary" matTooltip="Registrar devolución" (click)="registrarDevolucion(r)">
+                  <mat-icon>payments</mat-icon>
+                </button>
+              }
+              @if (puedeVerDevoluciones(r)) {
+                <button mat-icon-button matTooltip="Devoluciones" (click)="verDevoluciones(r)">
+                  <mat-icon>receipt_long</mat-icon>
+                </button>
+              }
+              @if (!puedeAprobar(r) && !puedeAnular(r) && !puedeRegistrarDevolucion(r) && !puedeVerDevoluciones(r)) {
                 —
               }
             </td>

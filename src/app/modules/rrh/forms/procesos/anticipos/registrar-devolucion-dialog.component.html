@@ -1,0 +1,128 @@
+<h2 mat-dialog-title>Registrar devolución de anticipo</h2>
+
+<mat-dialog-content class="contenido">
+  @if (!resultado()) {
+    <p class="subtitulo">
+      {{ empleadoNombre() }} — saldo pendiente {{ data.anticipo.saldo | number: '1.2-2' }}
+    </p>
+
+    @if (errorMsg()) {
+      <div class="aviso-dialog">
+        <mat-icon>report_problem</mat-icon>
+        <span>{{ errorMsg() }}</span>
+      </div>
+    }
+
+    <div class="grid-campos">
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha real del depósito</mat-label>
+        <input matInput [matDatepicker]="picker" [(ngModel)]="fecha" />
+        <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+        <mat-hint>No la fecha de hoy: la del comprobante de depósito</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Valor devuelto</mat-label>
+        <input matInput type="number" min="0.01" step="0.01" [(ngModel)]="valor" />
+        <span matTextSuffix>$</span>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="span-2">
+        <mat-label>Cuenta bancaria de la empresa</mat-label>
+        <mat-select [(ngModel)]="idCuentaBancaria">
+          @for (c of cuentas(); track c.codigo) {
+            <mat-option [value]="c.codigo">{{ etiquetaCuenta(c) }}</mat-option>
+          }
+        </mat-select>
+        @if (cuentas().length === 0) {
+          <mat-hint>No hay cuentas bancarias activas configuradas.</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Referencia</mat-label>
+        <input matInput [(ngModel)]="referencia" placeholder="N.° de papeleta o transferencia" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Observación</mat-label>
+        <input matInput [(ngModel)]="observacion" />
+      </mat-form-field>
+    </div>
+  } @else {
+    <!-- La mitad del valor de esta pantalla: qué cuotas quedaron canceladas, no un "listo". -->
+    <div class="resultado">
+      <div class="aviso-exito">
+        <mat-icon>check_circle</mat-icon>
+        <span>{{ resultado()!.mensaje }}</span>
+      </div>
+
+      <div class="resumen-saldo">
+        <span>Saldo anterior: {{ resultado()!.saldoAnterior | number: '1.2-2' }}</span>
+        <span>Saldo nuevo: {{ resultado()!.saldoNuevo | number: '1.2-2' }}</span>
+      </div>
+
+      @if (resultado()!.cuotasCanceladas.length > 0) {
+        <div class="panel-cuotas">
+          <p class="panel-cuotas-titulo">Cuotas canceladas</p>
+          <table class="tabla-cuotas">
+            <thead>
+              <tr>
+                <th>N.°</th>
+                <th>Vencimiento</th>
+                <th class="al-derecha">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of resultado()!.cuotasCanceladas; track c.numero) {
+                <tr>
+                  <td>{{ c.numero }}</td>
+                  <td>{{ c.vencimiento | date: 'dd/MM/yyyy' }}</td>
+                  <td class="al-derecha">{{ c.valor | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (resultado()!.cuotaAjustada; as ajustada) {
+        <div class="panel-cuotas">
+          <p class="panel-cuotas-titulo">Cuota ajustada (sigue pendiente, con menor valor)</p>
+          <table class="tabla-cuotas">
+            <tbody>
+              <tr>
+                <td>N.° {{ ajustada.numero }}</td>
+                <td>{{ ajustada.vencimiento | date: 'dd/MM/yyyy' }}</td>
+                <td class="al-derecha">Nuevo valor: {{ ajustada.valorNuevo | number: '1.2-2' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (resultado()!.avisoPeriodoCalculado; as aviso) {
+        <div class="aviso-destacado">
+          <mat-icon>warning</mat-icon>
+          <div>
+            <strong>Atención — el período ya está calculado</strong>
+            <p>{{ aviso }}</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (!resultado()) {
+    <button mat-stroked-button type="button" (click)="cerrar()">Cancelar</button>
+    <button mat-raised-button color="primary" type="button" [disabled]="!formValido" (click)="registrar()">
+      @if (guardando()) { <mat-spinner diameter="18"></mat-spinner> } @else { <mat-icon>save</mat-icon> }
+      Registrar
+    </button>
+  } @else {
+    <button mat-raised-button color="primary" type="button" (click)="cerrar()">Cerrar</button>
+  }
+</mat-dialog-actions>

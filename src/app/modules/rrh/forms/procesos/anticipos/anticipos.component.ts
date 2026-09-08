@@ -24,6 +24,8 @@ import { AnticipoTrabajador, ESTADO_ANTICIPO_LABELS, EstadoAnticipo } from '../.
 import { AnticipoTrabajadorService } from '../../../service/anticipo-trabajador.service';
 import { AnticipoFormDialogComponent } from './anticipo-form-dialog.component';
 import { AprobarAnticipoDialogComponent } from './aprobar-anticipo-dialog.component';
+import { DevolucionesAnticipoDialogComponent } from './devoluciones-anticipo-dialog.component';
+import { RegistrarDevolucionDialogComponent } from './registrar-devolucion-dialog.component';
 
 /** Anticipos a trabajadores: solicitar, aprobar (paga en el acto) y anular. */
 @Component({
@@ -136,6 +138,37 @@ export class AnticiposComponent implements OnInit {
 
   puedeAnular(row: AnticipoTrabajador): boolean {
     return Number(row.estado) === EstadoAnticipo.SOLICITADO || Number(row.estado) === EstadoAnticipo.APROBADO;
+  }
+
+  /** Sólo sobre un anticipo ya pagado: antes de eso no hay plata que devolver. */
+  puedeRegistrarDevolucion(row: AnticipoTrabajador): boolean {
+    const estado = Number(row.estado);
+    return estado === EstadoAnticipo.PAGADO || estado === EstadoAnticipo.EN_DESCUENTO;
+  }
+
+  /** También sobre uno ya CANCELADO: pudo llegar ahí justo por una devolución total. */
+  puedeVerDevoluciones(row: AnticipoTrabajador): boolean {
+    const estado = Number(row.estado);
+    return estado === EstadoAnticipo.PAGADO || estado === EstadoAnticipo.EN_DESCUENTO || estado === EstadoAnticipo.CANCELADO;
+  }
+
+  registrarDevolucion(row: AnticipoTrabajador): void {
+    this.dialog
+      .open(RegistrarDevolucionDialogComponent, { width: '640px', maxWidth: '98vw', data: { anticipo: row } })
+      .afterClosed()
+      .subscribe((resultado) => {
+        if (!resultado) return;
+        this.buscar();
+      });
+  }
+
+  verDevoluciones(row: AnticipoTrabajador): void {
+    this.dialog
+      .open(DevolucionesAnticipoDialogComponent, { width: '820px', maxWidth: '98vw', data: { anticipo: row } })
+      .afterClosed()
+      .subscribe((huboCambios: boolean) => {
+        if (huboCambios) this.buscar();
+      });
   }
 
   aprobar(row: AnticipoTrabajador): void {

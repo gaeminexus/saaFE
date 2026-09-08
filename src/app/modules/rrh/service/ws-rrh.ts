@@ -90,5 +90,10 @@ export class ServiciosRhh {
   // con RS_PLIE de arriba, que es el cálculo contra el que ésta se concilia.
   public static RS_PLIS = `${API_URL}/plis`;
 
+  // Devolución de un anticipo a empleado — RHH.DVAN (docs/rrh/API-DEVOLUCION-ANTICIPO.md).
+  // Sin getAll/PUT/DELETE a propósito: es el registro de un hecho contable que sólo se deshace
+  // anulando, no una entidad de edición libre.
+  public static RS_DVAN = `${API_URL}/dvan`;
+
   // Agregar más endpoints de RRHH acá según necesidades
 }

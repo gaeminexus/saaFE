@@ -1,0 +1,65 @@
+<h2 mat-dialog-title>Devoluciones del anticipo</h2>
+
+<mat-dialog-content class="contenido">
+  <div class="encabezado">
+    <span>Saldo pendiente: {{ data.anticipo.saldo | number: '1.2-2' }}</span>
+    @if (puedeRegistrarNueva) {
+      <button mat-stroked-button type="button" color="primary" (click)="registrarNueva()">
+        <mat-icon>add</mat-icon>
+        Registrar devolución
+      </button>
+    }
+  </div>
+
+  @if (cargando()) {
+    <div class="spinner-wrap"><mat-spinner diameter="32"></mat-spinner></div>
+  } @else {
+    <table class="tabla-devoluciones">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th class="al-derecha">Valor</th>
+          <th>Cuenta</th>
+          <th>Referencia</th>
+          <th>Observación</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (d of devoluciones(); track d.codigo) {
+          <tr [class.fila-anulada]="d.estado === EstadoDevolucionAnticipo.ANULADA">
+            <td>{{ d.fecha | date: 'dd/MM/yyyy' }}</td>
+            <td class="al-derecha">{{ d.valor | number: '1.2-2' }}</td>
+            <td>{{ etiquetaCuenta(d) }}</td>
+            <td>{{ d.referencia || '—' }}</td>
+            <td>{{ d.observacion || '—' }}</td>
+            <td>
+              <span class="chip" [class.chip-anulada]="d.estado === EstadoDevolucionAnticipo.ANULADA">
+                {{ etiquetaEstado(d.estado) }}
+              </span>
+              @if (d.estado === EstadoDevolucionAnticipo.ANULADA && d.motivoAnulacion) {
+                <div class="motivo-anulacion">{{ d.motivoAnulacion }}</div>
+              }
+            </td>
+            <td>
+              @if (puedeAnular(d)) {
+                <button mat-icon-button color="warn" matTooltip="Anular" [disabled]="procesando() === d.codigo" (click)="anular(d)">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="7" class="vacio">Este anticipo todavía no tiene devoluciones registradas.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-raised-button color="primary" type="button" (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>
