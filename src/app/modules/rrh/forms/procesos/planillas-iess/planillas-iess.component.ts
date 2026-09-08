@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
@@ -36,6 +35,7 @@ import {
   RegistrarPlanillaDialogComponent,
   RegistrarPlanillaDialogResult,
 } from './registrar-planilla-dialog.component';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /** Una fila fija de la pantalla: el tipo, y la planilla del período si ya se registró. */
 interface FilaTipo {
@@ -66,8 +66,8 @@ interface FilaTipo {
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './planillas-iess.component.html',
   styleUrls: ['./planillas-iess.component.scss'],
@@ -145,6 +145,10 @@ export class PlanillasIessComponent implements OnInit {
       },
     });
   }
+
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
+  readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
 
   etiquetaPeriodo(periodo: PeriodoNomina): string {
     return `${String(periodo.mes).padStart(2, '0')}/${periodo.anio}`;

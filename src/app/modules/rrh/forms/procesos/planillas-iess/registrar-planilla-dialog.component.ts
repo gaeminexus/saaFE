@@ -7,10 +7,10 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { RubrosRrh } from '../../../model/rubros-rrh';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface RegistrarPlanillaDialogData {
   /** Rubro 330: fija el título y no es editable — la fila desde la que se abrió ya lo decidió. */
@@ -56,7 +56,7 @@ export interface RegistrarPlanillaDialogResult {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './registrar-planilla-dialog.component.html',
   styleUrls: ['./registrar-planilla-dialog.component.scss'],
@@ -98,6 +98,9 @@ export class RegistrarPlanillaDialogComponent {
   ) {
     this.conceptos = this.detalleRubroService.getDetallesByParent(RubrosRrh.CONCEPTO_PLANILLA_IESS);
   }
+
+  readonly etiquetaConcepto = (c: DetalleRubro): string => c.descripcion;
+  readonly valorConcepto = (c: DetalleRubro): number => c.codigoAlterno;
 
   agregarRenglon(): void {
     this.renglones.update((filas) => [...filas, { concepto: '', conceptoTipo: null, valorIess: '' }]);

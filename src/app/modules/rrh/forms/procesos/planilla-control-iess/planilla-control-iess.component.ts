@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -18,6 +17,7 @@ import { ColumnaTabla } from '../../comunes/modelo-formulario';
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aniosDisponibles, criteriosPorEmpresa, filtrarPorAnio } from '../../parametrizacion/utiles-parametrizacion';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Planilla de control del IESS (`docs/rrh/API-PLANILLA-IESS.md` §7.a).
@@ -44,9 +44,9 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     MatTooltipModule,
     TablaRrhComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './planilla-control-iess.component.html',
   styleUrls: ['./planilla-control-iess.component.scss'],
@@ -111,6 +111,10 @@ export class PlanillaControlIessComponent implements OnInit {
   }
 
   /** Sirve tanto para `PeriodoNomina` como para `PlanillaControlIess`: las dos traen mes y año. */
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
+  readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
+
   etiquetaPeriodo(periodo: { mes: number; anio: number }): string {
     return `${String(periodo.mes).padStart(2, '0')}/${periodo.anio}`;
   }

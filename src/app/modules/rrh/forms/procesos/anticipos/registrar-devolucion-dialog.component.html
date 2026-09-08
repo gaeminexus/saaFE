@@ -28,17 +28,21 @@
         <span matTextSuffix>$</span>
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="span-2">
-        <mat-label>Cuenta bancaria de la empresa</mat-label>
-        <mat-select [(ngModel)]="idCuentaBancaria">
-          @for (c of cuentas(); track c.codigo) {
-            <mat-option [value]="c.codigo">{{ etiquetaCuenta(c) }}</mat-option>
-          }
-        </mat-select>
+      <div class="span-2">
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Cuenta bancaria de la empresa"
+          [opciones]="cuentas()"
+          [etiqueta]="etiquetaCuenta"
+          [valorPor]="valorCuenta"
+          [buscarPor]="buscarPorCuenta"
+          [(ngModel)]="idCuentaBancaria"
+          placeholder="Escriba el banco o el número de cuenta"
+        />
         @if (cuentas().length === 0) {
-          <mat-hint>No hay cuentas bancarias activas configuradas.</mat-hint>
+          <p class="ayuda-cuentas">No hay cuentas bancarias activas configuradas.</p>
         }
-      </mat-form-field>
+      </div>
 
       <mat-form-field appearance="outline">
         <mat-label>Referencia</mat-label>

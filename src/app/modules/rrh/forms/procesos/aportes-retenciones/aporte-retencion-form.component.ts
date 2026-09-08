@@ -6,6 +6,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { AporteRetenciones } from '../../../model/aportes-retenciones';
 import { ContratoEmpleado } from '../../../model/contrato-empleado';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface AporteRetencionFormData {
   mode: 'create' | 'edit' | 'view';
@@ -15,7 +16,7 @@ export interface AporteRetencionFormData {
 @Component({
   selector: 'app-aporte-retencion-form',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './aporte-retencion-form.component.html',
   styleUrls: ['./aporte-retencion-form.component.scss'],
 })
@@ -92,6 +93,8 @@ export class AporteRetencionFormComponent implements OnInit {
   guardar(): void {
     this.mostrarValidaciones.set(true);
   }
+
+  readonly etiquetaTipo = (t: String | null): string => (t != null ? String(t) : '');
 
   contratoLabel(value: ContratoEmpleado | null): string {
     if (!value) {

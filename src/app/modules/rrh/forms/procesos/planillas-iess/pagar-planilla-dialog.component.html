@@ -22,17 +22,23 @@
     <span class="valor">{{ data.valorIess | number: '1.2-2' }}</span>
   </div>
 
-  <mat-form-field appearance="outline" class="campo-completo">
-    <mat-label>Cuenta bancaria debitada</mat-label>
-    <mat-select [(ngModel)]="idCuentaBancaria">
-      @for (c of data.cuentas; track c.codigo) {
-        <mat-option [value]="c.codigo">{{ etiquetaCuenta(c) }}</mat-option>
-      }
-    </mat-select>
-    @if (data.cuentas.length === 0) {
-      <mat-hint>No hay cuentas bancarias activas configuradas.</mat-hint>
-    }
-  </mat-form-field>
+  <app-inline-autocomplete
+    modo="campo"
+    etiquetaCampo="Cuenta bancaria debitada"
+    class="campo-completo"
+    [opciones]="data.cuentas"
+    [etiqueta]="etiquetaCuenta"
+    [valorPor]="valorCuenta"
+    [buscarPor]="buscarPorCuenta"
+    [(ngModel)]="idCuentaBancaria"
+    placeholder="Escriba el banco o el número de cuenta"
+  />
+  @if (data.cuentas.length === 0) {
+    <div class="aviso-dialog">
+      <mat-icon>info</mat-icon>
+      <span>No hay cuentas bancarias activas configuradas.</span>
+    </div>
+  }
 
   <mat-form-field appearance="outline" class="campo-completo">
     <mat-label>Fecha real del débito</mat-label>

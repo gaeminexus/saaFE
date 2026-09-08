@@ -75,14 +75,14 @@
               </mat-form-field>
             </td>
             <td class="col-concepto">
-              <mat-form-field appearance="outline" class="campo-fila">
-                <mat-select [(ngModel)]="r.conceptoTipo">
-                  <mat-option [value]="null">Sin clasificar</mat-option>
-                  @for (c of conceptos; track c.codigoAlterno) {
-                    <mat-option [value]="c.codigoAlterno">{{ c.descripcion }}</mat-option>
-                  }
-                </mat-select>
-              </mat-form-field>
+              <app-inline-autocomplete
+                [opciones]="conceptos"
+                [etiqueta]="etiquetaConcepto"
+                [valorPor]="valorConcepto"
+                etiquetaVacio="Sin clasificar"
+                [(ngModel)]="r.conceptoTipo"
+                placeholder="Escriba el concepto"
+              />
             </td>
             <td class="col-valor">
               <mat-form-field appearance="outline" class="campo-fila">

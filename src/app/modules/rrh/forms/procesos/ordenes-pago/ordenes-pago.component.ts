@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -32,6 +31,7 @@ import {
 } from '../../parametrizacion/utiles-parametrizacion';
 import { aValorDeInput } from '../../asistencia/utiles-asistencia';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Órdenes de pago de la nómina (RHH.RDPG) y su detalle por colaborador (RHH.DRPG).
@@ -53,9 +53,9 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule,
     MatTableModule,
     MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './ordenes-pago.component.html',
   styleUrls: ['./ordenes-pago.component.scss'],
@@ -319,6 +319,12 @@ export class OrdenesPagoComponent implements OnInit {
   etiquetaPeriodo(periodo: PeriodoNomina): string {
     return `${periodo.mes}/${periodo.anio}`;
   }
+
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
+  readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
+  readonly valorCuenta = (c: CuentaBancaria): number => c.codigo;
+  readonly buscarPorCuenta = (c: CuentaBancaria): string[] => [c.banco?.nombre ?? '', c.numeroCuenta ?? ''];
 
   exportarCsv(): void {
     this.exportService.exportToCSV(

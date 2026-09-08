@@ -121,6 +121,11 @@ export class ReportesNominaComponent implements OnInit {
     e?.nombres ?? '',
   ];
 
+  /** Año: la propia opción ya es el escalar (no hace falta `valorPor`). */
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
+  readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio), this.etiquetaPeriodo(p)];
+
   constructor(
     private periodoService: PeriodoNominaService,
     private empleadoService: EmpleadoService,

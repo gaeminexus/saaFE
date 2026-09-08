@@ -55,15 +55,16 @@
                 </mat-autocomplete>
               </mat-form-field>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Tipo</mat-label>
-                <mat-select [ngModel]="filtroTipo()" (ngModelChange)="filtroTipo.set($event)">
-                  @for (tipo of tiposDisponibles(); track $index) {
-                    <mat-option [value]="tipo">{{ tipo }}</mat-option>
-                  }
-                </mat-select>
-                <mat-hint>Catálogo pendiente de integración</mat-hint>
-              </mat-form-field>
+              <app-inline-autocomplete
+                modo="campo"
+                etiquetaCampo="Tipo"
+                [opciones]="tiposDisponibles()"
+                [etiqueta]="etiquetaTipo"
+                etiquetaVacio="Todos"
+                [ngModel]="filtroTipo()"
+                (ngModelChange)="filtroTipo.set($event)"
+                placeholder="Catálogo pendiente de integración"
+              />
 
               <div class="date-range">
                 <mat-form-field appearance="outline">

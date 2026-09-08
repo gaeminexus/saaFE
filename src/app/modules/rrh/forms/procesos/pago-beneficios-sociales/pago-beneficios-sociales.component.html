@@ -13,14 +13,16 @@
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-anio">
-        <mat-label>Año</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Año"
+        class="selector-anio"
+        [opciones]="anios"
+        [etiqueta]="etiquetaAnio"
+        [ngModel]="anio()"
+        (ngModelChange)="onAnioChange($event)"
+        placeholder="Escriba el año"
+      />
 
       <mat-form-field appearance="outline" class="selector-tipo">
         <mat-label>Beneficio</mat-label>
@@ -36,14 +38,17 @@
   @if (tipoBeneficio() !== null) {
     <div class="panel barra-generar">
       @if (tipoBeneficio() === TipoBeneficioSocial.DECIMO_CUARTO) {
-        <mat-form-field appearance="outline" class="selector-region">
-          <mat-label>Región</mat-label>
-          <mat-select [ngModel]="region()" (ngModelChange)="region.set($event)">
-            @for (r of regiones(); track r.codigo) {
-              <mat-option [value]="r.codigoAlterno">{{ r.descripcion }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Región"
+          class="selector-region"
+          [opciones]="regiones()"
+          [etiqueta]="etiquetaRegion"
+          [valorPor]="valorRegion"
+          [ngModel]="region()"
+          (ngModelChange)="region.set($event)"
+          placeholder="Escriba la región"
+        />
       }
 
       <button

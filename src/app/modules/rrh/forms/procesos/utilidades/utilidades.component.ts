@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -18,6 +17,7 @@ import { ColumnaTabla } from '../../comunes/modelo-formulario';
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aniosDisponibles, filtrarPorAnio } from '../../parametrizacion/utiles-parametrizacion';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Reparto anual de utilidades.
@@ -39,9 +39,9 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule,
     MatTooltipModule,
     TablaRrhComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './utilidades.component.html',
   styleUrls: ['./utilidades.component.scss'],
@@ -55,6 +55,8 @@ export class UtilidadesComponent implements OnInit {
   readonly ocupado = signal<boolean>(false);
 
   utilidadContable: number | null = null;
+
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
 
   readonly columnas: ColumnaTabla[] = [
     { campo: 'colaborador', titulo: 'Colaborador', ancho: '26%' },

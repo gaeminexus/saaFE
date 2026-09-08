@@ -12,6 +12,7 @@ import {
   RegistrarDevolucionAnticipoResponse,
 } from '../../../model/devolucion-anticipo';
 import { DevolucionAnticipoService } from '../../../service/devolucion-anticipo.service';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface RegistrarDevolucionDialogData {
   anticipo: AnticipoTrabajador;
@@ -29,7 +30,7 @@ export interface RegistrarDevolucionDialogData {
 @Component({
   selector: 'app-registrar-devolucion-dialog',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './registrar-devolucion-dialog.component.html',
   styleUrls: ['./registrar-devolucion-dialog.component.scss'],
 })
@@ -79,6 +80,9 @@ export class RegistrarDevolucionDialogComponent implements OnInit {
   etiquetaCuenta(cuenta: CuentaBancaria): string {
     return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
   }
+
+  readonly valorCuenta = (c: CuentaBancaria): number => c.codigo;
+  readonly buscarPorCuenta = (c: CuentaBancaria): string[] => [c.banco?.nombre ?? '', c.numeroCuenta ?? ''];
 
   empleadoNombre(): string {
     const empleado = this.data.anticipo.empleado;

@@ -7,8 +7,8 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface PagarPlanillaDialogData {
   tipoLabel: string;
@@ -42,7 +42,7 @@ export interface PagarPlanillaDialogResult {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './pagar-planilla-dialog.component.html',
   styleUrls: ['./pagar-planilla-dialog.component.scss'],
@@ -61,6 +61,9 @@ export class PagarPlanillaDialogComponent {
   etiquetaCuenta(cuenta: CuentaBancaria): string {
     return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
   }
+
+  readonly valorCuenta = (c: CuentaBancaria): number => c.codigo;
+  readonly buscarPorCuenta = (c: CuentaBancaria): string[] => [c.banco?.nombre ?? '', c.numeroCuenta ?? ''];
 
   private fechaISO(fecha: Date | null): string {
     if (!fecha) return '';

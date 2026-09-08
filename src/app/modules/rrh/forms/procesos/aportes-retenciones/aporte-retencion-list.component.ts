@@ -21,13 +21,14 @@ import {
   AporteRetencionFormComponent,
   AporteRetencionFormData,
 } from './aporte-retencion-form.component';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 type FormMode = 'create' | 'edit' | 'view';
 
 @Component({
   selector: 'app-aporte-retencion-list',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './aporte-retencion-list.component.html',
   styleUrls: ['./aporte-retencion-list.component.scss'],
 })
@@ -64,6 +65,7 @@ export class AporteRetencionListComponent implements AfterViewInit {
 
   readonly contratosDisponibles = signal<ContratoEmpleado[]>([]);
   readonly tiposDisponibles = signal<String[]>([]);
+  readonly etiquetaTipo = (t: String | null): string => (t != null ? String(t) : '');
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;

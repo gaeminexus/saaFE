@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
@@ -19,6 +18,7 @@ import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { aniosDisponibles } from '../../parametrizacion/utiles-parametrizacion';
 import { opcionesAviso } from '../../comunes/avisos';
 import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Salidas a los organismos: RDEP y 107 al SRI, planilla al IESS, formularios del MDT.
@@ -37,9 +37,9 @@ import { guardarArchivo } from '../../../../../shared/services/descarga-reporte'
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule,
     MatTooltipModule,
     TablaRrhComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './salidas-oficiales.component.html',
   styleUrls: ['./salidas-oficiales.component.scss'],
@@ -55,6 +55,7 @@ export class SalidasOficialesComponent implements OnInit {
   readonly presentando = signal<any | null>(null);
   fechaPresentacion = '';
   numeroComprobante = '';
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
 
   readonly visibles = computed(() =>
     this.filas().filter((f) => Number(f.anio) === Number(this.anio())),

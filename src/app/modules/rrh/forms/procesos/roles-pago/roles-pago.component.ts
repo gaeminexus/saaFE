@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
@@ -30,6 +29,7 @@ import { ReportesNomina } from '../descarga-reporte';
 import { SeleccionFilas } from '../seleccion-filas';
 import { admiteRecepcion, etiquetaEstadoRol, estadoRol } from './estado-rol';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Roles de pago del período (RHH.RLPG).
@@ -54,9 +54,9 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     MatTableModule,
     MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './roles-pago.component.html',
   styleUrls: ['./roles-pago.component.scss'],
@@ -310,6 +310,10 @@ export class RolesPagoComponent implements OnInit {
     if (!empleado) return '—';
     return `${empleado.identificacion ?? ''} — ${empleado.apellidos ?? ''} ${empleado.nombres ?? ''}`.trim();
   }
+
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
+  readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
 
   etiquetaPeriodo(periodo: PeriodoNomina): string {
     return `${periodo.mes}/${periodo.anio}`;

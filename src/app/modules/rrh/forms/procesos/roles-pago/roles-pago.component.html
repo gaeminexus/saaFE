@@ -10,23 +10,29 @@
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-anio">
-        <mat-label>Ejercicio</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Ejercicio"
+        class="selector-anio"
+        [opciones]="anios"
+        [etiqueta]="etiquetaAnio"
+        [ngModel]="anio()"
+        (ngModelChange)="onAnioChange($event)"
+        placeholder="Escriba el año"
+      />
 
-      <mat-form-field appearance="outline" class="selector-periodo">
-        <mat-label>Período</mat-label>
-        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
-          @for (p of periodos(); track p.codigo) {
-            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Período"
+        class="selector-periodo"
+        [opciones]="periodos()"
+        [etiqueta]="etiquetaPeriodo"
+        [valorPor]="valorPeriodo"
+        [buscarPor]="buscarPorPeriodo"
+        [ngModel]="periodoSeleccionado()"
+        (ngModelChange)="onPeriodoChange($event)"
+        placeholder="Escriba el mes o el año"
+      />
 
       @if (puedeRegenerar()) {
         <button

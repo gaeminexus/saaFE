@@ -6,7 +6,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
@@ -42,6 +41,7 @@ import {
 import { MotivoDialogComponent } from '../periodo-nomina/motivo-dialog.component';
 import { NuevaNovedadDialogComponent } from './nueva-novedad-dialog.component';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /** Lo que se le dice al usuario cuando cada acción termina bien. */
 const MENSAJE_EXITO: Record<AccionNovedad, string> = {
@@ -77,9 +77,9 @@ const MENSAJE_EXITO: Record<AccionNovedad, string> = {
     MatFormFieldModule,
     MatIconModule,
     MatMenuModule,
-    MatSelectModule,
     MatTooltipModule,
     TablaRrhComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './novedades-iess.component.html',
   styleUrls: ['./novedades-iess.component.scss'],
@@ -570,6 +570,10 @@ export class NovedadesIessComponent implements OnInit {
   }
 
   // ─── Utilidades ────────────────────────────────────────────────────────────
+
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
+  readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
 
   etiquetaPeriodo(periodo: PeriodoNomina): string {
     return `${String(periodo.mes).padStart(2, '0')}/${periodo.anio}`;

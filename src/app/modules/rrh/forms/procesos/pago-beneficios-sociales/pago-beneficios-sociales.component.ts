@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
@@ -63,7 +64,7 @@ const ESTADO_VISUAL_LABELS: Record<EstadoVisualOrden, string> = {
 @Component({
   selector: 'app-pago-beneficios-sociales',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './pago-beneficios-sociales.component.html',
   styleUrls: ['./pago-beneficios-sociales.component.scss'],
 })
@@ -97,6 +98,10 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
   generando = signal<boolean>(false);
   /** `idOrden` de la fila con una acción en curso — deshabilita solo sus botones, no toda la tabla. */
   procesando = signal<number | null>(null);
+
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
+  readonly etiquetaRegion = (r: DetalleRubro): string => r.descripcion;
+  readonly valorRegion = (r: DetalleRubro): number => r.codigoAlterno;
 
   columnasOrden = ['numero', 'region', 'emision', 'empleados', 'total', 'estado', 'acciones'];
   columnasDetalle = ['empleado', 'periodo', 'baseCalculo', 'dias', 'valor', 'situacion'];

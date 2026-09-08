@@ -12,14 +12,16 @@
     </div>
 
     <div class="acciones-cabecera">
-      <mat-form-field appearance="outline" class="anio">
-        <mat-label>Ejercicio</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="anio.set($event)">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Ejercicio"
+        class="anio"
+        [opciones]="anios"
+        [etiqueta]="etiquetaAnio"
+        [ngModel]="anio()"
+        (ngModelChange)="anio.set($event)"
+        placeholder="Escriba el año"
+      />
 
       <button mat-raised-button color="primary" type="button" (click)="generarRdep()"
               [disabled]="ocupado() || !puedeGenerar()"

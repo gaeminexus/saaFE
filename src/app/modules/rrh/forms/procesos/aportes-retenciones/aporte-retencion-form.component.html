@@ -15,41 +15,39 @@
     </mat-card-header>
     <mat-card-content>
       <div class="grid-3">
-        <mat-form-field appearance="outline">
-          <mat-label>Contrato Empleado *</mat-label>
-          <mat-select
+        <div class="campo-autocomplete">
+          <app-inline-autocomplete
+            modo="campo"
+            etiquetaCampo="Contrato Empleado *"
+            [opciones]="contratosDisponibles()"
+            [etiqueta]="contratoLabel"
             [ngModel]="contratoEmpleado()"
             (ngModelChange)="contratoEmpleado.set($event)"
             [disabled]="isViewMode()"
-            required
-          >
-            @for (contrato of contratosDisponibles(); track $index) {
-              <mat-option [value]="contrato">{{ contratoLabel(contrato) }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Catálogo de contratos pendiente de integración</mat-hint>
+            [invalido]="mostrarValidaciones() && !contratoEmpleado()"
+            placeholder="Catálogo de contratos pendiente de integración"
+          />
           @if (mostrarValidaciones() && !contratoEmpleado()) {
             <mat-error>Campo requerido (visual)</mat-error>
           }
-        </mat-form-field>
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Tipo *</mat-label>
-          <mat-select
+        <div class="campo-autocomplete">
+          <app-inline-autocomplete
+            modo="campo"
+            etiquetaCampo="Tipo *"
+            [opciones]="tiposDisponibles()"
+            [etiqueta]="etiquetaTipo"
             [ngModel]="tipo()"
             (ngModelChange)="tipo.set($event)"
             [disabled]="isViewMode()"
-            required
-          >
-            @for (item of tiposDisponibles(); track $index) {
-              <mat-option [value]="item">{{ item }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Catálogo pendiente de integración</mat-hint>
+            [invalido]="mostrarValidaciones() && !tipo()"
+            placeholder="Catálogo pendiente de integración"
+          />
           @if (mostrarValidaciones() && !tipo()) {
             <mat-error>Campo requerido (visual)</mat-error>
           }
-        </mat-form-field>
+        </div>
 
         <mat-form-field appearance="outline">
           <mat-label>Fecha Anexo *</mat-label>
