@@ -89,48 +89,60 @@
         <mat-icon>calculate</mat-icon>
         Calcular
       </button>
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="aprobar()"
-        [disabled]="!puede('aprobar')"
-        [matTooltip]="motivo('aprobar') ?? ''"
-        [matTooltipDisabled]="!motivo('aprobar')"
-      >
-        <mat-icon>how_to_reg</mat-icon>
-        Aprobar
-      </button>
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="contabilizar()"
-        [disabled]="!puede('contabilizar')"
-        [matTooltip]="motivo('contabilizar') ?? 'Emite el asiento del rol de pagos'"
-      >
-        <mat-icon>receipt_long</mat-icon>
-        Contabilizar rol
-      </button>
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="contabilizarProvisiones()"
-        [disabled]="!puede('contabilizarProvisiones')"
-        [matTooltip]="motivo('contabilizarProvisiones') ?? 'Emite el asiento de provisiones, que es distinto del rol y se guarda aparte'"
-      >
-        <mat-icon>savings</mat-icon>
-        Contabilizar provisiones
-      </button>
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="cerrar()"
-        [disabled]="!puede('cerrar')"
-        [matTooltip]="motivo('cerrar') ?? ''"
-        [matTooltipDisabled]="!motivo('cerrar')"
-      >
-        <mat-icon>lock</mat-icon>
-        Cerrar
-      </button>
+      <div class="accion-con-pista">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="aprobar()"
+          [disabled]="!puede('aprobar')"
+          [matTooltip]="motivo('aprobar') ?? ''"
+          [matTooltipDisabled]="!motivo('aprobar')"
+        >
+          <mat-icon>how_to_reg</mat-icon>
+          Aprobar
+        </button>
+        <ng-container [ngTemplateOutlet]="pistaAccion" [ngTemplateOutletContext]="{ accion: 'aprobar' }" />
+      </div>
+      <div class="accion-con-pista">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="contabilizar()"
+          [disabled]="!puede('contabilizar')"
+          [matTooltip]="motivo('contabilizar') ?? 'Emite el asiento del rol de pagos'"
+        >
+          <mat-icon>receipt_long</mat-icon>
+          Contabilizar rol
+        </button>
+        <ng-container [ngTemplateOutlet]="pistaAccion" [ngTemplateOutletContext]="{ accion: 'contabilizar' }" />
+      </div>
+      <div class="accion-con-pista">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="contabilizarProvisiones()"
+          [disabled]="!puede('contabilizarProvisiones')"
+          [matTooltip]="motivo('contabilizarProvisiones') ?? 'Emite el asiento de provisiones, que es distinto del rol y se guarda aparte'"
+        >
+          <mat-icon>savings</mat-icon>
+          Contabilizar provisiones
+        </button>
+        <ng-container [ngTemplateOutlet]="pistaAccion" [ngTemplateOutletContext]="{ accion: 'contabilizarProvisiones' }" />
+      </div>
+      <div class="accion-con-pista">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="cerrar()"
+          [disabled]="!puede('cerrar')"
+          [matTooltip]="motivo('cerrar') ?? ''"
+          [matTooltipDisabled]="!motivo('cerrar')"
+        >
+          <mat-icon>lock</mat-icon>
+          Cerrar
+        </button>
+        <ng-container [ngTemplateOutlet]="pistaAccion" [ngTemplateOutletContext]="{ accion: 'cerrar' }" />
+      </div>
       <span class="separador"></span>
       <!-- Previsualizar no persiste y funciona en histórico, pero arma las líneas desde las
            nóminas: sin período calculado no habría nada que mostrar -->
