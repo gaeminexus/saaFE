@@ -15,6 +15,9 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
+import { ExportService } from '../../../../../shared/services/export.service';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { EstadoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
@@ -56,6 +59,8 @@ export class ConsultaCobrosComponent implements OnInit {
   private appState = inject(AppStateService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private exportService = inject(ExportService);
+  private funcionesDatos = inject(FuncionesDatosService);
 
   readonly EstadoAplicacion = EstadoAplicacion;
   readonly formaPagoLabels = FORMA_PAGO_COBRO_LABELS;
@@ -202,6 +207,30 @@ export class ConsultaCobrosComponent implements OnInit {
         },
       });
     });
+  }
+
+  /** Exporta lo que se está viendo — ya filtrado en el servidor (GET /aplc/listar). */
+  exportarCSV(): void {
+    const rows = this.rows();
+    if (!rows.length) {
+      this.mostrarError('No hay cobros para exportar');
+      return;
+    }
+
+    const plano = rows.map((r) => ({
+      id: r.id,
+      fecha: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(r.fecha)),
+      titular: r.titular?.nombre || '',
+      documento: this.etiquetaDocumento(r),
+      formaPago: this.etiquetaFormaPago(r.formaPago),
+      valor: Number(r.valor || 0),
+      asiento: r.asiento?.numeroAlterno || '',
+      estado: this.estadoLabel(r.estado),
+    }));
+
+    const headers = ['ID', 'Fecha', 'Titular', 'Documento', 'Forma de pago', 'Valor', 'Asiento', 'Estado'];
+    const keys = ['id', 'fecha', 'titular', 'documento', 'formaPago', 'valor', 'asiento', 'estado'];
+    this.exportService.exportToCSV(plano, `consulta_cobros_${fechaCsv(new Date())}`, headers, keys);
   }
 
   private mostrarExito(mensaje: string): void {
