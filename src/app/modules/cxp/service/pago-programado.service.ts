@@ -10,6 +10,7 @@ import {
   ConfirmarManualResponse,
   DisponibilidadCuenta,
   FacturasComprometidasResponse,
+  FiltrosListarPagos,
   FiltrosLotes,
   FiltrosPorAprobar,
   GenerarLoteRequest,
@@ -39,12 +40,36 @@ export class PagoProgramadoService {
     );
   }
 
-  /** Lista pagos de la empresa; sin `estado` trae todos (seguimiento). */
-  listar(idEmpresa: number, estado?: number): Observable<PagoProgramado[]> {
-    let params = new HttpParams().set('idEmpresa', idEmpresa);
-    if (estado != null) {
-      params = params.set('estado', estado);
+  /**
+   * Lista pagos de la empresa con filtros opcionales (docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md
+   * §2). Sin `estados` trae todos (seguimiento/consulta). `estados`/`origenes` son repetibles en
+   * el backend — `append`, NUNCA `set`: `set` dentro de un bucle pisa el valor anterior y solo
+   * viaja el último, sin que el backend avise (mismo patrón que `porAprobar`).
+   *
+   * Sobrecarga retrocompatible: además de `confirmacion.component.ts` y `consulta.component.ts`
+   * (ya migrados al objeto de filtros), hay OTROS SEIS llamados con la firma vieja
+   * `listar(idEmpresa, estado?)` en `archivo-banco.component.ts` y en `cxp/forms/pagos/`
+   * (`solicitud-pago.component.ts`, `pagos-transferencia.component.ts` legado) — ninguno tocado
+   * ni verificado en este cambio, así que la firma vieja se conserva funcionando tal cual.
+   */
+  listar(idEmpresa: number, estado?: number): Observable<PagoProgramado[]>;
+  listar(filtros: FiltrosListarPagos): Observable<PagoProgramado[]>;
+  listar(arg: number | FiltrosListarPagos, estado?: number): Observable<PagoProgramado[]> {
+    const filtros: FiltrosListarPagos = typeof arg === 'number'
+      ? { idEmpresa: arg, estados: estado != null ? [estado] : undefined }
+      : arg;
+    let params = new HttpParams().set('idEmpresa', filtros.idEmpresa);
+    for (const e of filtros.estados ?? []) {
+      params = params.append('estado', e);
     }
+    for (const o of filtros.origenes ?? []) {
+      params = params.append('origen', o);
+    }
+    if (filtros.idTitular != null) params = params.set('idTitular', filtros.idTitular);
+    if (filtros.idCuentaBancaria != null) params = params.set('idCuentaBancaria', filtros.idCuentaBancaria);
+    if (filtros.desde) params = params.set('desde', filtros.desde);
+    if (filtros.hasta) params = params.set('hasta', filtros.hasta);
+    if (filtros.texto) params = params.set('texto', filtros.texto);
     return this.http.get<PagoProgramado[]>(`${ServiciosCxp.RS_PGTR}/listar`, { params }).pipe(
       catchError(this.handleError)
     );

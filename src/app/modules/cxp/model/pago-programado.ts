@@ -269,6 +269,24 @@ export interface FiltrosPorAprobar {
   hasta?: string;
 }
 
+/**
+ * Query params de GET /pgtr/listar (docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §2). Solo
+ * `idEmpresa` es obligatorio. `estados` y `origenes` son repetibles en el backend — cero, uno o
+ * varios; cero (u omitido) es "todos". `desde`/`hasta` filtran sobre `fechaProgramada`. `texto`
+ * es coincidencia parcial sobre la observación o el nombre del beneficiario.
+ */
+export interface FiltrosListarPagos {
+  idEmpresa: number;
+  estados?: number[];
+  idTitular?: number;
+  /** Cuenta bancaria DE ORIGEN (PGTRCNBC), no la de destino del titular. */
+  idCuentaBancaria?: number;
+  origenes?: OrigenPago[];
+  desde?: string;
+  hasta?: string;
+  texto?: string;
+}
+
 /** Body de POST /pgtr/aprobar. `formaPago`: 2 Transferencia, 3 Cheque, 4 Débito automático — 1 Efectivo no se soporta. */
 export interface AprobarPagosRequest {
   idsPagos: number[];

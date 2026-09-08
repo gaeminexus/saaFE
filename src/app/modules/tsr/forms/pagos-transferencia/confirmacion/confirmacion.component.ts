@@ -17,10 +17,14 @@ import { FuncionesDatosService } from '../../../../../shared/services/funciones-
 import { etiquetaOrigenPagoExterno } from '../../../../cxp/model/origen-pago-externo';
 import {
   ConfirmarManualResponse,
+  ORIGEN_PAGO_LABELS,
+  OrigenPago,
   PagoProgramado,
   RespuestaBancoResponse,
 } from '../../../../cxp/model/pago-programado';
 import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
+import { CuentaBancaria } from '../../../model/cuenta-bancaria';
+import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 
 /**
  * T3 del circuito de pagos por transferencia
@@ -44,10 +48,23 @@ import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.s
 })
 export class ConfirmacionComponent implements OnInit, AfterViewChecked {
   private pagoS = inject(PagoProgramadoService);
+  private cuentaBancariaS = inject(CuentaBancariaService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private route = inject(ActivatedRoute);
+
+  // ─── Filtros (docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §3.1) — todos al servidor ───
+  readonly origenOptions = (Object.entries(ORIGEN_PAGO_LABELS) as [OrigenPago, string][]).map(
+    ([codigo, texto]) => ({ codigo, texto }),
+  );
+  cuentasBancarias = signal<CuentaBancaria[]>([]);
+  filtroCuenta = signal<CuentaBancaria | null>(null);
+  /** Vacío = todos los orígenes, mismo criterio que la bandeja de aprobación. */
+  filtroOrigenes = signal<OrigenPago[]>([]);
+  filtroDesde = signal<string>('');
+  filtroHasta = signal<string>('');
+  filtroTexto = signal<string>('');
 
   // ─── Confirmación manual (camino principal) ────────────
   pagosPorConfirmar = signal<PagoProgramado[]>([]);
@@ -100,6 +117,36 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
   ngOnInit(): void {
     const idLote = this.route.snapshot.queryParamMap.get('idLote');
     if (idLote) this.respIdLote = +idLote;
+    this.cargarCuentasBancarias();
+    this.cargarPagosPorConfirmar();
+  }
+
+  private cargarCuentasBancarias(): void {
+    const idEmpresa = this.idEmpresaSesion();
+    this.cuentaBancariaS.getAll().subscribe({
+      next: (data) => {
+        let lista = Array.isArray(data) ? data : [];
+        if (idEmpresa) {
+          lista = lista.filter(
+            (c: any) => c.banco?.empresa?.codigo === idEmpresa || c.empresa?.codigo === idEmpresa,
+          );
+        }
+        this.cuentasBancarias.set(lista);
+      },
+      error: () => this.cuentasBancarias.set([]),
+    });
+  }
+
+  etiquetaCuenta(cuenta: CuentaBancaria): string {
+    return `${cuenta.banco?.nombre ?? 'Banco'} — ${cuenta.numeroCuenta}`;
+  }
+
+  limpiarFiltros(): void {
+    this.filtroCuenta.set(null);
+    this.filtroOrigenes.set([]);
+    this.filtroDesde.set('');
+    this.filtroHasta.set('');
+    this.filtroTexto.set('');
     this.cargarPagosPorConfirmar();
   }
 
@@ -170,17 +217,24 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
     this.confError.set('');
     this.confSeleccionados.clear();
 
-    this.pagoS.listar(this.idEmpresaSesion()).subscribe({
+    // Los dos estados en una sola llamada al servidor (§2/§3.1 del contrato) — se acabó pedir
+    // todo el historial de la empresa y filtrar acá. Los débitos automáticos ya no nacen
+    // CONFIRMADO (docs/logica-negocio/pagos/PLAN-DEBITO-AUTOMATICO-CONTABILIZA-AL-CONFIRMAR.md en
+    // saaBE): quedan REGISTRADO al aprobar y se contabilizan acá, con su referencia, así que
+    // entran solos con estos dos estados, sin necesitar ninguna exclusión aparte.
+    this.pagoS.listar({
+      idEmpresa: this.idEmpresaSesion(),
+      estados: [EstadoPagoProgramado.REGISTRADO, EstadoPagoProgramado.EN_ARCHIVO],
+      idCuentaBancaria: this.filtroCuenta()?.codigo ?? undefined,
+      origenes: this.filtroOrigenes(),
+      desde: this.filtroDesde() || undefined,
+      hasta: this.filtroHasta() || undefined,
+      texto: this.filtroTexto().trim() || undefined,
+    }).subscribe({
       next: (data) => {
-        // Los débitos automáticos ya no nacen CONFIRMADO (docs/logica-negocio/pagos/PLAN-DEBITO-AUTOMATICO-CONTABILIZA-AL-CONFIRMAR.md
-        // en saaBE): quedan REGISTRADO al aprobar y se contabilizan acá, con su referencia. Por
-        // eso ya no se excluyen — aparecen como cualquier otro pago por confirmar.
-        const filtrados = (data ?? []).filter(
-          (p) => p.estado === EstadoPagoProgramado.REGISTRADO
-            || p.estado === EstadoPagoProgramado.EN_ARCHIVO
-        );
-        this.pagosPorConfirmar.set(filtrados);
-        this.dataSourceConf.data = filtrados;
+        const filas = data ?? [];
+        this.pagosPorConfirmar.set(filas);
+        this.dataSourceConf.data = filas;
         this.referenciasPorPago.set({});
         this.cargandoPorConfirmar.set(false);
       },

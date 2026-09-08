@@ -87,7 +87,10 @@ export class ConsultaComponent implements OnInit {
     this.cargandoSeguimiento.set(true);
     this.segError.set('');
 
-    this.pagoS.listar(this.idEmpresaSesion(), this.segEstado ?? undefined).subscribe({
+    this.pagoS.listar({
+      idEmpresa: this.idEmpresaSesion(),
+      estados: this.segEstado != null ? [this.segEstado] : undefined,
+    }).subscribe({
       next: (data) => {
         this.pagosSeguimiento.set(data ?? []);
         this.cargandoSeguimiento.set(false);

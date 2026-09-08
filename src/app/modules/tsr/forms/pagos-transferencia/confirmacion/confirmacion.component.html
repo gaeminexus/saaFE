@@ -20,6 +20,60 @@
         </span>
       </div>
 
+      <!-- Filtros — todos se mandan al servidor (docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §3.1) -->
+      <div class="filtros">
+        <mat-form-field appearance="outline">
+          <mat-label>Cuenta bancaria</mat-label>
+          <mat-select [ngModel]="filtroCuenta()" (ngModelChange)="filtroCuenta.set($event); cargarPagosPorConfirmar()" name="filtroCuenta">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (c of cuentasBancarias(); track c.codigo) {
+              <mat-option [value]="c">{{ etiquetaCuenta(c) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-origen">
+          <mat-label>{{ filtroOrigenes().length === 0 ? 'Origen (todos)' : 'Origen' }}</mat-label>
+          <mat-select
+            multiple
+            panelWidth="auto"
+            [ngModel]="filtroOrigenes()"
+            (ngModelChange)="filtroOrigenes.set($event)"
+            (closed)="cargarPagosPorConfirmar()"
+            name="filtroOrigenes"
+          >
+            @for (o of origenOptions; track o.codigo) {
+              <mat-option [value]="o.codigo">{{ o.texto }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Desde</mat-label>
+          <input matInput type="date" [ngModel]="filtroDesde()" (ngModelChange)="filtroDesde.set($event)" name="filtroDesde" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Hasta</mat-label>
+          <input matInput type="date" [ngModel]="filtroHasta()" (ngModelChange)="filtroHasta.set($event)" name="filtroHasta" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-texto">
+          <mat-label>Buscar</mat-label>
+          <input matInput [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" name="filtroTexto"
+                 placeholder="Observación o nombre del beneficiario" (keyup.enter)="cargarPagosPorConfirmar()" />
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" (click)="cargarPagosPorConfirmar()">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
+        <button mat-stroked-button (click)="limpiarFiltros()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar
+        </button>
+      </div>
+
       <div class="fila-campos">
         <mat-form-field appearance="outline">
           <mat-label>Fecha del pago</mat-label>
@@ -32,11 +86,6 @@
           <mat-datepicker #pickerConf></mat-datepicker>
           <mat-hint>Es la fecha del asiento contable — igual para todos los pagos seleccionados</mat-hint>
         </mat-form-field>
-
-        <button mat-stroked-button class="btn-consultar" (click)="cargarPagosPorConfirmar()">
-          <mat-icon>refresh</mat-icon>
-          Actualizar listado
-        </button>
       </div>
 
       <mat-form-field appearance="outline" class="campo-ancho">

@@ -13,6 +13,25 @@
     width: 56px;
   }
 
+  .filtros {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+
+    // La etiqueta más larga de ORIGEN_PAGO_LABELS ("Seguro médico jubilados") no entraba en el
+    // ancho por defecto del mat-form-field (mismo ajuste que la bandeja de aprobación).
+    .campo-origen {
+      min-width: 280px;
+      flex: 1 1 280px;
+    }
+
+    .campo-texto {
+      flex: 1 1 220px;
+    }
+  }
+
   // La tabla scrollea, no la página: altura propia + encabezado sticky (mismo
   // tratamiento que las cinco pantallas de cheques y mayor-analitico-v2). El mixin
   // compartido `pagos-cobros-layout` solo da scroll horizontal — esto se agrega acá,
