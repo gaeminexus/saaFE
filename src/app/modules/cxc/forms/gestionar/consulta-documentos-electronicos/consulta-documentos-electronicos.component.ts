@@ -26,6 +26,7 @@ import {
   AnularDocumentoCompraDialogComponent,
   AnularDocumentoCompraDialogResult,
 } from '../../../../cxp/forms/procesos/dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
+import { criteriosDocumentoEmitido } from '../../../../../shared/utils/criterios-documento-emitido.util';
 
 export type TipoDocumento = 'TODOS' | 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETENCION' | 'LIQUIDACION';
 
@@ -167,16 +168,33 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     this.sinBusqueda.set(false);
     this.cargando.set(true);
 
+    const filtrosBase = {
+      textoCliente: this.cliente,
+      autorizacion: this.numeroAutorizacion,
+      fechaDesde,
+      fechaHasta,
+      estadoEmision: this.estadoFiltro !== 'TODOS' ? Number(this.estadoFiltro) : null,
+    };
+
+    // Cada entidad tiene su propio criterio: mismos filtros, pero `campoRelacion` cambia
+    // ('proveedor' en RetencionV2, 'titular' en las otras cuatro — ver criteriosDocumentoEmitido)
+    // y `fechaConHora` también (Factura.fecha es LocalDate; las otras cuatro son LocalDateTime).
+    const criteriosFactura = criteriosDocumentoEmitido(filtrosBase, 'titular', false);
+    const criteriosNC = criteriosDocumentoEmitido(filtrosBase, 'titular', true);
+    const criteriosND = criteriosDocumentoEmitido(filtrosBase, 'titular', true);
+    const criteriosRet = criteriosDocumentoEmitido(filtrosBase, 'proveedor', true);
+    const criteriosLiq = criteriosDocumentoEmitido(filtrosBase, 'titular', true);
+
     const cargarFacturas   = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'FACTURA')
-      ? this.facturaService.getAll().pipe(catchError(() => of(null))) : of(null);
+      ? this.facturaService.selectByCriteria(criteriosFactura).pipe(catchError(() => of(null))) : of(null);
     const cargarNC         = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'NOTA_CREDITO')
-      ? this.ncService.getAll().pipe(catchError(() => of(null)))      : of(null);
+      ? this.ncService.selectByCriteria(criteriosNC).pipe(catchError(() => of(null)))      : of(null);
     const cargarND         = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'NOTA_DEBITO')
-      ? this.ndService.getAll().pipe(catchError(() => of(null)))      : of(null);
+      ? this.ndService.selectByCriteria(criteriosND).pipe(catchError(() => of(null)))      : of(null);
     const cargarRet        = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'RETENCION')
-      ? this.retService.getAll().pipe(catchError(() => of(null)))     : of(null);
+      ? this.retService.selectByCriteria(criteriosRet).pipe(catchError(() => of(null)))     : of(null);
     const cargarLiq        = (this.tipoDocumento === 'TODOS' || this.tipoDocumento === 'LIQUIDACION')
-      ? this.liquidacionService.getAll().pipe(catchError(() => of(null))) : of(null);
+      ? this.liquidacionService.selectByCriteria(criteriosLiq).pipe(catchError(() => of(null))) : of(null);
 
     forkJoin([cargarFacturas, cargarNC, cargarND, cargarRet, cargarLiq]).subscribe({
       next: ([facturas, notasC, notasD, retenciones, liquidaciones]) => {
@@ -188,15 +206,14 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
         (retenciones || []).forEach((r: any) => docs.push(this.normalizarRetencion(r)));
         (liquidaciones || []).forEach((l: any) => docs.push(this.normalizarLiquidacion(l)));
 
-        const filtrados = this.aplicarFiltros(docs)
-          .sort((a, b) => {
-            const fa = this.asDate(a.fecha)?.getTime() || 0;
-            const fb = this.asDate(b.fecha)?.getTime() || 0;
-            return fb - fa || (b.id || 0) - (a.id || 0);
-          });
+        const ordenados = docs.sort((a, b) => {
+          const fa = this.asDate(a.fecha)?.getTime() || 0;
+          const fb = this.asDate(b.fecha)?.getTime() || 0;
+          return fb - fa || (b.id || 0) - (a.id || 0);
+        });
 
-        this.registros = filtrados;
-        this.dataSource.data = filtrados;
+        this.registros = ordenados;
+        this.dataSource.data = ordenados;
         this.cargando.set(false);
       },
       error: () => {
@@ -667,27 +684,6 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     };
   }
 
-  // ─── Filtros ─────────────────────────────────────────────────────────────
-
-  private aplicarFiltros(data: DocumentoElectronico[]): DocumentoElectronico[] {
-    return data.filter((row) => {
-      if (this.estadoFiltro !== 'TODOS' && String(Number(row.estadoEmision)) !== this.estadoFiltro) return false;
-      if (this.numeroAutorizacion.trim()) {
-        if (!row.autorizacion.toLowerCase().includes(this.numeroAutorizacion.trim().toLowerCase())) return false;
-      }
-      if (this.cliente.trim()) {
-        const filtro = this.cliente.trim().toLowerCase();
-        if (!row.clienteNombre.toLowerCase().includes(filtro) && !row.clienteIdentificacion.toLowerCase().includes(filtro)) return false;
-      }
-      const fecha = this.asDate(row.fecha);
-      const fechaDesde: Date | null = this.fechaDesdeControl.value;
-      const fechaHasta: Date | null = this.fechaHastaControl.value;
-      if (fechaDesde && fecha && this.soloFecha(fecha) < this.soloFecha(fechaDesde)) return false;
-      if (fechaHasta && fecha && this.soloFecha(fecha) > this.soloFecha(fechaHasta)) return false;
-      return true;
-    });
-  }
-
   // ─── Utilidades ──────────────────────────────────────────────────────────
 
   /** Convierte el formato LocalDateTime del backend ("2026,7,22,18,38,...") a Date. */
@@ -706,10 +702,6 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     }
     const parsed = new Date(str);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  private soloFecha(d: Date): number {
-    const v = new Date(d); v.setHours(0, 0, 0, 0); return v.getTime();
   }
 
   private toNum(value: unknown): number {

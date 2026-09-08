@@ -358,6 +358,71 @@
 
   <mat-card class="documento-card">
     <mat-card-content>
+      <div class="filtros-listado">
+        <mat-form-field appearance="outline">
+          <mat-label>Proveedor</mat-label>
+          <input matInput [(ngModel)]="filtroCliente" placeholder="Nombre o identificación" (keyup.enter)="buscar()" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Estado SRI</mat-label>
+          <mat-select [(ngModel)]="filtroEstadoEmision" (selectionChange)="buscar()">
+            <mat-option value="">Todos</mat-option>
+            @for (opcion of estadoEmisionOpciones; track opcion.value) {
+              <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha desde</mat-label>
+          <input
+            #fechaDesdeFiltroInput
+            matInput
+            [matDatepicker]="pickerDesdeFiltro"
+            [formControl]="fechaDesdeFiltroControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaDesdeFiltroRaw($event)"
+            (dateChange)="onFechaDesdeFiltroPickerChange($event.value)"
+            (blur)="syncFechaDesdeFiltroFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerDesdeFiltro"></mat-datepicker-toggle>
+          <mat-datepicker #pickerDesdeFiltro></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha hasta</mat-label>
+          <input
+            #fechaHastaFiltroInput
+            matInput
+            [matDatepicker]="pickerHastaFiltro"
+            [formControl]="fechaHastaFiltroControl"
+            placeholder="dd/mm/aaaa"
+            (input)="capturarFechaHastaFiltroRaw($event)"
+            (dateChange)="onFechaHastaFiltroPickerChange($event.value)"
+            (blur)="syncFechaHastaFiltroFromRaw($event)"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="pickerHastaFiltro"></mat-datepicker-toggle>
+          <mat-datepicker #pickerHastaFiltro></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="filtros-listado-acciones">
+        <button mat-raised-button color="primary" type="button" (click)="buscar()">
+          <mat-icon>search</mat-icon>
+          Buscar
+        </button>
+        <button mat-stroked-button type="button" (click)="limpiarFiltrosListado()">
+          <mat-icon>refresh</mat-icon>
+          Limpiar
+        </button>
+        <span class="spacer"></span>
+        <button mat-stroked-button type="button" (click)="exportarCSV()">
+          <mat-icon>download</mat-icon>
+          Exportar CSV
+        </button>
+      </div>
+
       <div class="table-toolbar">
         <span>{{ registros().length }} registro(s) encontrados</span>
         <span>{{ cargando() ? 'Consultando...' : 'Historial disponible' }}</span>

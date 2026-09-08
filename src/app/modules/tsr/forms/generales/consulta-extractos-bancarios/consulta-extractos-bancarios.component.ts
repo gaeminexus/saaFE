@@ -62,8 +62,13 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // `cargarExtractos()` ya no filtra en memoria sobre un `getAll()` cacheado: el período
+    // seleccionado viaja en la propia consulta al servidor. Antes daba igual el orden porque
+    // ambas llamadas terminaban recalculando sobre el mismo arreglo completo ya en memoria; ahora
+    // hay que esperar a que `cargarPeriodos()` resuelva el default (mes anterior) antes de pedir
+    // los extractos, o la primera consulta saldría con "todos los períodos" por un instante y
+    // traería la tabla entera sin necesidad.
     this.cargarPeriodos();
-    this.cargarExtractos();
   }
 
   cargarPeriodos(): void {
@@ -80,11 +85,12 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
         // revisar el mes en curso (que normalmente aun no tiene extracto).
         this.periodoSeleccionado = this.obtenerCodigoPeriodoAnterior() ?? this.periodos[0]?.codigo ?? TODOS_LOS_PERIODOS;
         this.isLoadingPeriodos = false;
-        this.aplicarFiltro();
+        this.cargarExtractos();
       },
       error: () => {
         this.periodos = [];
         this.isLoadingPeriodos = false;
+        this.cargarExtractos();
       },
     });
   }
@@ -103,12 +109,60 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
     return periodoAnterior ? periodoAnterior.codigo : null;
   }
 
+  /**
+   * `POST .../selectByCriteria` sobre `TSR.EXBC` (ítem 2.3 del lote 2 — antes `getAll()` pelado
+   * con filtro de período y texto libre en memoria). Campos reales confirmados leyendo la
+   * entidad `ExtractoBancario` en saaBE: `periodo` (relación), `cuentaBancaria.banco.nombre` y
+   * `cuentaBancaria.numeroCuenta` (dos y un salto respectivamente), `archivoNombre` y
+   * `usuarioCreacion` (directos).
+   *
+   * ⚠️ El LIKE genérico no envuelve la columna en `UPPER()` — se manda el texto en mayúsculas,
+   * misma convención que el resto del sistema para este mecanismo.
+   */
   cargarExtractos(): void {
     this.isLoading = true;
-    this.extractoBancarioService.getAll().subscribe({
+    const criterios: DatosBusqueda[] = [];
+
+    if (this.periodoSeleccionado !== TODOS_LOS_PERIODOS) {
+      const dbPeriodo = new DatosBusqueda();
+      dbPeriodo.asignaValorConCampoPadre(TipoDatos.LONG, 'periodo', 'codigo', String(this.periodoSeleccionado), TipoComandosBusqueda.IGUAL);
+      criterios.push(dbPeriodo);
+    }
+
+    const texto = this.filtroTexto.trim().toUpperCase();
+    if (texto) {
+      const dbOpen = new DatosBusqueda();
+      dbOpen.usaParentesis(TipoComandosBusqueda.ABRE_PARENTESIS);
+      criterios.push(dbOpen);
+
+      const dbBanco = new DatosBusqueda();
+      dbBanco.asignaValorConCampoPadre(TipoDatos.STRING, 'cuentaBancaria.banco', 'nombre', texto, TipoComandosBusqueda.LIKE);
+      criterios.push(dbBanco);
+
+      const dbCuenta = new DatosBusqueda();
+      dbCuenta.asignaValorConCampoPadre(TipoDatos.STRING, 'cuentaBancaria', 'numeroCuenta', texto, TipoComandosBusqueda.LIKE);
+      dbCuenta.setTipoOperadorLogico(TipoComandosBusqueda.OR);
+      criterios.push(dbCuenta);
+
+      const dbArchivo = new DatosBusqueda();
+      dbArchivo.asignaUnCampoSinTrunc(TipoDatos.STRING, 'archivoNombre', texto, TipoComandosBusqueda.LIKE);
+      dbArchivo.setTipoOperadorLogico(TipoComandosBusqueda.OR);
+      criterios.push(dbArchivo);
+
+      const dbUsuario = new DatosBusqueda();
+      dbUsuario.asignaUnCampoSinTrunc(TipoDatos.STRING, 'usuarioCreacion', texto, TipoComandosBusqueda.LIKE);
+      dbUsuario.setTipoOperadorLogico(TipoComandosBusqueda.OR);
+      criterios.push(dbUsuario);
+
+      const dbClose = new DatosBusqueda();
+      dbClose.usaParentesis(TipoComandosBusqueda.CIERRA_PARENTESIS);
+      criterios.push(dbClose);
+    }
+
+    this.extractoBancarioService.selectByCriteria(criterios).subscribe({
       next: (data) => {
         this.extractos = Array.isArray(data) ? data : [];
-        this.aplicarFiltro();
+        this.extractosFiltrados = this.extractos;
         this.isLoading = false;
       },
       error: () => {
@@ -119,22 +173,14 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
     });
   }
 
-  aplicarFiltro(): void {
-    const texto = this.filtroTexto.trim().toLowerCase();
-    this.extractosFiltrados = this.extractos.filter((e) => {
-      const coincidePeriodo =
-        this.periodoSeleccionado === TODOS_LOS_PERIODOS || e.periodo?.codigo === this.periodoSeleccionado;
-      if (!coincidePeriodo) {
-        return false;
-      }
-      if (!texto) {
-        return true;
-      }
-      const base = `${e.cuentaBancaria?.banco?.nombre ?? ''} ${e.cuentaBancaria?.numeroCuenta ?? ''} ${
-        e.archivoNombre ?? ''
-      } ${e.usuarioCreacion ?? ''}`.toLowerCase();
-      return base.includes(texto);
-    });
+  /**
+   * El texto ya no filtra en memoria en cada tecla (`(ngModelChange)` disparaba `aplicarFiltro()`
+   * al instante) — ahora es una consulta al servidor, y repetirla en cada tecla lo martillaría
+   * sin necesidad. El template pasa a disparar `buscar()` con Enter o con el botón, no con cada
+   * tecla; ver el reporte del lote 2 (cambio de comportamiento explícito, ítem 2.3).
+   */
+  buscar(): void {
+    this.cargarExtractos();
   }
 
   verDetalle(extracto: ExtractoBancario): void {

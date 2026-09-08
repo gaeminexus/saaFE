@@ -10,7 +10,7 @@
   <div class="filtros-row">
     <mat-form-field appearance="outline" class="periodo-field">
       <mat-label>Período Contable</mat-label>
-      <mat-select [(ngModel)]="periodoSeleccionado" (selectionChange)="aplicarFiltro()">
+      <mat-select [(ngModel)]="periodoSeleccionado" (selectionChange)="buscar()">
         <mat-option [value]="TODOS_LOS_PERIODOS">Todos los períodos</mat-option>
         @for (periodo of periodos; track periodo.codigo) {
         <mat-option [value]="periodo.codigo">{{ periodo.nombre }}</mat-option>
@@ -23,9 +23,13 @@
 
     <mat-form-field appearance="outline" class="filter-field">
       <mat-label>Filtrar por banco, cuenta, archivo o usuario</mat-label>
-      <input matInput [(ngModel)]="filtroTexto" (ngModelChange)="aplicarFiltro()" />
+      <input matInput [(ngModel)]="filtroTexto" (keyup.enter)="buscar()" />
       <mat-icon matPrefix>search</mat-icon>
     </mat-form-field>
+
+    <button mat-icon-button matTooltip="Buscar" (click)="buscar()" [disabled]="isLoading">
+      <mat-icon>search</mat-icon>
+    </button>
   </div>
 
   @if (isLoading) {

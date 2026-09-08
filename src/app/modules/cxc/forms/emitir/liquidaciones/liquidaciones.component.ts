@@ -9,11 +9,13 @@ import { forkJoin, of } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { criteriosDocumentoEmitido } from '../../../../../shared/utils/criterios-documento-emitido.util';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -68,6 +70,8 @@ const ESTADO_ANULADO = 0;
 })
 export class LiquidacionesComponent implements OnInit {
   @ViewChild('fechaLiquidacionInput', { read: ElementRef }) fechaLiquidacionInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaDesdeFiltroInput', { read: ElementRef }) fechaDesdeFiltroInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaFiltroInput', { read: ElementRef }) fechaHastaFiltroInputRef!: ElementRef<HTMLInputElement>;
 
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -77,6 +81,7 @@ export class LiquidacionesComponent implements OnInit {
   private fileService = inject(FileService);
   private service = inject(LiquidacionEmitirService);
   private appState = inject(AppStateService);
+  private exportService = inject(ExportService);
   private detalleService = inject(DetalleLiquidacionEmitirService);
   private pathService = inject(PathLiquidacionCompraService);
   private facturadorService = inject(FacturadorService);
@@ -135,6 +140,23 @@ export class LiquidacionesComponent implements OnInit {
   formaPagoSri: DetalleSri | null = null;
   formaPagoInterna: DetalleSri | null = null;
 
+  // ── Filtros del listado (ítem 2.4 del lote 2 — no tenía ninguno) ──
+  // Default: mes actual por fecha, para no traer la tabla entera en un ingreso sin filtrar.
+  filtroCliente = '';
+  filtroEstadoEmision: number | '' = '';
+  fechaDesdeFiltroControl = new UntypedFormControl(this.primerDiaMesActual());
+  fechaHastaFiltroControl = new UntypedFormControl(this.ultimoDiaMesActual());
+  private _rawFechaDesdeFiltro = '';
+  private _rawFechaHastaFiltro = '';
+  readonly estadoEmisionOpciones = [
+    { value: 1, label: 'Ingresada' },
+    { value: 3, label: 'Firmada' },
+    { value: 4, label: 'Enviada' },
+    { value: 5, label: 'Autorizada' },
+    { value: 6, label: 'No autorizada' },
+    { value: 0, label: 'Anulada' },
+  ];
+
   registroId: number | null = null;
   fechaControl = new UntypedFormControl(new Date());
   observacion = '';
@@ -184,7 +206,27 @@ export class LiquidacionesComponent implements OnInit {
     this.cargarCatalogos();
     this.cargarCatalogosProducto();
     this.cargarFacturadorYPtoEmision();
+    setTimeout(() => {
+      const desde = this.fechaDesdeFiltroControl.value as Date | null;
+      const hasta = this.fechaHastaFiltroControl.value as Date | null;
+      if (this.fechaDesdeFiltroInputRef?.nativeElement && desde) {
+        this.fechaDesdeFiltroInputRef.nativeElement.value = this.funcionesDatosS.formatoFecha(desde, FuncionesDatosService.SOLO_FECHA) || '';
+      }
+      if (this.fechaHastaFiltroInputRef?.nativeElement && hasta) {
+        this.fechaHastaFiltroInputRef.nativeElement.value = this.funcionesDatosS.formatoFecha(hasta, FuncionesDatosService.SOLO_FECHA) || '';
+      }
+    });
     this.cargarRegistros();
+  }
+
+  private primerDiaMesActual(): Date {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  }
+
+  private ultimoDiaMesActual(): Date {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
   }
 
   get accionPrincipal(): string {
@@ -195,9 +237,26 @@ export class LiquidacionesComponent implements OnInit {
     this.cargarRegistros();
   }
 
+  /**
+   * `POST .../selectByCriteria` (ítem 2.4 del lote 2 — antes `getAll()` pelado, sin filtros de
+   * ningún tipo). Mismo criterio compartido con Documentos Electrónicos (`criteriosDocumentoEmitido`):
+   * `LiquidacionCompra.fecha` es `LocalDateTime` (confirmado en la entidad), así que va con
+   * `fechaConHora = true`.
+   */
   cargarRegistros(): void {
     this.cargando.set(true);
-    this.service.getAll().subscribe({
+    const criterios = criteriosDocumentoEmitido(
+      {
+        textoCliente: this.filtroCliente,
+        fechaDesde: this.fechaDesdeFiltroControl.value,
+        fechaHasta: this.fechaHastaFiltroControl.value,
+        estadoEmision: this.filtroEstadoEmision !== '' ? Number(this.filtroEstadoEmision) : null,
+      },
+      'titular',
+      true,
+    );
+
+    this.service.selectByCriteria(criterios).subscribe({
       next: (data) => {
         const registros = data || [];
         this.registros.set(registros);
@@ -209,6 +268,109 @@ export class LiquidacionesComponent implements OnInit {
         this.cargando.set(false);
       },
     });
+  }
+
+  buscar(): void {
+    this.cargarRegistros();
+  }
+
+  limpiarFiltrosListado(): void {
+    this.filtroCliente = '';
+    this.filtroEstadoEmision = '';
+    this.fechaDesdeFiltroControl.setValue(this.primerDiaMesActual(), { emitEvent: false });
+    this.fechaHastaFiltroControl.setValue(this.ultimoDiaMesActual(), { emitEvent: false });
+    const desdeTexto = this.funcionesDatosS.formatoFecha(this.fechaDesdeFiltroControl.value, FuncionesDatosService.SOLO_FECHA) || '';
+    const hastaTexto = this.funcionesDatosS.formatoFecha(this.fechaHastaFiltroControl.value, FuncionesDatosService.SOLO_FECHA) || '';
+    if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = desdeTexto;
+    if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = hastaTexto;
+    this.cargarRegistros();
+  }
+
+  capturarFechaDesdeFiltroRaw(event: Event): void {
+    this._rawFechaDesdeFiltro = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFiltroFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesdeFiltro || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesdeFiltro = '';
+    const date = this.parseFechaDDMMYYYY(rawValue);
+    if (date) {
+      this.fechaDesdeFiltroControl.setValue(date, { emitEvent: false });
+      const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+      setTimeout(() => {
+        if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = formatted;
+      });
+    }
+  }
+
+  onFechaDesdeFiltroPickerChange(date: Date | null | undefined): void {
+    this.fechaDesdeFiltroControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  capturarFechaHastaFiltroRaw(event: Event): void {
+    this._rawFechaHastaFiltro = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFiltroFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHastaFiltro || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHastaFiltro = '';
+    const date = this.parseFechaDDMMYYYY(rawValue);
+    if (date) {
+      this.fechaHastaFiltroControl.setValue(date, { emitEvent: false });
+      const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+      setTimeout(() => {
+        if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = formatted;
+      });
+    }
+  }
+
+  onFechaHastaFiltroPickerChange(date: Date | null | undefined): void {
+    this.fechaHastaFiltroControl.setValue(date || null, { emitEvent: false });
+    const formatted = date ? this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '' : '';
+    setTimeout(() => {
+      if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = formatted;
+    });
+  }
+
+  private parseFechaDDMMYYYY(rawValue: string): Date | null {
+    if (!rawValue) return null;
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return null;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (isNaN(dia) || dia < 1 || dia > 31 || isNaN(mes) || mes < 0 || mes > 11 || isNaN(anio) || anio < 1000 || anio > 9999) {
+      return null;
+    }
+    const date = new Date(anio, mes, dia);
+    if (date.getFullYear() !== anio || date.getMonth() !== mes || date.getDate() !== dia) return null;
+    return date;
+  }
+
+  /** CSV del listado (ítem 2.4 del lote 2 — no tenía exportación). */
+  exportarCSV(): void {
+    const rows = this.dataSourceRegistros.data;
+    if (!rows.length) {
+      this.mostrarError('No hay datos para exportar');
+      return;
+    }
+
+    const flat = rows.map((r) => ({
+      id: r.id,
+      fecha: this.funcionesDatosS.formatoFecha(r.fecha, FuncionesDatosService.SOLO_FECHA) || '',
+      numero: r.numero || r.secuencial || '',
+      proveedor: this.displayPersona(r.titular || null),
+      total: Number(r.total || 0),
+      estado: this.estadoLabel(r.estado),
+      estadoEmision: this.estadoEmisionLabel(r.estadoEmision),
+    }));
+
+    const headers = ['ID', 'Fecha', 'Número', 'Proveedor', 'Total', 'Estado', 'Estado SRI'];
+    const keys = ['id', 'fecha', 'numero', 'proveedor', 'total', 'estado', 'estadoEmision'];
+    const fecha = new Date().toISOString().slice(0, 10);
+    this.exportService.exportToCSV(flat, `liquidaciones_${fecha}`, headers, keys);
   }
 
   private cargarCatalogosProducto(): void {

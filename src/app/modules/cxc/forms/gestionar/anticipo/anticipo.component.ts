@@ -9,6 +9,9 @@ import { AppStateService } from '../../../../../shared/services/app-state.servic
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -72,13 +75,14 @@ export class AnticipoComponent implements OnInit {
   dataSource = new MatTableDataSource<AnticipoCliente>([]);
   columnas = ['id', 'fechaAnticipo', 'titular', 'numeroDoc', 'valor', 'estado', 'acciones'];
 
-  private registrosTodos: AnticipoCliente[] = [];
-
-  // Filtros de la lista (ítem 1.2 del lote — la pantalla no tenía ninguno)
+  // Filtros de la lista (ítem 1.2 del lote 1 los agregó; ítem 2.2 del lote 2 los pasó a
+  // `selectByCriteria` en vez de filtrar en cliente sobre `getAll()`).
+  // Default: mes actual por `fechaAnticipo` — sin esto un ingreso sin tocar nada traía la tabla
+  // entera (regla del lote 2: el filtro vacío no debe traer todo).
   filtroCliente = '';
   filtroEstado: number | '' = '';
-  fechaDesdeFiltroControl = new UntypedFormControl(null);
-  fechaHastaFiltroControl = new UntypedFormControl(null);
+  fechaDesdeFiltroControl = new UntypedFormControl(this.primerDiaMesActual());
+  fechaHastaFiltroControl = new UntypedFormControl(this.ultimoDiaMesActual());
 
   id: number | null = null;
   fechaAnticipoControl = new UntypedFormControl(new Date());
@@ -90,7 +94,27 @@ export class AnticipoComponent implements OnInit {
   observacion = '';
 
   ngOnInit(): void {
+    setTimeout(() => {
+      const desde = this.fechaDesdeFiltroControl.value as Date | null;
+      const hasta = this.fechaHastaFiltroControl.value as Date | null;
+      if (this.fechaDesdeFiltroInputRef?.nativeElement && desde) {
+        this.fechaDesdeFiltroInputRef.nativeElement.value = this.funcionesDatosS.formatoFecha(desde, FuncionesDatosService.SOLO_FECHA) || '';
+      }
+      if (this.fechaHastaFiltroInputRef?.nativeElement && hasta) {
+        this.fechaHastaFiltroInputRef.nativeElement.value = this.funcionesDatosS.formatoFecha(hasta, FuncionesDatosService.SOLO_FECHA) || '';
+      }
+    });
     this.cargarRegistros();
+  }
+
+  private primerDiaMesActual(): Date {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  }
+
+  private ultimoDiaMesActual(): Date {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
   }
 
   buscarTitular(): void {
@@ -197,17 +221,26 @@ export class AnticipoComponent implements OnInit {
     this.saldoAnticipos.set(0);
   }
 
+  /**
+   * `POST /antc/selectByCriteria` (ítem 2.2 del lote 2 — antes era `getAll()` pelado y filtraba
+   * en cliente). Campos reales de la entidad `AnticipoCliente` (`CBR.ANTC`), confirmados leyendo
+   * la entidad en saaBE, no asumidos: `titular` (relación), `fechaAnticipo` (`LocalDate`),
+   * `estado` (`Long`).
+   */
   cargarRegistros(): void {
     this.cargando.set(true);
-    this.anticipoService.getAll().subscribe({
+    const criterios = this.construirCriterios();
+
+    this.anticipoService.selectByCriteria(criterios).subscribe({
       next: (data) => {
-        this.registrosTodos = (data || []).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
-        this.aplicarFiltros();
+        const rows = (data || []).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+        this.registros.set(rows);
+        this.dataSource.data = rows;
         this.cargando.set(false);
       },
       error: () => {
-        this.registrosTodos = [];
-        this.aplicarFiltros();
+        this.registros.set([]);
+        this.dataSource.data = [];
         this.cargando.set(false);
         this.mostrarError('No se pudieron cargar los anticipos');
       },
@@ -215,44 +248,85 @@ export class AnticipoComponent implements OnInit {
   }
 
   buscar(): void {
-    this.aplicarFiltros();
+    this.cargarRegistros();
   }
 
   limpiarFiltros(): void {
     this.filtroCliente = '';
     this.filtroEstado = '';
-    this.fechaDesdeFiltroControl.setValue(null, { emitEvent: false });
-    this.fechaHastaFiltroControl.setValue(null, { emitEvent: false });
-    if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = '';
-    if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = '';
-    this.aplicarFiltros();
+    this.fechaDesdeFiltroControl.setValue(this.primerDiaMesActual(), { emitEvent: false });
+    this.fechaHastaFiltroControl.setValue(this.ultimoDiaMesActual(), { emitEvent: false });
+    const desdeTexto = this.funcionesDatosS.formatoFecha(this.fechaDesdeFiltroControl.value, FuncionesDatosService.SOLO_FECHA) || '';
+    const hastaTexto = this.funcionesDatosS.formatoFecha(this.fechaHastaFiltroControl.value, FuncionesDatosService.SOLO_FECHA) || '';
+    if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = desdeTexto;
+    if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = hastaTexto;
+    this.cargarRegistros();
   }
 
-  private aplicarFiltros(): void {
-    const filtro = this.filtroCliente.trim().toLowerCase();
+  /**
+   * ⚠️ El LIKE genérico de `selectByCriteria` (`EntityDaoImpl` en saaBE) NO envuelve la columna
+   * en `UPPER()`, solo mayusculiza el parámetro — si el dato guardado no está en mayúsculas, no
+   * matchea. Se manda el texto ya en mayúsculas, misma convención que ya usa el resto del sistema
+   * para este mismo genérico (p. ej. `AnticiposComponent` de `rrh`).
+   */
+  private construirCriterios(): DatosBusqueda[] {
+    const criterios: DatosBusqueda[] = [];
+
+    const texto = this.filtroCliente.trim().toUpperCase();
+    if (texto) {
+      const dbOpen = new DatosBusqueda();
+      dbOpen.usaParentesis(TipoComandosBusqueda.ABRE_PARENTESIS);
+      criterios.push(dbOpen);
+
+      const dbIdent = new DatosBusqueda();
+      dbIdent.asignaValorConCampoPadre(TipoDatosBusqueda.STRING, 'titular', 'identificacion', texto, TipoComandosBusqueda.LIKE);
+      criterios.push(dbIdent);
+
+      const dbRazon = new DatosBusqueda();
+      dbRazon.asignaValorConCampoPadre(TipoDatosBusqueda.STRING, 'titular', 'razonSocial', texto, TipoComandosBusqueda.LIKE);
+      dbRazon.setTipoOperadorLogico(TipoComandosBusqueda.OR);
+      criterios.push(dbRazon);
+
+      const dbNombre = new DatosBusqueda();
+      dbNombre.asignaValorConCampoPadre(TipoDatosBusqueda.STRING, 'titular', 'nombre', texto, TipoComandosBusqueda.LIKE);
+      dbNombre.setTipoOperadorLogico(TipoComandosBusqueda.OR);
+      criterios.push(dbNombre);
+
+      const dbClose = new DatosBusqueda();
+      dbClose.usaParentesis(TipoComandosBusqueda.CIERRA_PARENTESIS);
+      criterios.push(dbClose);
+    }
+
+    if (this.filtroEstado !== '') {
+      const db = new DatosBusqueda();
+      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'estado', String(this.filtroEstado), TipoComandosBusqueda.IGUAL);
+      criterios.push(db);
+    }
+
     const desde: Date | null = this.fechaDesdeFiltroControl.value;
     const hasta: Date | null = this.fechaHastaFiltroControl.value;
+    if (desde && hasta) {
+      const db = new DatosBusqueda();
+      db.asignaUnCampoConBetween('fechaAnticipo', TipoDatosBusqueda.DATE, this.soloFechaISO(desde), TipoComandosBusqueda.BETWEEN, this.soloFechaISO(hasta));
+      criterios.push(db);
+    } else if (desde) {
+      const db = new DatosBusqueda();
+      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE, 'fechaAnticipo', this.soloFechaISO(desde), TipoComandosBusqueda.MAYOR_IGUAL);
+      criterios.push(db);
+    } else if (hasta) {
+      const db = new DatosBusqueda();
+      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.DATE, 'fechaAnticipo', this.soloFechaISO(hasta), TipoComandosBusqueda.MENOR_IGUAL);
+      criterios.push(db);
+    }
 
-    const filtrados = this.registrosTodos.filter((row) => {
-      if (filtro) {
-        const nombre = String(row.titular?.razonSocial || row.titular?.nombre || '').toLowerCase();
-        const identificacion = String(row.titular?.identificacion || '').toLowerCase();
-        if (!nombre.includes(filtro) && !identificacion.includes(filtro)) return false;
-      }
+    return criterios;
+  }
 
-      if (this.filtroEstado !== '' && Number(row.estado) !== Number(this.filtroEstado)) {
-        return false;
-      }
-
-      const fecha = this.toDateObj(row.fechaAnticipo);
-      if (desde && this.soloFecha(fecha) < this.soloFecha(desde)) return false;
-      if (hasta && this.soloFecha(fecha) > this.soloFecha(hasta)) return false;
-
-      return true;
-    });
-
-    this.registros.set(filtrados);
-    this.dataSource.data = filtrados;
+  private soloFechaISO(fecha: Date): string {
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 
   capturarFechaDesdeFiltroRaw(event: Event): void {
@@ -313,11 +387,6 @@ export class AnticipoComponent implements OnInit {
     return date;
   }
 
-  private soloFecha(value: Date): number {
-    const date = new Date(value);
-    date.setHours(0, 0, 0, 0);
-    return date.getTime();
-  }
 
   estadoLabel(estado: number | null | undefined): string {
     const e = Number(estado || ESTADO_ANTICIPO_PENDIENTE);

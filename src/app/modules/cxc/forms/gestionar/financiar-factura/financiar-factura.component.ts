@@ -4,6 +4,9 @@ import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/f
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { FormaPagoFactura } from '../../../model/forma-pago-factura';
 import { FacturaEmitirService } from '../../../service/emitir/factura-emitir.service';
@@ -13,6 +16,9 @@ type Periodicidad = 'SEMANAL' | 'QUINCENAL' | 'MENSUAL';
 type ModoMonto = 'PORCENTAJE' | 'VALOR_FIJO';
 
 const FORMA_PAGO_CREDITO = '20';
+/** Solo facturas autorizadas (estado 5) y en emisión "Ingresada" (estadoEmision 1) son financiables. */
+const ESTADO_FACTURA_FINANCIABLE = 5;
+const ESTADO_EMISION_FACTURA_FINANCIABLE = 1;
 
 interface CuotaPlan {
   numero: number;
@@ -100,12 +106,26 @@ export class FinanciarFacturaComponent implements OnInit {
     this.cargarFacturas();
   }
 
+  /**
+   * `POST .../selectByCriteria` sobre `Factura` (ítem 2.6 del lote 2 — antes `getAll()` pelado,
+   * filtrando estado/estadoEmision en memoria). La elegibilidad (estado=5, estadoEmision=1) ya
+   * era el único filtro real de esta pantalla — no hacía falta agregar ninguno nuevo, ni un
+   * default de fecha: ese hardcode YA impedía traer la tabla entera. La búsqueda libre
+   * (`busqueda`/`facturasFiltradas`) sigue en cliente a propósito: opera sobre el conjunto ya
+   * angosto de facturas elegibles y filtra al instante en cada tecla — pasarla al servidor solo
+   * agregaría un viaje de red por tecla sin ganar nada.
+   */
   cargarFacturas(): void {
     this.cargando.set(true);
-    this.facturaService.getAll().subscribe({
+
+    const dbEstado = new DatosBusqueda();
+    dbEstado.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'estado', String(ESTADO_FACTURA_FINANCIABLE), TipoComandosBusqueda.IGUAL);
+    const dbEstadoEmision = new DatosBusqueda();
+    dbEstadoEmision.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'estadoEmision', String(ESTADO_EMISION_FACTURA_FINANCIABLE), TipoComandosBusqueda.IGUAL);
+
+    this.facturaService.selectByCriteria([dbEstado, dbEstadoEmision]).subscribe({
       next: (data) => {
         const elegibles = (data || [])
-          .filter((f) => Number(f.estado) === 5 && Number(f.estadoEmision) === 1)
           .map((f) => ({ ...f, total: this.toNumber(f.total) }))
           .sort((a, b) => Number(b.id) - Number(a.id));
 

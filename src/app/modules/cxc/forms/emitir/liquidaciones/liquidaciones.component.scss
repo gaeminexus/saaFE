@@ -23,3 +23,26 @@
     color: #1e4620;
   }
 }
+
+.filtros-listado {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.filtros-listado-acciones {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 1100px) {
+  .filtros-listado {
+    grid-template-columns: 1fr;
+  }
+}
