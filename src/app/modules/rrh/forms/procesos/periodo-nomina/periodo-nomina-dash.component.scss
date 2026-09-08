@@ -19,6 +19,18 @@
     flex: 1 1 auto;
   }
 
+  .accion-con-pista {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .pista {
+    font-size: $font-size-sm;
+    color: $text-muted;
+  }
+
   .aviso ul {
     margin: $spacing-xs 0 0;
     padding-left: $spacing-md;

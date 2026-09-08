@@ -109,6 +109,19 @@ export class PeriodoNominaService {
   }
 
   /**
+   * POST /rest/prdn/descontabilizar/{id} — anula los asientos de rol y de provisiones del
+   * período, limpia las referencias y lo devuelve a CALCULADO. Sólo desde CONTABILIZADO; rechaza
+   * si ya hay órdenes de pago generadas o si algún asiento cayó en un período contable
+   * mayorizado/cerrado. Espejo exacto de `reabrir` (`PeriodoNominaRest.java:234-262`).
+   */
+  descontabilizar(idPeriodo: number, motivo: string): Observable<unknown> {
+    return this.proceso<unknown>(`/descontabilizar/${idPeriodo}`, {
+      motivo,
+      usuarioRegistro: usuarioSesion(),
+    });
+  }
+
+  /**
    * POST /rest/prdn/contabilizar/{id} — asiento del **rol**, guardado en `PRDNASNT`.
    * Responde 204 sin cuerpo si el período es histórico, que llega aquí como `null`.
    */

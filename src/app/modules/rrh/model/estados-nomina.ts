@@ -44,7 +44,8 @@ export type AccionPeriodo =
   | 'contabilizar'
   | 'contabilizarProvisiones'
   | 'cerrar'
-  | 'reabrir';
+  | 'reabrir'
+  | 'descontabilizar';
 
 /**
  * Estados en los que el backend admite cada proceso, **verificados contra su código**, no
@@ -153,6 +154,15 @@ export function accionesDisponibles(periodo: PeriodoNomina | null): Set<AccionPe
     acciones.add('reabrir');
   }
 
+  // Descontabilizar: sólo desde CONTABILIZADO (2026-09-08, ContabilizacionNominaService en
+  // saaBE). Anula los asientos de rol y provisiones y devuelve el período a CALCULADO — el
+  // backend además rechaza si ya hay órdenes de pago generadas o si algún asiento cayó en un
+  // período contable mayorizado/cerrado, pero eso no se puede saber acá sin consultar: ese
+  // rechazo llega como el error real de la llamada, no como un motivo estático de este archivo.
+  if (estado === EstadoPeriodo.CONTABILIZADO) {
+    acciones.add('descontabilizar');
+  }
+
   return acciones;
 }
 
@@ -192,6 +202,8 @@ export function motivoBloqueado(periodo: PeriodoNomina | null, accion: AccionPer
         return 'Ya tiene un asiento del rol emitido; reabrir exigiría reversar contabilidad primero.';
       }
       return null;
+    case 'descontabilizar':
+      return 'Requiere el período Contabilizado.';
     default:
       return null;
   }

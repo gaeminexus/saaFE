@@ -153,21 +153,51 @@
         Ver asiento de provisiones
       </button>
       <span class="separador"></span>
-      <button
-        mat-stroked-button
-        color="warn"
-        (click)="reabrir()"
-        [disabled]="!puede('reabrir')"
-        [matTooltip]="motivo('reabrir') ?? ''"
-        [matTooltipDisabled]="!motivo('reabrir')"
-      >
-        <mat-icon>lock_open</mat-icon>
-        Reabrir
-      </button>
+      <div class="accion-con-pista">
+        <button
+          mat-stroked-button
+          color="warn"
+          (click)="reabrir()"
+          [disabled]="!puede('reabrir')"
+          [matTooltip]="motivo('reabrir') ?? ''"
+          [matTooltipDisabled]="!motivo('reabrir')"
+        >
+          <mat-icon>lock_open</mat-icon>
+          Reabrir
+        </button>
+        <ng-container [ngTemplateOutlet]="pistaAccion" [ngTemplateOutletContext]="{ accion: 'reabrir' }" />
+      </div>
+      <div class="accion-con-pista">
+        <button
+          mat-stroked-button
+          color="warn"
+          (click)="descontabilizar()"
+          [disabled]="!puede('descontabilizar')"
+          [matTooltip]="motivo('descontabilizar') ?? ''"
+          [matTooltipDisabled]="!motivo('descontabilizar')"
+        >
+          <mat-icon>undo</mat-icon>
+          Descontabilizar
+        </button>
+        <ng-container [ngTemplateOutlet]="pistaAccion" [ngTemplateOutletContext]="{ accion: 'descontabilizar' }" />
+      </div>
       @if (ocupado()) {
         <mat-spinner diameter="24"></mat-spinner>
       }
     </div>
+
+    <!--
+      Pista visible para un botón deshabilitado — el tooltip de Material no dispara sobre un
+      `mat-*-button` con `disabled`, así que "Reabrir"/"Descontabilizar" quedaban mudos con el
+      mouse encima (reporte de usuario, 2026-09-08: "No me saca nada cuando pongo el mouse sobre
+      reabrir"). Un solo template para los dos botones — la razón sale siempre de `motivo(accion)`,
+      no se escribe el texto dos veces.
+    -->
+    <ng-template #pistaAccion let-accion="accion">
+      @if (motivo(accion); as texto) {
+        <span class="pista">{{ texto }}</span>
+      }
+    </ng-template>
 
     <!-- Mensajes de la validación: en panel, no en snackbar -->
     @if (mensajesValidacion(); as mensajes) {

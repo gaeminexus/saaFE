@@ -12,6 +12,10 @@ import { catchError } from 'rxjs/operators';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import {
   AccionPeriodo,
@@ -305,6 +309,45 @@ export class PeriodoNominaDashComponent implements OnInit {
         this.refrescar();
       });
     });
+  }
+
+  /**
+   * Deshace la contabilización: anula el asiento del rol y el de provisiones, y el período
+   * vuelve a CALCULADO. Es una acción contable, no un simple cambio de estado — por eso, a
+   * diferencia de `reabrir`, pide una confirmación explícita antes del motivo. El backend además
+   * rechaza si ya hay órdenes de pago generadas o si algún asiento cayó en un período contable
+   * mayorizado/cerrado; ese motivo llega tal cual en el error de la llamada.
+   */
+  descontabilizar(): void {
+    const data: ConfirmDialogData = {
+      title: 'Descontabilizar el período',
+      message:
+        'Se ANULARÁN el asiento contable del rol y el de provisiones de este período, y volverá ' +
+        'al estado Calculado. No se puede deshacer solo: para volver a Contabilizado hay que ' +
+        'generar los asientos de nuevo.',
+      type: 'danger',
+      confirmText: 'Sí, descontabilizar',
+    };
+
+    this.dialog
+      .open(ConfirmDialogComponent, { width: '480px', data })
+      .afterClosed()
+      .subscribe((confirmado: boolean) => {
+        if (!confirmado) return;
+
+        this.pedirMotivo('Descontabilizar el período', 'Motivo de la descontabilización').subscribe(
+          (motivo) => {
+            if (!motivo) return;
+            this.ejecutar(
+              this.periodoService.descontabilizar(this.periodo()!.codigo, motivo),
+              () => {
+                this.avisar('Período descontabilizado; volvió a Calculado.');
+                this.refrescar();
+              },
+            );
+          },
+        );
+      });
   }
 
   onExcluirEmpleado(evento: { idEmpleado: number; nombre: string }): void {
