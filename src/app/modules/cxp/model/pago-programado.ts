@@ -175,8 +175,14 @@ export interface RespuestaBancoResponse {
  */
 export interface ConfirmarManualRequest {
   idsPagos: number[];
-  /** Referencia o N° de transacción del banco; queda en el pago y el asiento. */
+  /** Referencia o N° de transacción del banco para los pagos sin entrada en `referenciasPorPago`. */
   referencia?: string;
+  /**
+   * Referencia bancaria específica por pago (idPago → referencia), para cuando cada pago del
+   * lote recibió una referencia distinta del banco. Gana sobre `referencia` para el pago que
+   * tenga entrada acá; si un pago no tiene entrada, no se manda vacío — se omite del objeto.
+   */
+  referenciasPorPago?: Record<number, string>;
   /** Fecha real del pago (yyyy-MM-dd). Es la fecha del asiento contable. */
   fechaPago?: string;
   /** Nota que se agrega a la observación de cada pago. */

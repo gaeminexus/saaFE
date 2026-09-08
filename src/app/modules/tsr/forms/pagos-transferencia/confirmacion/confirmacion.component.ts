@@ -7,7 +7,6 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 import { ActivatedRoute } from '@angular/router';
-import { catchError, forkJoin, map, of } from 'rxjs';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -256,11 +255,9 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
 
   /**
    * El motivo del diálogo se guarda como parte de la observación del pago. Fecha y observación
-   * son las mismas para todo el lote; la referencia bancaria es por pago (contrato
-   * docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §3.2) — como `confirmarManual` solo acepta
-   * UNA referencia para toda la lista de `idsPagos`, se llama una vez por pago (en paralelo) en
-   * vez de una sola vez para el lote entero. No es un cambio a la lógica de confirmación: es la
-   * única forma de que cada pago viaje con su propia referencia sin tocar el endpoint.
+   * son las mismas para todo el lote; la referencia bancaria va por pago en `referenciasPorPago`
+   * (contrato docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §3.2 + el `POST /pgtr/confirmarManual`
+   * ya extendido) — una sola llamada para todo el lote, cada pago con su propia referencia.
    */
   private ejecutarConfirmacionManual(motivo: string): void {
     this.confirmandoManual.set(true);
@@ -268,51 +265,32 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
     this.confResultado.set(null);
 
     const nota = [this.confObservacion.trim(), motivo].filter((t) => !!t).join(' | ');
-    const fechaPago = this.fechaISO(this.confFecha);
-    const idUsuario = this.idUsuarioSesion();
     const referencias = this.referenciasPorPago();
-    const ids = Array.from(this.confSeleccionados);
+    const referenciasPorPago: Record<number, string> = {};
+    for (const idPago of this.confSeleccionados) {
+      const ref = (referencias[idPago] || '').trim();
+      if (ref) referenciasPorPago[idPago] = ref;
+    }
 
-    const llamadas = ids.map((idPago) =>
-      this.pagoS.confirmarManual({
-        idsPagos: [idPago],
-        referencia: (referencias[idPago] || '').trim() || undefined,
-        fechaPago,
-        observacion: `Confirmación manual: ${nota}`,
-        idUsuario,
-      }).pipe(
-        map((resp) => ({ ok: true as const, resp })),
-        catchError((err: Error) => of({ ok: false as const, idPago, mensaje: err.message })),
-      )
-    );
-
-    forkJoin(llamadas).subscribe((resultados) => {
-      this.confirmandoManual.set(false);
-
-      const confirmados = resultados
-        .filter((r): r is { ok: true; resp: ConfirmarManualResponse } => r.ok)
-        .reduce((suma, r) => suma + (r.resp.confirmados || 0), 0);
-      const errores = resultados
-        .filter((r): r is { ok: false; idPago: number; mensaje: string } => !r.ok)
-        .map((r) => `Pago ${r.idPago}: ${r.mensaje}`);
-
-      this.confResultado.set({
-        exito: errores.length === 0,
-        mensaje: errores.length === 0
-          ? `${confirmados} pago(s) confirmado(s).`
-          : `${confirmados} pago(s) confirmado(s), ${errores.length} con error.`,
-        confirmados,
-        errores: errores.length ? errores : undefined,
-      });
-
-      this.referenciasPorPago.set({});
-      this.confObservacion = '';
-      this.cargarPagosPorConfirmar();
-      this.snackBar.open(
-        errores.length === 0 ? `${confirmados} pago(s) confirmado(s).` : `${confirmados} confirmado(s), ${errores.length} con error.`,
-        'Cerrar',
-        { duration: 6000 },
-      );
+    this.pagoS.confirmarManual({
+      idsPagos: Array.from(this.confSeleccionados),
+      referenciasPorPago,
+      fechaPago: this.fechaISO(this.confFecha),
+      observacion: `Confirmación manual: ${nota}`,
+      idUsuario: this.idUsuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.confirmandoManual.set(false);
+        this.confResultado.set(resp);
+        this.referenciasPorPago.set({});
+        this.confObservacion = '';
+        this.cargarPagosPorConfirmar();
+        this.snackBar.open(resp.mensaje ?? 'Pagos confirmados.', 'Cerrar', { duration: 6000 });
+      },
+      error: (err: Error) => {
+        this.confirmandoManual.set(false);
+        this.confError.set(err.message);
+      },
     });
   }
 
