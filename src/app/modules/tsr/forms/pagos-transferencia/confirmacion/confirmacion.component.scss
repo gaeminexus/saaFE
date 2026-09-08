@@ -46,6 +46,21 @@
     color: #cbd5e1;
   }
 
+  // Débito automático: el banco lo debita por convenio, no se transfiere — la persona necesita
+  // saber cuál es cuál porque la referencia que va a teclear viene de otro lado.
+  .chip-debito-automatico {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: #ede9fe;
+    color: #5b21b6;
+    cursor: default;
+  }
+
   .resumen-seleccion {
     display: flex;
     flex-wrap: wrap;

@@ -172,10 +172,12 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
 
     this.pagoS.listar(this.idEmpresaSesion()).subscribe({
       next: (data) => {
+        // Los débitos automáticos ya no nacen CONFIRMADO (docs/logica-negocio/pagos/PLAN-DEBITO-AUTOMATICO-CONTABILIZA-AL-CONFIRMAR.md
+        // en saaBE): quedan REGISTRADO al aprobar y se contabilizan acá, con su referencia. Por
+        // eso ya no se excluyen — aparecen como cualquier otro pago por confirmar.
         const filtrados = (data ?? []).filter(
-          (p) => !this.esDebitoAutomatico(p)
-            && (p.estado === EstadoPagoProgramado.REGISTRADO
-              || p.estado === EstadoPagoProgramado.EN_ARCHIVO)
+          (p) => p.estado === EstadoPagoProgramado.REGISTRADO
+            || p.estado === EstadoPagoProgramado.EN_ARCHIVO
         );
         this.pagosPorConfirmar.set(filtrados);
         this.dataSourceConf.data = filtrados;
@@ -359,8 +361,12 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
     return ESTADO_PAGO_PROGRAMADO_LABELS[estado] ?? { texto: `Estado ${estado}`, clase: 'badge-neutro' };
   }
 
-  /** El banco lo debitó por convenio: nació confirmado y sin lote. */
-  private esDebitoAutomatico(pago: PagoProgramado): boolean {
+  /**
+   * El banco lo debita por convenio, no se transfiere. Se muestra en la fila para que la
+   * persona sepa que la referencia que va a teclear viene de otro lado (no es un N° de
+   * transferencia bancaria común).
+   */
+  esDebitoAutomatico(pago: PagoProgramado): boolean {
     return Number(pago.debitoAutomatico) === 1;
   }
 
