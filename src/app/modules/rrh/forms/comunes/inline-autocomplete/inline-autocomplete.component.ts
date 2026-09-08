@@ -39,6 +39,14 @@ import { coincideTexto } from '../normalizar';
   imports: [CommonModule, FormsModule, MatAutocompleteModule, MatFormFieldModule, MatInputModule],
   templateUrl: './inline-autocomplete.component.html',
   styleUrl: './inline-autocomplete.component.scss',
+  // Clase en el host solo para modo="campo": un componente Angular es `display: inline` por
+  // defecto, así que sin esto `<app-inline-autocomplete>` no ocupa el ancho de lo que lo
+  // contiene y el `min-width`/`flex` que le ponga la pantalla que lo usa no tiene ningún efecto
+  // (el defecto medido en conciliación-cierre: combos de ~180px, el desplegable partiendo
+  // nombres largos en tres renglones). Acotado a `.campo` a propósito: `modo="celda"` vive
+  // dentro de una celda de tabla sin `mat-form-field`, y un `display: block` general ahí podría
+  // cambiar cómo se comporta — no medido, así que no se toca sin necesidad.
+  host: { '[class.campo]': "modo === 'campo'" },
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,

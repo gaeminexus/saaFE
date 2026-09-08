@@ -1,6 +1,18 @@
 @use '../../../../../../styles/abstracts/colors' as *;
 @use '../../../../../../styles/abstracts/variables' as *;
 
+// Solo modo="campo" — ver el comentario en el @Component sobre por qué no se toca el host en
+// modo="celda". Sin esto, el host queda `inline` (el default del navegador para un componente
+// sin CSS de host) y el ancho que le da la pantalla contenedora (min-width, flex) no llega a
+// pintarse: el mat-form-field de adentro se queda con su ancho intrínseco angosto.
+:host(.campo) {
+  display: block;
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
 .celda-input {
   width: 100%;
   border: $border-width solid transparent;
