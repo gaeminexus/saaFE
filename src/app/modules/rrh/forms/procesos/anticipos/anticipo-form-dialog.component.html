@@ -12,14 +12,17 @@
     </button>
   </div>
 
-  <mat-form-field appearance="outline" class="w-100">
-    <mat-label>Empleado</mat-label>
-    <mat-select [ngModel]="formEmpleado()" (ngModelChange)="onEmpleadoChange($event)" [compareWith]="compareEmpleado">
-      @for (emp of empleados(); track emp.codigo) {
-        <mat-option [value]="emp">{{ empleadoLabel(emp) }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+  <div class="w-100">
+    <app-inline-autocomplete
+      modo="campo"
+      etiquetaCampo="Empleado"
+      [opciones]="empleados()"
+      [etiqueta]="empleadoLabel"
+      [ngModel]="formEmpleado()"
+      (ngModelChange)="onEmpleadoChange($event)"
+      placeholder="Escriba la cédula o el nombre del empleado"
+    />
+  </div>
 
   @if (consultandoVigente()) {
     <div class="aviso aviso-info">Consultando si el empleado ya tiene un anticipo abierto...</div>

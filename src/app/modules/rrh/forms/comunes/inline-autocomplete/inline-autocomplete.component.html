@@ -36,6 +36,9 @@
   />
 }
 <mat-autocomplete #auto="matAutocomplete" (optionSelected)="seleccionar($event)">
+  @if (etiquetaVacio) {
+    <mat-option [value]="null">{{ etiquetaVacio }}</mat-option>
+  }
   @for (item of filtradas(); track item) {
     <mat-option [value]="item">{{ etiqueta(item) }}</mat-option>
   }

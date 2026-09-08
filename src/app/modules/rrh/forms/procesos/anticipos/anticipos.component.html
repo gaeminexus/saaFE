@@ -13,25 +13,28 @@
           </button>
         </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Empleado</mat-label>
-          <mat-select [ngModel]="filtroEmpleado()" (ngModelChange)="onFiltroEmpleadoChange($event)" [compareWith]="compareEmpleado">
-            <mat-option [value]="null">Todos</mat-option>
-            @for (emp of empleados(); track emp.codigo) {
-              <mat-option [value]="emp">{{ empleadoLabel(emp) }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Empleado"
+          [opciones]="empleados()"
+          [etiqueta]="empleadoLabel"
+          etiquetaVacio="Todos"
+          [ngModel]="filtroEmpleado()"
+          (ngModelChange)="onFiltroEmpleadoChange($event)"
+          placeholder="Escriba la cédula o el nombre"
+        />
 
-        <mat-form-field appearance="outline">
-          <mat-label>Estado</mat-label>
-          <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event); buscar()">
-            <mat-option [value]="null">Todos</mat-option>
-            @for (e of estadoOptions; track e.codigo) {
-              <mat-option [value]="e.codigo">{{ e.texto }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <app-inline-autocomplete
+          modo="campo"
+          etiquetaCampo="Estado"
+          [opciones]="estadoOptions"
+          [etiqueta]="estadoOptionLabel"
+          [valorPor]="estadoOptionValor"
+          etiquetaVacio="Todos"
+          [ngModel]="filtroEstado()"
+          (ngModelChange)="filtroEstado.set($event); buscar()"
+          placeholder="Escriba el estado"
+        />
       </div>
 
       <div class="actions">

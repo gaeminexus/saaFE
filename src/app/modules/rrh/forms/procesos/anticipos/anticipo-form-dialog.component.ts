@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { InlineAutocompleteComponent } from '../../../../rrh/forms/comunes/inline-autocomplete/inline-autocomplete.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -24,7 +25,7 @@ import { AnticipoTrabajadorService } from '../../../service/anticipo-trabajador.
 @Component({
   selector: 'app-anticipo-form-dialog',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './anticipo-form-dialog.component.html',
   styleUrls: ['./anticipo-form-dialog.component.scss'],
 })
@@ -72,9 +73,6 @@ export class AnticipoFormDialogComponent implements OnInit {
   ngOnInit(): void {
     this.onBuscarEmpleados();
   }
-
-  compareEmpleado = (a: Empleado | null, b: Empleado | null): boolean =>
-    (a?.codigo ?? null) === (b?.codigo ?? null);
 
   onBuscarEmpleados(): void {
     this.cargandoEmpleados.set(true);

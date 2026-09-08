@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
@@ -28,7 +29,7 @@ import { AprobarAnticipoDialogComponent } from './aprobar-anticipo-dialog.compon
 @Component({
   selector: 'app-anticipos',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './anticipos.component.html',
   styleUrls: ['./anticipos.component.scss'],
 })
@@ -65,8 +66,9 @@ export class AnticiposComponent implements OnInit {
     this.buscar();
   }
 
-  compareEmpleado = (a: Empleado | null, b: Empleado | null): boolean =>
-    (a?.codigo ?? null) === (b?.codigo ?? null);
+  /** Piloto fase 2 (InlineAutocomplete): Estado bindea el código escalar, no el objeto. */
+  estadoOptionLabel = (e: { codigo: number; texto: string }): string => e.texto;
+  estadoOptionValor = (e: { codigo: number; texto: string }): number => e.codigo;
 
   onBuscarEmpleados(): void {
     this.cargandoEmpleados.set(true);

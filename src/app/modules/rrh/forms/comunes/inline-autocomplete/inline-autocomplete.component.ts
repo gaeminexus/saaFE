@@ -89,6 +89,15 @@ export class InlineAutocompleteComponent implements ControlValueAccessor {
    * novedades-nomina) y no se toca.
    */
   @Input() valorPor?: (item: any) => any;
+  /**
+   * Opcional. Texto de una opción de escape siempre visible, primera en la lista, sin importar
+   * lo tecleado (no es un resultado de búsqueda, no se filtra contra `termino`). Elegirla
+   * equivale a seleccionar `null` — mismo camino que `seleccionar()` ya usa para cualquier
+   * opción, así que sale por `valorChange`/CVA igual que un `null` normal. Cada pantalla decide
+   * el texto («Todos», «Todas», «Sin filtro»); cuando no está definido, no aparece ninguna
+   * opción de vacío y el componente se comporta exactamente como hoy.
+   */
+  @Input() etiquetaVacio?: string;
   @Input() set valor(item: any) {
     this._valor = item ?? null;
     this.texto.set(item ? this.etiqueta(item) : '');
@@ -198,9 +207,18 @@ export class InlineAutocompleteComponent implements ControlValueAccessor {
   }
 
   seleccionar(evento: MatAutocompleteSelectedEvent): void {
+    // Elegir de la lista —incluida la opción de vacío, que llega acá con item = null— es
+    // intención explícita del usuario, igual que tipear: se abandona cualquier id pendiente de
+    // `writeValue` sin resolver, o el `effect()` de `opciones` podría pisar esta elección más
+    // tarde con el valor viejo que todavía no había llegado.
+    this.idPendiente = undefined;
     const item = evento.option.value;
     this._valor = item;
-    this.texto.set(this.etiqueta(item));
+    // `etiqueta` NUNCA se llama con `null`: es una función de cada pantalla, pensada para SU
+    // tipo de opción, no para el `null` de la opción de vacío del componente. `item` es `null`
+    // acá cuando se elige esa opción (`evento.option.value` de la `mat-option [value]="null"`)
+    // — el mismo criterio que ya usa el setter de `valor` más abajo.
+    this.texto.set(item != null ? this.etiqueta(item) : '');
     this.valorChange.emit(item);
     this.onChange(this.salidaCVA(item));
   }
@@ -215,6 +233,11 @@ export class InlineAutocompleteComponent implements ControlValueAccessor {
     // mostrando bien. Sin esto, la pantalla parece correcta y el formulario guarda vacío.
     if (this.idPendiente !== undefined) return;
     if (this._valor && this.etiqueta(this._valor) === this.texto()) return;
+    // Ya estaba vacío (nunca hubo valor, o se acaba de elegir la opción de vacío): no hay nada
+    // que limpiar. Sin este corte, cada blur de un campo vacío reemitía null de nuevo —
+    // inofensivo la mayoría de las veces, pero un consumidor que hace `algo.set($event);
+    // buscar()` en el mismo handler dispara una consulta de más por cada blur.
+    if (this._valor === null && this.texto() === '') return;
     this._valor = null;
     this.texto.set('');
     this.valorChange.emit(null);
