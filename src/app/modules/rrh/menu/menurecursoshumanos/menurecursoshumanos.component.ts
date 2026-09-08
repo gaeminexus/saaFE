@@ -278,6 +278,12 @@ export class MenurecursoshumanosComponent implements OnInit {
           route: '/menurecursoshumanos/procesos/ordenes-pago',
         },
         {
+          displayName: 'Valores no pagados',
+          iconName: 'money_off',
+          idPermiso: PermisosRrh.VALORES_NO_PAGADOS,
+          route: '/menurecursoshumanos/procesos/valores-no-pagados',
+        },
+        {
           displayName: 'Pago de beneficios sociales',
           iconName: 'volunteer_activism',
           idPermiso: PermisosRrh.PAGO_BENEFICIOS_SOCIALES,

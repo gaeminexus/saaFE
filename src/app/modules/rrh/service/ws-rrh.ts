@@ -95,5 +95,11 @@ export class ServiciosRhh {
   // anulando, no una entidad de edición libre.
   public static RS_DVAN = `${API_URL}/dvan`;
 
+  // Valores no pagados — RHH.VNPG (saaBE/docs/logica-negocio/rhh/PLAN-VALORES-NO-PAGADOS.md §10).
+  // Backend escribiéndose en paralelo (2026-09-08): implementado contra el contrato del plan, no
+  // contra código real todavía. DELETE deshabilitado a propósito (405) — es un registro contable
+  // encadenado a una orden de pago, nunca se borra, solo se anula (§8).
+  public static RS_VNPG = `${API_URL}/vnpg`;
+
   // Agregar más endpoints de RRHH acá según necesidades
 }

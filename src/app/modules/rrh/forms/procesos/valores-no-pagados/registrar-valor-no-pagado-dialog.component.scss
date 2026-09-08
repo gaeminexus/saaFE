@@ -1,0 +1,35 @@
+.w-100 {
+  width: 100%;
+}
+
+.search-grid {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+
+  mat-form-field {
+    flex: 1;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.aviso-error {
+  background: #fdecea;
+  color: #611a15;
+}

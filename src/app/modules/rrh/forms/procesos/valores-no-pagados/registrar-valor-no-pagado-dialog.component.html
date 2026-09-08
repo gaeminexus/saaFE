@@ -1,0 +1,76 @@
+<h2 mat-dialog-title>Nuevo valor no pagado</h2>
+
+<mat-dialog-content>
+  <div class="search-grid">
+    <mat-form-field appearance="outline" class="w-100">
+      <mat-label>Buscar empleado (identificación)</mat-label>
+      <input matInput [ngModel]="formEmpleadoBusqueda()" (ngModelChange)="formEmpleadoBusqueda.set($event)" />
+    </mat-form-field>
+    <button mat-stroked-button color="primary" (click)="onBuscarEmpleados()" [disabled]="cargandoEmpleados()">
+      <mat-icon>search</mat-icon>
+      Buscar
+    </button>
+  </div>
+
+  <div class="w-100">
+    <app-inline-autocomplete
+      modo="campo"
+      etiquetaCampo="Empleado"
+      [opciones]="empleados()"
+      [etiqueta]="empleadoLabel"
+      [buscarPor]="buscarPorEmpleado"
+      [ngModel]="formEmpleado()"
+      (ngModelChange)="onEmpleadoChange($event)"
+      placeholder="Escriba la cédula o el nombre del empleado"
+    />
+  </div>
+
+  <div class="w-100">
+    <app-inline-autocomplete
+      modo="campo"
+      etiquetaCampo="Período (sólo abiertos)"
+      [opciones]="periodosAbiertos()"
+      [etiqueta]="periodoLabel"
+      [valorPor]="valorPeriodo"
+      [buscarPor]="buscarPorPeriodo"
+      [ngModel]="formPeriodo()"
+      (ngModelChange)="formPeriodo.set($event)"
+      placeholder="Escriba el mes o el año"
+    />
+  </div>
+
+  @if (!cargandoPeriodos() && periodosAbiertos().length === 0) {
+    <div class="aviso aviso-error">
+      <mat-icon>event_busy</mat-icon>
+      <span>No hay ningún período Abierto para esta empresa: no se puede registrar todavía.</span>
+    </div>
+  }
+
+  <div class="form-grid">
+    <mat-form-field appearance="outline">
+      <mat-label>Valor</mat-label>
+      <input matInput type="number" min="0.01" step="0.01" [ngModel]="valor()" (ngModelChange)="valor.set($event)" />
+      <span matTextSuffix>$</span>
+    </mat-form-field>
+  </div>
+
+  <mat-form-field appearance="outline" class="w-100">
+    <mat-label>Motivo</mat-label>
+    <textarea matInput rows="3" [ngModel]="motivo()" (ngModelChange)="motivo.set($event)"></textarea>
+  </mat-form-field>
+
+  @if (errorMsg()) {
+    <div class="aviso aviso-error">{{ errorMsg() }}</div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" [disabled]="!puedeGuardar()" (click)="guardar()">
+    @if (guardando()) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      Registrar
+    }
+  </button>
+</mat-dialog-actions>

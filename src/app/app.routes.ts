@@ -787,6 +787,16 @@ export const routes: Routes = [
         data: { title: 'Órdenes de pago' },
       },
       {
+        // Nueva (2026-09-08): saaBE/docs/logica-negocio/rhh/PLAN-VALORES-NO-PAGADOS.md.
+        path: 'procesos/valores-no-pagados',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/valores-no-pagados/valores-no-pagados.component').then(
+            (m) => m.ValoresNoPagadosComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Valores no pagados' },
+      },
+      {
         path: 'procesos/pago-beneficios-sociales',
         loadComponent: () =>
           import(

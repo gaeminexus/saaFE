@@ -88,4 +88,7 @@ export class PermisosRrh {
 
   // Procesos de la fase 7
   public static readonly IMPORTACION_MARCACIONES = 891;
+
+  /** Valores no pagados — saaBE/docs/logica-negocio/rhh/PLAN-VALORES-NO-PAGADOS.md. */
+  public static readonly VALORES_NO_PAGADOS = 900;
 }
