@@ -17,7 +17,6 @@ import { EmpleadoService } from '../../../service/empleado.service';
 import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.service';
 import { SolicitudVacacionesService } from '../../../service/solicitud-vacaciones.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
-import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { opcionesAviso } from '../../comunes/avisos';
 import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
@@ -134,31 +133,14 @@ export class VacacionesFormComponent implements OnInit {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    // Instrumentación temporal (2026-09-08): reporte de "manosal" sin opciones en Nueva
-    // solicitud. El código es idéntico byte a byte a registrar-valor-no-pagado-dialog (que sí
-    // funciona), así que la diferencia tiene que estar en tiempo de ejecución — empresa de sesión
-    // no resuelta, la consulta trayendo menos filas de lo esperado, o el filtro de activos
-    // descartándolas todas. Sacar cuando se confirme la causa real.
-    // eslint-disable-next-line no-console
-    console.log('[vacaciones-form] cargarEmpleados: empresaSesionCodigo() =', empresaSesionCodigo());
-
     const criterios = criteriosPorEmpresa('apellidos');
     this.empleadoService.selectByCriteria(criterios).subscribe({
       next: (rows: Empleado[] | null) => {
-        const extraidas = this.extractRows(rows);
-        const activos = extraidas.filter((e) => this.isEmpleadoActivo(e.estado));
-        // eslint-disable-next-line no-console
-        console.log(
-          '[vacaciones-form] cargarEmpleados: filas crudas =', rows,
-          '| extraídas =', extraidas.length,
-          '| activas tras isEmpleadoActivo =', activos.length,
-        );
+        const activos = this.extractRows(rows).filter((e) => this.isEmpleadoActivo(e.estado));
         this.empleados.set(activos);
         this.loading.set(false);
       },
       error: (err) => {
-        // eslint-disable-next-line no-console
-        console.error('[vacaciones-form] cargarEmpleados: entró al error handler, no al next', err);
         this.showError(this.extractError(err) || 'Error al buscar empleados');
         this.loading.set(false);
       },
@@ -393,12 +375,20 @@ export class VacacionesFormComponent implements OnInit {
       });
   }
 
-  empleadoLabel(value: Empleado | null): string {
+  /**
+   * Arrow function, no método — a propósito (2026-09-08). `InlineAutocomplete` la invoca sin
+   * `this` (`[etiqueta]="empleadoLabel"` pasa la referencia suelta), y un método normal la pierde:
+   * era exactamente esto lo que hacía explotar `etiqueta(item)` al dibujar cada opción del panel
+   * (`TypeError: this.formatIdentificacion is not a function`) — la lista de empleados cargaba
+   * bien, pero el panel nunca llegaba a pintar ni una fila. Mismo defecto que ya mordió una vez en
+   * `mostrar` (el `displayWith` de `InlineAutocompleteComponent`).
+   */
+  readonly empleadoLabel = (value: Empleado | null): string => {
     if (!value) return '';
     const ident = this.formatIdentificacion(value.identificacion);
     const nombre = `${value.apellidos ?? ''} ${value.nombres ?? ''}`.replace(/\s+/g, ' ').trim();
     return `${ident} - ${nombre}`.trim();
-  }
+  };
 
   readonly buscarPorEmpleado = (e: Empleado): string[] => [
     e.identificacion != null ? String(e.identificacion) : '',
