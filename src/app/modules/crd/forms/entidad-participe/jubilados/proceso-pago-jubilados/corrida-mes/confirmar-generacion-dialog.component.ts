@@ -4,32 +4,37 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 
 import { MaterialFormModule } from '../../../../../../../shared/modules/material-form.module';
 
+/** Un renglón del desglose de montos del diálogo. */
+export interface ItemDesgloseConfirmacion {
+  label: string;
+  valor: number;
+  nota?: string;
+  /** Color del bloque — mismo criterio visual que ya usaban préstamos/dinero/seguro/total. */
+  clase?: 'prestamos' | 'dinero' | 'seguro-interno' | 'total';
+}
+
 export interface ConfirmarGeneracionData {
+  /** `mat-icon` del título. Por defecto `payments`. */
+  icono?: string;
+  titulo: string;
   periodo: string;
-  /** COMPLETA + SOLO_CRUCE: los que de verdad van a hacer algo en esta corrida. */
-  cantidadAptos: number;
-  cantidadBloqueados: number;
-  /** Cancela deuda. No sale de la asociación. */
-  totalACruzarPrestamos: number;
-  /** Sale al banco como orden de pago. Esto sí es dinero saliendo. */
-  totalADinero: number;
-  /**
-   * Total de seguro médico de todos los jubilados (decisión del usuario, 2026-09-05: nunca fue
-   * plata del jubilado — se descuenta siempre y sale siempre en una orden aparte a un proveedor).
-   * No sale de la asociación hacia los jubilados. El nombre interno del campo sigue siendo
-   * `totalSeguroInternoGeneral` a propósito, pendiente de que el backend proponga el renombre.
-   */
-  totalSeguroInternoGeneral: number;
-  /** La suma de los TRES (§4ter): lo que se descuenta de las cuentas de pensión complementaria. */
-  totalGeneral: number;
+  /** Frase completa: qué va a pasar. No se compone a partir de campos sueltos. */
+  advertencia: string;
+  desglose: ItemDesgloseConfirmacion[];
+  /** Aviso secundario opcional (p. ej. bloqueados en el prevuelo). */
+  avisoExtra?: string;
+  /** Por defecto, la nota de idempotencia/no-reversible de siempre. */
+  nota?: string;
+  textoBoton?: string;
 }
 
 /**
- * Confirmación previa a `generarPagosDelMes`. Nombra la consecuencia antes de disparar una
- * acción que genera asientos contables y órdenes en tesorería (§3-B2 del diseño), con el mismo
- * desglose préstamos/dinero/total que ya se ve en el prevuelo — ahora que `previsualizarCorrida`
- * lo da de verdad, no hay que prometerlo sin poder cumplirlo. Precedente:
- * `devolucion-aportes/confirmar-devolucion-dialog.component.ts`.
+ * Confirmación genérica antes de disparar un proceso que mueve plata al banco y no tiene
+ * anulación. Generalizado (2026-09-07, docs/crd/API-DOS-PROCESOS-MENSUALES-JUBILADOS.md §4/ítem 4)
+ * para servir tanto a "Generar seguro médico" como a "Generar pensiones" — antes tenía cuatro
+ * campos de desglose fijos (préstamos/dinero/seguro/total) pensados solo para la corrida única;
+ * ahora el desglose es una lista, así que cada acción manda solo los montos que le aplican.
+ * Precedente: `devolucion-aportes/confirmar-devolucion-dialog.component.ts`.
  */
 @Component({
   selector: 'app-confirmar-generacion-dialog',
@@ -37,59 +42,46 @@ export interface ConfirmarGeneracionData {
   imports: [CommonModule, MatDialogModule, MaterialFormModule],
   template: `
     <h2 mat-dialog-title>
-      <mat-icon class="titulo-icono">payments</mat-icon>
-      Confirmar generación de pagos — {{ data.periodo }}
+      <mat-icon class="titulo-icono">{{ data.icono || 'payments' }}</mat-icon>
+      {{ data.titulo }} — {{ data.periodo }}
     </h2>
 
     <mat-dialog-content>
       <p class="advertencia">
         <mat-icon>warning</mat-icon>
-        Se van a generar <strong>{{ data.cantidadAptos }}</strong> pagos. Esta acción genera
-        asientos contables y órdenes en tesorería.
+        {{ data.advertencia }}
       </p>
 
-      <div class="desglose">
-        <div class="d-item d-prestamos">
-          <span class="d-label">A préstamos</span>
-          <span class="d-valor">{{ formatMoneda(data.totalACruzarPrestamos) }}</span>
-          <span class="d-nota">cancela deuda — no sale de la asociación</span>
+      @if (data.desglose.length) {
+        <div class="desglose" [class.desglose-una-col]="data.desglose.length === 1">
+          @for (item of data.desglose; track item.label) {
+            <div class="d-item" [class]="'d-' + (item.clase || 'total')">
+              <span class="d-label">{{ item.label }}</span>
+              <span class="d-valor">{{ formatMoneda(item.valor) }}</span>
+              @if (item.nota) {
+                <span class="d-nota">{{ item.nota }}</span>
+              }
+            </div>
+          }
         </div>
-        <div class="d-item d-dinero">
-          <span class="d-label">A dinero</span>
-          <span class="d-valor">{{ formatMoneda(data.totalADinero) }}</span>
-          <span class="d-nota">sale al banco</span>
-        </div>
-        <div class="d-item d-seguro-interno">
-          <span class="d-label">Seguro médico (a proveedor)</span>
-          <span class="d-valor">{{ formatMoneda(data.totalSeguroInternoGeneral) }}</span>
-          <span class="d-nota">orden aparte a un proveedor, no a los jubilados</span>
-        </div>
-        <div class="d-item d-total">
-          <span class="d-label">Total</span>
-          <span class="d-valor">{{ formatMoneda(data.totalGeneral) }}</span>
-          <span class="d-nota">se descuenta de las cuentas de pensión</span>
-        </div>
-      </div>
+      }
 
-      @if (data.cantidadBloqueados > 0) {
+      @if (data.avisoExtra) {
         <p class="bloqueados-aviso">
-          <mat-icon>block</mat-icon>
-          Hay <strong>{{ data.cantidadBloqueados }}</strong>
-          {{ data.cantidadBloqueados === 1 ? 'jubilado bloqueado' : 'jubilados bloqueados' }} que
-          no se van a pagar en esta corrida. Revise el motivo en el prevuelo antes de continuar.
+          <mat-icon>info</mat-icon>
+          {{ data.avisoExtra }}
         </p>
       }
 
       <p class="nota">
-        La corrida es idempotente: volver a ejecutarla no duplica pagos ya generados. No es
-        reversible desde esta pantalla.
+        {{ data.nota || 'La corrida es idempotente: volver a ejecutarla no duplica lo ya generado. No es reversible desde esta pantalla.' }}
       </p>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
       <button mat-button (click)="cancelar()">Cancelar</button>
       <button mat-raised-button color="primary" (click)="confirmar()">
-        <mat-icon>play_circle</mat-icon> Generar y contabilizar
+        <mat-icon>play_circle</mat-icon> {{ data.textoBoton || 'Confirmar' }}
       </button>
     </mat-dialog-actions>
   `,
@@ -106,6 +98,8 @@ export interface ConfirmarGeneracionData {
 
     .desglose {
       display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; margin-bottom: 1rem;
+
+      &.desglose-una-col { grid-template-columns: 1fr; }
 
       .d-item {
         display: flex; flex-direction: column; gap: 1px; border-radius: 8px; padding: 0.5rem 0.65rem;

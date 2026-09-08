@@ -210,6 +210,75 @@ export interface DetallePrevisualizacionPago {
   totalSeguro: number;
 }
 
+/**
+ * docs/crd/API-DOS-PROCESOS-MENSUALES-JUBILADOS.md §4.1/§4.2 — cuerpo de la solicitud de los dos
+ * procesos nuevos (seguro médico y pensiones). Misma forma para los dos endpoints.
+ */
+export interface SolicitudProcesoJubilados {
+  idEmpresa: number;
+  anio: number;
+  mes: number;
+  usuario: string;
+  idUsuario: number;
+}
+
+/**
+ * §4.1 — cuerpo de `resultado` de `POST /pgpc/seguro/generar`. ⚠️ Forma inferida: el contrato no
+ * publica el JSON de este endpoint (solo describe los pasos) — verificar contra el backend real
+ * cuando esté disponible. Por eso la pantalla NO depende de este tipo para pintar el estado del
+ * proceso: siempre vuelve a pedir `corrida()` después de generar, que es la fuente de verdad.
+ */
+export interface ResultadoGeneracionSeguro {
+  anio: number;
+  mes: number;
+  jubilados: number;
+  total: number;
+  idOrdenPago: number;
+}
+
+/**
+ * §4.3 — un proceso (seguro o pensiones) dentro de la cabecera de corrida del período. Estado
+ * `0` = pendiente, `1` = generado. `nombreEstado` lo resuelve el backend — no traducir el número.
+ */
+export interface EstadoProcesoCorridaJubilados {
+  estado: number;
+  nombreEstado: string;
+  fecha: string | number[] | Date | null;
+  usuario: string | null;
+  total: number | null;
+  jubilados: number | null;
+  /** Solo en `seguro`. */
+  idOrdenPago?: number | null;
+  /** Solo en `pensiones`. */
+  cruzadoAPrestamos?: number | null;
+}
+
+/**
+ * §4.3 — cuerpo de `GET /pgpc/corrida/{anio}/{mes}?idEmpresa=`. **200 con los dos procesos en
+ * estado 0 si el período no se corrió todavía — nunca 404**: "este mes no se corrió nada" es una
+ * respuesta válida, no un error.
+ *
+ * `puedeGenerarSeguro`/`puedeGenerarPensiones` los calcula el BACKEND con la misma regla que
+ * aplican los endpoints de escritura — el frontend NO la reimplementa: si lo hiciera, tarde o
+ * temprano se desincroniza y muestra habilitado algo que el backend va a rechazar (D2 del
+ * contrato: no se pueden generar pensiones sin el seguro del mes).
+ *
+ * `conSeguroSinPension`/`conPensionSinSeguro` son la consecuencia visible de que cada proceso usa
+ * el padrón de SU PROPIA fecha (D4) — alguien que entra o sale a mitad de mes puede tener uno sin
+ * el otro. **Es información, no un error.**
+ */
+export interface CorridaJubiladosMes {
+  anio: number;
+  mes: number;
+  idEmpresa: number;
+  seguro: EstadoProcesoCorridaJubilados;
+  pensiones: EstadoProcesoCorridaJubilados;
+  puedeGenerarSeguro: boolean;
+  puedeGenerarPensiones: boolean;
+  conSeguroSinPension: number;
+  conPensionSinSeguro: number;
+}
+
 /** §4bis — cuerpo de `resultado` de `POST /pgpc/previsualizarCorrida`. NO escribe nada. */
 export interface ResultadoPrevisualizacionCorrida {
   anio: number;

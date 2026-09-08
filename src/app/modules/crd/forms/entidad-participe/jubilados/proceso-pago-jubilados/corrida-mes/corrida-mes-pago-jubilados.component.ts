@@ -16,14 +16,17 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { guardarArchivo, mensajeReporteFallido } from '../../../../../../../shared/services/descarga-reporte';
 import { empresaSesionCodigo } from '../../../../../../../shared/services/empresa-sesion';
 import { ExportService } from '../../../../../../../shared/services/export.service';
+import { FuncionesDatosService } from '../../../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../../../../shared/services/usuario-sesion';
 import {
+  CorridaJubiladosMes,
   DetallePagoPension,
   DetallePrevisualizacionPago,
   Participacion,
   ResultadoGeneracionPagos,
   ResultadoPrevisualizacionCorrida,
+  SolicitudProcesoJubilados,
 } from '../../../../../model/pago-pension-complementaria';
 import { PagoPensionComplementariaService } from '../../../../../service/pago-pension-complementaria.service';
 import {
@@ -105,6 +108,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   private pgpcService = inject(PagoPensionComplementariaService);
   private exportService = inject(ExportService);
   private jasperReportes = inject(JasperReportesService);
+  private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
@@ -118,7 +122,6 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   mes: number;
 
   previsualizando = signal(false);
-  ejecutando = signal(false);
 
   prevuelo = signal<ResultadoPrevisualizacionCorrida | null>(null);
   errorPrevuelo = signal<string | null>(null);
@@ -128,6 +131,20 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   resultado = signal<ResultadoGeneracionPagos | null>(null);
   mensajeResultado = signal<string | null>(null);
   errorEjecucion = signal<string | null>(null);
+
+  // ===================== Los dos procesos mensuales =====================
+  // docs/crd/API-DOS-PROCESOS-MENSUALES-JUBILADOS.md. Reemplaza el botón único "Ejecutar corrida":
+  // ahora hay dos tarjetas (seguro médico al inicio de mes, pensiones al final), cada una con su
+  // propio estado, y la de pensiones depende de que la de seguro ya esté generada (D2).
+
+  corrida = signal<CorridaJubiladosMes | null>(null);
+  cargandoCorrida = signal(false);
+  errorCorrida = signal<string | null>(null);
+
+  generandoSeguro = signal(false);
+  errorSeguro = signal<string | null>(null);
+
+  generandoPensiones = signal(false);
 
   // Reporte Jasper de la corrida (RPRT_PGPC_CRRD) — trae de la base la corrida COMPLETA del
   // período, no lo que esté filtrado en pantalla. Independiente del prevuelo: no requiere haber
@@ -166,8 +183,11 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     if (this.idEmpresa == null) {
       this.errorPrevuelo.set('No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
     }
-    // Sin auto-cargar: igual que `cierre-cartera`, previsualizar es una acción explícita del
-    // operador (el cálculo real recorre ~187 jubilados en el servidor, no es gratis).
+    // Sin auto-cargar el prevuelo: igual que `cierre-cartera`, previsualizar es una acción
+    // explícita del operador (el cálculo real recorre ~187 jubilados en el servidor, no es
+    // gratis). El estado de los DOS PROCESOS sí se carga solo: es una simple lectura de cabecera
+    // (§4.3), no un cálculo pesado, y es lo primero que hay que ver al entrar a un período.
+    this.cargarCorrida();
   }
 
   get periodoTexto(): string {
@@ -175,7 +195,147 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   }
 
   ocupado(): boolean {
-    return this.previsualizando() || this.ejecutando();
+    return this.previsualizando() || this.generandoSeguro() || this.generandoPensiones();
+  }
+
+  private idUsuarioSesion(): number {
+    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+  }
+
+  /** Selector de año/mes cambiado: la cabecera de corrida es de OTRO período, hay que releerla. */
+  onPeriodoCambiado(): void {
+    this.cargarCorrida();
+  }
+
+  // ===================== Los dos procesos mensuales =====================
+
+  cargarCorrida(): void {
+    if (this.idEmpresa == null) {
+      return;
+    }
+    this.cargandoCorrida.set(true);
+    this.errorCorrida.set(null);
+    this.pgpcService.corrida(this.anio, this.mes, this.idEmpresa).subscribe((resp) => {
+      this.cargandoCorrida.set(false);
+      // `null` = falló la consulta. Un período sin correr todavía NO es `null`: llega como
+      // objeto con los dos procesos en estado 0 (§4.3) — son mensajes distintos.
+      if (resp === null) {
+        this.corrida.set(null);
+        this.errorCorrida.set('No se pudo cargar el estado de los procesos de este mes. Intente de nuevo.');
+        return;
+      }
+      this.corrida.set(resp);
+    });
+  }
+
+  private solicitudProceso(): SolicitudProcesoJubilados {
+    return {
+      idEmpresa: this.idEmpresa ?? 0,
+      anio: this.anio,
+      mes: this.mes,
+      usuario: this.usuario,
+      idUsuario: this.idUsuarioSesion(),
+    };
+  }
+
+  confirmarGenerarSeguro(): void {
+    const c = this.corrida();
+    if (!c?.puedeGenerarSeguro || this.generandoSeguro() || this.idEmpresa == null) {
+      return;
+    }
+
+    const data: ConfirmarGeneracionData = {
+      icono: 'medical_services',
+      titulo: 'Confirmar generación del seguro médico',
+      periodo: this.periodoTexto,
+      advertencia:
+        'Se va a generar UNA orden de pago agregada al proveedor del seguro médico, por el total ' +
+        'de todos los jubilados del padrón vigente. El valor queda fijo: la corrida de pensiones ' +
+        'de fin de mes lo va a descontar tal cual, sin recalcular.',
+      desglose: [],
+      textoBoton: 'Generar seguro médico',
+    };
+
+    this.dialog
+      .open(ConfirmarGeneracionDialogComponent, { data, width: '520px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (confirmado) {
+          this.generarSeguroConfirmado();
+        }
+      });
+  }
+
+  private generarSeguroConfirmado(): void {
+    this.errorSeguro.set(null);
+    this.generandoSeguro.set(true);
+
+    this.pgpcService.generarSeguro(this.solicitudProceso()).subscribe((resp) => {
+      this.generandoSeguro.set(false);
+      if (resp.exito) {
+        this.notificar(resp.mensaje || 'Seguro médico generado.', true);
+        // La fuente de verdad de "qué pasó" es la cabecera de corrida, no el cuerpo de esta
+        // respuesta (§4.3) — se relee para que las dos tarjetas queden al día de una sola vez.
+        this.cargarCorrida();
+      } else {
+        this.errorSeguro.set(resp.mensaje ?? 'No se pudo generar el seguro médico.');
+        this.notificar(resp.mensaje ?? 'No se pudo generar el seguro médico.', false);
+      }
+    });
+  }
+
+  confirmarGenerarPensiones(): void {
+    const c = this.corrida();
+    if (!c?.puedeGenerarPensiones || this.generandoPensiones() || this.idEmpresa == null) {
+      return;
+    }
+
+    const data: ConfirmarGeneracionData = {
+      titulo: 'Confirmar generación de pensiones',
+      periodo: this.periodoTexto,
+      advertencia:
+        'Se van a generar las órdenes de pensión del período, descontando exactamente el seguro ' +
+        'médico ya pagado a cada jubilado. Esta acción genera asientos contables y órdenes en ' +
+        'tesorería.',
+      desglose: [],
+      textoBoton: 'Generar pensiones',
+    };
+
+    this.dialog
+      .open(ConfirmarGeneracionDialogComponent, { data, width: '520px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (confirmado) {
+          this.generarPensionesConfirmado();
+        }
+      });
+  }
+
+  private generarPensionesConfirmado(): void {
+    this.resultado.set(null);
+    this.mensajeResultado.set(null);
+    this.errorEjecucion.set(null);
+    this.generandoPensiones.set(true);
+
+    this.pgpcService.generarPensiones(this.solicitudProceso()).subscribe((resp) => {
+      this.generandoPensiones.set(false);
+      // ⛔ Un 200 no significa que salió bien: hay que leer resp.exito y, adentro, conError/errores.
+      if (resp.exito && resp.resultado) {
+        this.resultado.set(resp.resultado);
+        this.mensajeResultado.set(resp.mensaje ?? null);
+        const conError = resp.resultado.conError ?? 0;
+        this.notificar(
+          conError > 0
+            ? `Pensiones generadas con ${conError} error(es). Revise el detalle.`
+            : 'Pensiones generadas correctamente.',
+          conError === 0,
+        );
+        this.cargarCorrida();
+      } else {
+        this.errorEjecucion.set(resp.mensaje ?? 'No se pudo generar las pensiones.');
+        this.notificar(resp.mensaje ?? 'No se pudo generar las pensiones.', false);
+      }
+    });
   }
 
   // ===================== Derivados del prevuelo =====================
@@ -325,67 +485,6 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     });
   }
 
-  // ===================== Ejecutar =====================
-
-  ejecutar(): void {
-    const res = this.prevuelo();
-    if (!res || this.ocupado() || this.idEmpresa == null) {
-      return;
-    }
-    if (this.cantidadAccionable === 0) {
-      this.notificar('No hay jubilados listos para pagar en este período.', false);
-      return;
-    }
-
-    const data: ConfirmarGeneracionData = {
-      periodo: this.periodoTexto,
-      cantidadAptos: this.cantidadAccionable,
-      cantidadBloqueados: res.bloqueados,
-      totalACruzarPrestamos: res.totalACruzarPrestamos,
-      totalADinero: res.totalADinero,
-      totalSeguroInternoGeneral: res.totalSeguroInternoGeneral,
-      totalGeneral: res.totalGeneral,
-    };
-
-    this.dialog
-      .open(ConfirmarGeneracionDialogComponent, { data, width: '540px' })
-      .afterClosed()
-      .subscribe((confirmado) => {
-        if (confirmado) {
-          this.ejecutarConfirmado();
-        }
-      });
-  }
-
-  private ejecutarConfirmado(): void {
-    if (this.idEmpresa == null) {
-      return;
-    }
-    this.resultado.set(null);
-    this.mensajeResultado.set(null);
-    this.errorEjecucion.set(null);
-    this.ejecutando.set(true);
-
-    this.pgpcService.generarPagosDelMes(this.idEmpresa, this.anio, this.mes, this.usuario).subscribe((resp) => {
-      this.ejecutando.set(false);
-      // ⛔ Un 200 no significa que salió bien: hay que leer resp.exito y, adentro, conError/errores.
-      if (resp.exito && resp.resultado) {
-        this.resultado.set(resp.resultado);
-        this.mensajeResultado.set(resp.mensaje ?? null);
-        const conError = resp.resultado.conError ?? 0;
-        this.notificar(
-          conError > 0
-            ? `Corrida generada con ${conError} error(es). Revise el detalle.`
-            : 'Corrida generada correctamente.',
-          conError === 0,
-        );
-      } else {
-        this.errorEjecucion.set(resp.mensaje ?? 'No se pudo generar la corrida.');
-        this.notificar(resp.mensaje ?? 'No se pudo generar la corrida.', false);
-      }
-    });
-  }
-
   // ===================== Derivados del resultado ejecutado =====================
 
   /**
@@ -474,6 +573,12 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
 
   nombreMes(mes: number): string {
     return MESES.find((m) => m.valor === mes)?.nombre ?? String(mes);
+  }
+
+  /** `LocalDateTime` del proceso (§4.3) — ISO local sin zona, nunca tratarla como si trajera offset. */
+  formatFechaHoraProceso(fecha: unknown): string {
+    if (!fecha) return '—';
+    return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.FECHA_HORA) || '—';
   }
 
   // ===================== Reporte Jasper de la corrida =====================

@@ -15,12 +15,12 @@
       <div class="seleccion-row">
         <mat-form-field appearance="outline" class="anio-field">
           <mat-label>Año</mat-label>
-          <input matInput type="number" min="2000" max="2100" [(ngModel)]="anio" />
+          <input matInput type="number" min="2000" max="2100" [(ngModel)]="anio" (ngModelChange)="onPeriodoCambiado()" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="mes-field">
           <mat-label>Mes</mat-label>
-          <mat-select [(ngModel)]="mes">
+          <mat-select [(ngModel)]="mes" (ngModelChange)="onPeriodoCambiado()">
             @for (m of MESES; track m.valor) {
               <mat-option [value]="m.valor">{{ m.nombre }}</mat-option>
             }
@@ -28,11 +28,7 @@
         </mat-form-field>
 
         <div class="seleccion-acciones">
-          <!--
-            "Previsualizar" NO escribe nada (§4bis del contrato): botón outline, gris, deliberadamente
-            distinto del de "Ejecutar corrida" (raised, primary) — son dos acciones de riesgo muy
-            distinto y no pueden parecerse.
-          -->
+          <!-- "Previsualizar" NO escribe nada (§4bis del contrato): solo simula el cálculo combinado. -->
           <button
             mat-stroked-button
             (click)="previsualizar()"
@@ -46,23 +42,142 @@
             }
             Previsualizar
           </button>
-          <button
-            mat-raised-button
-            color="primary"
-            (click)="ejecutar()"
-            [disabled]="ocupado() || idEmpresa == null || !prevuelo() || cantidadAccionable === 0"
-          >
-            @if (ejecutando()) {
-              <mat-spinner diameter="18"></mat-spinner>
-            } @else {
-              <mat-icon>play_circle</mat-icon>
-            }
-            Ejecutar corrida
-          </button>
         </div>
       </div>
     </mat-card-content>
   </mat-card>
+
+  <!--
+    Los DOS procesos del mes (docs/crd/API-DOS-PROCESOS-MENSUALES-JUBILADOS.md). Reemplaza el
+    botón único "Ejecutar corrida": el seguro médico se paga al inicio de mes y las pensiones al
+    final, y no son independientes — no se pueden generar pensiones sin el seguro del mes (D2).
+  -->
+  @if (cargandoCorrida()) {
+    <div class="loading-spinner-container"><mat-spinner diameter="32"></mat-spinner></div>
+  } @else if (errorCorrida()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorCorrida() }}</span>
+      <button mat-stroked-button (click)="cargarCorrida()">Reintentar</button>
+    </div>
+  } @else if (corrida(); as c) {
+    <div class="procesos-mes">
+
+      <mat-card class="proceso-card" [class.proceso-generado]="c.seguro.estado === 1">
+        <mat-card-content>
+          <div class="proceso-header">
+            <mat-icon>medical_services</mat-icon>
+            <div class="proceso-titulo">
+              <span class="pt-nombre">Seguro médico</span>
+              <span class="pt-momento">Inicio de mes</span>
+            </div>
+            <span class="proceso-estado" [class.generado]="c.seguro.estado === 1">{{ c.seguro.nombreEstado }}</span>
+          </div>
+
+          @if (c.seguro.estado === 1) {
+            <div class="proceso-datos">
+              <div class="pd-item"><span class="l">Total al proveedor</span><span class="v">$ {{ money(c.seguro.total) }}</span></div>
+              <div class="pd-item"><span class="l">Jubilados</span><span class="v">{{ c.seguro.jubilados }}</span></div>
+              <div class="pd-item ancho-total"><span class="l">Generado por</span><span class="v">{{ c.seguro.usuario || '—' }} · {{ formatFechaHoraProceso(c.seguro.fecha) }}</span></div>
+            </div>
+          } @else {
+            <p class="proceso-pendiente-texto">Todavía no se ha generado el seguro médico de este período.</p>
+          }
+
+          @if (errorSeguro()) {
+            <div class="error-banner error-banner-proceso">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorSeguro() }}</span>
+            </div>
+          }
+
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="confirmarGenerarSeguro()"
+            [disabled]="!c.puedeGenerarSeguro || generandoSeguro()"
+          >
+            @if (generandoSeguro()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>play_circle</mat-icon>
+            }
+            Generar seguro médico
+          </button>
+          @if (!c.puedeGenerarSeguro && c.seguro.estado !== 1) {
+            <p class="motivo-deshabilitado">No se puede generar en este momento.</p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="proceso-card" [class.proceso-generado]="c.pensiones.estado === 1">
+        <mat-card-content>
+          <div class="proceso-header">
+            <mat-icon>elderly</mat-icon>
+            <div class="proceso-titulo">
+              <span class="pt-nombre">Pensiones</span>
+              <span class="pt-momento">Fin de mes</span>
+            </div>
+            <span class="proceso-estado" [class.generado]="c.pensiones.estado === 1">{{ c.pensiones.nombreEstado }}</span>
+          </div>
+
+          @if (c.pensiones.estado === 1) {
+            <div class="proceso-datos">
+              <div class="pd-item"><span class="l">Total</span><span class="v">$ {{ money(c.pensiones.total) }}</span></div>
+              <div class="pd-item"><span class="l">Cruzado a préstamos</span><span class="v">$ {{ money(c.pensiones.cruzadoAPrestamos) }}</span></div>
+              <div class="pd-item"><span class="l">Jubilados</span><span class="v">{{ c.pensiones.jubilados }}</span></div>
+              <div class="pd-item ancho-total"><span class="l">Generado por</span><span class="v">{{ c.pensiones.usuario || '—' }} · {{ formatFechaHoraProceso(c.pensiones.fecha) }}</span></div>
+            </div>
+          } @else {
+            <p class="proceso-pendiente-texto">Todavía no se han generado las pensiones de este período.</p>
+          }
+
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="confirmarGenerarPensiones()"
+            [disabled]="!c.puedeGenerarPensiones || generandoPensiones()"
+          >
+            @if (generandoPensiones()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>play_circle</mat-icon>
+            }
+            Generar pensiones
+          </button>
+          @if (!c.puedeGenerarPensiones && c.pensiones.estado !== 1) {
+            <p class="motivo-deshabilitado">
+              @if (c.seguro.estado !== 1) {
+                Falta generar el seguro médico de este mes.
+              } @else {
+                No se puede generar en este momento.
+              }
+            </p>
+          }
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!--
+      D4 del contrato: cada proceso usa el padrón de SU PROPIA fecha, así que alguien que entró o
+      salió a mitad de mes puede tener uno de los dos y no el otro. Es información, no un error —
+      por eso solo se muestra cuando hay algo que contar, nunca como advertencia roja.
+    -->
+    @if (c.conSeguroSinPension > 0 || c.conPensionSinSeguro > 0) {
+      <div class="aviso-descalce">
+        <mat-icon>info</mat-icon>
+        <div>
+          @if (c.conSeguroSinPension > 0) {
+            <div>{{ c.conSeguroSinPension }} jubilado(s) con seguro médico pagado y todavía sin pensión de este mes (normal si salieron del padrón antes de fin de mes).</div>
+          }
+          @if (c.conPensionSinSeguro > 0) {
+            <div>{{ c.conPensionSinSeguro }} jubilado(s) con pensión generada sin seguro médico de este período (normal si entraron al padrón después del inicio de mes).</div>
+          }
+        </div>
+      </div>
+    }
+  }
 
   @if (errorPrevuelo()) {
     <div class="error-banner">
@@ -395,7 +510,7 @@
   @if (resultado(); as res) {
     <mat-card class="resultado-card">
       <mat-card-header class="card-header-con-accion">
-        <mat-card-title><mat-icon>fact_check</mat-icon> Resultado de la corrida</mat-card-title>
+        <mat-card-title><mat-icon>fact_check</mat-icon> Resultado de las pensiones generadas</mat-card-title>
         <button mat-stroked-button (click)="exportarResultadoCSV()" matTooltip="Exporta el detalle de esta corrida">
           <mat-icon>download</mat-icon>
           Exportar CSV

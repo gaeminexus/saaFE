@@ -3,11 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 
 import {
+  CorridaJubiladosMes,
   PagoPensionComplementaria,
   ResultadoGeneracionPagos,
+  ResultadoGeneracionSeguro,
   ResultadoPrevisualizacionCorrida,
   ResultadoSincronizacion,
   RespuestaPgpc,
+  SolicitudProcesoJubilados,
 } from '../model/pago-pension-complementaria';
 import { ServiciosCrd } from './ws-crd';
 
@@ -75,6 +78,43 @@ export class PagoPensionComplementariaService {
       .set('usuario', usuario);
     return this.http
       .post<RespuestaPgpc<ResultadoPrevisualizacionCorrida>>(`${this.base}/previsualizarCorrida`, null, { params })
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  /**
+   * GET /pgpc/corrida/{anio}/{mes}?idEmpresa= — cabecera de seguimiento de los dos procesos
+   * mensuales (docs/crd/API-DOS-PROCESOS-MENSUALES-JUBILADOS.md §4.3). `null` distingue "la
+   * consulta falló" de una respuesta válida con los dos estados en 0 ("este mes no se corrió
+   * nada") — quien llama tiene que ramificar por eso en el punto de consumo.
+   */
+  corrida(anio: number, mes: number, idEmpresa: number): Observable<CorridaJubiladosMes | null> {
+    const params = new HttpParams().set('idEmpresa', idEmpresa);
+    return this.http
+      .get<CorridaJubiladosMes>(`${this.base}/corrida/${anio}/${mes}`, { params })
+      .pipe(catchError(() => of(null)));
+  }
+
+  /**
+   * POST /pgpc/seguro/generar — inicio de mes (§4.1). Genera UNA orden agregada al proveedor del
+   * seguro médico y escribe `PGPCVLSG` en cada jubilado del padrón vigente. Se bloquea si el
+   * seguro de ese período ya se generó — mismo criterio de idempotencia que `generarPagosDelMes`.
+   */
+  generarSeguro(solicitud: SolicitudProcesoJubilados): Observable<RespuestaPgpc<ResultadoGeneracionSeguro>> {
+    return this.http
+      .post<RespuestaPgpc<ResultadoGeneracionSeguro>>(`${this.base}/seguro/generar`, solicitud)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  /**
+   * POST /pgpc/pensiones/generar — fin de mes (§4.2). Es `generarPagosDelMes` menos el seguro
+   * (que ya se generó al inicio del mes), descontando `PGPCVLSG` tal cual, sin recalcular. ⛔ El
+   * backend rechaza esta llamada si el seguro del período no se generó todavía (D2) — el frontend
+   * ya evita mostrar el botón habilitado en ese caso (`puedeGenerarPensiones`), pero el guard real
+   * vive en el servidor.
+   */
+  generarPensiones(solicitud: SolicitudProcesoJubilados): Observable<RespuestaPgpc<ResultadoGeneracionPagos>> {
+    return this.http
+      .post<RespuestaPgpc<ResultadoGeneracionPagos>>(`${this.base}/pensiones/generar`, solicitud)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 
