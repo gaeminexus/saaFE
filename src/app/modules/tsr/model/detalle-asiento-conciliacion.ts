@@ -12,6 +12,8 @@ export interface DetalleAsientoConciliacion {
         codigo: number;
         fechaAsiento: string;
         numero: number;
+        /** ASNTNMAL (VARCHAR2(100)) — el número con el que contabilidad identifica el asiento. Nulable: los asientos viejos no lo tienen. */
+        numeroAlterno?: string;
         observaciones: string;
     };
     planCuenta: PlanCuenta;

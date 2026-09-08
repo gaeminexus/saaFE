@@ -391,6 +391,18 @@ export class ConciliacionContableComponent implements OnInit {
     return (fila.valorDebe || 0) - (fila.valorHaber || 0);
   }
 
+  /**
+   * Número del asiento a mostrar: `numeroAlterno` (el que usa contabilidad para identificarlo)
+   * cuando lo haya, y el consecutivo interno `numero` como respaldo — es nulable, los asientos
+   * cargados antes de que contabilidad empezara a usarlo no lo tienen. Único punto de esta
+   * regla: llamar desde acá, no repetir la condición en cada lugar que muestra un asiento.
+   */
+  numeroAsientoMostrar(asiento: { numero: number; numeroAlterno?: string } | null | undefined): string {
+    const alterno = asiento?.numeroAlterno;
+    if (alterno != null && alterno.trim() !== '') return alterno;
+    return String(asiento?.numero ?? '');
+  }
+
   toggleExtracto(codigo: number): void {
     if (this.periodoActualCerrado) {
       return;
