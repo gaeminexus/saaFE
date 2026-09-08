@@ -19,6 +19,8 @@ import { AnularAnticipoDialogComponent, AnularAnticipoDialogResult } from '../di
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { ExportService } from '../../../../../shared/services/export.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 
 @Component({
   selector: 'app-anticipos-proveedores',
@@ -36,6 +38,7 @@ export class AnticiposProveedoresComponent {
   private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
+  private exportService = inject(ExportService);
 
   private readonly ROL_PROVEEDOR = 2;
   private readonly RUBRO_ROL_P = 55;
@@ -490,5 +493,31 @@ export class AnticiposProveedoresComponent {
     const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
     if (!d) return '—';
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  /** Exporta el historial del proveedor seleccionado — ya viene filtrado por titular desde el servidor. */
+  exportarCSV(): void {
+    const titular = this.titularSeleccionado();
+    const rows = this.listaAnticipos();
+    if (!rows.length) {
+      this.snackBar.open('No hay anticipos para exportar.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = rows.map((a: any) => ({
+      id: a?.id ?? a?.antpCodigo ?? '',
+      fecha: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(a?.fechaAnticipo)),
+      numeroDoc: a?.numeroDoc ?? '',
+      valor: Number(a?.valor ?? 0),
+      estado: this.etiquetaEstado(a),
+      formaPago: a?.formaPago != null ? (this.FORMA_PAGO_LABELS[a.formaPago as FormaPagoAplicacion] ?? '') : '',
+      observacion: a?.observacion ?? '',
+    }));
+
+    const headers = ['ID', 'Fecha', 'N° Documento', 'Valor', 'Estado', 'Forma de pago', 'Observación'];
+    const keys = ['id', 'fecha', 'numeroDoc', 'valor', 'estado', 'formaPago', 'observacion'];
+    const nombreProveedor = (titular?.razonSocial || titular?.nombre || titular?.identificacion || 'proveedor')
+      .toString().replace(/[^a-zA-Z0-9_-]+/g, '_');
+    this.exportService.exportToCSV(plano, `anticipos_proveedores_${nombreProveedor}_${fechaCsv(new Date())}`, headers, keys);
   }
 }

@@ -166,6 +166,12 @@
           <mat-icon>history</mat-icon>
           Historial de Anticipos — {{ titularSeleccionado()?.razonSocial || titularSeleccionado()?.nombre }}
         </mat-card-title>
+        @if (listaAnticipos().length > 0) {
+          <button mat-stroked-button (click)="exportarCSV()">
+            <mat-icon>download</mat-icon>
+            Exportar CSV
+          </button>
+        }
       </mat-card-header>
       <mat-card-content>
         @if (cargandoLista()) {

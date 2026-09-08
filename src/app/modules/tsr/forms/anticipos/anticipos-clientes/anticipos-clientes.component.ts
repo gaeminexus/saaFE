@@ -18,6 +18,8 @@ import { AnularAnticipoDialogComponent, AnularAnticipoDialogResult } from '../di
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { ExportService } from '../../../../../shared/services/export.service';
+import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 
 @Component({
   selector: 'app-anticipos-clientes',
@@ -35,6 +37,7 @@ export class AnticiposClientesComponent {
   private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
+  private exportService = inject(ExportService);
 
   private readonly ROL_CLIENTE = 1;
   private readonly RUBRO_ROL_P = 55;
@@ -435,5 +438,30 @@ export class AnticiposClientesComponent {
     const d = this.funcionesDatos.convertirFechaDesdeBackend(fecha);
     if (!d) return '—';
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  /** Exporta el historial del cliente seleccionado — ya viene filtrado por titular desde el servidor. */
+  exportarCSV(): void {
+    const titular = this.titularSeleccionado();
+    const rows = this.listaAnticipos();
+    if (!rows.length) {
+      this.snackBar.open('No hay anticipos para exportar.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = rows.map((a: any) => ({
+      id: a?.id ?? a?.antcCodigo ?? '',
+      fecha: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(a?.fechaAnticipo)),
+      numeroDoc: a?.numeroDoc ?? '',
+      valor: Number(a?.valor ?? 0),
+      estado: this.etiquetaEstado(a),
+      observacion: a?.observacion ?? '',
+    }));
+
+    const headers = ['ID', 'Fecha', 'N° Documento', 'Valor', 'Estado', 'Observación'];
+    const keys = ['id', 'fecha', 'numeroDoc', 'valor', 'estado', 'observacion'];
+    const nombreCliente = (titular?.razonSocial || titular?.nombre || titular?.identificacion || 'cliente')
+      .toString().replace(/[^a-zA-Z0-9_-]+/g, '_');
+    this.exportService.exportToCSV(plano, `anticipos_clientes_${nombreCliente}_${fechaCsv(new Date())}`, headers, keys);
   }
 }

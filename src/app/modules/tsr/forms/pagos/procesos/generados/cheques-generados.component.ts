@@ -17,7 +17,9 @@ import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AppStateService } from '../../../../../../shared/services/app-state.service';
 import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
+import { ExportService } from '../../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
+import { fechaCsv } from '../../../../../../shared/utils/fecha-csv.util';
 import { ChequeListado, destinoVerPago } from '../../../../model/cheque-listado';
 import { CuentaBancaria } from '../../../../model/cuenta-bancaria';
 import { ChequeService } from '../../../../service/cheque.service';
@@ -61,6 +63,7 @@ export class ChequesGeneradosComponent implements OnInit, AfterViewChecked {
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private exportService = inject(ExportService);
 
   cuentas = signal<CuentaBancaria[]>([]);
   idCuentaFiltro = signal<number | null>(null);
@@ -224,5 +227,29 @@ export class ChequesGeneradosComponent implements OnInit, AfterViewChecked {
     const destino = destinoVerPago(row.tipoPago, row.idDocumento);
     if (!destino) return;
     this.router.navigate([destino.ruta], { queryParams: destino.queryParams });
+  }
+
+  /** Exporta lo que se está viendo — ya filtrado en el servidor por cuenta/fecha/estado GENERADO. */
+  exportarCSV(): void {
+    const rows = this.rows();
+    if (!rows.length) {
+      this.snackBar.open('No hay cheques para exportar', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    const plano = rows.map((r) => ({
+      numero: r.numero,
+      beneficiario: r.beneficiario || '',
+      cuenta: this.cuentaBanco(r),
+      fecha: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(r.fechaUso ?? r.fechaImpresion ?? r.fechaEntrega ?? null)),
+      tipoPago: this.etiquetaTipoPago(r.tipoPago),
+      referencia: r.referenciaPago || '',
+      valor: Number(r.valor || 0),
+      estado: this.etiquetaEstado(r.estado),
+    }));
+
+    const headers = ['Número', 'Beneficiario', 'Cuenta', 'Fecha', 'Tipo de pago', 'Referencia', 'Valor', 'Estado'];
+    const keys = ['numero', 'beneficiario', 'cuenta', 'fecha', 'tipoPago', 'referencia', 'valor', 'estado'];
+    this.exportService.exportToCSV(plano, `cheques_generados_${fechaCsv(new Date())}`, headers, keys);
   }
 }
