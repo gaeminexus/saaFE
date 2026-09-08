@@ -192,7 +192,7 @@ export class ValoresNoPagadosComponent implements OnInit {
 
     const data: MotivoDialogData = {
       titulo: `Anular valor no pagado N° ${row.codigo}`,
-      advertencia: `Se anulará el registro de ${this.empleadoLabel(row.empleado)} por ${Number(row.valor).toFixed(2)} en el período ${this.periodoLabel(row.periodo)}. El empleado cobrará su neto completo en este período.`,
+      advertencia: `Se anulará el registro de ${this.empleadoLabel(row.empleado)} por ${Number(row.valor).toFixed(2)} en el período ${this.periodoLabel(row.periodoNomina)}. El empleado cobrará su neto completo en este período.`,
       textoConfirmar: 'Sí, anular',
     };
 
@@ -200,7 +200,8 @@ export class ValoresNoPagadosComponent implements OnInit {
       if (!motivo) return;
 
       this.anulando.set(row.codigo);
-      this.valorNoPagadoService.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+      const usuario = this.appState.getUsuario()?.nombre ?? sessionStorage.getItem('userName') ?? '';
+      this.valorNoPagadoService.anular(row.codigo, { motivo, usuario }).subscribe({
         next: () => {
           this.anulando.set(null);
           this.mostrarExito('Valor no pagado anulado correctamente');
@@ -225,7 +226,7 @@ export class ValoresNoPagadosComponent implements OnInit {
     const plano = rows.map((r) => ({
       codigo: r.codigo,
       empleado: this.empleadoLabel(r.empleado),
-      periodo: this.periodoLabel(r.periodo),
+      periodo: this.periodoLabel(r.periodoNomina),
       valor: Number(r.valor || 0),
       motivo: r.motivo || '',
       estado: this.estadoLabel(r.estado),

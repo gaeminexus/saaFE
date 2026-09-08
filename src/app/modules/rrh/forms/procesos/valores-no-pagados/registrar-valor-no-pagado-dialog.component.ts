@@ -147,15 +147,22 @@ export class RegistrarValorNoPagadoDialogComponent implements OnInit {
       idPeriodo: periodo.codigo,
       valor: this.valor(),
       motivo: this.motivo().trim(),
-      idUsuario: this.appState.getIdUsuario(),
+      usuario: this.appState.getUsuario()?.nombre ?? sessionStorage.getItem('userName') ?? '',
     };
 
     this.guardando.set(true);
     this.errorMsg.set('');
     this.valorNoPagadoService.registrar(payload).subscribe({
-      next: () => {
+      next: (resultado) => {
         this.guardando.set(false);
-        this.mostrarExito('Valor no pagado registrado correctamente');
+        // La validación dura (contra el neto real) la hace el motor al procesar el rol — al
+        // registrar, si X supera el salario base del contrato, el backend avisa sin bloquear
+        // (plan §8). Se muestra igual aunque el registro haya salido bien.
+        if (resultado?.advertencia) {
+          this.mostrarError(resultado.advertencia);
+        } else {
+          this.mostrarExito(resultado?.mensaje || 'Valor no pagado registrado correctamente');
+        }
         this.dialogRef.close(true);
       },
       error: (err) => {

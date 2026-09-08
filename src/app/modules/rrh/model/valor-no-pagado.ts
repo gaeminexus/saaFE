@@ -53,8 +53,12 @@ export interface ReferenciaTrazabilidad {
 }
 
 /**
- * Fila de `GET /vnpg/listar` (plan §10). Es una **proyección**, no la entidad `RHH.VNPG` cruda de
- * `getAll`/`selectByCriteria`: trae el empleado y el período ya resueltos, no sólo sus códigos.
+ * Fila de `GET /vnpg/listar` (`ValorNoPagadoDaoServiceImpl.selectListado`, saaBE). **No es una
+ * proyección**: `listar()` devuelve la entidad JPA `ValorNoPagado` cruda (mismo objeto que
+ * `getAll`/`selectByCriteria`), así que los nombres de propiedad son los del bean —
+ * `periodoNomina`, no `periodo`. `ordenRetencion`/`ordenPago` traen el `OrdenPagoNomina` completo
+ * (con `numero`); `liquidacion` trae el `Liquidacion` completo, que NO tiene `numero` — sólo
+ * `codigo` (de ahí que `ReferenciaTrazabilidad.numero` sea opcional).
  *
  * Toda la trazabilidad (`periodoRecuperacion`, `ordenRetencion`, `ordenPago`, `liquidacion`) es
  * nulable a propósito: un registro recién creado (`REGISTRADO`) no tiene ninguna todavía (plan §9).
@@ -62,8 +66,8 @@ export interface ReferenciaTrazabilidad {
 export interface ValorNoPagadoListado {
   codigo: number;
   empleado: Empleado;
-  /** Período en que NO se paga (`VNPGPRNM`). */
-  periodo: PeriodoNomina;
+  /** Período en que NO se paga (`VNPGPRNM` → `ValorNoPagado.periodoNomina`, no `.periodo`). */
+  periodoNomina: PeriodoNomina;
   valor: number;
   motivo: string;
   estado: number;
@@ -94,18 +98,46 @@ export interface FiltrosListarValoresNoPagados {
   estado?: number[];
 }
 
-/** Body para registrar un valor no pagado (`POST /vnpg`, plan §8: empleado activo, período ABIERTO, valor > 0, motivo obligatorio). */
+/**
+ * Body para registrar un valor no pagado (`POST /vnpg/registrar`, no el `POST /vnpg` estándar:
+ * ahí es donde vive la validación de negocio — empleado activo, período ABIERTO, valor > 0,
+ * motivo obligatorio, ningún otro registro vivo — ver `ValorNoPagadoServiceImpl.registrar` en
+ * saaBE). `usuario` es el nombre de usuario (String), no el id — así lo recibe
+ * `ValorNoPagadoRest.registrar`.
+ */
 export interface RegistrarValorNoPagadoRequest {
   idEmpresa: number;
   idEmpleado: number;
   idPeriodo: number;
   valor: number;
   motivo: string;
-  idUsuario: number;
+  usuario: string;
 }
 
-/** Body de `POST /vnpg/anular/{id}` (plan §10). Sólo válido desde `REGISTRADO` (plan §8). */
+/** Respuesta de `POST /vnpg/registrar` (`ValorNoPagadoServiceImpl.registrar`, saaBE). `advertencia` viaja no nula cuando el valor supera el salario base del contrato — se muestra igual aunque el registro haya salido bien. */
+export interface RegistrarValorNoPagadoResponse {
+  exito: boolean;
+  idRegistro: number;
+  estado: number;
+  estadoTexto: string;
+  advertencia: string | null;
+  mensaje: string;
+}
+
+/**
+ * Body de `POST /vnpg/anular/{id}` (`ValorNoPagadoRest.anular`, saaBE). Sólo válido desde
+ * `REGISTRADO` (plan §8). `usuario` es el nombre de usuario (String), no el id — igual que
+ * `registrar` (corregido 2026-09-08, antes mandaba `idUsuario` numérico y `usuarioAnulacion`
+ * quedaba en null en la BD sin que el backend lo rechazara).
+ */
 export interface AnularValorNoPagadoRequest {
   motivo: string;
-  idUsuario: number;
+  usuario: string;
+}
+
+/** Respuesta de `POST /vnpg/anular/{id}` (`ValorNoPagadoServiceImpl.anular`, saaBE). */
+export interface AnularValorNoPagadoResponse {
+  exito: boolean;
+  idRegistro: number;
+  mensaje: string;
 }

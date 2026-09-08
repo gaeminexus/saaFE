@@ -3,8 +3,10 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
 import {
   AnularValorNoPagadoRequest,
+  AnularValorNoPagadoResponse,
   FiltrosListarValoresNoPagados,
   RegistrarValorNoPagadoRequest,
+  RegistrarValorNoPagadoResponse,
   ValorNoPagadoListado,
 } from '../model/valor-no-pagado';
 import { ServiciosRhh } from './ws-rrh';
@@ -40,17 +42,22 @@ export class ValorNoPagadoService {
       .pipe(catchError(this.handleError));
   }
 
-  /** POST /vnpg — registra el valor no pagado (plan §8). */
-  registrar(datos: RegistrarValorNoPagadoRequest): Observable<unknown> {
+  /**
+   * POST /vnpg/registrar — registra el valor no pagado (plan §8). No es el `POST /vnpg` estándar:
+   * ahí vive la validación de negocio completa (empleado activo, período ABIERTO, valor > 0,
+   * motivo obligatorio, ningún otro registro vivo para ese empleado y período) — ver
+   * `ValorNoPagadoServiceImpl.registrar` en saaBE. El `POST /vnpg` estándar sólo graba tal cual.
+   */
+  registrar(datos: RegistrarValorNoPagadoRequest): Observable<RegistrarValorNoPagadoResponse> {
     return this.http
-      .post(ServiciosRhh.RS_VNPG, datos, this.httpOptions)
+      .post<RegistrarValorNoPagadoResponse>(`${ServiciosRhh.RS_VNPG}/registrar`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
   /** POST /vnpg/anular/{id} — sólo válido desde REGISTRADO (plan §8/§10). */
-  anular(id: number, datos: AnularValorNoPagadoRequest): Observable<unknown> {
+  anular(id: number, datos: AnularValorNoPagadoRequest): Observable<AnularValorNoPagadoResponse> {
     return this.http
-      .post(`${ServiciosRhh.RS_VNPG}/anular/${id}`, datos, this.httpOptions)
+      .post<AnularValorNoPagadoResponse>(`${ServiciosRhh.RS_VNPG}/anular/${id}`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
