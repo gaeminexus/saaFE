@@ -55,6 +55,30 @@ DDL en `sql/lap1-11-devolucion-anticipo.sql`. **Va antes del WAR.**
 **Sin rubro nuevo.** El estado es un flag de dos valores, no parametría de oficina: constante Java
 en `com.saa.rubros.EstadoDevolucionAnticipo`, mismo criterio que `EstadoCajaChica`.
 
+### 2.2 `RHH.DVCT` — qué cuotas tocó cada devolución
+
+**Agregada el 2026-09-07, y la levantó el agente de backend, no yo.** El contrato original decía que
+al cancelar una cuota «se deje dicho en su observación que fue por devolución», y `RHH.CTDS`
+**no tiene columna de observación**. Pero el hueco real era más grande que un texto: **sin rastro de
+qué cuotas tocó cada devolución, anular una devolución no puede saber cuáles devolver a `PENDIENTE`**
+cuando el anticipo tuvo varias — reactivaría la equivocada, y no se notaría hasta que a alguien le
+descuenten un mes que ya había devuelto.
+
+| Columna | Tipo | Java |
+|---|---|---|
+| `DVCTCDGO` | `NUMBER` identity | `Long codigo` |
+| `DVANCDGO` | `NUMBER` | `DevolucionAnticipo devolucion` (FK) |
+| `CTDSCDGO` | `NUMBER` | `CuotaDescuento cuota` (FK) |
+| `DVCTTIPO` | `NUMBER` | `Long tipo` — 1 cancelada entera · 2 ajustada (bajó de valor) |
+| `DVCTVLAP` | `NUMBER(18,2)` | `Double valorAplicado` |
+| `DVCTVLAN` | `NUMBER(18,2)` | `Double valorAnterior` — para restaurarlo al anular |
+
+**Por qué tabla y no una lista de ids en una columna de texto**, que fue la primera propuesta y
+resolvía el anular: porque resolvía **sólo** el anular. Con tabla se puede responder *«¿por qué esta
+cuota no se descontó?»* —que es **la** pregunta cuando un empleado reclama—, hay integridad
+referencial, y no hay un largo fijo que se trunque en silencio. Y es el patrón del repositorio
+entero: `DSRC`/`CTDS`, `PLIS`/`DLIS`, `ANTE`… una lista separada por comas sería el único caso.
+
 ---
 
 ## 3. Contabilidad — el ingreso lo hace tesorería, no `rhh`
