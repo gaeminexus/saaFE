@@ -1,0 +1,51 @@
+<h2 mat-dialog-title>Registrar el pago — {{ data.tipoLabel }}</h2>
+
+<mat-dialog-content class="contenido">
+  <div class="aviso-info">
+    <mat-icon>info</mat-icon>
+    <span>
+      Esto <strong>no envía ninguna orden de pago al banco.</strong> El IESS cobra por débito
+      automático: acá se registra el hecho que ya ocurrió — la cuenta y la fecha reales del débito —
+      para que tesorería pueda conciliarlo contra el extracto bancario.
+    </span>
+  </div>
+
+  @if (aviso(); as a) {
+    <div class="aviso-dialog">
+      <mat-icon>report_problem</mat-icon>
+      <span>{{ a }}</span>
+    </div>
+  }
+
+  <div class="resumen">
+    <span>Comprobante {{ data.numeroComprobante }}</span>
+    <span class="valor">{{ data.valorIess | number: '1.2-2' }}</span>
+  </div>
+
+  <mat-form-field appearance="outline" class="campo-completo">
+    <mat-label>Cuenta bancaria debitada</mat-label>
+    <mat-select [(ngModel)]="idCuentaBancaria">
+      @for (c of data.cuentas; track c.codigo) {
+        <mat-option [value]="c.codigo">{{ etiquetaCuenta(c) }}</mat-option>
+      }
+    </mat-select>
+    @if (data.cuentas.length === 0) {
+      <mat-hint>No hay cuentas bancarias activas configuradas.</mat-hint>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="campo-completo">
+    <mat-label>Fecha real del débito</mat-label>
+    <input matInput [matDatepicker]="picker" [(ngModel)]="fechaPago" />
+    <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+    <mat-datepicker #picker></mat-datepicker>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" type="button" [disabled]="!formValido" (click)="confirmar()">
+    <mat-icon>check</mat-icon>
+    Registrar el débito
+  </button>
+</mat-dialog-actions>

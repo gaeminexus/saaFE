@@ -1,0 +1,117 @@
+<h2 mat-dialog-title>Registrar planilla — {{ data.tipoLabel }}</h2>
+
+<mat-dialog-content class="contenido">
+  @if (aviso(); as a) {
+    <div class="aviso-dialog">
+      <mat-icon>report_problem</mat-icon>
+      <span>{{ a }}</span>
+    </div>
+  }
+
+  <div class="grid-campos">
+    <mat-form-field appearance="outline">
+      <mat-label>N.° de comprobante</mat-label>
+      <input matInput [(ngModel)]="numeroComprobante" />
+      <mat-hint>El que emite el portal — único por empresa y tipo</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Valor total del IESS</mat-label>
+      <input matInput type="number" min="0.01" step="0.01" [(ngModel)]="valorIess" />
+      <span matTextSuffix>$</span>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de emisión</mat-label>
+      <input matInput [matDatepicker]="pickerEmision" [(ngModel)]="fechaEmision" />
+      <mat-datepicker-toggle matSuffix [for]="pickerEmision"></mat-datepicker-toggle>
+      <mat-datepicker #pickerEmision></mat-datepicker>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha máxima de pago</mat-label>
+      <input matInput [matDatepicker]="pickerVencimiento" [(ngModel)]="fechaMaximaPago" />
+      <mat-datepicker-toggle matSuffix [for]="pickerVencimiento"></mat-datepicker-toggle>
+      <mat-datepicker #pickerVencimiento></mat-datepicker>
+      <mat-hint>Vencimiento del comprobante</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="span-2">
+      <mat-label>Observación</mat-label>
+      <input matInput [(ngModel)]="observacion" />
+    </mat-form-field>
+  </div>
+
+  <div class="panel-renglones">
+    <div class="panel-titulo-tabla">
+      Renglones del comprobante
+      <button mat-stroked-button type="button" (click)="agregarRenglon()">
+        <mat-icon>add</mat-icon>
+        Renglón
+      </button>
+    </div>
+
+    <p class="ayuda-renglones">
+      El concepto no es decorativo: es contra qué total de la planilla de control se compara cada
+      renglón al conciliar. Un renglón sin concepto queda «sin clasificar» y la conciliación no
+      podrá compararlo.
+    </p>
+
+    <table class="tabla-renglones">
+      <thead>
+        <tr>
+          <th>Texto del portal</th>
+          <th class="col-concepto">Concepto</th>
+          <th class="col-valor">Valor</th>
+          <th class="col-quitar"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of renglones(); track $index) {
+          <tr>
+            <td>
+              <mat-form-field appearance="outline" class="campo-fila">
+                <input matInput [(ngModel)]="r.concepto" placeholder="Ej. APORTE PERSONAL" />
+              </mat-form-field>
+            </td>
+            <td class="col-concepto">
+              <mat-form-field appearance="outline" class="campo-fila">
+                <mat-select [(ngModel)]="r.conceptoTipo">
+                  <mat-option [value]="null">Sin clasificar</mat-option>
+                  @for (c of conceptos; track c.codigoAlterno) {
+                    <mat-option [value]="c.codigoAlterno">{{ c.descripcion }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </td>
+            <td class="col-valor">
+              <mat-form-field appearance="outline" class="campo-fila">
+                <input matInput type="number" min="0" step="0.01" [(ngModel)]="r.valorIess" />
+              </mat-form-field>
+            </td>
+            <td class="col-quitar">
+              <button mat-icon-button type="button" matTooltip="Quitar renglón" (click)="quitarRenglon($index)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <div class="resumen-renglones" [class.descuadra]="renglonesDescuadran()">
+      <span>Suma de renglones: {{ sumaRenglones() | number: '1.2-2' }}</span>
+      @if (renglonesDescuadran()) {
+        <span><mat-icon>warning</mat-icon> No cuadra con el valor total del IESS</span>
+      }
+    </div>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-stroked-button type="button" (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" type="button" [disabled]="!formValido" (click)="guardar()">
+    <mat-icon>save</mat-icon>
+    Registrar
+  </button>
+</mat-dialog-actions>

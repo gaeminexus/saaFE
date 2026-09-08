@@ -82,9 +82,13 @@ export class ServiciosRhh {
   public static RS_ODBS = `${API_URL}/odbs`;
 
   // Planilla de control del IESS (docs/rrh/API-PLANILLA-IESS.md §7.a). @Path("plie") en el
-  // backend: NO confundir con la futura RS_PLIS de las planillas que emite el portal (§3.1/§5),
-  // que es una tabla real y todavía no tiene endpoints.
+  // backend: es el POJO calculado (sin tabla), NO confundir con RS_PLIS de abajo.
   public static RS_PLIE = `${API_URL}/plie`;
+
+  // Planillas que emite el portal del IESS — RHH.PLIS (docs/rrh/API-PLANILLA-IESS.md §3/§5/§6).
+  // @Path("plis") en el backend: es la tabla real que se registra, concilia y paga. NO confundir
+  // con RS_PLIE de arriba, que es el cálculo contra el que ésta se concilia.
+  public static RS_PLIS = `${API_URL}/plis`;
 
   // Agregar más endpoints de RRHH acá según necesidades
 }

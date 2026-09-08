@@ -742,6 +742,15 @@ export const routes: Routes = [
         data: { title: 'Planilla de control del IESS' },
       },
       {
+        path: 'procesos/planillas-iess',
+        loadComponent: () =>
+          import('./modules/rrh/forms/procesos/planillas-iess/planillas-iess.component').then(
+            (m) => m.PlanillasIessComponent,
+          ),
+        canActivate: [authGuard],
+        data: { title: 'Planillas del IESS' },
+      },
+      {
         path: 'procesos/horas-extra',
         loadComponent: () =>
           import('./modules/rrh/forms/procesos/horas-extra/horas-extra.component').then(

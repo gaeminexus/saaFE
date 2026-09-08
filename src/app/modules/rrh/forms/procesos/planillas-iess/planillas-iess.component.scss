@@ -1,0 +1,173 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+@use '../../../styles/pantalla-rrh' as *;
+
+.rrh-page {
+  @include pantalla-rrh;
+
+  .selector-anio {
+    min-width: $breakpoint-sm * 0.25;
+  }
+
+  .selector-periodo {
+    min-width: $breakpoint-sm * 0.3;
+  }
+}
+
+.tarjetas-planillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax($breakpoint-sm * 0.55, 1fr));
+  gap: $spacing-md;
+}
+
+.tarjeta-planilla {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+
+  &.tarjeta-anulada {
+    opacity: 0.75;
+  }
+}
+
+.tarjeta-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .tipo-label {
+    font-weight: $font-weight-semibold;
+    color: $secondary-color;
+  }
+}
+
+.tarjeta-vacia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-lg 0;
+  color: $text-muted;
+
+  mat-icon {
+    font-size: $font-size-2xl;
+    width: $font-size-2xl;
+    height: $font-size-2xl;
+  }
+}
+
+.tarjeta-datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}
+
+.tarjeta-motivo {
+  margin: 0;
+}
+
+.grid-totales-tarjeta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-xs;
+
+  .total-item {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs * 0.5;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-sm;
+    background: $background-tertiary;
+
+    .etiqueta {
+      font-size: $font-size-xs;
+      color: $text-secondary;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .valor {
+      font-size: $font-size-base;
+      font-weight: $font-weight-semibold;
+      color: $text-primary;
+
+      &.muted {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-normal;
+        color: $text-muted;
+      }
+    }
+  }
+
+  // La diferencia es el dato de esta pantalla: signo y color, no una columna más.
+  .total-diferencia {
+    &.positiva .valor {
+      color: $error-color;
+    }
+
+    &.negativa .valor {
+      color: $success-color;
+    }
+  }
+}
+
+.tarjeta-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-xs;
+
+  .separador-flexible {
+    flex: 1;
+  }
+}
+
+.tabla-renglones-wrap {
+  overflow-x: auto;
+  border-top: $border-width solid $border-light;
+  padding-top: $spacing-sm;
+}
+
+.tabla-renglones-detalle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    text-align: left;
+    padding: $spacing-xs;
+    color: $text-secondary;
+    font-size: $font-size-xs;
+    border-bottom: $border-width solid $border-light;
+  }
+
+  td {
+    padding: $spacing-xs;
+    border-bottom: $border-width solid $border-light;
+  }
+
+  .al-derecha {
+    text-align: right;
+  }
+
+  .muted {
+    color: $text-muted;
+    font-style: italic;
+  }
+
+  .positiva {
+    color: $error-color;
+  }
+
+  .negativa {
+    color: $success-color;
+  }
+
+  .vacio {
+    text-align: center;
+    color: $text-muted;
+    padding: $spacing-md;
+  }
+}

@@ -1,0 +1,114 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.contenido {
+  min-width: $breakpoint-sm * 0.85;
+  max-width: 90vw;
+}
+
+.aviso-dialog {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-radius: $border-radius-sm;
+  background: rgba($error-color, 0.08);
+  border-left: $border-width-md solid $error-color;
+  color: $error-color;
+  font-size: $font-size-sm;
+}
+
+.grid-campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-md;
+
+  .span-2 {
+    grid-column: span 2;
+  }
+}
+
+.panel-renglones {
+  border-top: $border-width solid $border-light;
+  padding-top: $spacing-sm;
+}
+
+.panel-titulo-tabla {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-xs;
+  font-weight: $font-weight-semibold;
+  color: $secondary-color;
+
+  button mat-icon {
+    vertical-align: middle;
+    margin-right: $spacing-xs * 0.5;
+  }
+}
+
+.ayuda-renglones {
+  margin: 0 0 $spacing-sm;
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.tabla-renglones {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font-size: $font-size-xs;
+    color: $text-secondary;
+    padding: 0 $spacing-xs;
+  }
+
+  .col-concepto {
+    width: 30%;
+  }
+
+  .col-valor {
+    width: 18%;
+  }
+
+  .col-quitar {
+    width: 40px;
+  }
+
+  .campo-fila {
+    width: 100%;
+
+    ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+      display: none;
+    }
+  }
+}
+
+.resumen-renglones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+
+  &.descuadra {
+    color: $error-color;
+    font-weight: $font-weight-semibold;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: $spacing-xs * 0.5;
+    }
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+    }
+  }
+}

@@ -82,4 +82,18 @@ export class RubrosRrh {
    * (`FORMATO_ARCHIVO_MARCACION`), que describe cualquier archivo plano y no solo los del reloj.
    */
   public static readonly CAMPO_ARCHIVO_BANCARIO = 224;
+
+  /**
+   * Tipo de planilla del IESS (`RHH.PLIS.PLISTIPO`): 1 rol normal · 2 quirografarios ·
+   * 3 hipotecarios · 4 fondos de reserva. Ver `docs/rrh/API-PLANILLA-IESS.md` §3.3.
+   */
+  public static readonly TIPO_PLANILLA_IESS = 330;
+
+  /**
+   * Concepto normalizado de un renglón de planilla del IESS (`RHH.DLIS.DLISCNCT`): 1 aporte
+   * personal · 2 aporte patronal · 3 contribución CCC · 4 seguro tiempo parcial · 5 otro. Decide
+   * contra qué total de la planilla de control se compara el renglón — nunca se adivina por el
+   * texto libre del comprobante. Ver `docs/rrh/API-PLANILLA-IESS.md` §3.4.
+   */
+  public static readonly CONCEPTO_PLANILLA_IESS = 331;
 }

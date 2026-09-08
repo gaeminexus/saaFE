@@ -1,0 +1,55 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.contenido {
+  min-width: $breakpoint-sm * 0.7;
+  max-width: 90vw;
+}
+
+.aviso-info {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-md;
+  border-radius: $border-radius-sm;
+  background: rgba($info-color, 0.08);
+  border-left: $border-width-md solid $info-color;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+
+  strong {
+    color: $text-primary;
+  }
+}
+
+.aviso-dialog {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-radius: $border-radius-sm;
+  background: rgba($error-color, 0.08);
+  border-left: $border-width-md solid $error-color;
+  color: $error-color;
+  font-size: $font-size-sm;
+}
+
+.resumen {
+  display: flex;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-radius: $border-radius-sm;
+  background: $background-tertiary;
+  font-weight: $font-weight-medium;
+
+  .valor {
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.campo-completo {
+  width: 100%;
+}

@@ -80,6 +80,9 @@ export class PermisosRrh {
   /** Planilla de control del IESS — docs/rrh/API-PLANILLA-IESS.md §7.a. */
   public static readonly PLANILLA_CONTROL_IESS = 898;
 
+  /** Planillas del IESS: registrar, conciliar, pagar y anular — docs/rrh/API-PLANILLA-IESS.md §7.b. */
+  public static readonly PLANILLAS_IESS = 899;
+
   // Parametrización de la fase 6
   public static readonly FORMATOS_ARCHIVO_BANCARIO = 862;
 

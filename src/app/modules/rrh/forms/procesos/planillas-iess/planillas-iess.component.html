@@ -1,0 +1,230 @@
+<div class="rrh-page">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>receipt_long</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>Planillas del IESS</h1>
+        <p class="subtitle">
+          Captura del comprobante del portal, conciliación contra la planilla de control y registro
+          del débito automático.
+        </p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <mat-form-field appearance="outline" class="selector-anio">
+        <mat-label>Ejercicio</mat-label>
+        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
+          @for (a of anios; track a) {
+            <mat-option [value]="a">{{ a }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="selector-periodo">
+        <mat-label>Período</mat-label>
+        <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="onPeriodoChange($event)">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ etiquetaPeriodo(p) }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </div>
+
+  @if (periodos().length === 0) {
+    <div class="aviso">
+      <mat-icon>event_busy</mat-icon>
+      <span>No hay períodos de nómina creados para {{ anio() }}.</span>
+    </div>
+  } @else if (periodoSeleccionado() === null) {
+    <div class="aviso">
+      <mat-icon>event</mat-icon>
+      <span>Seleccione un período para ver sus planillas del IESS.</span>
+    </div>
+  } @else if (cargando()) {
+    <div class="aviso">
+      <mat-icon>hourglass_empty</mat-icon>
+      <span>Cargando…</span>
+    </div>
+  } @else {
+    <div class="tarjetas-planillas">
+      @for (fila of filas(); track fila.tipo) {
+        <div class="panel tarjeta-planilla" [class.tarjeta-anulada]="fila.planilla?.estado === EstadoPlanillaIess.ANULADA">
+          <div class="tarjeta-header">
+            <span class="tipo-label">{{ fila.tipoLabel }}</span>
+            @if (fila.planilla; as p) {
+              <span
+                class="pill"
+                [class.pill-estado-abierto]="p.estado === EstadoPlanillaIess.REGISTRADA"
+                [class.pill-estado-en-calculo]="p.estado === EstadoPlanillaIess.CONCILIADA"
+                [class.pill-estado-pagado]="p.estado === EstadoPlanillaIess.PAGADA"
+                [class.pill-estado-anulado]="p.estado === EstadoPlanillaIess.ANULADA"
+              >{{ etiquetaEstado(p.estado) }}</span>
+            }
+          </div>
+
+          @if (!fila.planilla) {
+            <div class="tarjeta-vacia">
+              <mat-icon>inbox</mat-icon>
+              <span>Sin planilla registrada este período.</span>
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="registrar(fila)"
+                [disabled]="registrandoTipo() === fila.tipo"
+              >
+                <mat-icon>add</mat-icon>
+                Registrar
+              </button>
+            </div>
+          } @else if (fila.planilla; as p) {
+              <div class="tarjeta-datos">
+                <span>N.° {{ p.numeroComprobante }}</span>
+                <span>Vence {{ p.fechaMaximaPago | date: 'dd/MM/yyyy' }}</span>
+                @if (p.estado === EstadoPlanillaIess.PAGADA) {
+                  <span>Debitado {{ p.fechaPago | date: 'dd/MM/yyyy' }}</span>
+                }
+              </div>
+
+              @if (p.estado === EstadoPlanillaIess.ANULADA && p.motivoAnulacion) {
+                <div class="aviso aviso-error tarjeta-motivo">
+                  <mat-icon>block</mat-icon>
+                  <span>{{ p.motivoAnulacion }}</span>
+                </div>
+              }
+
+              <div class="grid-totales-tarjeta">
+                <div class="total-item">
+                  <span class="etiqueta">Valor IESS</span>
+                  <span class="valor">{{ p.valorIess | number: '1.2-2' }}</span>
+                </div>
+                <div class="total-item">
+                  <span class="etiqueta">Valor control</span>
+                  @if (p.estado === EstadoPlanillaIess.REGISTRADA) {
+                    <span class="valor muted">— sin conciliar —</span>
+                  } @else if (p.valorControl === null || p.valorControl === undefined) {
+                    <span class="valor muted">Sin control disponible</span>
+                  } @else {
+                    <span class="valor">{{ p.valorControl | number: '1.2-2' }}</span>
+                  }
+                </div>
+                <div class="total-item total-diferencia" [class.positiva]="(p.diferencia ?? 0) > 0.01" [class.negativa]="(p.diferencia ?? 0) < -0.01">
+                  <span class="etiqueta">Diferencia</span>
+                  @if (p.diferencia === null || p.diferencia === undefined) {
+                    <span class="valor muted">—</span>
+                  } @else {
+                    <span class="valor">
+                      {{ p.diferencia > 0 ? '+' : '' }}{{ p.diferencia | number: '1.2-2' }}
+                    </span>
+                  }
+                </div>
+              </div>
+
+              <div class="tarjeta-acciones">
+                <button mat-button type="button" (click)="toggleDetalle(p)">
+                  <mat-icon>{{ estaExpandido(p.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  Renglones
+                </button>
+
+                <span class="separador-flexible"></span>
+
+                @if (p.estado === EstadoPlanillaIess.REGISTRADA) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    [disabled]="procesando() === p.codigo"
+                    (click)="conciliar(p)"
+                  >
+                    <mat-icon>compare_arrows</mat-icon>
+                    Conciliar
+                  </button>
+                }
+                @if (p.estado === EstadoPlanillaIess.CONCILIADA) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="primary"
+                    [disabled]="procesando() === p.codigo"
+                    (click)="pagar(p)"
+                  >
+                    <mat-icon>payments</mat-icon>
+                    Registrar pago
+                  </button>
+                }
+                @if (p.estado === EstadoPlanillaIess.REGISTRADA || p.estado === EstadoPlanillaIess.CONCILIADA) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="warn"
+                    [disabled]="procesando() === p.codigo"
+                    (click)="anular(p)"
+                  >
+                    <mat-icon>cancel</mat-icon>
+                    Anular
+                  </button>
+                }
+                @if (p.estado === EstadoPlanillaIess.PAGADA) {
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    color="warn"
+                    [disabled]="procesando() === p.codigo"
+                    (click)="reversarPago(p)"
+                  >
+                    <mat-icon>undo</mat-icon>
+                    Reversar pago
+                  </button>
+                }
+              </div>
+
+              @if (estaExpandido(p.codigo)) {
+                <div class="tabla-renglones-wrap">
+                  <table class="tabla-renglones-detalle">
+                    <thead>
+                      <tr>
+                        <th>Texto del portal</th>
+                        <th>Concepto</th>
+                        <th class="al-derecha">Valor IESS</th>
+                        <th class="al-derecha">Valor control</th>
+                        <th class="al-derecha">Diferencia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (r of renglonesDe(p.codigo); track $index) {
+                        <tr>
+                          <td>{{ r.concepto || '—' }}</td>
+                          <td>{{ etiquetaConcepto(r.conceptoTipo) }}</td>
+                          <td class="al-derecha">{{ r.valorIess | number: '1.2-2' }}</td>
+                          <td class="al-derecha">
+                            @if (r.valorControl === null || r.valorControl === undefined) {
+                              <span class="muted">Sin control disponible</span>
+                            } @else {
+                              {{ r.valorControl | number: '1.2-2' }}
+                            }
+                          </td>
+                          <td class="al-derecha" [class.positiva]="(r.diferencia ?? 0) > 0.01" [class.negativa]="(r.diferencia ?? 0) < -0.01">
+                            @if (r.diferencia === null || r.diferencia === undefined) {
+                              <span class="muted">—</span>
+                            } @else {
+                              {{ r.diferencia > 0 ? '+' : '' }}{{ r.diferencia | number: '1.2-2' }}
+                            }
+                          </td>
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td colspan="5" class="vacio">Sin renglones registrados.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
