@@ -56,7 +56,11 @@
         color="primary"
         (click)="generar()"
         [disabled]="!puedeGenerar() || ocupado()"
-        matTooltip="Arma la orden y su detalle a partir de las nóminas del período"
+        [matTooltip]="
+          puedeGenerar()
+            ? 'Arma la orden y su detalle a partir de las nóminas del período'
+            : (pistaEstadoNoHabilita() ?? 'Seleccione la cuenta de origen para poder generar')
+        "
       >
         <mat-icon>playlist_add</mat-icon>
         Generar orden
@@ -64,6 +68,8 @@
 
       @if (!puedeGenerar() && cuentaSeleccionada() === null) {
         <span class="pista">Seleccione la cuenta de origen para poder generar.</span>
+      } @else if (pistaEstadoNoHabilita(); as pista) {
+        <span class="pista">{{ pista }}</span>
       }
     </div>
   }

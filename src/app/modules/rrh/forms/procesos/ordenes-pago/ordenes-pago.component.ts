@@ -95,6 +95,22 @@ export class OrdenesPagoComponent implements OnInit {
       this.cuentaSeleccionada() !== null,
   );
 
+  /**
+   * Cuando el botón está gris por el ESTADO del período (no por falta de cuenta), antes no decía
+   * nada — el usuario se quedaba mirando un botón deshabilitado sin explicación (2026-09-08,
+   * reporte de usuario: cerró el período antes de generar la orden). `null` mientras
+   * `periodoActual()` no cargó todavía, para no parpadear una pista falsa.
+   */
+  pistaEstadoNoHabilita = computed(() => {
+    const periodo = this.periodoActual();
+    if (!periodo) return null;
+    if (estadoEn(periodo, ESTADOS_GENERA_ORDEN_PAGO)) return null;
+
+    const actual = this.estadoPeriodoLabel(periodo);
+    const permitidos = this.textoEstadosPermitidos();
+    return `El período está ${actual}. La orden de pago se genera con el período ${permitidos}.`;
+  });
+
   totalDetalle = computed(() =>
     this.detalle().reduce((suma, fila) => suma + Number(fila.valor ?? 0), 0),
   );
@@ -308,6 +324,32 @@ export class OrdenesPagoComponent implements OnInit {
           row.tipoCuenta,
         ) || '—',
     }));
+  }
+
+  /** Reusa el mismo catálogo que `PeriodosNominaComponent.estadoLabel` (rubro 182) — no duplica el switch de textos. */
+  estadoPeriodoLabel(periodo: PeriodoNomina | null): string {
+    if (!periodo) return '—';
+    return (
+      this.detalleRubroService.getDescripcionByParentAndAlterno(
+        RubrosRrh.ESTADO_PERIODO_NOMINA,
+        periodo.estado,
+      ) || '—'
+    );
+  }
+
+  /** "APROBADO, CONTABILIZADO o PAGADO" — arma la lista desde el catálogo, no un literal aparte que se desincronice de `ESTADOS_GENERA_ORDEN_PAGO`. */
+  private textoEstadosPermitidos(): string {
+    const nombres = ESTADOS_GENERA_ORDEN_PAGO.map(
+      (estado) =>
+        this.detalleRubroService.getDescripcionByParentAndAlterno(
+          RubrosRrh.ESTADO_PERIODO_NOMINA,
+          estado,
+        ) || '',
+    ).filter((nombre) => !!nombre);
+
+    if (nombres.length === 0) return '';
+    if (nombres.length === 1) return nombres[0];
+    return `${nombres.slice(0, -1).join(', ')} o ${nombres[nombres.length - 1]}`;
   }
 
   etiquetaCuenta(cuenta: any): string {
