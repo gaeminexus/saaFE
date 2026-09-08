@@ -11,9 +11,6 @@ import {
   MotivoDialogComponent,
   MotivoDialogData,
 } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
@@ -49,7 +46,6 @@ export class AnticiposComponent implements OnInit {
     texto,
   }));
 
-  filtroEmpleadoBusqueda = signal<string>('');
   filtroEmpleado = signal<Empleado | null>(null);
   filtroEstado = signal<number | null>(null);
   empleados = signal<Empleado[]>([]);
@@ -64,7 +60,7 @@ export class AnticiposComponent implements OnInit {
   totalValor = computed(() => this.rows().reduce((s, r) => s + (Number(r.valor) || 0), 0));
 
   ngOnInit(): void {
-    this.onBuscarEmpleados();
+    this.cargarEmpleados();
     this.buscar();
   }
 
@@ -72,9 +68,20 @@ export class AnticiposComponent implements OnInit {
   estadoOptionLabel = (e: { codigo: number; texto: string }): string => e.texto;
   estadoOptionValor = (e: { codigo: number; texto: string }): number => e.codigo;
 
-  onBuscarEmpleados(): void {
+  /**
+   * Carga todos los empleados de la empresa en una sola llamada al abrir la pantalla (mismo
+   * patrón que `ColaboradoresComponent`), para que `InlineAutocomplete` filtre client-side por
+   * nombre, apellido o cédula vía `[buscarPor]`. Antes había un cuadro de "Buscar" separado que
+   * sólo filtraba por identificación en el servidor y, si no encontraba nada, dejaba el combo sin
+   * opciones para filtrar (2026-09-08, mismo defecto reportado en "valores no pagados").
+   *
+   * Sigue restringiendo a activos (`isEmpleadoActivo`), igual que antes de este arreglo — es el
+   * único filtro de consulta de RRHH que lo hace en vez de ofrecer también inactivos; no lo
+   * cambié porque no sé si es una decisión de negocio deliberada (reportado al árbitro).
+   */
+  cargarEmpleados(): void {
     this.cargandoEmpleados.set(true);
-    const criterios = this.buildEmpleadoCriteria(this.filtroEmpleadoBusqueda().trim());
+    const criterios = criteriosPorEmpresa('apellidos');
     this.empleadoService.selectByCriteria(criterios).subscribe({
       next: (rows: Empleado[] | null) => {
         const activos = this.extractRows(rows).filter((e) => this.isEmpleadoActivo(e.estado));
@@ -120,7 +127,6 @@ export class AnticiposComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.filtroEmpleado.set(null);
-    this.filtroEmpleadoBusqueda.set('');
     this.filtroEstado.set(null);
     this.buscar();
   }
@@ -223,6 +229,12 @@ export class AnticiposComponent implements OnInit {
     return `${value.identificacion ?? ''} - ${nombre}`.trim();
   }
 
+  readonly buscarPorEmpleado = (e: Empleado): string[] => [
+    e.identificacion != null ? String(e.identificacion) : '',
+    e.apellidos ?? '',
+    e.nombres ?? '',
+  ];
+
   estadoLabel(estado: number): string {
     return ESTADO_ANTICIPO_LABELS[Number(estado)] || `Estado ${estado}`;
   }
@@ -239,21 +251,6 @@ export class AnticiposComponent implements OnInit {
 
   fechaDisplay(fecha: unknown): string {
     return this.funcionesDatosS.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA) || '—';
-  }
-
-  private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
-    const texto = busqueda.replace(/\s+/g, ' ').trim().toUpperCase();
-    if (texto) {
-      const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'identificacion', texto, TipoComandosBusqueda.LIKE);
-      criterios.push(db);
-    }
-    const order = new DatosBusqueda();
-    order.orderBy('apellidos');
-    order.setTipoOrden(DatosBusqueda.ORDER_ASC);
-    criterios.push(order);
-    return criterios;
   }
 
   private isEmpleadoActivo(value?: string | number | null): boolean {

@@ -2,16 +2,6 @@
   width: 100%;
 }
 
-.search-grid {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-
-  mat-form-field {
-    flex: 1;
-  }
-}
-
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

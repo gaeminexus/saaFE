@@ -1,26 +1,16 @@
 <h2 mat-dialog-title>Nuevo anticipo</h2>
 
 <mat-dialog-content>
-  <div class="search-grid">
-    <mat-form-field appearance="outline" class="w-100">
-      <mat-label>Buscar empleado (identificación)</mat-label>
-      <input matInput [ngModel]="formEmpleadoBusqueda()" (ngModelChange)="formEmpleadoBusqueda.set($event)" />
-    </mat-form-field>
-    <button mat-stroked-button color="primary" (click)="onBuscarEmpleados()" [disabled]="cargandoEmpleados()">
-      <mat-icon>search</mat-icon>
-      Buscar
-    </button>
-  </div>
-
   <div class="w-100">
     <app-inline-autocomplete
       modo="campo"
       etiquetaCampo="Empleado"
       [opciones]="empleados()"
       [etiqueta]="empleadoLabel"
+      [buscarPor]="buscarPorEmpleado"
       [ngModel]="formEmpleado()"
       (ngModelChange)="onEmpleadoChange($event)"
-      placeholder="Escriba la cédula o el nombre del empleado"
+      placeholder="Escriba la cédula, el nombre o el apellido"
     />
   </div>
 

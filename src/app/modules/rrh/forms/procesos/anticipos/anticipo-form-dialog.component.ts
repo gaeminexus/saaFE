@@ -6,9 +6,6 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { InlineAutocompleteComponent } from '../../../../rrh/forms/comunes/inline-autocomplete/inline-autocomplete.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Empleado } from '../../../../rrh/model/empleado';
 import { EmpleadoService } from '../../../../rrh/service/empleado.service';
 import { criteriosPorEmpresa } from '../../../../rrh/forms/parametrizacion/utiles-parametrizacion';
@@ -17,10 +14,12 @@ import { AnticipoTrabajador, SolicitarAnticipoRequest } from '../../../model/ant
 import { AnticipoTrabajadorService } from '../../../service/anticipo-trabajador.service';
 
 /**
- * "Nuevo anticipo". Mismo combo de búsqueda de empleado que
- * vacaciones-form.component.ts (buscar por identificación + mat-select de
- * activos de la empresa), más el aviso de anticipo vigente que exige la
- * regla de negocio: un empleado no puede tener dos anticipos abiertos.
+ * "Nuevo anticipo". Un solo control de empleado: `InlineAutocomplete` sobre la lista completa de
+ * activos de la empresa (una carga al abrir), filtrando client-side por nombre, apellido o cédula
+ * — no un cuadro de "buscar y luego elegir" separado (2026-09-08: ese patrón resultó confuso y
+ * encima el cuadro de búsqueda sólo filtraba por identificación en el servidor). Más el aviso de
+ * anticipo vigente que exige la regla de negocio: un empleado no puede tener dos anticipos
+ * abiertos.
  */
 @Component({
   selector: 'app-anticipo-form-dialog',
@@ -36,7 +35,6 @@ export class AnticipoFormDialogComponent implements OnInit {
   private appState = inject(AppStateService);
   private snackBar = inject(MatSnackBar);
 
-  formEmpleadoBusqueda = signal<string>('');
   formEmpleado = signal<Empleado | null>(null);
   empleados = signal<Empleado[]>([]);
   cargandoEmpleados = signal<boolean>(false);
@@ -71,12 +69,20 @@ export class AnticipoFormDialogComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.onBuscarEmpleados();
+    this.cargarEmpleados();
   }
 
-  onBuscarEmpleados(): void {
+  /**
+   * Carga todos los empleados activos de la empresa en una sola llamada al abrir el diálogo
+   * (mismo patrón que `ColaboradoresComponent`/`RegistrarValorNoPagadoDialogComponent`), para que
+   * `InlineAutocomplete` filtre client-side por nombre, apellido o cédula vía `[buscarPor]`. Antes
+   * había un cuadro de "Buscar" separado que sólo filtraba por identificación en el servidor y,
+   * si no encontraba nada, dejaba el combo sin opciones para filtrar (2026-09-08, mismo defecto
+   * reportado en "valores no pagados" — este diálogo era el original del que se copió el patrón).
+   */
+  cargarEmpleados(): void {
     this.cargandoEmpleados.set(true);
-    const criterios = this.buildEmpleadoCriteria(this.formEmpleadoBusqueda().trim());
+    const criterios = criteriosPorEmpresa('apellidos');
     this.empleadoService.selectByCriteria(criterios).subscribe({
       next: (rows: Empleado[] | null) => {
         const activos = this.extractRows(rows).filter((e) => this.isEmpleadoActivo(e.estado));
@@ -113,6 +119,12 @@ export class AnticipoFormDialogComponent implements OnInit {
     return `${value.identificacion ?? ''} - ${nombre}`.trim();
   }
 
+  readonly buscarPorEmpleado = (e: Empleado): string[] => [
+    e.identificacion != null ? String(e.identificacion) : '',
+    e.apellidos ?? '',
+    e.nombres ?? '',
+  ];
+
   guardar(): void {
     const empleado = this.formEmpleado();
     if (!this.puedeGuardar() || !empleado) return;
@@ -144,21 +156,6 @@ export class AnticipoFormDialogComponent implements OnInit {
 
   cancelar(): void {
     this.dialogRef.close(false);
-  }
-
-  private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
-    const texto = busqueda.replace(/\s+/g, ' ').trim().toUpperCase();
-    if (texto) {
-      const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'identificacion', texto, TipoComandosBusqueda.LIKE);
-      criterios.push(db);
-    }
-    const order = new DatosBusqueda();
-    order.orderBy('apellidos');
-    order.setTipoOrden(DatosBusqueda.ORDER_ASC);
-    criterios.push(order);
-    return criterios;
   }
 
   private isEmpleadoActivo(value?: string | number | null): boolean {

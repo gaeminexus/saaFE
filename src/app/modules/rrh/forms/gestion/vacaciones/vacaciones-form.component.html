@@ -35,27 +35,6 @@
     </div>
   }
 
-  <div class="search-grid">
-    <mat-form-field appearance="outline" class="w-100">
-      <mat-label>Buscar empleado (identificacion)</mat-label>
-      <input
-        matInput
-        [ngModel]="formEmpleadoBusqueda()"
-        (ngModelChange)="formEmpleadoBusqueda.set($event)"
-        [disabled]="isView()"
-      />
-    </mat-form-field>
-    <button
-      mat-stroked-button
-      color="primary"
-      (click)="onBuscarEmpleados()"
-      [disabled]="loading() || isView()"
-    >
-      <mat-icon>search</mat-icon>
-      Buscar
-    </button>
-  </div>
-
   <app-inline-autocomplete
     modo="campo"
     etiquetaCampo="Empleado"

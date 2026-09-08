@@ -39,7 +39,6 @@ export class VacacionesFormComponent implements OnInit {
   private _rawFechaInicio = '';
   private _rawFechaFin = '';
 
-  formEmpleadoBusqueda = signal<string>('');
   formEmpleado = signal<Empleado | null>(null);
   formFechaInicio = signal<string>('');
   formFechaFin = signal<string>('');
@@ -102,7 +101,6 @@ export class VacacionesFormComponent implements OnInit {
       this.formUsuarioRegistro.set(String(item.usuarioRegistro ?? ''));
       this.formAprobador.set(String(item.usuarioAprobacion ?? ''));
       this.formFechaAprobacion.set(this.formatDate((item as any)?.fechaAprobacion));
-      this.formEmpleadoBusqueda.set(this.empleadoLabel(item.empleado));
     }
 
     if (this.formEmpleado()) {
@@ -110,7 +108,7 @@ export class VacacionesFormComponent implements OnInit {
     }
 
     // Combo de empleados: cargar la lista de activos de la empresa al abrir, no esperar a que se teclee algo.
-    this.onBuscarEmpleados();
+    this.cargarEmpleados();
 
     if (this.isView()) {
       this.formFechaInicioControl.disable({ emitEvent: false });
@@ -123,16 +121,19 @@ export class VacacionesFormComponent implements OnInit {
   }
 
   /**
-   * Carga los empleados activos de la empresa (sin exigir texto: se llama ya al abrir la
-   * pantalla). El texto de `formEmpleadoBusqueda` se manda como filtro adicional por
-   * identificación cuando existe; con el campo vacío trae la lista completa de la empresa.
+   * Carga todos los empleados activos de la empresa en una sola llamada al abrir el diálogo
+   * (mismo patrón que `ColaboradoresComponent`/`RegistrarValorNoPagadoDialogComponent`), para que
+   * `InlineAutocomplete` filtre client-side por nombre, apellido o cédula vía `[buscarPor]`. Antes
+   * había un cuadro de "Buscar" separado que sólo filtraba por identificación en el servidor y,
+   * si no encontraba nada, dejaba el combo sin opciones para filtrar — mismo defecto que en
+   * `valores-no-pagados`, corregido igual (2026-09-08, reporte de usuario: "el combo no permite
+   * buscar. No hay forma de escoger un empleado").
    */
-  onBuscarEmpleados(): void {
+  cargarEmpleados(): void {
     this.loading.set(true);
     this.errorMsg.set('');
 
-    const busqueda = this.formEmpleadoBusqueda().trim();
-    const criterios = this.buildEmpleadoCriteria(busqueda);
+    const criterios = criteriosPorEmpresa('apellidos');
     this.empleadoService.selectByCriteria(criterios).subscribe({
       next: (rows: Empleado[] | null) => {
         const activos = this.extractRows(rows).filter((e) => this.isEmpleadoActivo(e.estado));
@@ -524,29 +525,6 @@ export class VacacionesFormComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
-  private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    // RHH.MPLD lleva PJRQCDGO desde el script 05: la búsqueda se acota a la empresa activa
-    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
-    const texto = this.normalizeText(busqueda);
-    if (texto) {
-      const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(
-        TipoDatosBusqueda.STRING,
-        'identificacion',
-        texto,
-        TipoComandosBusqueda.LIKE,
-      );
-      criterios.push(db);
-    }
-
-    const order = new DatosBusqueda();
-    order.orderBy('apellidos');
-    order.setTipoOrden(DatosBusqueda.ORDER_ASC);
-    criterios.push(order);
-
-    return criterios;
-  }
-
   private normalizeEstado(value?: string | number | null): string {
     const normalized = (value ?? '').toString().toUpperCase();
     if (['SOLICITADA', 'APROBADA', 'RECHAZADA', 'ANULADA'].includes(normalized)) {
@@ -610,10 +588,6 @@ export class VacacionesFormComponent implements OnInit {
       if (candidate !== undefined && candidate !== null) return String(candidate);
     }
     return String(value);
-  }
-
-  private normalizeText(value: string | null | undefined): string {
-    return (value ?? '').replace(/\s+/g, ' ').trim().toUpperCase();
   }
 
   private extractRows<T>(rows: T[] | null): T[] {
