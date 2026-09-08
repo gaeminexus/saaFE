@@ -62,20 +62,82 @@ Esto es lo primero que hay que resolver, porque **la contabilidad de hoy no las 
 planillas con dos débitos distintos, **esa cuenta no se puede cuadrar por planilla**: los dos pagos
 debitan el mismo saldo y una diferencia en uno se compensa con el otro sin que nadie la vea.
 
-**Hay que separarla**, y eso implica una línea de asiento nueva más su parametrización en las
-plantillas contables (`CNT.PLNS` / `CNT.DTPL`). **Requiere confirmar con la contadora contra qué
-cuenta del plan se registra hoy cada uno** — si hoy van a la misma cuenta contable real, separarlas
-es también un cambio en el plan de cuentas, no solo en la plantilla.
+> **RESUELTO — decisión del usuario, 2026-09-07:** *«hipotecarios y quirografarios van a cuentas
+> diferentes»*. **Hay que separarlas.**
 
-⚠️ **Está sin resolver y es un prerrequisito del pago, no del registro.** La Fase 1 se puede
-construir entera sin esto.
+**Es viable**: el motor de nómina **ya los distingue** como conceptos separados
+(`RhhRolConceptoMotor.PRESTAMO_QUIROGRAFARIO = 12` y `PRESTAMO_HIPOTECARIO = 13`). Lo que los junta
+es una sola línea de `ContabilizacionNominaServiceImpl.lineaDeDescuento:937-940`, que devuelve
+`IESS_POR_PAGAR_PRESTAMOS` para los dos.
 
-### 2.2 CCC y seguro de tiempo parcial no tienen línea propia
+Qué hace falta, en orden:
 
-La planilla de control ya los calcula (`contribucionCcc`, `totalSeguroTiempoParcial`), pero
-`RhhLineaAsiento` no los tiene: hoy quedan dentro del aporte patronal (11). Para conciliar el
-comprobante renglón por renglón hay que saber si el plan de cuentas los separa. **Misma consulta a
-la contadora que §2.1.**
+1. Una línea de asiento nueva, `IESS_POR_PAGAR_PRESTAMOS_HIPOTECARIOS`, en `RhhLineaAsiento`.
+2. Ramificar ese `if` para que el hipotecario vaya a la nueva.
+3. Parametrizar la línea nueva en las plantillas contables con su cuenta (`sql/lap1-10`).
+4. Dos productos de pago en vez de uno: `IESS-PRSQ` y `IESS-PRSH`.
+
+⚠️ **El punto 2 cambia el asiento mensual de nómina**, y `rhh` está en calibración con meses ya
+cerrados en producción. **Aplicar desde un período nuevo, nunca reprocesando uno cerrado**: un mes
+cerrado que se recalcule con la línea nueva deja de cuadrar contra lo que ya se declaró.
+
+⚠️ Y **la provisión histórica no se reparte sola**: todo lo acumulado hasta hoy en la cuenta 12 es
+de los dos préstamos mezclados. Separar de aquí en adelante no separa el saldo anterior; ese saldo
+se arrastra hasta que se consuma o se reclasifique a mano. Es una consulta a la contadora, no algo
+que el sistema deba adivinar.
+
+### 2.2 Qué es el CCC, y por qué esta sección se corrigió DOS veces
+
+**Qué es.** `CCC` = **Contribución de Fomento de Capacidades y Conocimientos Ciudadanos**
+(disposición general undécima del Código Orgánico Monetario y Financiero): **1 % de la masa
+salarial**, que se reparte **0,5 % al IECE** y **0,5 % al SECAP**. Verificado además contra la
+planilla real de ASOPREP: 205,60 sobre 20 560,00 en abril.
+
+**Y eso cambia todo, porque el sistema ya lo contabiliza — con otro nombre.**
+
+| Primera versión | Segunda versión | Lo verificado hoy |
+|---|---|---|
+| «Quedan dentro del aporte patronal» — suposición, sin verificar | «No se provisionan»: grep de `CCC`/`contribucion` en la contabilización dio cero | **El CCC sí se provisiona: se llama `IECE` y `SECAP`** |
+
+`ContabilizacionNominaServiceImpl:872-881` lo dice explícitamente: *«separando el IESS del IECE y el
+SECAP porque son dos cuentas de gasto distintas. HABER: los tres van al IESS, que es quien los
+recauda en la misma planilla»*. El DEBE va a `GASTO_IECE_Y_SECAP` (4) y **el HABER a
+`IESS_POR_PAGAR_APORTE_PATRONAL` (11)** — la misma cuenta que el aporte patronal.
+
+> **La lección, y por eso queda escrita en vez de borrada:** el segundo grep buscaba el **acrónimo**
+> (`CCC`) y no el **concepto**. El sistema lo tenía, con el nombre de sus dos destinatarios legales.
+> Buscar por el nombre que usa el documento y no por el que usa el código es exactamente cómo se
+> "descubre" que algo falta cuando está ahí.
+
+**Consecuencia práctica: `IESS-CCC` debe apuntar a la MISMA cuenta que `IESS-APAT`**, porque ahí está
+provisionado. No es un pliegue en el código —cada concepto conserva su producto— sino dos grupos
+apuntando a la misma cuenta, que es exactamente para lo que se separaron (§6.5).
+
+### 2.2bis 🔴 El seguro de salud de tiempo parcial sí queda sin provisión
+
+Esto sobrevive a la corrección: **el 4,41 % sobre (SBU − sueldo real) no se calcula ni se contabiliza
+en la nómina.** No existe como concepto del motor (`RhhRolConceptoMotor`, cero resultados) ni aparece
+en la contabilización. Sólo lo calcula la planilla de control, para cuadrar el comprobante.
+
+**Por qué importa:** si el pago lo debitara contra «IESS por pagar aporte patronal», estaría
+debitando un pasivo que **por esa parte nunca se acreditó**. Esa cuenta se iría a saldo deudor por
+ese monto **todos los meses**, creciendo, y no lo notaría nadie hasta un cierre — y ahí el descuadre
+no apuntaría a su causa. Es el patrón de siempre: **un lector apuntando a donde nadie escribe.**
+
+Es un monto chico —sólo aplica a quien tiene jornada parcial— y por eso es más fácil que pase
+inadvertido durante meses.
+
+**Decisión pendiente del usuario, y es contable, no técnica.** Dos salidas:
+
+- **Reconocerlos como gasto al pagar**: el DEBE va a una cuenta de gasto, no al pasivo. Correcto si
+  nunca se devengaron, y no toca la nómina.
+- **Provisionarlos en la nómina**: líneas de asiento nuevas más su parametrización, y cambia el
+  asiento mensual de nómina. Es lo correcto por devengado, y es un cambio de criterio contable.
+
+**Mientras no se decida, el código no debe elegir por su cuenta.** El mapeo `conceptoTipo` → producto
+es **1:1 y parametrizado** (§6.5): existen productos propios `IESS-CCC` e `IESS-STP`, y a qué cuenta
+apuntan sus grupos lo define `lap1-09`, no el Java. Sea cual sea la decisión, se implementa
+cambiando la cuenta de un grupo.
 
 ---
 
@@ -302,6 +364,34 @@ sentido de todo esto es no pagar sin haber cuadrado.
 no omitir la línea: omitirla haría que el asiento no cuadre contra el valor del pago, y el circuito
 lo rechazaría con un error de cuadre que no dice nada del renglón que lo causó. Mejor fallar
 temprano y explicando.
+
+### 6.5 El mapeo concepto → producto es 1:1 y vive en la parametrización
+
+**Seis productos, no cuatro.** Uno por cada valor del rubro 331 que pueda pagarse, más los de los
+otros tipos de planilla:
+
+| De dónde viene la línea | Código de producto |
+|---|---|
+| Rol · `conceptoTipo` 1 Aporte personal | `IESS-APER` |
+| Rol · `conceptoTipo` 2 Aporte patronal | `IESS-APAT` |
+| Rol · `conceptoTipo` 3 Contribución CCC | `IESS-CCC` |
+| Rol · `conceptoTipo` 4 Seguro tiempo parcial | `IESS-STP` |
+| Planilla tipo 2 (quirografarios), línea única por el total | `IESS-PRSQ` |
+| Planilla tipo 3 (hipotecarios), línea única por el total | `IESS-PRSH` |
+| Planilla tipo 4 (fondos de reserva), línea única por el total | `IESS-FRES` |
+
+⛔ **Ningún concepto se «pliega» a otro dentro del código.** Plegar CCC y seguro de tiempo parcial al
+producto del aporte patronal parece inofensivo y no lo es: ver §2.2. Si dos conceptos deben terminar
+en la misma cuenta, eso se resuelve **apuntando sus dos grupos a la misma cuenta** en `lap1-09` — un
+`UPDATE`, visible y reversible— y no con un `switch` en Java que nadie va a releer.
+
+**Quirografarios e hipotecarios van a productos separados** desde la decisión del usuario del
+2026-09-07 (§2.1): `IESS-PRSQ` y `IESS-PRSH`, cada uno con su grupo y su cuenta. Ya no hay un
+`IESS-PRST` único.
+
+**Y `IESS-CCC` apunta a la misma cuenta que `IESS-APAT`** (§2.2), porque el CCC se provisiona bajo el
+nombre IECE/SECAP con HABER a la cuenta 11. Dos grupos, una cuenta — que es la forma correcta de
+expresar «van al mismo lado», en la parametrización y no en un `switch`.
 
 ### 6.3 Reverso
 
