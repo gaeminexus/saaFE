@@ -24,14 +24,33 @@ a.menu-list-item {
 
   .menu-text {
     flex: 1 !important; // Toma todo el espacio disponible
+    // `min-width: 0` es lo que de verdad hace falta acá, no sólo `white-space: normal` — sin
+    // esto, el "automatic minimum size" de un ítem flex con texto que puede partirse (spec de
+    // Flexbox) sigue siendo el ancho de la palabra más larga tomado como piso, y en la práctica
+    // Chrome deja crecer el ítem más allá del espacio real disponible antes de partir la línea:
+    // verificado con un test de layout real (Chrome headless) — sacando esto, "Proyección de
+    // impuesto a la renta" medía un solo renglón de 16.8px de alto, no partido, aunque
+    // `white-space` ya diera `normal`. Es la misma familia de bug que el "track que no se
+    // encoge" de conciliación, pero en un ítem flex en vez de un track de grid.
+    min-width: 0 !important;
     text-align: left;
     line-height: 1.2;
     margin: 0 !important;
     padding: 0 !important;
     padding-right: 20px !important; // Espacio reservado para la flecha
-    white-space: nowrap; // Evita que el texto se parta
-    overflow: hidden; // Oculta texto que se desborde
-    text-overflow: ellipsis; // Muestra ... si el texto es muy largo
+    // Se parte en dos renglones en vez de recortarse (2026-09-08, reporte de usuario: nombres
+    // largos —"Pago de beneficios sociales", "Proyección de impuesto a la renta"— se veían SOLO
+    // como "…", sin una sola letra, en los cinco menús). El ancho disponible acá es angosto por
+    // diseño (~170-190px con el sidebar expandido a 300px, medido con un test de layout real en
+    // Chrome) y ya queda al límite con los nombres más largos del sistema — cualquier diferencia
+    // de fuente entre entornos lo hacía colapsar del todo. Partir en dos líneas es la solución que
+    // sirve para cualquier nombre futuro, no sólo para los de hoy: no usar `nowrap` +
+    // `text-overflow: ellipsis` acá de nuevo sin volver a medir contra el nombre más largo del
+    // sistema (grep `displayName` en `modules/**/menu/**`).
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    overflow: visible;
   }
 
   .spacer {
@@ -105,9 +124,15 @@ a.menu-list-item {
 .menu-text {
   display: inline-block !important;
   vertical-align: middle;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  // Ídem el bloque de arriba: se parte en dos renglones, no se recorta. Las dos reglas de
+  // `.menu-text` en este archivo tienen que decir lo mismo — si sólo se cambia una, la cascada
+  // (`.menu-list-item > *` más abajo pisa el `display`, y el orden de las dos declara qué
+  // `white-space` gana) puede dejar viva la que sigue recortando.
+  min-width: 0 !important;
+  white-space: normal;
+  overflow-wrap: break-word;
+  overflow: visible;
+  text-overflow: clip;
   font-size: 14px;
   line-height: 1.3;
   padding-left: 0 !important; // Asegurar que no haya padding adicional
