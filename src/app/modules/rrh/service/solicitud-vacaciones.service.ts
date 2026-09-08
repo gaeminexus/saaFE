@@ -1,7 +1,12 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { SolicitudVacaciones } from '../model/solicitud-vacaciones';
+import {
+  AnularAprobacionSolicitudVacacionesRequest,
+  AprobarSolicitudVacacionesRequest,
+  RechazarSolicitudVacacionesRequest,
+  SolicitudVacaciones,
+} from '../model/solicitud-vacaciones';
 import { ServiciosRhh } from './ws-rrh';
 
 @Injectable({
@@ -59,6 +64,37 @@ export class SolicitudVacacionesService {
     const url = `${ServiciosRhh.RS_SLCT}${wsEndpoint}`;
     return this.http
       .delete<SolicitudVacaciones>(url, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * POST /slct/aprobar/{id} — valida días disponibles, consume el saldo FIFO y genera la novedad
+   * de "Vacaciones pagadas" del período de la fecha de inicio. Devuelve la solicitud actualizada.
+   */
+  aprobar(id: number, datos: AprobarSolicitudVacacionesRequest): Observable<SolicitudVacaciones | null> {
+    return this.http
+      .post<SolicitudVacaciones>(`${ServiciosRhh.RS_SLCT}/aprobar/${id}`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** POST /slct/rechazar/{id} — no toca saldo ni novedad. */
+  rechazar(id: number, datos: RechazarSolicitudVacacionesRequest): Observable<SolicitudVacaciones | null> {
+    return this.http
+      .post<SolicitudVacaciones>(`${ServiciosRhh.RS_SLCT}/rechazar/${id}`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * POST /slct/anularAprobacion/{id} — devuelve el saldo a los años exactos de donde salió y
+   * retira la novedad. Sólo para una solicitud que YA estaba APROBADA (rechaza si la novedad ya
+   * entró en un rol pagado).
+   */
+  anularAprobacion(
+    id: number,
+    datos: AnularAprobacionSolicitudVacacionesRequest,
+  ): Observable<SolicitudVacaciones | null> {
+    return this.http
+      .post<SolicitudVacaciones>(`${ServiciosRhh.RS_SLCT}/anularAprobacion/${id}`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

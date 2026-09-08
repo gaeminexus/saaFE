@@ -4,10 +4,12 @@ import { AbstractControl, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Observable } from 'rxjs';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
@@ -19,7 +21,6 @@ import { SolicitudVacacionesService } from '../../../service/solicitud-vacacione
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { VacacionesAprobacionDialogComponent } from './vacaciones-aprobacion-dialog.component';
 import { VacacionesFormComponent } from './vacaciones-form.component';
-import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { opcionesAviso } from '../../comunes/avisos';
 import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
@@ -51,6 +52,7 @@ export class VacacionesListComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private appState = inject(AppStateService);
 
   @ViewChild('inicioDesdeInput', { read: ElementRef }) inicioDesdeInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('inicioHastaInput', { read: ElementRef }) inicioHastaInputRef!: ElementRef<HTMLInputElement>;
@@ -447,37 +449,45 @@ export class VacacionesListComponent implements OnInit {
     });
   }
 
+  /**
+   * Aprobar/rechazar/anular una solicitud pasa por los endpoints de proceso de `slct`
+   * (`SolicitudVacacionesService` de saaBE) — nunca por el `PUT` plano de `update()`. Ese `PUT`
+   * sólo reescribe el registro tal cual llega: no valida saldo, no lo consume, y no genera la
+   * novedad de "Vacaciones pagadas" que el rol convierte en renglón. Con `update()` una solicitud
+   * podía quedar APROBADA sin haber pasado nunca por esas validaciones (defecto en producción
+   * 2026-09-08: seis solicitudes de agosto, ninguna con saldo consumido ni novedad generada).
+   *
+   * `anularAprobacion` acepta tanto SOLICITADA como APROBADA (confirmado con el backend,
+   * 2026-09-08) — una SOLICITADA no tiene saldo ni novedad que revertir, pero el endpoint la
+   * pasa a ANULADA igual, con el mismo contrato `{idUsuario, motivo}`. No queda ningún caso que
+   * necesite el `update()` plano para cambiar de estado.
+   */
   private actualizarEstado(
     row: SolicitudVacaciones,
     action: 'approve' | 'reject' | 'cancel',
     observacion: string | null,
   ): void {
-    const estado =
-      action === 'approve' ? 'APROBADA' : action === 'reject' ? 'RECHAZADA' : 'ANULADA';
-    const payload: Partial<SolicitudVacaciones> = {
-      codigo: row.codigo,
-      empleado: { codigo: row.empleado?.codigo } as Empleado,
-      fechaDesde: row.fechaDesde,
-      fechaHasta: row.fechaHasta,
-      diasSolicitados: row.diasSolicitados,
-      estado,
-      observacion: observacion ?? row.observacion ?? undefined,
-      usuarioAprobacion: usuarioSesion(),
-      // SLCTFHAP: falta desde siempre en esta acción — es justo la fecha de la decisión que se
-      // está tomando acá (aprobar/rechazar/anular), así que se sella igual que usuarioAprobacion,
-      // no se preserva de `row`.
-      fechaAprobacion: new Date(),
-      fechaRegistro: row.fechaRegistro,
-      usuarioRegistro: row.usuarioRegistro,
-    };
+    const idUsuario = this.appState.getIdUsuario();
+    const motivo = observacion ?? undefined;
 
     this.loading.set(true);
-    this.solicitudService.update(payload).subscribe({
+
+    const llamada: Observable<SolicitudVacaciones | null> =
+      action === 'approve'
+        ? this.solicitudService.aprobar(row.codigo, { idUsuario, observacion: motivo })
+        : action === 'reject'
+          ? this.solicitudService.rechazar(row.codigo, { idUsuario, motivo })
+          : this.solicitudService.anularAprobacion(row.codigo, { idUsuario, motivo });
+
+    llamada.subscribe({
       next: () => {
         this.showSuccess('Solicitud actualizada');
         this.buscar();
       },
       error: (err) => {
+        // El mensaje del backend trae la instrucción real (p.ej. "El periodo de nomina 8/2026 no
+        // esta abierto..."): se muestra tal cual, nunca un genérico — showError ya usa
+        // duracionError() para que no desaparezca antes de leerse.
         this.showError(this.extractError(err) || 'No se pudo actualizar');
         this.loading.set(false);
       },
