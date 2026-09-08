@@ -27,4 +27,20 @@ export interface Conciliacion {
     transferenciaCreditoTransito: number;       // Transferencias de crédito en tránsito
     transferenciaDebitoSistema: number;         // Transferencias de débito según sistema
     transferenciaCreditoSistema: number;        // Transferencias de crédito según sistema
+
+    /**
+     * Campos del cierre con partidas en tránsito (ver `com.saa.rubros.EstadoCierreConciliacion` y
+     * `ConciliacionCierreServiceImpl` en saaBE) — nulos en las filas del mecanismo viejo
+     * (`insertaConciliacion`), que nunca llegó a producción.
+     */
+    estadoCierre?: number | null; // CNCLESTD - 1 Borrador, 2 Cerrado, 3 Anulado
+    fechaCierre?: string | null; // CNCLFCCR
+    usuarioCierre?: string | null; // CNCLUSCR - texto, no FK
+    motivoAnulacion?: string | null; // CNCLMTAN - nulo mientras no se anule
 }
+
+export const ESTADO_CIERRE_CONCILIACION = {
+  BORRADOR: 1,
+  CERRADO: 2,
+  ANULADO: 3,
+} as const;

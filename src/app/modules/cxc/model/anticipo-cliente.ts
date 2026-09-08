@@ -24,3 +24,30 @@ export interface AnticipoCliente {
 export interface ConfirmarAnticipoClienteRequest {
   idAnticipo: number;
 }
+
+/** Un cruce contra factura que quedaría revertido si se confirma la anulación. */
+export interface CruceAnticipoCliente {
+  idAplicacion: number;
+  idFactura: number;
+  numeroFactura: string;
+  montoAplicado: number;
+  fechaAplicacion: string;
+}
+
+/** Respuesta de `GET /antc/verificarAnulacion/{id}` — qué pasaría si se anula este anticipo. */
+export interface VerificarAnulacionAnticipoResponse {
+  puedeAnular: boolean;
+  requiereConfirmacion: boolean;
+  valorAnticipo: number;
+  saldoDisponible: number;
+  montoACruzar: number;
+  cruces: CruceAnticipoCliente[];
+  mensaje?: string;
+}
+
+export interface AnularAnticipoClienteRequest {
+  motivo: string;
+  idUsuario: number;
+  /** Solo hace falta en true cuando `verificarAnulacion` devolvió cruces contra factura. */
+  confirmarReversionCruces?: boolean;
+}

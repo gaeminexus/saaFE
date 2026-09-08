@@ -161,6 +161,23 @@
     background: #fff5f5 !important;
   }
 
+  .historico-card {
+    .badge-estado-cierre {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #d1fae5;
+      color: #065f46;
+
+      &.badge-anulado {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    }
+  }
+
   .tipo-select {
     width: 220px;
   }

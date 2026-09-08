@@ -5,14 +5,25 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import {
+  MotivoDialogComponent,
+  MotivoDialogData,
+} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Empresa } from '../../../../../shared/model/empresa';
 import { Usuario } from '../../../../../shared/model/usuario';
-import { AnticipoCliente } from '../../../model/anticipo-cliente';
+import { AnticipoCliente, VerificarAnulacionAnticipoResponse } from '../../../model/anticipo-cliente';
 import { AnticipoClienteService } from '../../../service/anticipo-cliente.service';
 import { Titular } from '../../../../tsr/model/titular';
 import { PersonaCuentaContableService } from '../../../../tsr/service/persona-cuenta-contable.service';
+
+const ESTADO_ANTICIPO_PENDIENTE = 1;
+const ESTADO_ANTICIPO_CONFIRMADO = 2;
+const ESTADO_ANTICIPO_ANULADO = 3;
 
 @Component({
   selector: 'app-anticipo',
@@ -25,14 +36,21 @@ export class AnticipoComponent implements OnInit {
   @ViewChild('fechaAnticipoInput', { read: ElementRef }) fechaAnticipoInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('fechaRecepcionInput', { read: ElementRef }) fechaRecepcionInputRef!: ElementRef<HTMLInputElement>;
 
+  @ViewChild('fechaDesdeFiltroInput', { read: ElementRef }) fechaDesdeFiltroInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild('fechaHastaFiltroInput', { read: ElementRef }) fechaHastaFiltroInputRef!: ElementRef<HTMLInputElement>;
+
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private anticipoService = inject(AnticipoClienteService);
   private personaCuentaContableService = inject(PersonaCuentaContableService);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private appState = inject(AppStateService);
+  private exportService = inject(ExportService);
 
   private _rawFechaAnticipo = '';
   private _rawFechaRecepcion = '';
+  private _rawFechaDesdeFiltro = '';
+  private _rawFechaHastaFiltro = '';
 
   readonly rolTitularCodigo = 1;
   readonly rolTitularNombre = 'CLIENTE';
@@ -42,19 +60,25 @@ export class AnticipoComponent implements OnInit {
   cargando = signal(false);
   guardando = signal(false);
   confirmando = signal(false);
+  anulando = signal<number | null>(null);
   titularSeleccionado = signal<Titular | null>(null);
   saldoAnticipos = signal(0);
   anticipoActual = signal<AnticipoCliente | null>(null);
   registros = signal<AnticipoCliente[]>([]);
 
   textoTitular = computed(() => this.displayPersona(this.titularSeleccionado()));
-  estadoTexto = computed(() => {
-    const estado = Number(this.anticipoActual()?.estado || 1);
-    return estado === 2 ? 'Confirmado' : estado === 3 ? 'Anulado' : 'Pendiente';
-  });
+  estadoTexto = computed(() => this.estadoLabel(this.anticipoActual()?.estado));
 
   dataSource = new MatTableDataSource<AnticipoCliente>([]);
-  columnas = ['id', 'fechaAnticipo', 'titular', 'numeroDoc', 'valor', 'estado'];
+  columnas = ['id', 'fechaAnticipo', 'titular', 'numeroDoc', 'valor', 'estado', 'acciones'];
+
+  private registrosTodos: AnticipoCliente[] = [];
+
+  // Filtros de la lista (ítem 1.2 del lote — la pantalla no tenía ninguno)
+  filtroCliente = '';
+  filtroEstado: number | '' = '';
+  fechaDesdeFiltroControl = new UntypedFormControl(null);
+  fechaHastaFiltroControl = new UntypedFormControl(null);
 
   id: number | null = null;
   fechaAnticipoControl = new UntypedFormControl(new Date());
@@ -177,18 +201,233 @@ export class AnticipoComponent implements OnInit {
     this.cargando.set(true);
     this.anticipoService.getAll().subscribe({
       next: (data) => {
-        const rows = (data || []).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
-        this.registros.set(rows);
-        this.dataSource.data = rows;
+        this.registrosTodos = (data || []).sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+        this.aplicarFiltros();
         this.cargando.set(false);
       },
       error: () => {
-        this.dataSource.data = [];
-        this.registros.set([]);
+        this.registrosTodos = [];
+        this.aplicarFiltros();
         this.cargando.set(false);
         this.mostrarError('No se pudieron cargar los anticipos');
       },
     });
+  }
+
+  buscar(): void {
+    this.aplicarFiltros();
+  }
+
+  limpiarFiltros(): void {
+    this.filtroCliente = '';
+    this.filtroEstado = '';
+    this.fechaDesdeFiltroControl.setValue(null, { emitEvent: false });
+    this.fechaHastaFiltroControl.setValue(null, { emitEvent: false });
+    if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = '';
+    if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = '';
+    this.aplicarFiltros();
+  }
+
+  private aplicarFiltros(): void {
+    const filtro = this.filtroCliente.trim().toLowerCase();
+    const desde: Date | null = this.fechaDesdeFiltroControl.value;
+    const hasta: Date | null = this.fechaHastaFiltroControl.value;
+
+    const filtrados = this.registrosTodos.filter((row) => {
+      if (filtro) {
+        const nombre = String(row.titular?.razonSocial || row.titular?.nombre || '').toLowerCase();
+        const identificacion = String(row.titular?.identificacion || '').toLowerCase();
+        if (!nombre.includes(filtro) && !identificacion.includes(filtro)) return false;
+      }
+
+      if (this.filtroEstado !== '' && Number(row.estado) !== Number(this.filtroEstado)) {
+        return false;
+      }
+
+      const fecha = this.toDateObj(row.fechaAnticipo);
+      if (desde && this.soloFecha(fecha) < this.soloFecha(desde)) return false;
+      if (hasta && this.soloFecha(fecha) > this.soloFecha(hasta)) return false;
+
+      return true;
+    });
+
+    this.registros.set(filtrados);
+    this.dataSource.data = filtrados;
+  }
+
+  capturarFechaDesdeFiltroRaw(event: Event): void {
+    this._rawFechaDesdeFiltro = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaDesdeFiltroFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaDesdeFiltro || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaDesdeFiltro = '';
+    if (!rawValue) return;
+    const date = this.parseFechaDDMMYYYY(rawValue);
+    if (date) {
+      this.fechaDesdeFiltroControl.setValue(date, { emitEvent: false });
+      const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+      setTimeout(() => {
+        if (this.fechaDesdeFiltroInputRef?.nativeElement) this.fechaDesdeFiltroInputRef.nativeElement.value = formatted;
+      });
+    }
+  }
+
+  onFechaDesdeFiltroPickerChange(date: Date | null | undefined): void {
+    this.fechaDesdeFiltroControl.setValue(date || null, { emitEvent: false });
+    this.buscar();
+  }
+
+  capturarFechaHastaFiltroRaw(event: Event): void {
+    this._rawFechaHastaFiltro = (event.target as HTMLInputElement).value;
+  }
+
+  syncFechaHastaFiltroFromRaw(event: FocusEvent): void {
+    const rawValue = (this._rawFechaHastaFiltro || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawFechaHastaFiltro = '';
+    if (!rawValue) return;
+    const date = this.parseFechaDDMMYYYY(rawValue);
+    if (date) {
+      this.fechaHastaFiltroControl.setValue(date, { emitEvent: false });
+      const formatted = this.funcionesDatosS.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+      setTimeout(() => {
+        if (this.fechaHastaFiltroInputRef?.nativeElement) this.fechaHastaFiltroInputRef.nativeElement.value = formatted;
+      });
+    }
+  }
+
+  onFechaHastaFiltroPickerChange(date: Date | null | undefined): void {
+    this.fechaHastaFiltroControl.setValue(date || null, { emitEvent: false });
+    this.buscar();
+  }
+
+  private parseFechaDDMMYYYY(rawValue: string): Date | null {
+    const parts = rawValue.split('/');
+    if (parts.length !== 3) return null;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (isNaN(dia) || dia < 1 || dia > 31 || isNaN(mes) || mes < 0 || mes > 11 || isNaN(anio) || anio < 1000 || anio > 9999) {
+      return null;
+    }
+    const date = new Date(anio, mes, dia);
+    if (date.getFullYear() !== anio || date.getMonth() !== mes || date.getDate() !== dia) return null;
+    return date;
+  }
+
+  private soloFecha(value: Date): number {
+    const date = new Date(value);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
+
+  estadoLabel(estado: number | null | undefined): string {
+    const e = Number(estado || ESTADO_ANTICIPO_PENDIENTE);
+    if (e === ESTADO_ANTICIPO_CONFIRMADO) return 'Confirmado';
+    if (e === ESTADO_ANTICIPO_ANULADO) return 'Anulado';
+    return 'Pendiente';
+  }
+
+  puedeAnular(row: AnticipoCliente): boolean {
+    return Number(row.estado) !== ESTADO_ANTICIPO_ANULADO;
+  }
+
+  /**
+   * Antes de pedir el motivo, consulta al backend qué se revertiría (`verificarAnulacion`):
+   * si el anticipo ya está cruzado contra facturas, el diálogo tiene que decirlo explícitamente
+   * y exigir una confirmación aparte — nunca un "¿está seguro?" genérico.
+   */
+  anular(row: AnticipoCliente): void {
+    if (!this.puedeAnular(row) || !row.id) return;
+
+    this.anulando.set(row.id);
+    this.anticipoService.verificarAnulacion(row.id).subscribe({
+      next: (info) => {
+        this.anulando.set(null);
+        if (!info) {
+          this.mostrarError('No se pudo verificar la anulación');
+          return;
+        }
+        if (info.puedeAnular === false) {
+          this.mostrarError(info.mensaje || 'Este anticipo no se puede anular');
+          return;
+        }
+        this.abrirDialogoAnular(row, info);
+      },
+      error: (err) => {
+        this.anulando.set(null);
+        this.mostrarError(mensajeDeError(err, 'No se pudo verificar la anulación'));
+      },
+    });
+  }
+
+  private abrirDialogoAnular(row: AnticipoCliente, info: VerificarAnulacionAnticipoResponse): void {
+    const cruces = info.cruces || [];
+    const hayCruces = cruces.length > 0;
+    const detalleCruces = hayCruces
+      ? ' Se revertirán estos cruces contra factura, que quedarán pendientes de cobro otra vez: ' +
+        cruces.map((c) => `N° ${c.numeroFactura} por ${Number(c.montoAplicado).toFixed(2)}`).join('; ') +
+        '.'
+      : '';
+
+    const data: MotivoDialogData = {
+      titulo: `Anular anticipo N° ${row.id}`,
+      advertencia:
+        `Se anulará el anticipo de ${Number(row.valor).toFixed(2)} recibido de ${this.nombreTitular(row)}.` +
+        detalleCruces,
+      textoConfirmar: 'Sí, anular',
+      requiereDobleConfirmacion: hayCruces,
+      textoDobleConfirmacion: 'Entiendo que esto revierte los cruces contra factura(s) listados arriba.',
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+      if (!motivo || !row.id) return;
+
+      this.anulando.set(row.id);
+      this.anticipoService.anular(row.id, {
+        motivo,
+        idUsuario: this.appState.getIdUsuario(),
+        confirmarReversionCruces: hayCruces,
+      }).subscribe({
+        next: (resp) => {
+          this.anulando.set(null);
+          if (resp && resp.exito === false) {
+            this.mostrarError(resp.mensaje || 'No se pudo anular el anticipo');
+            return;
+          }
+          this.mostrarExito(resp?.mensaje || 'Anticipo anulado correctamente');
+          if (this.id === row.id) this.anticipoActual.set({ ...row, estado: ESTADO_ANTICIPO_ANULADO });
+          this.cargarRegistros();
+        },
+        error: (err) => {
+          this.anulando.set(null);
+          this.mostrarError(mensajeDeError(err, 'No se pudo anular el anticipo'));
+        },
+      });
+    });
+  }
+
+  exportarCSV(): void {
+    const rows = this.dataSource.data;
+    if (!rows.length) {
+      this.mostrarInfo('No hay datos para exportar');
+      return;
+    }
+
+    const flat = rows.map((r) => ({
+      id: r.id,
+      fechaAnticipo: this.funcionesDatosS.formatoFecha(r.fechaAnticipo, FuncionesDatosService.SOLO_FECHA) || '',
+      fechaRecepcion: this.funcionesDatosS.formatoFecha(r.fechaRecepcion, FuncionesDatosService.SOLO_FECHA) || '',
+      titular: this.nombreTitular(r),
+      identificacion: r.titular?.identificacion || '',
+      numeroDoc: r.numeroDoc,
+      valor: Number(r.valor || 0),
+      estado: this.estadoLabel(r.estado),
+      observacion: r.observacion || '',
+    }));
+
+    const headers = ['ID', 'Fecha anticipo', 'Fecha recepción', 'Cliente', 'Identificación', 'Documento', 'Valor', 'Estado', 'Observación'];
+    const keys = ['id', 'fechaAnticipo', 'fechaRecepcion', 'titular', 'identificacion', 'numeroDoc', 'valor', 'estado', 'observacion'];
+    this.exportService.exportToCSV(flat, `anticipos_clientes_${this.hoyISO()}`, headers, keys);
+    this.mostrarExito(`${flat.length} registros exportados`);
   }
 
   seleccionarRegistro(row: AnticipoCliente): void {

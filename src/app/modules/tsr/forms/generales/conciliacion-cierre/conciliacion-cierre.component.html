@@ -11,7 +11,7 @@
             [etiqueta]="etiquetaCuenta"
             [buscarPor]="buscarPorCuenta"
             [ngModel]="cuentaSeleccionada()"
-            (ngModelChange)="cuentaSeleccionada.set($event)"
+            (ngModelChange)="onCuentaChange($event)"
             placeholder="Escriba el banco o el número de cuenta"
           />
         </div>
@@ -24,7 +24,7 @@
             [etiqueta]="etiquetaPeriodo"
             [buscarPor]="buscarPorPeriodo"
             [ngModel]="periodoSeleccionado()"
-            (ngModelChange)="periodoSeleccionado.set($event)"
+            (ngModelChange)="onPeriodoChange($event)"
             placeholder="Escriba el mes o el año"
           />
         </div>
@@ -47,6 +47,68 @@
       }
     </mat-card-content>
   </mat-card>
+
+  @if (cuentaSeleccionada() && periodoSeleccionado()) {
+    <mat-card class="historico-card">
+      <mat-card-title>Histórico de cierres de esta cuenta/período</mat-card-title>
+      <mat-card-content>
+        @if (cargandoHistorico()) {
+          <div class="empty-state"><mat-spinner diameter="24"></mat-spinner></div>
+        } @else if (historicoCierres().length === 0) {
+          <div class="empty-state">Esta cuenta/período todavía no tiene ningún cierre declarado.</div>
+        } @else {
+          <div class="table-scroll">
+            <table mat-table [dataSource]="historicoCierres()" class="mat-elevation-z1 full-width">
+              <ng-container matColumnDef="codigo">
+                <th mat-header-cell *matHeaderCellDef>Cierre</th>
+                <td mat-cell *matCellDef="let r">N° {{ r.codigo }}</td>
+              </ng-container>
+              <ng-container matColumnDef="fechaCierre">
+                <th mat-header-cell *matHeaderCellDef>Fecha de cierre</th>
+                <td mat-cell *matCellDef="let r">{{ fechaDisplay(r.fechaCierre) }}</td>
+              </ng-container>
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let r">
+                  <span class="badge-estado-cierre" [class.badge-anulado]="r.estadoCierre === ESTADO_CIERRE_CONCILIACION.ANULADO">
+                    {{ estadoCierreLabel(r.estadoCierre) }}
+                  </span>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="usuarioCierre">
+                <th mat-header-cell *matHeaderCellDef>Usuario</th>
+                <td mat-cell *matCellDef="let r">{{ r.usuarioCierre || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="motivoAnulacion">
+                <th mat-header-cell *matHeaderCellDef>Motivo de anulación</th>
+                <td mat-cell *matCellDef="let r">{{ r.motivoAnulacion || '—' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="acciones">
+                <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                <td mat-cell *matCellDef="let r">
+                  @if (puedeAnularCierre(r)) {
+                    <button
+                      mat-stroked-button
+                      color="warn"
+                      [disabled]="anulandoCierre() === r.codigo"
+                      (click)="anularCierreHistorico(r)"
+                    >
+                      <mat-icon>undo</mat-icon>
+                      Anular cierre
+                    </button>
+                  } @else {
+                    —
+                  }
+                </td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="['codigo', 'fechaCierre', 'estado', 'usuarioCierre', 'motivoAnulacion', 'acciones']"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['codigo', 'fechaCierre', 'estado', 'usuarioCierre', 'motivoAnulacion', 'acciones']"></tr>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
 
   @if (preparado(); as prep) {
     <mat-accordion multi class="secciones">

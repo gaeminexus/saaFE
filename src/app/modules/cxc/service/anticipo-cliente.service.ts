@@ -1,7 +1,12 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { AnticipoCliente, ConfirmarAnticipoClienteRequest } from '../model/anticipo-cliente';
+import {
+  AnticipoCliente,
+  AnularAnticipoClienteRequest,
+  ConfirmarAnticipoClienteRequest,
+  VerificarAnulacionAnticipoResponse,
+} from '../model/anticipo-cliente';
 import { ServiciosCxc } from './ws-cxc';
 
 @Injectable({
@@ -53,6 +58,23 @@ export class AnticipoClienteService {
   confirmar(datos: ConfirmarAnticipoClienteRequest): Observable<any | null> {
     return this.http
       .post<any>(`${ServiciosCxc.RS_ANTC}/confirmar`, datos, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** Qué se revertiría si se anula este anticipo (cruces contra factura, si los hay). */
+  verificarAnulacion(id: number): Observable<VerificarAnulacionAnticipoResponse | null> {
+    return this.http
+      .get<VerificarAnulacionAnticipoResponse>(`${ServiciosCxc.RS_ANTC}/verificarAnulacion/${id}`)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * `confirmarReversionCruces` debe ir en `true` cuando `verificarAnulacion` devolvió cruces
+   * contra factura(s); sin eso el backend responde 200 con `exito:false` en vez de anular.
+   */
+  anular(id: number, datos: AnularAnticipoClienteRequest): Observable<any | null> {
+    return this.http
+      .post<any>(`${ServiciosCxc.RS_ANTC}/anular/${id}`, datos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

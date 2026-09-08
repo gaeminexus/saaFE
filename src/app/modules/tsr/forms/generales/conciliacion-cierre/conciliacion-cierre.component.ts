@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,6 +21,13 @@ import { Router } from '@angular/router';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import {
+  MotivoDialogComponent,
+  MotivoDialogData,
+} from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
+import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 // InlineAutocompleteComponent vive en rrh/forms/comunes — es genérico (sin ningún acoplamiento a
@@ -33,6 +41,8 @@ import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { InlineAutocompleteComponent } from '../../../../rrh/forms/comunes/inline-autocomplete/inline-autocomplete.component';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { Conciliacion, ESTADO_CIERRE_CONCILIACION } from '../../../model/conciliacion';
+import { ConciliacionService } from '../../../service/conciliacion.service';
 import {
   CerrarConciliacionRequest,
   ConciliadoDelMes,
@@ -127,12 +137,16 @@ interface EstadoFila {
 })
 export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
   private cierreS = inject(ConciliacionCierreService);
+  private conciliacionS = inject(ConciliacionService);
   private cuentaS = inject(CuentaBancariaService);
   private periodoS = inject(PeriodoService);
   private appState = inject(AppStateService);
   private funcionesDatosS = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
   private router = inject(Router);
+
+  readonly ESTADO_CIERRE_CONCILIACION = ESTADO_CIERRE_CONCILIACION;
 
   readonly TipoTransito = TipoTransito;
   readonly tipoTransitoOptions = Object.entries(TIPO_TRANSITO_LABELS).map(([codigo, texto]) => ({
@@ -146,6 +160,21 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
 
   cuentaSeleccionada = signal<CuentaBancaria | null>(null);
   periodoSeleccionado = signal<Periodo | null>(null);
+
+  // ── Histórico de cierres de la cuenta/período seleccionados (ítem 1.3 del lote) ──
+  historicoCierres = signal<Conciliacion[]>([]);
+  cargandoHistorico = signal(false);
+  anulandoCierre = signal<number | null>(null);
+
+  onCuentaChange(cuenta: CuentaBancaria | null): void {
+    this.cuentaSeleccionada.set(cuenta);
+    this.cargarHistoricoCierres();
+  }
+
+  onPeriodoChange(periodo: Periodo | null): void {
+    this.periodoSeleccionado.set(periodo);
+    this.cargarHistoricoCierres();
+  }
 
   // ── Combos: etiqueta/búsqueda para InlineAutocomplete (ítem 2) ──
   etiquetaCuenta = (c: CuentaBancaria | null): string => c ? `${c.banco?.nombre ?? 'Banco'} — ${c.numeroCuenta}` : '';
@@ -342,6 +371,116 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
 
   puedePreparar(): boolean {
     return !!this.cuentaSeleccionada() && !!this.periodoSeleccionado() && !this.preparando();
+  }
+
+  /**
+   * Cierres ya declarados (`TSR.CNCL`) para la cuenta/período seleccionados — vía el CRUD
+   * genérico `GET /cncl/selectByCriteria` (ver `ConciliacionRest`/`ConciliacionService`), el
+   * mismo mecanismo estándar de listado por criterios usado en todo el resto del sistema. No
+   * existe un endpoint dedicado a "listar cierres": este es el que ya lista TSR.CNCL, filtrado
+   * por cuenta y período. Se descartan las filas con `estadoCierre` nulo — son del mecanismo
+   * viejo (`insertaConciliacion`) que nunca llegó a producción y no tiene anulación.
+   */
+  private cargarHistoricoCierres(): void {
+    const cuenta = this.cuentaSeleccionada();
+    const periodo = this.periodoSeleccionado();
+    if (!cuenta || !periodo) {
+      this.historicoCierres.set([]);
+      return;
+    }
+
+    this.cargandoHistorico.set(true);
+
+    const dbCuenta = new DatosBusqueda();
+    dbCuenta.asignaValorConCampoPadre(TipoDatosBusqueda.LONG, 'cuentaBancaria', 'codigo', String(cuenta.codigo), TipoComandosBusqueda.IGUAL);
+
+    const dbPeriodo = new DatosBusqueda();
+    dbPeriodo.asignaUnCampoSinTrunc(TipoDatosBusqueda.LONG, 'idPeriodo', String(periodo.codigo), TipoComandosBusqueda.IGUAL);
+
+    this.conciliacionS.selectByCriteria([dbCuenta, dbPeriodo]).subscribe({
+      next: (data) => {
+        const filas = (data || [])
+          .filter((c) => c.estadoCierre != null)
+          .sort((a, b) => Number(b.codigo) - Number(a.codigo));
+        this.historicoCierres.set(filas);
+        this.cargandoHistorico.set(false);
+      },
+      error: () => {
+        this.historicoCierres.set([]);
+        this.cargandoHistorico.set(false);
+      },
+    });
+  }
+
+  estadoCierreLabel(estado: number | null | undefined): string {
+    if (estado === ESTADO_CIERRE_CONCILIACION.CERRADO) return 'Cerrado';
+    if (estado === ESTADO_CIERRE_CONCILIACION.ANULADO) return 'Anulado';
+    if (estado === ESTADO_CIERRE_CONCILIACION.BORRADOR) return 'Borrador';
+    return '—';
+  }
+
+  /**
+   * Solo el cierre CERRADO más reciente de la cuenta/período es anulable — el backend
+   * (`ConciliacionCierreServiceImpl.anularCierre`) rechaza cualquier otro con
+   * "Solo se puede anular el ultimo cierre...". Se oculta el botón en los demás para no ofrecer
+   * una acción que el servidor va a rechazar siempre.
+   */
+  esCierreVigente(row: Conciliacion): boolean {
+    const cerrados = this.historicoCierres().filter((c) => c.estadoCierre === ESTADO_CIERRE_CONCILIACION.CERRADO);
+    if (!cerrados.length) return false;
+    const maxCodigo = Math.max(...cerrados.map((c) => Number(c.codigo)));
+    return Number(row.codigo) === maxCodigo;
+  }
+
+  puedeAnularCierre(row: Conciliacion): boolean {
+    return row.estadoCierre === ESTADO_CIERRE_CONCILIACION.CERRADO && this.esCierreVigente(row);
+  }
+
+  /**
+   * `anularCierre` en saaBE (confirmado leyendo `ConciliacionCierreServiceImpl.java`): borra las
+   * filas de `TSR.DTCN` (`DetalleTransito`) que este cierre declaró —las partidas vuelven a
+   * Pendiente y reaparecen como "arrastradas" en el próximo `prepararCierre()`— y deja el `CNCL`
+   * en ANULADO con el motivo. Rechaza si alguna de esas partidas ya fue saldada (hay que deshacer
+   * esa conciliación primero) o si no es el último cierre de la cuenta/período. No revierte
+   * ningún asiento contable ni movimiento bancario: este mecanismo de tránsito no genera asiento
+   * propio, solo declara partidas ya existentes como "en tránsito".
+   */
+  anularCierreHistorico(row: Conciliacion): void {
+    if (!row.codigo || !this.puedeAnularCierre(row)) return;
+
+    const data: MotivoDialogData = {
+      titulo: `Anular cierre N° ${row.codigo}`,
+      advertencia:
+        `Se anulará el cierre de ${this.etiquetaCuenta(this.cuentaSeleccionada())} del período ` +
+        `${this.etiquetaPeriodo(this.periodoSeleccionado())}. Las partidas que este cierre declaró en tránsito ` +
+        `volverán a quedar pendientes de conciliar. No se revierte ningún asiento contable ni movimiento ` +
+        `bancario — solo esta declaración de tránsito.`,
+      textoConfirmar: 'Sí, anular cierre',
+    };
+
+    this.dialog.open(MotivoDialogComponent, { width: '560px', data }).afterClosed().subscribe((motivo: string | null) => {
+      if (!motivo || !row.codigo) return;
+
+      this.anulandoCierre.set(row.codigo);
+      this.errorMsg.set('');
+      this.successMsg.set('');
+
+      this.cierreS.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+        next: () => {
+          this.anulandoCierre.set(null);
+          this.successMsg.set(`Cierre N° ${row.codigo} anulado correctamente.`);
+          this.snackBar.open('✓ Cierre anulado correctamente', 'Cerrar', { duration: 4000, panelClass: ['snackbar-success'] });
+          this.cargarHistoricoCierres();
+          // Si había una preparación en pantalla de esta misma cuenta/período, refrescarla: las
+          // partidas que este cierre declaró vuelven a aparecer como pendientes.
+          if (this.preparado()) this.prepararCierre();
+        },
+        error: (err) => {
+          this.anulandoCierre.set(null);
+          this.errorMsg.set(mensajeDeError(err, 'No se pudo anular el cierre'));
+        },
+      });
+    });
   }
 
   prepararCierre(): void {
