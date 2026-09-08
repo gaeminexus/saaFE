@@ -16,16 +16,6 @@
           placeholder="Escriba el mes o el año"
         />
 
-        <div class="search-grid">
-          <mat-form-field appearance="outline" class="w-100">
-            <mat-label>Buscar empleado (identificación)</mat-label>
-            <input matInput [ngModel]="filtroEmpleadoBusqueda()" (ngModelChange)="filtroEmpleadoBusqueda.set($event)" />
-          </mat-form-field>
-          <button mat-icon-button matTooltip="Buscar" (click)="onBuscarEmpleados()" [disabled]="cargandoEmpleados()">
-            <mat-icon>search</mat-icon>
-          </button>
-        </div>
-
         <app-inline-autocomplete
           modo="campo"
           etiquetaCampo="Empleado"
@@ -35,7 +25,7 @@
           etiquetaVacio="Todos"
           [ngModel]="filtroEmpleado()"
           (ngModelChange)="onFiltroEmpleadoChange($event)"
-          placeholder="Escriba la cédula o el nombre"
+          placeholder="Escriba la cédula, el nombre o el apellido"
         />
 
         <app-inline-autocomplete

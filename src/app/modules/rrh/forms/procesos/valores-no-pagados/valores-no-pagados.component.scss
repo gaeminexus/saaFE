@@ -1,21 +1,9 @@
 .valores-no-pagados {
   .filters {
     display: grid;
-    grid-template-columns: repeat(4, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, minmax(200px, 1fr));
     gap: 12px;
     align-items: start;
-  }
-  .search-grid {
-    display: flex;
-    gap: 4px;
-    align-items: flex-start;
-
-    mat-form-field {
-      flex: 1;
-    }
-  }
-  .w-100 {
-    width: 100%;
   }
   .table-wrapper {
     margin-top: 8px;

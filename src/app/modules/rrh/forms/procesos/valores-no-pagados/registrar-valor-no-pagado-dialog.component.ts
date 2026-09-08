@@ -7,9 +7,6 @@ import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/i
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
@@ -21,11 +18,13 @@ import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacio
 import { opcionesAviso } from '../../comunes/avisos';
 
 /**
- * Registrar un valor no pagado (plan §8/§9): empleado activo, período ABIERTO (el rol de ese
- * período todavía no se procesó — decisión 3 del usuario), valor > 0, motivo obligatorio.
+ * Registrar un valor no pagado (plan §8/§9): empleado activo, período ABIERTO o CALCULADO, valor
+ * > 0, motivo obligatorio.
  *
- * Mismo patrón de búsqueda de empleado que `AnticipoFormDialogComponent` (buscar por
- * identificación + `InlineAutocomplete` de activos de la empresa).
+ * Un solo control de empleado: `InlineAutocomplete` sobre la lista completa de activos de la
+ * empresa (una carga al abrir el diálogo), filtrando client-side por nombre, apellido o cédula —
+ * no el patrón de "buscar y luego elegir" de `AnticipoFormDialogComponent` (2026-09-08: ese patrón
+ * resultó confuso y encima el cuadro de búsqueda sólo filtraba por identificación en el servidor).
  */
 @Component({
   selector: 'app-registrar-valor-no-pagado-dialog',
@@ -42,14 +41,16 @@ export class RegistrarValorNoPagadoDialogComponent implements OnInit {
   private appState = inject(AppStateService);
   private snackBar = inject(MatSnackBar);
 
-  formEmpleadoBusqueda = signal<string>('');
   formEmpleado = signal<Empleado | null>(null);
   empleados = signal<Empleado[]>([]);
   cargandoEmpleados = signal<boolean>(false);
 
-  periodosAbiertos = signal<PeriodoNomina[]>([]);
+  /** Ofrece ABIERTO y CALCULADO (decisión 2026-09-08): un CALCULADO todavía admite el registro porque el motor regenera los renglones al recalcular. */
+  periodosDisponibles = signal<PeriodoNomina[]>([]);
   formPeriodo = signal<PeriodoNomina | null>(null);
   cargandoPeriodos = signal<boolean>(false);
+
+  periodoEsCalculado = computed(() => Number(this.formPeriodo()?.estado) === EstadoPeriodo.CALCULADO);
 
   valor = signal<number>(0);
   motivo = signal<string>('');
@@ -66,21 +67,28 @@ export class RegistrarValorNoPagadoDialogComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.onBuscarEmpleados();
-    this.cargarPeriodosAbiertos();
+    this.cargarEmpleados();
+    this.cargarPeriodos();
   }
 
-  onBuscarEmpleados(): void {
+  /**
+   * Carga en una sola llamada todos los empleados activos de la empresa (mismo patrón que
+   * `ColaboradoresComponent`: `selectByCriteria(criteriosPorEmpresa('apellidos'))` sin buscar
+   * primero) para que `InlineAutocomplete` filtre client-side por nombre, apellido o cédula vía
+   * `[buscarPor]` — antes había un cuadro de "Buscar" separado que sólo filtraba por
+   * identificación en el servidor y, si no encontraba nada, dejaba `empleados` vacío y con eso el
+   * combo de abajo sin opciones para filtrar (2026-09-08, corregido a pedido del árbitro).
+   */
+  private cargarEmpleados(): void {
     this.cargandoEmpleados.set(true);
-    const criterios = this.buildEmpleadoCriteria(this.formEmpleadoBusqueda().trim());
-    this.empleadoService.selectByCriteria(criterios).subscribe({
+    this.empleadoService.selectByCriteria(criteriosPorEmpresa('apellidos')).subscribe({
       next: (rows: Empleado[] | null) => {
         const activos = this.extractRows(rows).filter((e) => this.isEmpleadoActivo(e.estado));
         this.empleados.set(activos);
         this.cargandoEmpleados.set(false);
       },
       error: (err) => {
-        this.mostrarError(mensajeDeError(err, 'Error al buscar empleados'));
+        this.mostrarError(mensajeDeError(err, 'Error al cargar los empleados'));
         this.cargandoEmpleados.set(false);
       },
     });
@@ -90,24 +98,30 @@ export class RegistrarValorNoPagadoDialogComponent implements OnInit {
     this.formEmpleado.set(empleado);
   }
 
-  /** Sólo los períodos ABIERTOS (plan §8): antes de eso, el rol ya se procesó y no se puede registrar. */
-  private cargarPeriodosAbiertos(): void {
+  /**
+   * ABIERTO y CALCULADO (2026-09-08): un CALCULADO todavía no distribuyó pagos, así que también
+   * admite el registro — el motor regenera los renglones informativos del rol al recalcular. De
+   * ahí en adelante (APROBADO en más) el rol ya está cerrado y no se puede registrar.
+   */
+  private cargarPeriodos(): void {
     this.cargandoPeriodos.set(true);
     this.periodoService.selectByCriteria(criteriosPorEmpresa('anio', 'mes')).subscribe({
       next: (data) => {
-        const abiertos = (data ?? []).filter((p) => Number(p.estado) === EstadoPeriodo.ABIERTO);
-        this.periodosAbiertos.set(abiertos);
-        // Default: el abierto actual — el más reciente por (año, mes), ya que ordinariamente sólo
-        // hay uno vivo a la vez.
-        if (!this.formPeriodo() && abiertos.length > 0) {
-          const actual = [...abiertos].sort((a, b) => (b.anio - a.anio) || (b.mes - a.mes))[0];
+        const disponibles = (data ?? []).filter((p) => {
+          const estado = Number(p.estado);
+          return estado === EstadoPeriodo.ABIERTO || estado === EstadoPeriodo.CALCULADO;
+        });
+        this.periodosDisponibles.set(disponibles);
+        // Default: el más reciente por (año, mes) entre los disponibles.
+        if (!this.formPeriodo() && disponibles.length > 0) {
+          const actual = [...disponibles].sort((a, b) => (b.anio - a.anio) || (b.mes - a.mes))[0];
           this.formPeriodo.set(actual);
         }
         this.cargandoPeriodos.set(false);
       },
       error: (err) => {
-        this.mostrarError(mensajeDeError(err, 'No se pudieron cargar los períodos abiertos'));
-        this.periodosAbiertos.set([]);
+        this.mostrarError(mensajeDeError(err, 'No se pudieron cargar los períodos'));
+        this.periodosDisponibles.set([]);
         this.cargandoPeriodos.set(false);
       },
     });
@@ -177,21 +191,6 @@ export class RegistrarValorNoPagadoDialogComponent implements OnInit {
 
   cancelar(): void {
     this.dialogRef.close(false);
-  }
-
-  private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
-    const texto = busqueda.replace(/\s+/g, ' ').trim().toUpperCase();
-    if (texto) {
-      const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'identificacion', texto, TipoComandosBusqueda.LIKE);
-      criterios.push(db);
-    }
-    const order = new DatosBusqueda();
-    order.orderBy('apellidos');
-    order.setTipoOrden(DatosBusqueda.ORDER_ASC);
-    criterios.push(order);
-    return criterios;
   }
 
   private isEmpleadoActivo(value?: string | number | null): boolean {

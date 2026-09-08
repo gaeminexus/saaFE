@@ -14,9 +14,6 @@ import {
   MotivoDialogComponent,
   MotivoDialogData,
 } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
-import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
-import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
-import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Empleado } from '../../../model/empleado';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
@@ -69,7 +66,6 @@ export class ValoresNoPagadosComponent implements OnInit {
   periodos = signal<PeriodoNomina[]>([]);
   filtroPeriodo = signal<PeriodoNomina | null>(null);
 
-  filtroEmpleadoBusqueda = signal<string>('');
   filtroEmpleado = signal<Empleado | null>(null);
   empleados = signal<Empleado[]>([]);
   cargandoEmpleados = signal<boolean>(false);
@@ -85,7 +81,7 @@ export class ValoresNoPagadosComponent implements OnInit {
   totalValor = computed(() => this.rows().reduce((s, r) => s + (Number(r.valor) || 0), 0));
 
   ngOnInit(): void {
-    this.onBuscarEmpleados();
+    this.cargarEmpleados();
     this.cargarPeriodos();
   }
 
@@ -113,16 +109,22 @@ export class ValoresNoPagadosComponent implements OnInit {
     });
   }
 
-  onBuscarEmpleados(): void {
+  /**
+   * Carga en una sola llamada todos los empleados de la empresa (mismo patrón que
+   * `ColaboradoresComponent`) para que el filtro `InlineAutocomplete` filtre client-side por
+   * nombre, apellido o cédula. Antes había un cuadro de "Buscar" separado que sólo filtraba por
+   * identificación en el servidor y dejaba el combo sin opciones si no encontraba nada — mismo
+   * defecto que en `RegistrarValorNoPagadoDialogComponent`, corregido igual (2026-09-08).
+   */
+  private cargarEmpleados(): void {
     this.cargandoEmpleados.set(true);
-    const criterios = this.buildEmpleadoCriteria(this.filtroEmpleadoBusqueda().trim());
-    this.empleadoService.selectByCriteria(criterios).subscribe({
+    this.empleadoService.selectByCriteria(criteriosPorEmpresa('apellidos')).subscribe({
       next: (rows: Empleado[] | null) => {
         this.empleados.set(this.extractRows(rows));
         this.cargandoEmpleados.set(false);
       },
       error: (err) => {
-        this.mostrarError(mensajeDeError(err, 'Error al buscar empleados'));
+        this.mostrarError(mensajeDeError(err, 'Error al cargar los empleados'));
         this.cargandoEmpleados.set(false);
       },
     });
@@ -161,7 +163,6 @@ export class ValoresNoPagadosComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.filtroEmpleado.set(null);
-    this.filtroEmpleadoBusqueda.set('');
     this.filtroEstado.set(null);
     const abiertos = this.periodos().filter((p) => Number(p.estado) === EstadoPeriodo.ABIERTO);
     const actual = abiertos.length > 0
@@ -281,21 +282,6 @@ export class ValoresNoPagadosComponent implements OnInit {
 
   fechaDisplay(fecha: unknown): string {
     return this.funcionesDatosS.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA) || '—';
-  }
-
-  private buildEmpleadoCriteria(busqueda: string): DatosBusqueda[] {
-    const criterios: DatosBusqueda[] = criteriosPorEmpresa();
-    const texto = busqueda.replace(/\s+/g, ' ').trim().toUpperCase();
-    if (texto) {
-      const db = new DatosBusqueda();
-      db.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'identificacion', texto, TipoComandosBusqueda.LIKE);
-      criterios.push(db);
-    }
-    const order = new DatosBusqueda();
-    order.orderBy('apellidos');
-    order.setTipoOrden(DatosBusqueda.ORDER_ASC);
-    criterios.push(order);
-    return criterios;
   }
 
   private extractRows<T>(rows: T[] | null): T[] {
