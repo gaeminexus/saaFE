@@ -1,9 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { AfterViewChecked, Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSort } from '@angular/material/sort';
+import { MatTableDataSource } from '@angular/material/table';
 import { ActivatedRoute } from '@angular/router';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -39,7 +43,7 @@ import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.s
   templateUrl: './confirmacion.component.html',
   styleUrl: './confirmacion.component.scss',
 })
-export class ConfirmacionComponent implements OnInit {
+export class ConfirmacionComponent implements OnInit, AfterViewChecked {
   private pagoS = inject(PagoProgramadoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
@@ -49,14 +53,27 @@ export class ConfirmacionComponent implements OnInit {
   // ─── Confirmación manual (camino principal) ────────────
   pagosPorConfirmar = signal<PagoProgramado[]>([]);
   confSeleccionados = new Set<number>();
-  confReferencia = '';
+  /** Referencia bancaria por pago — cada pago confirmado puede traer una distinta. */
+  referenciasPorPago = signal<Record<number, string>>({});
   confFecha: Date | null = new Date();
   confObservacion = '';
   cargandoPorConfirmar = signal(false);
   confirmandoManual = signal(false);
   confError = signal('');
   confResultado = signal<ConfirmarManualResponse | null>(null);
-  readonly columnasConfirmacion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'estado'];
+  readonly columnasConfirmacion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'estado', 'referencia'];
+
+  readonly dataSourceConf = new MatTableDataSource<PagoProgramado>([]);
+  @ViewChild(MatSort) sort?: MatSort;
+  @ViewChild(MatPaginator) paginator?: MatPaginator;
+  @ViewChildren('refInput') refInputs?: QueryList<ElementRef<HTMLInputElement>>;
+
+  /** Id del pago que se acaba de marcar — se enfoca su campo de referencia apenas exista en el DOM. */
+  private pendienteFoco: number | null = null;
+
+  // ─── Fecha del pago: datepicker + tipeo manual dd/mm/aaaa (mismo patrón que mayor-analitico-v2) ───
+  @ViewChild('confFechaInput', { read: ElementRef }) confFechaInputRef!: ElementRef<HTMLInputElement>;
+  private _rawConfFecha = '';
 
   // ─── Cargar respuesta del banco (provisional) ──────────
   respIdLote: number | null = null;
@@ -65,10 +82,81 @@ export class ConfirmacionComponent implements OnInit {
   respError = signal('');
   respResultado = signal<RespuestaBancoResponse | null>(null);
 
+  constructor() {
+    this.dataSourceConf.sortingDataAccessor = (row: PagoProgramado, property: string): string | number => {
+      switch (property) {
+        case 'fechaProgramada': {
+          const d = this.funcionesDatos.convertirFechaDesdeBackend(row.fechaProgramada);
+          return d ? d.getTime() : 0;
+        }
+        case 'proveedor': return this.nombreBeneficiario(row);
+        case 'factura':   return this.conceptoPago(row);
+        case 'valor':     return Number(row.valor) || 0;
+        case 'estado':    return this.etiquetaEstado(row.estado).texto;
+        default:          return (row as any)[property] ?? '';
+      }
+    };
+  }
+
   ngOnInit(): void {
     const idLote = this.route.snapshot.queryParamMap.get('idLote');
     if (idLote) this.respIdLote = +idLote;
     this.cargarPagosPorConfirmar();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.sort && this.dataSourceConf.sort !== this.sort) {
+      this.dataSourceConf.sort = this.sort;
+    }
+    if (this.paginator && this.dataSourceConf.paginator !== this.paginator) {
+      this.dataSourceConf.paginator = this.paginator;
+    }
+    if (this.pendienteFoco != null && this.refInputs) {
+      const input = this.refInputs.find(
+        (ref) => Number(ref.nativeElement.dataset['pagoId']) === this.pendienteFoco,
+      );
+      if (input) {
+        input.nativeElement.focus();
+        this.pendienteFoco = null;
+      }
+    }
+  }
+
+  // ─── Fecha del pago: datepicker + tipeo manual ─────────
+  capturarConfFechaRaw(event: Event): void {
+    this._rawConfFecha = (event.target as HTMLInputElement).value;
+  }
+  syncConfFechaFromRaw(event: FocusEvent): void {
+    const raw = (this._rawConfFecha || (event.target as HTMLInputElement)?.value || '').trim();
+    this._rawConfFecha = '';
+    const date = this.parseFechaLocalConf(raw);
+    if (!date) return;
+    this.confFecha = date;
+    const formatted = this.funcionesDatos.formatoFecha(date, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => { if (this.confFechaInputRef?.nativeElement) this.confFechaInputRef.nativeElement.value = formatted; });
+  }
+  onConfFechaPickerChange(date: Date | null | undefined): void {
+    const d = date || new Date();
+    this.confFecha = d;
+    const formatted = this.funcionesDatos.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '';
+    setTimeout(() => { if (this.confFechaInputRef?.nativeElement) this.confFechaInputRef.nativeElement.value = formatted; });
+  }
+  private parseFechaLocalConf(raw: string): Date | null {
+    if (!raw) return null;
+    const parts = raw.split('/');
+    if (parts.length !== 3) return null;
+    const dia = Number(parts[0]), mes = Number(parts[1]) - 1, anio = Number(parts[2]);
+    if (isNaN(dia) || dia < 1 || dia > 31 || isNaN(mes) || mes < 0 || mes > 11 || isNaN(anio) || anio < 1000) return null;
+    const d = new Date(anio, mes, dia);
+    return d.getFullYear() === anio && d.getMonth() === mes && d.getDate() === dia ? d : null;
+  }
+
+  // ─── Referencia bancaria por pago ───────────────────────
+  referenciaDe(idPago: number): string {
+    return this.referenciasPorPago()[idPago] ?? '';
+  }
+  setReferencia(idPago: number, valor: string): void {
+    this.referenciasPorPago.update((m) => ({ ...m, [idPago]: valor }));
   }
 
   // ═══ CONFIRMACIÓN MANUAL ═════════════════════════════════
@@ -85,13 +173,14 @@ export class ConfirmacionComponent implements OnInit {
 
     this.pagoS.listar(this.idEmpresaSesion()).subscribe({
       next: (data) => {
-        this.pagosPorConfirmar.set(
-          (data ?? []).filter(
-            (p) => !this.esDebitoAutomatico(p)
-              && (p.estado === EstadoPagoProgramado.REGISTRADO
-                || p.estado === EstadoPagoProgramado.EN_ARCHIVO)
-          )
+        const filtrados = (data ?? []).filter(
+          (p) => !this.esDebitoAutomatico(p)
+            && (p.estado === EstadoPagoProgramado.REGISTRADO
+              || p.estado === EstadoPagoProgramado.EN_ARCHIVO)
         );
+        this.pagosPorConfirmar.set(filtrados);
+        this.dataSourceConf.data = filtrados;
+        this.referenciasPorPago.set({});
         this.cargandoPorConfirmar.set(false);
       },
       error: (err: Error) => {
@@ -111,6 +200,7 @@ export class ConfirmacionComponent implements OnInit {
       this.confSeleccionados.delete(pago.id);
     } else {
       this.confSeleccionados.add(pago.id);
+      this.pendienteFoco = pago.id;
     }
   }
 
@@ -164,33 +254,65 @@ export class ConfirmacionComponent implements OnInit {
     });
   }
 
-  /** El motivo del diálogo se guarda como parte de la observación del pago. */
+  /**
+   * El motivo del diálogo se guarda como parte de la observación del pago. Fecha y observación
+   * son las mismas para todo el lote; la referencia bancaria es por pago (contrato
+   * docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §3.2) — como `confirmarManual` solo acepta
+   * UNA referencia para toda la lista de `idsPagos`, se llama una vez por pago (en paralelo) en
+   * vez de una sola vez para el lote entero. No es un cambio a la lógica de confirmación: es la
+   * única forma de que cada pago viaje con su propia referencia sin tocar el endpoint.
+   */
   private ejecutarConfirmacionManual(motivo: string): void {
     this.confirmandoManual.set(true);
     this.confError.set('');
     this.confResultado.set(null);
 
     const nota = [this.confObservacion.trim(), motivo].filter((t) => !!t).join(' | ');
+    const fechaPago = this.fechaISO(this.confFecha);
+    const idUsuario = this.idUsuarioSesion();
+    const referencias = this.referenciasPorPago();
+    const ids = Array.from(this.confSeleccionados);
 
-    this.pagoS.confirmarManual({
-      idsPagos: Array.from(this.confSeleccionados),
-      referencia: this.confReferencia.trim() || undefined,
-      fechaPago: this.fechaISO(this.confFecha),
-      observacion: `Confirmación manual: ${nota}`,
-      idUsuario: this.idUsuarioSesion(),
-    }).subscribe({
-      next: (resp) => {
-        this.confirmandoManual.set(false);
-        this.confResultado.set(resp);
-        this.confReferencia = '';
-        this.confObservacion = '';
-        this.cargarPagosPorConfirmar();
-        this.snackBar.open(resp.mensaje ?? 'Pagos confirmados.', 'Cerrar', { duration: 6000 });
-      },
-      error: (err: Error) => {
-        this.confirmandoManual.set(false);
-        this.confError.set(err.message);
-      },
+    const llamadas = ids.map((idPago) =>
+      this.pagoS.confirmarManual({
+        idsPagos: [idPago],
+        referencia: (referencias[idPago] || '').trim() || undefined,
+        fechaPago,
+        observacion: `Confirmación manual: ${nota}`,
+        idUsuario,
+      }).pipe(
+        map((resp) => ({ ok: true as const, resp })),
+        catchError((err: Error) => of({ ok: false as const, idPago, mensaje: err.message })),
+      )
+    );
+
+    forkJoin(llamadas).subscribe((resultados) => {
+      this.confirmandoManual.set(false);
+
+      const confirmados = resultados
+        .filter((r): r is { ok: true; resp: ConfirmarManualResponse } => r.ok)
+        .reduce((suma, r) => suma + (r.resp.confirmados || 0), 0);
+      const errores = resultados
+        .filter((r): r is { ok: false; idPago: number; mensaje: string } => !r.ok)
+        .map((r) => `Pago ${r.idPago}: ${r.mensaje}`);
+
+      this.confResultado.set({
+        exito: errores.length === 0,
+        mensaje: errores.length === 0
+          ? `${confirmados} pago(s) confirmado(s).`
+          : `${confirmados} pago(s) confirmado(s), ${errores.length} con error.`,
+        confirmados,
+        errores: errores.length ? errores : undefined,
+      });
+
+      this.referenciasPorPago.set({});
+      this.confObservacion = '';
+      this.cargarPagosPorConfirmar();
+      this.snackBar.open(
+        errores.length === 0 ? `${confirmados} pago(s) confirmado(s).` : `${confirmados} confirmado(s), ${errores.length} con error.`,
+        'Cerrar',
+        { duration: 6000 },
+      );
     });
   }
 

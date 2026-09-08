@@ -13,6 +13,39 @@
     width: 56px;
   }
 
+  // La tabla scrollea, no la página: altura propia + encabezado sticky (mismo
+  // tratamiento que las cinco pantallas de cheques y mayor-analitico-v2). El mixin
+  // compartido `pagos-cobros-layout` solo da scroll horizontal — esto se agrega acá,
+  // sin tocar el mixin, porque lo usan otras pantallas.
+  .panel-principal .tabla-scroll {
+    max-height: calc(100vh - 480px);
+    min-height: 220px;
+    overflow-y: auto;
+  }
+
+  .col-referencia {
+    min-width: 160px;
+  }
+
+  .input-referencia {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+  }
+
+  .referencia-inactiva {
+    color: #cbd5e1;
+  }
+
   .resumen-seleccion {
     display: flex;
     flex-wrap: wrap;

@@ -23,16 +23,14 @@
       <div class="fila-campos">
         <mat-form-field appearance="outline">
           <mat-label>Fecha del pago</mat-label>
-          <input matInput [matDatepicker]="pickerConf" [(ngModel)]="confFecha" name="confFecha" />
+          <input #confFechaInput matInput [matDatepicker]="pickerConf" [(ngModel)]="confFecha" name="confFecha"
+                 placeholder="dd/mm/aaaa"
+                 (input)="capturarConfFechaRaw($event)"
+                 (dateChange)="onConfFechaPickerChange($event.value)"
+                 (blur)="syncConfFechaFromRaw($event)" />
           <mat-datepicker-toggle matSuffix [for]="pickerConf"></mat-datepicker-toggle>
           <mat-datepicker #pickerConf></mat-datepicker>
-          <mat-hint>Es la fecha del asiento contable</mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Referencia del banco</mat-label>
-          <input matInput [(ngModel)]="confReferencia" name="confReferencia" maxlength="200" />
-          <mat-hint>Opcional; N° de transacción o comprobante</mat-hint>
+          <mat-hint>Es la fecha del asiento contable — igual para todos los pagos seleccionados</mat-hint>
         </mat-form-field>
 
         <button mat-stroked-button class="btn-consultar" (click)="cargarPagosPorConfirmar()">
@@ -44,7 +42,7 @@
       <mat-form-field appearance="outline" class="campo-ancho">
         <mat-label>Observación</mat-label>
         <input matInput [(ngModel)]="confObservacion" name="confObservacion" maxlength="200" />
-        <mat-hint>Opcional; se agrega a la observación de cada pago confirmado</mat-hint>
+        <mat-hint>Opcional; igual para todos los seleccionados, se agrega a la observación de cada pago</mat-hint>
       </mat-form-field>
 
       @if (confError()) {
@@ -66,7 +64,7 @@
         </div>
       } @else {
         <div class="tabla-scroll">
-          <table mat-table [dataSource]="pagosPorConfirmar()">
+          <table mat-table [dataSource]="dataSourceConf" matSort matSortActive="fechaProgramada" matSortDirection="desc">
 
             <ng-container matColumnDef="check">
               <th mat-header-cell *matHeaderCellDef class="col-check">
@@ -78,27 +76,27 @@
             </ng-container>
 
             <ng-container matColumnDef="proveedor">
-              <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Proveedor</th>
               <td mat-cell *matCellDef="let p">{{ nombreBeneficiario(p) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="factura">
-              <th mat-header-cell *matHeaderCellDef>Concepto</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Concepto</th>
               <td mat-cell *matCellDef="let p">{{ conceptoPago(p) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="valor">
-              <th mat-header-cell *matHeaderCellDef class="col-monto">Valor</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-monto">Valor</th>
               <td mat-cell *matCellDef="let p" class="col-monto">{{ p.valor | number: '1.2-2' }}</td>
             </ng-container>
 
             <ng-container matColumnDef="fechaProgramada">
-              <th mat-header-cell *matHeaderCellDef>Fecha programada</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha programada</th>
               <td mat-cell *matCellDef="let p">{{ formatearFecha(p.fechaProgramada) }}</td>
             </ng-container>
 
             <ng-container matColumnDef="estado">
-              <th mat-header-cell *matHeaderCellDef>Estado</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
               <td mat-cell *matCellDef="let p">
                 <span class="badge" [ngClass]="etiquetaEstado(p.estado).clase">
                   {{ etiquetaEstado(p.estado).texto }}
@@ -106,10 +104,32 @@
               </td>
             </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="columnasConfirmacion"></tr>
+            <ng-container matColumnDef="referencia">
+              <th mat-header-cell *matHeaderCellDef>Referencia</th>
+              <td mat-cell *matCellDef="let p" class="col-referencia">
+                @if (estaSeleccionadoConf(p)) {
+                  <input
+                    #refInput
+                    class="input-referencia"
+                    [attr.data-pago-id]="p.id"
+                    [value]="referenciaDe(p.id)"
+                    (input)="setReferencia(p.id, $any($event.target).value)"
+                    (keyup.enter)="confirmarPagosManualmente()"
+                    placeholder="N° de transacción"
+                    maxlength="200"
+                  />
+                } @else {
+                  <span class="referencia-inactiva">—</span>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="columnasConfirmacion; sticky: true"></tr>
             <tr mat-row *matRowDef="let row; columns: columnasConfirmacion"></tr>
           </table>
         </div>
+
+        <mat-paginator [pageSizeOptions]="[25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
 
         <div class="resumen-seleccion">
           <span>{{ confSeleccionados.size }} pago(s) seleccionado(s)</span>
