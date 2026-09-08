@@ -33,7 +33,7 @@ import { OrdenBeneficioSocialService } from '../../../service/orden-beneficio-so
 import { LiquidacionBeneficioSocialService } from '../../../service/liquidacion-beneficio-social.service';
 import { aniosDisponibles } from '../../parametrizacion/utiles-parametrizacion';
 import { aValorDeInput } from '../../asistencia/utiles-asistencia';
-import { opcionesAviso } from '../../comunes/avisos';
+import { opcionesAdvertencia, opcionesAviso } from '../../comunes/avisos';
 
 type EstadoVisualOrden =
   | 'generada'
@@ -384,7 +384,15 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
             this.avisar(res.mensaje, true);
             return;
           }
-          this.avisar(res.mensaje || `Pago confirmado. Asiento ${res.numeroAsiento}.`);
+          // La advertencia (novedad registrada sobre un período ya CALCULADO: hay que recalcular
+          // el rol o el décimo pagado no se refleja) viene concatenada al final de `mensaje` — se
+          // muestra ese mensaje completo con estilo de advertencia, nunca como éxito de 4s, para
+          // que la instrucción operativa no desaparezca antes de leerse.
+          if (res.advertencia) {
+            this.avisarAdvertencia(res.mensaje || res.advertencia);
+          } else {
+            this.avisar(res.mensaje || `Pago confirmado. Asiento ${res.numeroAsiento}.`);
+          }
           this.recargar();
         },
         error: (err) => {
@@ -501,5 +509,9 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', opcionesAviso(esError, mensaje));
+  }
+
+  private avisarAdvertencia(mensaje: string): void {
+    this.snackBar.open(mensaje, 'Cerrar', opcionesAdvertencia(mensaje));
   }
 }

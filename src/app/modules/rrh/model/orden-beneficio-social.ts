@@ -174,7 +174,13 @@ export interface ConfirmarPagoOrdenBeneficioSocialRequest {
   usuario: string;
 }
 
-/** 200 de `POST /odbs/confirmarPago/{id}`. */
+/**
+ * 200 de `POST /odbs/confirmarPago/{id}`. `advertencia` es nuevo (BE `663e428`, 2026-09-08):
+ * aparece cuando la novedad del décimo se registró en un período ya CALCULADO — el usuario tiene
+ * que recalcular el rol o el décimo pagado no se refleja. El BE ya la concatena al final de
+ * `mensaje`, así que alcanza con mostrar `mensaje` completo con estilo de advertencia cuando
+ * `advertencia` viene presente, en vez de mandar dos avisos.
+ */
 export interface ResultadoConfirmarPago {
   exito: boolean;
   idOrden: number;
@@ -183,6 +189,7 @@ export interface ResultadoConfirmarPago {
   liquidacionesPagadas: number;
   total: number;
   mensaje: string;
+  advertencia?: string;
 }
 
 /** Body de `POST /odbs/anular/{id}` (contrato §1.6). `motivo` es obligatorio. */

@@ -66,3 +66,24 @@ export function opcionesAviso(esError: boolean, mensaje = ''): MatSnackBarConfig
     verticalPosition: 'bottom',
   };
 }
+
+/**
+ * Aviso de advertencia: algo salió bien pero el usuario tiene una acción pendiente (p.ej.
+ * "recalcule el rol o el décimo pagado no se refleja") — ni éxito (verde, se lee y se olvida en
+ * 4s) ni error (rojo, alarma por algo que no falló). Misma duración que un error —
+ * `duracionError`, que escala con el largo del mensaje— porque una instrucción operativa se
+ * pierde igual de fácil que un error si desaparece a los 4 segundos.
+ *
+ * `snackbar-warn`, no `snackbar-warning` — ese segundo nombre aparece suelto en un par de
+ * pantallas de `cxc`/`cnt` sin una clase global que lo respalde (sólo un `.scss` de un componente,
+ * que un overlay de Material no ve). `snackbar-warn` sí está definido en `styles.scss` y ya lo usa
+ * medio módulo de `cnt`.
+ */
+export function opcionesAdvertencia(mensaje: string): MatSnackBarConfig {
+  return {
+    duration: duracionError(mensaje),
+    panelClass: ['snackbar-warn'],
+    horizontalPosition: 'center',
+    verticalPosition: 'bottom',
+  };
+}
