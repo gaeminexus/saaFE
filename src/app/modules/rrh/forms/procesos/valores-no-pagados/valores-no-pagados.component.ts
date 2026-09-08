@@ -266,7 +266,6 @@ export class ValoresNoPagadosComponent implements OnInit {
     return periodo ? `${periodo.mes}/${periodo.anio}` : '—';
   }
 
-  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
   readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
 
   readonly estadoOptionLabel = (e: { codigo: number; texto: string }): string => e.texto;

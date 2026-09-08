@@ -143,7 +143,6 @@ export class RegistrarValorNoPagadoDialogComponent implements OnInit {
     return periodo ? `${periodo.mes}/${periodo.anio}` : '';
   }
 
-  readonly valorPeriodo = (p: PeriodoNomina): number => p.codigo;
   readonly buscarPorPeriodo = (p: PeriodoNomina): string[] => [String(p.mes), String(p.anio)];
 
   guardar(): void {

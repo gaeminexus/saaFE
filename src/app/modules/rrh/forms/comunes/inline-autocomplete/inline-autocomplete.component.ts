@@ -13,7 +13,11 @@ import {
   signal,
 } from '@angular/core';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { MatAutocompleteModule, MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import {
+  MatAutocompleteModule,
+  MatAutocompleteSelectedEvent,
+  MatAutocompleteTrigger,
+} from '@angular/material/autocomplete';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { coincideTexto } from '../normalizar';
@@ -231,9 +235,37 @@ export class InlineAutocompleteComponent implements ControlValueAccessor {
     this.onChange(this.salidaCVA(item));
   }
 
-  /** Si se sale del campo sin haber elegido de la lista, no se inventa un valor libre. */
-  onBlur(): void {
+  /**
+   * Si se sale del campo sin haber elegido de la lista, no se inventa un valor libre.
+   *
+   * **Por qué recibe `trigger` y por qué el `setTimeout`.** En `mat-autocomplete`, hacer clic en
+   * una opción del panel dispara, en este orden: `mousedown` → el input pierde el foco → `blur` →
+   * `click` → recién ahí `optionSelected`. Si acá se limpia en el `blur` (como hacía antes), el
+   * texto se vacía, `filtradas()` se recalcula, el panel se re-renderiza con el texto vacío, y el
+   * `click` que venía en camino cae sobre una opción distinta (o sobre nada): el usuario ve que
+   * su elección se borra sola apenas la toca con el mouse. Con teclado (flechas + Enter) no hay
+   * `blur` de por medio, por eso el piloto no lo mostró.
+   *
+   * Dos guardas, las dos hacen falta:
+   * 1. `trigger.panelOpen`: un `blur` con el panel todavía abierto es el `mousedown` de un clic
+   *    dentro del panel (confirmado leyendo `autocomplete.mjs`: `MatAutocompleteTrigger` sólo usa
+   *    `(blur)` para marcar touched, nunca para cerrar el panel — el panel se cierra por
+   *    `optionSelections`, Tab o clic afuera), no una salida real del campo.
+   * 2. El `setTimeout`: por si el `blur` llega con el panel ya cerrado por alguna otra vía justo
+   *    antes de que la selección termine de correr, se difiere un tick y se vuelve a comprobar
+   *    `_valor`/`texto` — si `seleccionar()` corrió en el medio, ya no hay nada que limpiar. No
+   *    sacarlo "para simplificar": es la red de respaldo de la guarda de arriba, no un adorno.
+   *
+   *
+   * Con Tab sobre texto que no matchea ninguna opción, el panel ya se cerró en el `keydown` del
+   * propio Tab (`MatAutocompleteTrigger._handleKeydown` dispara `_keyManager.onKeydown`, que
+   * cierra el panel vía `tabOut` ANTES de que el navegador mueva el foco y dispare `blur`) — así
+   * que `trigger.panelOpen` ya es `false` acá y este caso limpia igual que siempre, sin quedar
+   * atrapado por la guarda nueva.
+   */
+  onBlur(trigger: MatAutocompleteTrigger): void {
     this.onTouched();
+    if (trigger.panelOpen) return;
     // Hay un id de `writeValue` que todavía no se pudo resolver porque `opciones` no llegó: esto
     // NO es que el usuario haya salido sin elegir, es que el valor real sigue en camino. Limpiar
     // acá manda `null` al form control, y cuando el `effect()` resuelva el id más tarde ya no
@@ -246,10 +278,14 @@ export class InlineAutocompleteComponent implements ControlValueAccessor {
     // inofensivo la mayoría de las veces, pero un consumidor que hace `algo.set($event);
     // buscar()` en el mismo handler dispara una consulta de más por cada blur.
     if (this._valor === null && this.texto() === '') return;
-    this._valor = null;
-    this.texto.set('');
-    this.valorChange.emit(null);
-    this.onChange(this.salidaCVA(null));
+    setTimeout(() => {
+      if (this._valor && this.etiqueta(this._valor) === this.texto()) return;
+      if (this._valor === null && this.texto() === '') return;
+      this._valor = null;
+      this.texto.set('');
+      this.valorChange.emit(null);
+      this.onChange(this.salidaCVA(null));
+    }, 0);
   }
 
   foco(): void {
