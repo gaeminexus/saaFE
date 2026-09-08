@@ -3,23 +3,31 @@
     <mat-card-title>Conciliación · Cierre con partidas en tránsito</mat-card-title>
     <mat-card-content>
       <div class="filters">
-        <mat-form-field appearance="outline">
-          <mat-label>Cuenta bancaria</mat-label>
-          <mat-select [ngModel]="cuentaSeleccionada()" (ngModelChange)="cuentaSeleccionada.set($event)">
-            @for (c of cuentas(); track c.codigo) {
-              <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <div class="campo-cuenta">
+          <app-inline-autocomplete
+            modo="campo"
+            etiquetaCampo="Cuenta bancaria"
+            [opciones]="cuentas()"
+            [etiqueta]="etiquetaCuenta"
+            [buscarPor]="buscarPorCuenta"
+            [ngModel]="cuentaSeleccionada()"
+            (ngModelChange)="cuentaSeleccionada.set($event)"
+            placeholder="Escriba el banco o el número de cuenta"
+          />
+        </div>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Período</mat-label>
-          <mat-select [ngModel]="periodoSeleccionado()" (ngModelChange)="periodoSeleccionado.set($event)">
-            @for (p of periodos(); track p.codigo) {
-              <mat-option [value]="p">{{ p.nombre || (p.mes + '/' + p.anio) }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <div class="campo-periodo">
+          <app-inline-autocomplete
+            modo="campo"
+            etiquetaCampo="Período"
+            [opciones]="periodos()"
+            [etiqueta]="etiquetaPeriodo"
+            [buscarPor]="buscarPorPeriodo"
+            [ngModel]="periodoSeleccionado()"
+            (ngModelChange)="periodoSeleccionado.set($event)"
+            placeholder="Escriba el mes o el año"
+          />
+        </div>
 
         <button mat-raised-button color="primary" (click)="prepararCierre()" [disabled]="!puedePreparar()">
           @if (preparando()) {
@@ -41,52 +49,80 @@
   </mat-card>
 
   @if (preparado(); as prep) {
-    <!-- Bloque 1: conciliados del mes (informativo) -->
-    <mat-card>
-      <mat-card-title>Conciliados del mes ({{ prep.conciliadosDelMes.length }})</mat-card-title>
-      <mat-card-content>
+    <mat-accordion multi class="secciones">
+
+      <!-- Bloque 1: conciliados del mes (informativo) — arranca CONTRAÍDA -->
+      <mat-expansion-panel
+        [expanded]="conciliadosAbierto()"
+        (opened)="onConciliadosToggle(true)"
+        (closed)="onConciliadosToggle(false)"
+      >
+        <mat-expansion-panel-header>
+          <mat-panel-title>Conciliados del mes</mat-panel-title>
+          <mat-panel-description>
+            <span class="chip-info">{{ prep.conciliadosDelMes.length }}</span>
+            Informativo
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
         @if (prep.conciliadosDelMes.length === 0) {
           <div class="empty-state">No hay grupos conciliados en este período.</div>
         } @else {
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="prep.conciliadosDelMes" class="mat-elevation-z1 full-width">
+          <div class="table-scroll table-scroll--conciliados">
+            <table mat-table [dataSource]="dataSourceConciliados" matSort #sortConciliados="matSort"
+                   matSortActive="fecha" matSortDirection="desc" class="mat-elevation-z1 full-width">
               <ng-container matColumnDef="idGrupo">
-                <th mat-header-cell *matHeaderCellDef>Grupo</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Grupo</th>
                 <td mat-cell *matCellDef="let r">{{ r.idGrupo }}</td>
               </ng-container>
               <ng-container matColumnDef="fecha">
-                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
                 <td mat-cell *matCellDef="let r">{{ fechaDisplay(r.fechaConciliacion) }}</td>
               </ng-container>
               <ng-container matColumnDef="valorAsiento">
-                <th mat-header-cell *matHeaderCellDef>Valor asiento</th>
-                <td mat-cell *matCellDef="let r">{{ r.valorAsiento | number: '1.2-2' }}</td>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-monto">Valor asiento</th>
+                <td mat-cell *matCellDef="let r" class="col-monto">{{ r.valorAsiento | number: '1.2-2' }}</td>
               </ng-container>
               <ng-container matColumnDef="valorExtracto">
-                <th mat-header-cell *matHeaderCellDef>Valor extracto</th>
-                <td mat-cell *matCellDef="let r">{{ r.valorExtracto | number: '1.2-2' }}</td>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-monto">Valor extracto</th>
+                <td mat-cell *matCellDef="let r" class="col-monto">{{ r.valorExtracto | number: '1.2-2' }}</td>
               </ng-container>
               <ng-container matColumnDef="usuario">
-                <th mat-header-cell *matHeaderCellDef>Usuario</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Usuario</th>
                 <td mat-cell *matCellDef="let r">{{ r.usuarioConcilia }}</td>
               </ng-container>
-              <tr mat-header-row *matHeaderRowDef="columnasConciliados"></tr>
+              <tr mat-header-row *matHeaderRowDef="columnasConciliados; sticky: true"></tr>
               <tr mat-row *matRowDef="let row; columns: columnasConciliados"></tr>
             </table>
           </div>
+          <mat-paginator #paginadorConciliados [pageSizeOptions]="[25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
         }
-      </mat-card-content>
-    </mat-card>
+      </mat-expansion-panel>
 
-    <!-- Bloque 2: pendientes, para clasificar -->
-    <mat-card>
-      <mat-card-title>Pendientes ({{ filas().length }})</mat-card-title>
-      <mat-card-content>
+      <!-- Bloque 2: pendientes, para clasificar — arranca ABIERTA: es donde se trabaja -->
+      <mat-expansion-panel
+        [expanded]="pendientesAbierto()"
+        (opened)="onPendientesToggle(true)"
+        (closed)="onPendientesToggle(false)"
+      >
+        <mat-expansion-panel-header>
+          <mat-panel-title>Pendientes</mat-panel-title>
+          <mat-panel-description>
+            <span class="chip-info">{{ filas().length }}</span>
+            @if (filas().length > 0) {
+              <span class="chip-clasificadas">{{ pendientesClasificadas() }} clasificadas</span>
+              @if (pendientesFaltantes() > 0) {
+                <span class="chip-faltantes">{{ pendientesFaltantes() }} sin clasificar</span>
+              }
+            }
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
         @if (filas().length === 0) {
           <div class="empty-state">No hay movimientos pendientes en este período.</div>
         } @else {
-          <div class="table-wrapper">
-            <table mat-table [dataSource]="filas()" class="mat-elevation-z1 full-width">
+          <div class="table-scroll table-scroll--pendientes">
+            <table mat-table [dataSource]="dataSourcePendientes" matSort #sortPendientes="matSort" class="mat-elevation-z1 full-width">
               <ng-container matColumnDef="declarar">
                 <th mat-header-cell *matHeaderCellDef>Declarar</th>
                 <td mat-cell *matCellDef="let r">
@@ -98,7 +134,7 @@
               </ng-container>
 
               <ng-container matColumnDef="origen">
-                <th mat-header-cell *matHeaderCellDef>Origen</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Origen</th>
                 <td mat-cell *matCellDef="let r">
                   {{ origenLabel(r.origen) }}
                   @if (r.esArrastrada) {
@@ -111,18 +147,18 @@
               </ng-container>
 
               <ng-container matColumnDef="fecha">
-                <th mat-header-cell *matHeaderCellDef>Fecha</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
                 <td mat-cell *matCellDef="let r">{{ fechaDisplay(r.fecha) }}</td>
               </ng-container>
 
               <ng-container matColumnDef="descripcion">
-                <th mat-header-cell *matHeaderCellDef>Descripción</th>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header>Descripción</th>
                 <td mat-cell *matCellDef="let r">{{ r.descripcion }}</td>
               </ng-container>
 
               <ng-container matColumnDef="valor">
-                <th mat-header-cell *matHeaderCellDef>Valor</th>
-                <td mat-cell *matCellDef="let r">{{ r.valor | number: '1.2-2' }}</td>
+                <th mat-header-cell *matHeaderCellDef mat-sort-header class="col-monto">Valor</th>
+                <td mat-cell *matCellDef="let r" class="col-monto">{{ r.valor | number: '1.2-2' }}</td>
               </ng-container>
 
               <ng-container matColumnDef="tipo">
@@ -155,8 +191,52 @@
                 </td>
               </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="columnasPendientes"></tr>
-              <tr mat-row *matRowDef="let row; columns: columnasPendientes" [class.fila-arrastrada-antigua]="esArrastradaAntigua(row)"></tr>
+              <ng-container matColumnDef="detalle">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let r">
+                  @if (esExpandible(r)) {
+                    <button mat-icon-button (click)="toggleExpandir(r.key)" [matTooltip]="estaExpandida(r.key) ? 'Ocultar origen' : 'Ver origen del movimiento'">
+                      <mat-icon>{{ estaExpandida(r.key) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </button>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="expandido">
+                <td mat-cell *matCellDef="let r" [attr.colspan]="columnasPendientes.length" class="celda-expandida">
+                  <div class="detalle-origen">
+                    <div class="detalle-item">
+                      <span class="label">N° de asiento</span>
+                      <span class="value">{{ numeroAsientoMostrar(r) }}</span>
+                    </div>
+                    <div class="detalle-item detalle-item--ancho">
+                      <span class="label">Observación del asiento</span>
+                      <span class="value">{{ r.observacionAsiento || '—' }}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="label">Origen</span>
+                      <span class="value">{{ r.origenPago || '—' }}</span>
+                    </div>
+                    <div class="detalle-item">
+                      <span class="label">Referencia bancaria</span>
+                      <span class="value">{{ r.referenciaBanco || '—' }}</span>
+                    </div>
+                    @if (r.idPago) {
+                      <button mat-stroked-button class="btn-ir-pago" (click)="irAConsultaPago(r.idPago)">
+                        <mat-icon>open_in_new</mat-icon>
+                        Ver en Consulta y gestión
+                      </button>
+                    }
+                  </div>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasPendientes; sticky: true"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasPendientes"
+                  class="fila-pendiente"
+                  [class.fila-arrastrada]="row.esArrastrada"
+                  [class.fila-arrastrada-antigua]="esArrastradaAntigua(row)"></tr>
+              <tr mat-row *matRowDef="let row; columns: ['expandido']" [class.fila-oculta]="!estaExpandida(row.key)" class="fila-expandida"></tr>
             </table>
           </div>
           @if (!todoDeclarado()) {
@@ -166,10 +246,10 @@
             </div>
           }
         }
-      </mat-card-content>
-    </mat-card>
+      </mat-expansion-panel>
+    </mat-accordion>
 
-    <!-- Bloque 3: la ecuación en vivo -->
+    <!-- Bloque 3: la ecuación en vivo — NUNCA se colapsa, siempre visible -->
     <mat-card class="ecuacion-card">
       <mat-card-title>Ecuación de cierre</mat-card-title>
       <mat-card-content>
@@ -209,7 +289,10 @@
               <span>La ecuación cuadra. Se puede cerrar el mes.</span>
             } @else {
               <mat-icon>error_outline</mat-icon>
-              <span>Diferencia: {{ diferenciaViva() | number: '1.2-2' }} — faltan {{ faltaParaCuadrar }} para cuadrar.</span>
+              <span class="diferencia-texto">
+                Diferencia: {{ diferenciaViva() | number: '1.2-2' }}
+                <strong class="falta-destacado">— faltan {{ faltaParaCuadrar }} para cuadrar</strong>
+              </span>
             }
           </div>
         }

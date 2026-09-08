@@ -1,27 +1,41 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { AfterViewChecked, Component, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
+import { MatSort, MatSortModule } from '@angular/material/sort';
+import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
+// InlineAutocompleteComponent vive en rrh/forms/comunes — es genérico (sin ningún acoplamiento a
+// Empleado/RRHH en su código), y ya tiene CVA + valorPor + etiquetaVacio de las fases 1-2 de la
+// migración de combos. Importarlo tal cual desde acá crea una dependencia tsr → rrh que hoy no
+// existe, pero es la misma clase de dependencia cruzada que ya existe al revés (tsr ya lo
+// consume `cxp`, `cxp` ya consume `tsr`) — no es un precedente nuevo en este repo. Moverlo a
+// `shared/` es la respuesta más limpia a mediano plazo (así lo pidió el árbitro), pero se deja
+// para su propio lote: mover el archivo toca los ~6 usos de `rrh` que están en medio de su
+// propia migración de combos (lote A), y esta pantalla no debería ser la que la destsabilice.
+import { InlineAutocompleteComponent } from '../../../../rrh/forms/comunes/inline-autocomplete/inline-autocomplete.component';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import {
   CerrarConciliacionRequest,
+  ConciliadoDelMes,
   PartidaDeclarada,
   PrepararCierreResponse,
   TIPO_TRANSITO_LABELS,
@@ -32,6 +46,10 @@ import { ConciliacionCierreService } from '../../../service/conciliacion-cierre.
 
 /** Tolerancia de la ecuación clásica — la misma que usa el cierre de caja chica y conciliarGrupo. */
 const TOLERANCIA_DIFERENCIA = 0.01;
+
+/** Claves de `localStorage` para recordar si cada sección quedó abierta o cerrada. */
+const CLAVE_CONCILIADOS_ABIERTO = 'conciliacion-cierre.conciliados.abierto';
+const CLAVE_PENDIENTES_ABIERTO = 'conciliacion-cierre.pendientes.abierto';
 
 /**
  * Fila unificada para la tabla de pendientes. El backend las devuelve en dos
@@ -56,6 +74,15 @@ interface FilaPendiente {
   valor: number;
   esArrastrada: boolean;
   tipoSugerido: number | null;
+
+  // ── Campos nuevos (solo lado LIBROS) — ver nota de "sin confirmar" en el modelo ──
+  numeroAlternoAsiento: string | null;
+  numeroAsiento: number | null;
+  observacionAsiento: string | null;
+  origenPago: string | null;
+  idOrigenPago: number | null;
+  referenciaBanco: string | null;
+  idPago: number | null;
 }
 
 /** Estado de clasificación de una fila pendiente, editable por el usuario. */
@@ -86,21 +113,26 @@ interface EstadoFila {
     MatIconModule,
     MatCardModule,
     MatTableModule,
+    MatSortModule,
+    MatPaginatorModule,
+    MatExpansionModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatCheckboxModule,
     MatSnackBarModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './conciliacion-cierre.component.html',
   styleUrls: ['./conciliacion-cierre.component.scss'],
 })
-export class ConciliacionCierreComponent implements OnInit {
+export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
   private cierreS = inject(ConciliacionCierreService);
   private cuentaS = inject(CuentaBancariaService);
   private periodoS = inject(PeriodoService);
   private appState = inject(AppStateService);
   private funcionesDatosS = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
 
   readonly TipoTransito = TipoTransito;
   readonly tipoTransitoOptions = Object.entries(TIPO_TRANSITO_LABELS).map(([codigo, texto]) => ({
@@ -114,6 +146,12 @@ export class ConciliacionCierreComponent implements OnInit {
 
   cuentaSeleccionada = signal<CuentaBancaria | null>(null);
   periodoSeleccionado = signal<Periodo | null>(null);
+
+  // ── Combos: etiqueta/búsqueda para InlineAutocomplete (ítem 2) ──
+  etiquetaCuenta = (c: CuentaBancaria | null): string => c ? `${c.banco?.nombre ?? 'Banco'} — ${c.numeroCuenta}` : '';
+  buscarPorCuenta = (c: CuentaBancaria): string[] => [c.banco?.nombre ?? '', c.numeroCuenta ?? ''];
+  etiquetaPeriodo = (p: Periodo | null): string => p ? (p.nombre || `${p.mes}/${p.anio}`) : '';
+  buscarPorPeriodo = (p: Periodo): string[] => [p.nombre ?? '', String(p.mes ?? ''), String(p.anio ?? '')];
 
   preparando = signal(false);
   preparado = signal<PrepararCierreResponse | null>(null);
@@ -134,49 +172,143 @@ export class ConciliacionCierreComponent implements OnInit {
   successMsg = signal('');
 
   columnasConciliados = ['idGrupo', 'fecha', 'valorAsiento', 'valorExtracto', 'usuario'];
-  columnasPendientes = ['declarar', 'origen', 'fecha', 'descripcion', 'valor', 'tipo', 'observacion'];
+  columnasPendientes = ['declarar', 'origen', 'fecha', 'descripcion', 'valor', 'tipo', 'observacion', 'detalle'];
 
-  /** Suma con coeficiente de las filas actualmente declaradas — ver coeficienteTransito() en el modelo. */
-  sumaDeclaradas = computed(() => {
-    const filas = this.filas();
+  // ── Secciones colapsables (ítem 1) ──────────────────────────────────
+  conciliadosAbierto = signal<boolean>(this.leerEstadoPanel(CLAVE_CONCILIADOS_ABIERTO, false));
+  pendientesAbierto = signal<boolean>(this.leerEstadoPanel(CLAVE_PENDIENTES_ABIERTO, true));
+
+  /** Cuántas de las pendientes ya se marcaron como declaradas — visible aunque la sección esté cerrada. */
+  pendientesClasificadas = computed(() => {
     const estados = this.estadoFilas();
-    let suma = 0;
-    for (const f of filas) {
-      const estado = estados[f.key];
-      if (!estado?.declarada) continue;
-      suma += coeficienteTransito(estado.tipo) * Number(f.valor || 0);
-    }
-    return suma;
+    return this.filas().filter((f) => estados[f.key]?.declarada).length;
   });
+  pendientesFaltantes = computed(() => this.filas().length - this.pendientesClasificadas());
+
+  private leerEstadoPanel(clave: string, porDefecto: boolean): boolean {
+    try {
+      const guardado = localStorage.getItem(clave);
+      return guardado === null ? porDefecto : guardado === 'true';
+    } catch {
+      return porDefecto;
+    }
+  }
+
+  private guardarEstadoPanel(clave: string, valor: boolean): void {
+    try {
+      localStorage.setItem(clave, String(valor));
+    } catch {
+      // Sin persistencia disponible (modo privado, storage lleno, etc.): la pantalla sigue
+      // funcionando con el valor en memoria, solo no se recuerda entre visitas.
+    }
+  }
+
+  onConciliadosToggle(abierto: boolean): void {
+    this.conciliadosAbierto.set(abierto);
+    this.guardarEstadoPanel(CLAVE_CONCILIADOS_ABIERTO, abierto);
+  }
+
+  onPendientesToggle(abierto: boolean): void {
+    this.pendientesAbierto.set(abierto);
+    this.guardarEstadoPanel(CLAVE_PENDIENTES_ABIERTO, abierto);
+  }
+
+  // ── Fila expandida (ítem 3 — origen del movimiento) ─────────────────
+  private expandidas = signal<Set<string>>(new Set());
+
+  toggleExpandir(key: string): void {
+    this.expandidas.update((set) => {
+      const nuevo = new Set(set);
+      if (nuevo.has(key)) nuevo.delete(key); else nuevo.add(key);
+      return nuevo;
+    });
+  }
+
+  estaExpandida(key: string): boolean {
+    return this.expandidas().has(key);
+  }
 
   /**
-   * saldoLibros − t1 + t2 + t3 − t4 (declaradas) − saldoExtracto. `null`
-   * mientras no haya `preparado()` O el usuario todavía no ingresó el saldo
-   * del extracto — no se muestra una diferencia calculada contra un 0
-   * inventado.
+   * Solo tiene sentido expandir una fila de LIBROS: es la única que puede traer observación de
+   * asiento, origen del pago o referencia bancaria. Una línea de extracto no tiene nada de eso.
    */
-  diferenciaViva = computed(() => {
-    const prep = this.preparado();
-    const saldoExtracto = this.saldoExtracto();
-    if (!prep || saldoExtracto == null) return null;
-    return prep.saldoLibros + this.sumaDeclaradas() - saldoExtracto;
-  });
+  esExpandible(f: FilaPendiente): boolean {
+    return f.origen === 'LIBROS';
+  }
 
-  cuadra = computed(() => {
-    const d = this.diferenciaViva();
-    return d != null && Math.abs(d) <= TOLERANCIA_DIFERENCIA;
-  });
+  /**
+   * Número de asiento a mostrar: el alterno (el que usa contabilidad para identificarlo) cuando
+   * lo haya, y el consecutivo interno como respaldo — mismo criterio que
+   * `numeroAsientoMostrar()` de conciliación contable, reusado acá tal cual.
+   */
+  numeroAsientoMostrar(f: FilaPendiente): string {
+    const alterno = f.numeroAlternoAsiento;
+    if (alterno != null && alterno.trim() !== '') return alterno;
+    return f.numeroAsiento != null ? String(f.numeroAsiento) : '—';
+  }
 
-  /** Ningún pendiente puede quedar sin declarar — igual que exige `verificar()` en el backend (§10.2). */
-  todoDeclarado = computed(() => {
-    const estados = this.estadoFilas();
-    return this.filas().every((f) => estados[f.key]?.declarada);
-  });
+  /** Consulta y gestión no filtra todavía por `idPago` — el queryParam queda listo para cuando esa pantalla lo lea. */
+  irAConsultaPago(idPago: number): void {
+    this.router.navigate(['/menutesoreria/pagos/consulta'], { queryParams: { idPago } });
+  }
 
-  puedeCerrar = computed(() => !!this.preparado() && this.cuadra() && this.todoDeclarado() && !this.cerrando());
+  // ── Tabla "Conciliados del mes" — matSort + paginador (85 filas típicas) ──
+  readonly dataSourceConciliados = new MatTableDataSource<ConciliadoDelMes>([]);
+  @ViewChild('sortConciliados') sortConciliados?: MatSort;
+  @ViewChild('paginadorConciliados') paginadorConciliados?: MatPaginator;
+
+  // ── Tabla "Pendientes" — matSort SIN paginador a propósito: `todoDeclarado()` exige ver
+  // TODAS las filas, y paginar podría esconder una sin declarar detrás de otra página, haciendo
+  // parecer terminada una clasificación que no lo está. La tabla scrollea sola en su lugar.
+  readonly dataSourcePendientes = new MatTableDataSource<FilaPendiente>([]);
+  @ViewChild('sortPendientes') sortPendientes?: MatSort;
+
+  constructor() {
+    this.dataSourceConciliados.sortingDataAccessor = (row: ConciliadoDelMes, property: string): string | number => {
+      switch (property) {
+        case 'fecha': {
+          const d = this.funcionesDatosS.convertirFechaDesdeBackend(row.fechaConciliacion as any);
+          return d ? d.getTime() : 0;
+        }
+        case 'valorAsiento': return Number(row.valorAsiento) || 0;
+        case 'valorExtracto': return Number(row.valorExtracto) || 0;
+        case 'usuario': return row.usuarioConcilia ?? '';
+        default: return (row as any)[property] ?? '';
+      }
+    };
+
+    // `[dataSource]` de "Pendientes" tiene que ser un MatTableDataSource, no el arreglo plano de
+    // la señal `filas`: matSort no reordena nada sobre un array crudo, solo sobre un
+    // MatTableDataSource con `.sort` conectado — asignarlo directo dejaría las flechas de orden
+    // moviéndose sin que la tabla cambiara una sola fila de lugar.
+    this.dataSourcePendientes.sortingDataAccessor = (row: FilaPendiente, property: string): string | number => {
+      switch (property) {
+        case 'fecha': {
+          const d = this.funcionesDatosS.convertirFechaDesdeBackend(row.fecha as any);
+          return d ? d.getTime() : 0;
+        }
+        case 'origen': return this.origenLabel(row.origen);
+        case 'valor': return Number(row.valor) || 0;
+        case 'descripcion': return row.descripcion ?? '';
+        default: return (row as any)[property] ?? '';
+      }
+    };
+  }
 
   ngOnInit(): void {
     this.cargarCatalogos();
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.sortConciliados && this.dataSourceConciliados.sort !== this.sortConciliados) {
+      this.dataSourceConciliados.sort = this.sortConciliados;
+    }
+    if (this.paginadorConciliados && this.dataSourceConciliados.paginator !== this.paginadorConciliados) {
+      this.dataSourceConciliados.paginator = this.paginadorConciliados;
+    }
+    if (this.sortPendientes && this.dataSourcePendientes.sort !== this.sortPendientes) {
+      this.dataSourcePendientes.sort = this.sortPendientes;
+    }
   }
 
   private cargarCatalogos(): void {
@@ -222,13 +354,16 @@ export class ConciliacionCierreComponent implements OnInit {
     this.successMsg.set('');
     this.preparado.set(null);
     this.filas.set([]);
+    this.dataSourcePendientes.data = [];
     this.estadoFilas.set({});
+    this.expandidas.set(new Set());
 
     this.cierreS.preparar(cuenta.codigo, periodo.codigo).subscribe({
       next: (resp) => {
         this.preparando.set(false);
         this.preparado.set(resp);
         this.saldoExtracto.set(resp.saldoExtractoSugerido);
+        this.dataSourceConciliados.data = resp.conciliadosDelMes ?? [];
 
         const filasAsiento: FilaPendiente[] = (resp.pendientesAsiento ?? []).map((p) => ({
           key: `asiento-${p.idDetalleAsiento}`,
@@ -241,6 +376,13 @@ export class ConciliacionCierreComponent implements OnInit {
           valor: p.valor,
           esArrastrada: p.esArrastrada,
           tipoSugerido: p.tipoSugerido,
+          numeroAlternoAsiento: p.numeroAlternoAsiento ?? null,
+          numeroAsiento: p.numeroAsiento ?? null,
+          observacionAsiento: p.observacionAsiento ?? null,
+          origenPago: p.origen ?? null,
+          idOrigenPago: p.idOrigen ?? null,
+          referenciaBanco: p.referenciaBanco ?? null,
+          idPago: p.idPago ?? null,
         }));
         const filasExtracto: FilaPendiente[] = (resp.pendientesExtracto ?? []).map((p) => ({
           key: `extracto-${p.idDetalleExtracto}`,
@@ -253,9 +395,17 @@ export class ConciliacionCierreComponent implements OnInit {
           valor: p.valor,
           esArrastrada: p.esArrastrada,
           tipoSugerido: p.tipoSugerido,
+          numeroAlternoAsiento: null,
+          numeroAsiento: null,
+          observacionAsiento: null,
+          origenPago: null,
+          idOrigenPago: null,
+          referenciaBanco: null,
+          idPago: null,
         }));
         const todasLasFilas = [...filasAsiento, ...filasExtracto];
         this.filas.set(todasLasFilas);
+        this.dataSourcePendientes.data = todasLasFilas;
 
         const estados: Record<string, EstadoFila> = {};
         for (const f of todasLasFilas) {
@@ -300,6 +450,45 @@ export class ConciliacionCierreComponent implements OnInit {
     return this.estadoFilas()[key];
   }
 
+  /** Suma con coeficiente de las filas actualmente declaradas — ver coeficienteTransito() en el modelo. */
+  sumaDeclaradas = computed(() => {
+    const filas = this.filas();
+    const estados = this.estadoFilas();
+    let suma = 0;
+    for (const f of filas) {
+      const estado = estados[f.key];
+      if (!estado?.declarada) continue;
+      suma += coeficienteTransito(estado.tipo) * Number(f.valor || 0);
+    }
+    return suma;
+  });
+
+  /**
+   * saldoLibros − t1 + t2 + t3 − t4 (declaradas) − saldoExtracto. `null`
+   * mientras no haya `preparado()` O el usuario todavía no ingresó el saldo
+   * del extracto — no se muestra una diferencia calculada contra un 0
+   * inventado.
+   */
+  diferenciaViva = computed(() => {
+    const prep = this.preparado();
+    const saldoExtracto = this.saldoExtracto();
+    if (!prep || saldoExtracto == null) return null;
+    return prep.saldoLibros + this.sumaDeclaradas() - saldoExtracto;
+  });
+
+  cuadra = computed(() => {
+    const d = this.diferenciaViva();
+    return d != null && Math.abs(d) <= TOLERANCIA_DIFERENCIA;
+  });
+
+  /** Ningún pendiente puede quedar sin declarar — igual que exige `verificar()` en el backend (§10.2). */
+  todoDeclarado = computed(() => {
+    const estados = this.estadoFilas();
+    return this.filas().every((f) => estados[f.key]?.declarada);
+  });
+
+  puedeCerrar = computed(() => !!this.preparado() && this.cuadra() && this.todoDeclarado() && !this.cerrando());
+
   cerrarConciliacion(): void {
     const cuenta = this.cuentaSeleccionada();
     const periodo = this.periodoSeleccionado();
@@ -342,6 +531,7 @@ export class ConciliacionCierreComponent implements OnInit {
         });
         this.preparado.set(null);
         this.filas.set([]);
+        this.dataSourcePendientes.data = [];
         this.estadoFilas.set({});
       },
       error: (err) => {

@@ -95,6 +95,23 @@ export interface PendienteAsiento {
   esArrastrada: boolean;
   /** Ya no viene `null` desde la corrección del 2026-08-27: se deduce siempre del signo del detalle. */
   tipoSugerido: number | null;
+
+  // ── Campos NUEVOS, en camino del lado del backend (pedido "ver el origen del movimiento") ──
+  // ⚠️ SIN CONFIRMAR contra el JSON real todavía — el árbitro los describió pero el backend
+  // los está agregando ahora. Todos opcionales/nulables a propósito: un asiento manual no viene
+  // de ningún pago, y la fila tiene que verse bien igual, sin "undefined" ni huecos.
+  /** ASNTNMAL — el número con el que el contador identifica el asiento. Nulable en asientos viejos. */
+  numeroAlternoAsiento?: string | null;
+  /** Consecutivo interno del asiento — respaldo cuando `numeroAlternoAsiento` viene vacío. */
+  numeroAsiento?: number | null;
+  observacionAsiento?: string | null;
+  /** Origen legible del movimiento que generó el asiento (p. ej. "Pago a proveedor"), si vino de un proceso conocido. */
+  origen?: string | null;
+  idOrigen?: number | null;
+  /** Referencia bancaria del pago que originó el movimiento, si aplica. */
+  referenciaBanco?: string | null;
+  /** Id del pago (PGTR) que originó el movimiento — permite enlazar a Consulta y gestión. */
+  idPago?: number | null;
 }
 
 export interface PrepararCierreResponse {

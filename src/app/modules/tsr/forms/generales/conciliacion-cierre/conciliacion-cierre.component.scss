@@ -9,14 +9,83 @@
     align-items: center;
     flex-wrap: wrap;
 
-    mat-form-field {
+    // Que entre el nombre del banco completo + el número de cuenta sin recortar (ítem 2).
+    .campo-cuenta {
+      min-width: 340px;
+      flex: 1 1 340px;
+    }
+    .campo-periodo {
       min-width: 260px;
+      flex: 1 1 260px;
     }
   }
 
-  .table-wrapper {
+  .secciones {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    mat-expansion-panel-header {
+      font-weight: 500;
+    }
+
+    mat-panel-description {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+  }
+
+  .chip-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background: #667eea;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .chip-clasificadas {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #e6f4ea;
+    color: #1e4620;
+  }
+
+  .chip-faltantes {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: #fff3cd;
+    color: #7a5c00;
+  }
+
+  // La tabla scrollea, no la página: altura propia + encabezado sticky (mismo tratamiento que
+  // mayor-analitico-v2 y las cinco pantallas de cheques).
+  .table-scroll {
     overflow: auto;
   }
+  .table-scroll--conciliados {
+    max-height: calc(100vh - 480px);
+    min-height: 200px;
+  }
+  .table-scroll--pendientes {
+    // Sin paginador acá a propósito (ver comentario en el .ts): la tabla completa tiene que
+    // quedar alcanzable con scroll, nunca detrás de una página que esconda una fila sin declarar.
+    max-height: calc(100vh - 420px);
+    min-height: 260px;
+  }
+
   .full-width {
     width: 100%;
   }
@@ -24,6 +93,11 @@
     padding: 16px;
     color: #777;
     text-align: center;
+  }
+
+  .col-monto {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   .aviso {
@@ -62,6 +136,11 @@
     margin-top: 2px;
   }
 
+  // Arrastrada (cualquier antigüedad): tinte informativo, siempre visible de un vistazo — es la
+  // razón de ser de esta pantalla (§6 del diseño: por fin coexisten en la misma pantalla).
+  tr.fila-arrastrada {
+    background: #eef2ff;
+  }
   .badge-arrastrada {
     display: inline-block;
     margin-left: 6px;
@@ -69,16 +148,17 @@
     border-radius: 10px;
     font-size: 0.72rem;
     font-weight: 600;
-    background: #fff3cd;
-    color: #7a5c00;
+    background: #e0e7ff;
+    color: #3730a3;
     vertical-align: middle;
   }
+  // Arrastrada Y con más de 60 días: escala a advertencia real (§8, riesgo #1 del diseño).
   .badge-arrastrada-antigua {
     background: #f8d7da;
     color: #611a15;
   }
   tr.fila-arrastrada-antigua {
-    background: #fff5f5;
+    background: #fff5f5 !important;
   }
 
   .tipo-select {
@@ -88,7 +168,55 @@
     width: 220px;
   }
 
+  // ── Fila expandida (ítem 3 — origen del movimiento) ─────────────────
+  .fila-expandida.fila-oculta {
+    display: none;
+  }
+  .celda-expandida {
+    padding: 12px 16px !important;
+    background: #fafbfc;
+    border-top: none !important;
+  }
+  .detalle-origen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+
+    .detalle-item {
+      display: flex;
+      flex-direction: column;
+      min-width: 140px;
+
+      &.detalle-item--ancho {
+        min-width: 280px;
+        flex: 1 1 280px;
+      }
+
+      .label {
+        font-size: 0.7rem;
+        color: #757575;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .value {
+        font-size: 0.88rem;
+        color: #333;
+      }
+    }
+
+    .btn-ir-pago {
+      margin-left: auto;
+    }
+  }
+
+  // ── La ecuación NUNCA se colapsa; acompaña al hacer scroll ──────────
   .ecuacion-card {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+
     .ecuacion-grid {
       display: grid;
       grid-template-columns: 1fr auto 1fr auto 1fr;
@@ -147,6 +275,12 @@
         background: #e8f0fe;
         color: #1a3a6b;
       }
+    }
+
+    // "Que se note de un vistazo cuánto falta" (ítem 4) — el número que falta, destacado.
+    .falta-destacado {
+      font-size: 1.05rem;
+      margin-left: 4px;
     }
 
     .actions {
