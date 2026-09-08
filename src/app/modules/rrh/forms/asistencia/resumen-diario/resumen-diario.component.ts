@@ -6,7 +6,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -27,6 +26,7 @@ import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacio
 import { CAMPOS_ASISTENCIA_PERSISTEN, rangoPorDefecto } from '../utiles-asistencia';
 import { CorreccionResumenDialogComponent } from './correccion-resumen-dialog.component';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Resumen diario de asistencia (RHH.RSMN).
@@ -48,9 +48,9 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
-    MatSelectModule,
     MatTableModule,
     MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './resumen-diario.component.html',
   styleUrls: ['./resumen-diario.component.scss'],
@@ -259,6 +259,9 @@ export class ResumenDiarioComponent implements OnInit {
   etiquetaEmpleado(empleado: Empleado): string {
     return `${empleado.identificacion} — ${empleado.apellidos ?? ''} ${empleado.nombres ?? ''}`.trim();
   }
+
+  readonly valorEmpleado = (e: Empleado): number => e.codigo;
+  readonly buscarPorEmpleado = (e: Empleado): string[] => [String(e.identificacion ?? ''), e.apellidos ?? '', e.nombres ?? ''];
 
   irAHorasExtra(): void {
     this.router.navigate(['/menurecursoshumanos/procesos/horas-extra']);

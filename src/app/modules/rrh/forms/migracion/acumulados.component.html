@@ -12,26 +12,29 @@
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-empleado">
-        <mat-label>Colaborador</mat-label>
-        <mat-select
-          [ngModel]="empleadoSeleccionado()"
-          (ngModelChange)="empleadoSeleccionado.set($event); onFiltroChange()"
-        >
-          @for (emp of empleados(); track emp.codigo) {
-            <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Colaborador"
+        class="selector-empleado"
+        [opciones]="empleados()"
+        [etiqueta]="etiquetaEmpleado"
+        [valorPor]="valorEmpleado"
+        [buscarPor]="buscarPorEmpleado"
+        [ngModel]="empleadoSeleccionado()"
+        (ngModelChange)="empleadoSeleccionado.set($event); onFiltroChange()"
+        placeholder="Escriba cédula o nombre"
+      />
 
-      <mat-form-field appearance="outline" class="selector-anio">
-        <mat-label>Ejercicio</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="anio.set($event); onFiltroChange()">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Ejercicio"
+        class="selector-anio"
+        [opciones]="anios"
+        [etiqueta]="etiquetaAnio"
+        [ngModel]="anio()"
+        (ngModelChange)="anio.set($event); onFiltroChange()"
+        placeholder="Escriba el año"
+      />
 
       <button mat-stroked-button (click)="exportarCsv()" [disabled]="filas().length === 0">
         <mat-icon>description</mat-icon>

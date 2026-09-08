@@ -4,7 +4,6 @@ import { FormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TableBasicHijosComponent } from '../../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
 import { TableConfig } from '../../../../../shared/basics/table/model/table-interface';
@@ -23,6 +22,7 @@ import {
   referenciaEmpresa,
 } from '../utiles-parametrizacion';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Topes de gastos personales deducibles según cargas familiares (RHH.TPGP).
@@ -40,8 +40,8 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     TableBasicHijosComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './topes-gastos-personales.component.html',
   styleUrls: ['./topes-gastos-personales.component.scss'],
@@ -49,6 +49,7 @@ import { opcionesAviso } from '../../comunes/avisos';
 export class TopesGastosPersonalesComponent implements OnInit {
   anios = aniosDisponibles();
   anio = signal<number>(new Date().getFullYear());
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
   parametro = signal<ParametroNomina | null>(null);
   tableConfig?: TableConfig;
 

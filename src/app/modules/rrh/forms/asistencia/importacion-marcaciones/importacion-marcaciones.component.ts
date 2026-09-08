@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -18,6 +17,7 @@ import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacio
 import { MotivoDialogComponent } from '../../procesos/periodo-nomina/motivo-dialog.component';
 import { opcionesAviso } from '../../comunes/avisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Importación del archivo del reloj biométrico (RHH.CRMR).
@@ -38,9 +38,9 @@ import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     MatTableModule,
     MatTooltipModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './importacion-marcaciones.component.html',
   styleUrls: ['./importacion-marcaciones.component.scss'],
@@ -178,6 +178,8 @@ export class ImportacionMarcacionesComponent implements OnInit {
     if (!formato) return '—';
     return formato.nombre ?? `#${formato.codigo}`;
   }
+
+  readonly valorFormato = (f: FormatoMarcacion): number => f.codigo;
 
   private avisar(mensaje: string, esError = false): void {
     this.snackBar.open(mensaje, 'Cerrar', {

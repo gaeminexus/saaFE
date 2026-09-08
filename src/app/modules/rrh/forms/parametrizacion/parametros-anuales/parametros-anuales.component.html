@@ -12,14 +12,16 @@
       </div>
     </div>
     <div class="header-actions">
-      <mat-form-field appearance="outline" class="selector-anio">
-        <mat-label>Ejercicio</mat-label>
-        <mat-select [ngModel]="anio()" (ngModelChange)="onAnioChange($event)">
-          @for (a of anios; track a) {
-            <mat-option [value]="a">{{ a }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Ejercicio"
+        class="selector-anio"
+        [opciones]="anios"
+        [etiqueta]="etiquetaAnio"
+        [ngModel]="anio()"
+        (ngModelChange)="onAnioChange($event)"
+        placeholder="Escriba el año"
+      />
       <button mat-stroked-button (click)="duplicarAnioAnterior()" [disabled]="cargando()">
         <mat-icon>content_copy</mat-icon>
         Duplicar del año anterior

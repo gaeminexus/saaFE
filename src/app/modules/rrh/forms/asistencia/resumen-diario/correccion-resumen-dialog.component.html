@@ -58,15 +58,16 @@
       </mat-form-field>
     }
 
-    <mat-form-field appearance="outline">
-      <mat-label>Tipo de ausencia</mat-label>
-      <mat-select formControlName="tipoAusencia">
-        <mat-option [value]="null">Sin ausencia</mat-option>
-        @for (tipo of data.tiposAusencia; track tipo.codigoAlterno) {
-          <mat-option [value]="tipo.codigoAlterno">{{ tipo.descripcion }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <app-inline-autocomplete
+      modo="campo"
+      etiquetaCampo="Tipo de ausencia"
+      [opciones]="data.tiposAusencia"
+      [etiqueta]="etiquetaTipoAusencia"
+      [valorPor]="valorTipoAusencia"
+      etiquetaVacio="Sin ausencia"
+      formControlName="tipoAusencia"
+      placeholder="Escriba el tipo de ausencia"
+    />
 
     <mat-form-field appearance="outline">
       <mat-label>Ausencia justificada</mat-label>

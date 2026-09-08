@@ -29,15 +29,17 @@
               />
             </mat-form-field>
 
-            <mat-form-field appearance="outline">
-              <mat-label>Estado</mat-label>
-              <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
-                <mat-option [value]="null">Todos</mat-option>
-                @for (opt of estadoOptions; track opt.value) {
-                  <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
-                }
-              </mat-select>
-            </mat-form-field>
+            <app-inline-autocomplete
+              modo="campo"
+              etiquetaCampo="Estado"
+              [opciones]="estadoOptions"
+              [etiqueta]="etiquetaEstadoOpcion"
+              [valorPor]="valorEstadoOpcion"
+              etiquetaVacio="Todos"
+              [ngModel]="filtroEstado()"
+              (ngModelChange)="filtroEstado.set($event)"
+              placeholder="Escriba el estado"
+            />
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha inicio desde</mat-label>

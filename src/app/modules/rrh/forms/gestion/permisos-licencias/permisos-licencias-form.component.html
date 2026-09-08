@@ -16,26 +16,23 @@
           <h3>Información del Empleado</h3>
         </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Empleado *</mat-label>
-          <mat-select
+        <div class="full-width">
+          <app-inline-autocomplete
+            modo="campo"
+            etiquetaCampo="Empleado *"
+            [opciones]="empleados()"
+            [etiqueta]="formatEmpleado"
+            [buscarPor]="buscarPorEmpleado"
             [ngModel]="formEmpleado()"
             (ngModelChange)="formEmpleado.set($event)"
             [disabled]="isReadonly()"
-            [required]="!isReadonly()"
-            name="empleado"
-          >
-            <mat-option>Seleccione un empleado</mat-option>
-            @for (emp of empleados(); track emp.codigo) {
-              <mat-option [value]="emp">
-                {{ formatEmpleado(emp) }}
-              </mat-option>
-            }
-          </mat-select>
+            [invalido]="empleadoRequerido()"
+            placeholder="Escriba cédula o nombre"
+          />
           @if (empleadoRequerido()) {
             <mat-error>El empleado es obligatorio</mat-error>
           }
-        </mat-form-field>
+        </div>
 
         <!-- Tipo de Permiso y Configuración -->
         <div class="section-header">
@@ -43,26 +40,22 @@
           <h3>Tipo de Permiso</h3>
         </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Tipo de Permiso *</mat-label>
-          <mat-select
+        <div class="full-width">
+          <app-inline-autocomplete
+            modo="campo"
+            etiquetaCampo="Tipo de Permiso *"
+            [opciones]="tiposPermiso()"
+            [etiqueta]="etiquetaTipoPermiso"
             [ngModel]="formTipoPermiso()"
             (ngModelChange)="onTipoPermisoChange($event)"
             [disabled]="isReadonly()"
-            [required]="!isReadonly()"
-            name="tipoPermiso"
-          >
-            <mat-option>Seleccione un tipo</mat-option>
-            @for (tipo of tiposPermiso(); track tipo.codigo) {
-              <mat-option [value]="tipo">
-                {{ tipo.nombre }}
-              </mat-option>
-            }
-          </mat-select>
+            [invalido]="tipoPermisoRequerido()"
+            placeholder="Escriba el tipo de permiso"
+          />
           @if (tipoPermisoRequerido()) {
             <mat-error>El tipo de permiso es obligatorio</mat-error>
           }
-        </mat-form-field>
+        </div>
 
         @if (formTipoPermiso()) {
           <div class="info-card">

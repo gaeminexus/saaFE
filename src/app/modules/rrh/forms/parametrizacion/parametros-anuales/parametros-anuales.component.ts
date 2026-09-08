@@ -12,7 +12,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
@@ -30,6 +29,7 @@ import {
   SeccionParametros,
 } from './parametros-anuales.secciones';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Parámetros normativos por año (RHH.PRNM).
@@ -50,7 +50,7 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './parametros-anuales.component.html',
   styleUrls: ['./parametros-anuales.component.scss'],
@@ -58,6 +58,7 @@ import { opcionesAviso } from '../../comunes/avisos';
 export class ParametrosAnualesComponent implements OnInit {
   secciones: SeccionParametros[] = SECCIONES_PARAMETROS;
   anios = aniosDisponibles();
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
   anio = signal<number>(new Date().getFullYear());
   formulario: FormGroup;
   cargando = signal<boolean>(false);

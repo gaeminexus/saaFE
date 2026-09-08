@@ -18,11 +18,12 @@ import { CatalogoService } from '../../../service/catalogo.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { PermisosAprobacionDialogComponent } from './permisos-aprobacion-dialog.component';
 import { PermisosLicenciasFormComponent } from './permisos-licencias-form.component';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 @Component({
   selector: 'app-permisos-licencias-list',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule, DatePipe],
+  imports: [CommonModule, MaterialFormModule, DatePipe, InlineAutocompleteComponent],
   templateUrl: './permisos-licencias-list.component.html',
   styleUrls: ['./permisos-licencias-list.component.scss'],
 })
@@ -73,6 +74,10 @@ export class PermisosLicenciasListComponent implements OnInit {
   ];
 
   tiposPermiso = signal<any[]>([]);
+  readonly etiquetaTipoPermiso = (t: any): string => t?.nombre ?? '';
+  readonly valorTipoPermiso = (t: any): number => t.codigo;
+  readonly etiquetaEstadoOpcion = (o: { value: string; label: string }): string => o.label;
+  readonly valorEstadoOpcion = (o: { value: string; label: string }): string => o.value;
 
   // Datos y paginación
   allData = signal<PermisoLicencia[]>([]);

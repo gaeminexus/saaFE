@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -25,6 +24,7 @@ import {
   filtrarPorAnio,
 } from '../parametrizacion/utiles-parametrizacion';
 import { opcionesAviso } from '../comunes/avisos';
+import { InlineAutocompleteComponent } from '../comunes/inline-autocomplete/inline-autocomplete.component';
 
 const MESES = [
   'Enero',
@@ -59,8 +59,8 @@ const MESES = [
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     MatTableModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './acumulados.component.html',
   styleUrls: ['./acumulados.component.scss'],
@@ -172,6 +172,10 @@ export class AcumuladosComponent implements OnInit {
   etiquetaEmpleado(empleado: Empleado): string {
     return `${empleado.identificacion} — ${empleado.apellidos ?? ''} ${empleado.nombres ?? ''}`.trim();
   }
+
+  readonly valorEmpleado = (e: Empleado): number => e.codigo;
+  readonly buscarPorEmpleado = (e: Empleado): string[] => [String(e.identificacion ?? ''), e.apellidos ?? '', e.nombres ?? ''];
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
 
   private rubro(rubroAlterno: number, valor: number): string {
     return this.detalleRubroService.getDescripcionByParentAndAlterno(rubroAlterno, valor) || '—';

@@ -18,6 +18,7 @@ import { EmpleadoService } from '../../../service/empleado.service';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
 import { CatalogoService } from '../../../service/catalogo.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface PermisosLicenciasFormData {
   mode: 'new' | 'edit' | 'view';
@@ -27,7 +28,7 @@ export interface PermisosLicenciasFormData {
 @Component({
   selector: 'app-permisos-licencias-form',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule, MatSlideToggleModule],
+  imports: [CommonModule, MaterialFormModule, MatSlideToggleModule, InlineAutocompleteComponent],
   templateUrl: './permisos-licencias-form.component.html',
   styleUrls: ['./permisos-licencias-form.component.scss'],
 })
@@ -464,6 +465,13 @@ export class PermisosLicenciasFormComponent implements OnInit {
   formatEmpleado(empleado: Empleado): string {
     return `${empleado.identificacion} - ${empleado.apellidos} ${empleado.nombres}`;
   }
+
+  readonly buscarPorEmpleado = (e: Empleado): string[] => [
+    e.identificacion != null ? String(e.identificacion) : '',
+    e.apellidos ?? '',
+    e.nombres ?? '',
+  ];
+  readonly etiquetaTipoPermiso = (t: TipoPermiso): string => t?.nombre ?? '';
 
   private extractError(error: any): string | null {
     return mensajeDeError(error, '') || null;

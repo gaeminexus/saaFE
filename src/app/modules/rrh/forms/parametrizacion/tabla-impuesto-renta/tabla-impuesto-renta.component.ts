@@ -4,7 +4,6 @@ import { FormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { TableBasicHijosComponent } from '../../../../../shared/basics/table/forms/table-basic-hijos/table-basic-hijos.component';
 import { TableConfig } from '../../../../../shared/basics/table/model/table-interface';
@@ -22,6 +21,7 @@ import {
 } from '../utiles-parametrizacion';
 import { verificarCoherencia } from './coherencia-tramos';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 /**
  * Tabla del impuesto a la renta por año y tramo (RHH.TBIR).
@@ -40,8 +40,8 @@ import { opcionesAviso } from '../../comunes/avisos';
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatSelectModule,
     TableBasicHijosComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './tabla-impuesto-renta.component.html',
   styleUrls: ['./tabla-impuesto-renta.component.scss'],
@@ -49,6 +49,7 @@ import { opcionesAviso } from '../../comunes/avisos';
 export class TablaImpuestoRentaComponent implements OnInit {
   anios = aniosDisponibles();
   anio = signal<number>(new Date().getFullYear());
+  readonly etiquetaAnio = (a: number): string => String(a ?? '');
   tramos = signal<TablaImpuestoRenta[]>([]);
   tableConfig?: TableConfig;
 

@@ -19,6 +19,7 @@ import { SolicitudVacacionesService } from '../../../service/solicitud-vacacione
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface VacacionesFormData {
   mode: 'new' | 'edit' | 'view';
@@ -28,7 +29,7 @@ export interface VacacionesFormData {
 @Component({
   selector: 'app-vacaciones-form',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './vacaciones-form.component.html',
   styleUrls: ['./vacaciones-form.component.scss'],
 })
@@ -116,9 +117,6 @@ export class VacacionesFormComponent implements OnInit {
       this.formFechaFinControl.disable({ emitEvent: false });
     }
   }
-
-  compareEmpleado = (a: Empleado | null, b: Empleado | null): boolean =>
-    (a?.codigo ?? null) === (b?.codigo ?? null);
 
   onCancelar(): void {
     this.dialogRef.close(false);
@@ -382,6 +380,12 @@ export class VacacionesFormComponent implements OnInit {
     const nombre = `${value.apellidos ?? ''} ${value.nombres ?? ''}`.replace(/\s+/g, ' ').trim();
     return `${ident} - ${nombre}`.trim();
   }
+
+  readonly buscarPorEmpleado = (e: Empleado): string[] => [
+    e.identificacion != null ? String(e.identificacion) : '',
+    e.apellidos ?? '',
+    e.nombres ?? '',
+  ];
 
   private updateDiasSolicitados(): void {
     const inicio = this.formFechaInicio();

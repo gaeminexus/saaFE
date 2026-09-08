@@ -21,11 +21,12 @@ import { VacacionesAprobacionDialogComponent } from './vacaciones-aprobacion-dia
 import { VacacionesFormComponent } from './vacaciones-form.component';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { opcionesAviso } from '../../comunes/avisos';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 @Component({
   selector: 'app-vacaciones-list',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, InlineAutocompleteComponent],
   templateUrl: './vacaciones-list.component.html',
   styleUrls: ['./vacaciones-list.component.scss'],
 })
@@ -79,6 +80,8 @@ export class VacacionesListComponent implements OnInit {
     { value: 'RECHAZADA', label: 'Rechazada' },
     { value: 'ANULADA', label: 'Anulada' },
   ];
+  readonly etiquetaEstadoOpcion = (o: { value: string; label: string }): string => o.label;
+  readonly valorEstadoOpcion = (o: { value: string; label: string }): string => o.value;
 
   allData = signal<SolicitudVacaciones[]>([]);
   pageSize = signal<number>(10);

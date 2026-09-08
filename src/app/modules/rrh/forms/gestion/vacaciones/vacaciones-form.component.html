@@ -56,19 +56,18 @@
     </button>
   </div>
 
-  <mat-form-field appearance="outline" class="w-100">
-    <mat-label>Empleado</mat-label>
-    <mat-select
-      [ngModel]="formEmpleado()"
-      (ngModelChange)="onEmpleadoChange($event)"
-      [compareWith]="compareEmpleado"
-      [disabled]="isView()"
-    >
-      @for (emp of empleados(); track emp.codigo) {
-        <mat-option [value]="emp">{{ empleadoLabel(emp) }}</mat-option>
-      }
-    </mat-select>
-  </mat-form-field>
+  <app-inline-autocomplete
+    modo="campo"
+    etiquetaCampo="Empleado"
+    class="w-100"
+    [opciones]="empleados()"
+    [etiqueta]="empleadoLabel"
+    [buscarPor]="buscarPorEmpleado"
+    [ngModel]="formEmpleado()"
+    (ngModelChange)="onEmpleadoChange($event)"
+    [disabled]="isView()"
+    placeholder="Escriba cédula o nombre"
+  />
 
   <div class="form-grid">
     <mat-form-field appearance="outline">

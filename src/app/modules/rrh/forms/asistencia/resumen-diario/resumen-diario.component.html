@@ -26,17 +26,18 @@
   </div>
 
   <div class="panel filtros">
-    <mat-form-field appearance="outline" class="selector-empleado">
-      <mat-label>Colaborador</mat-label>
-      <mat-select
-        [ngModel]="empleadoSeleccionado()"
-        (ngModelChange)="empleadoSeleccionado.set($event)"
-      >
-        @for (emp of empleados(); track emp.codigo) {
-          <mat-option [value]="emp.codigo">{{ etiquetaEmpleado(emp) }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
+    <app-inline-autocomplete
+      modo="campo"
+      etiquetaCampo="Colaborador"
+      class="selector-empleado"
+      [opciones]="empleados()"
+      [etiqueta]="etiquetaEmpleado"
+      [valorPor]="valorEmpleado"
+      [buscarPor]="buscarPorEmpleado"
+      [ngModel]="empleadoSeleccionado()"
+      (ngModelChange)="empleadoSeleccionado.set($event)"
+      placeholder="Escriba cédula o nombre"
+    />
 
     <mat-form-field appearance="outline">
       <mat-label>Desde</mat-label>

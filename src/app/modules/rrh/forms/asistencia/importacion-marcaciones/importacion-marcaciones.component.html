@@ -15,17 +15,17 @@
     <h2 class="panel-titulo">1 · Archivo y formato</h2>
 
     <div class="fila-carga">
-      <mat-form-field appearance="outline" class="selector-formato">
-        <mat-label>Formato del archivo</mat-label>
-        <mat-select
-          [ngModel]="formatoSeleccionado()"
-          (ngModelChange)="onFormatoChange($event)"
-        >
-          @for (f of formatos(); track f.codigo) {
-            <mat-option [value]="f.codigo">{{ f.nombre }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
+      <app-inline-autocomplete
+        modo="campo"
+        etiquetaCampo="Formato del archivo"
+        class="selector-formato"
+        [opciones]="formatos()"
+        [etiqueta]="etiquetaFormato"
+        [valorPor]="valorFormato"
+        [ngModel]="formatoSeleccionado()"
+        (ngModelChange)="onFormatoChange($event)"
+        placeholder="Escriba el formato"
+      />
 
       <button mat-stroked-button (click)="entrada.click()">
         <mat-icon>attach_file</mat-icon>

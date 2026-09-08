@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { ResumenNomina } from '../../../model/resumen-nomina';
 import { CAMPOS_ASISTENCIA_PERSISTEN } from '../utiles-asistencia';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
 export interface CorreccionResumenData {
   resumen: ResumenNomina;
@@ -41,6 +42,7 @@ export interface CorreccionResumenData {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './correccion-resumen-dialog.component.html',
   styleUrls: ['./correccion-resumen-dialog.component.scss'],
@@ -77,6 +79,9 @@ export class CorreccionResumenDialogComponent {
       this.fb.control(resumen.justificacion ?? '', Validators.required),
     );
   }
+
+  readonly etiquetaTipoAusencia = (t: DetalleRubro): string => t.descripcion;
+  readonly valorTipoAusencia = (t: DetalleRubro): number => t.codigoAlterno;
 
   guardar(): void {
     if (this.formulario.invalid) {
