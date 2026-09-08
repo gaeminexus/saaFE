@@ -218,6 +218,38 @@ export class InlineAutocompleteComponent implements ControlValueAccessor {
     }
   }
 
+  /**
+   * `[displayWith]` de `<mat-autocomplete>`. Sin esto, Material escribe el **valor crudo** en el
+   * input al seleccionar una opción (`MatAutocompleteTrigger._assignOptionValue`, que sin
+   * `displayWith` hace `_updateNativeInputValue(value)` directo) — un objeto se ve como
+   * `[object Object]`. Arrow function a propósito, no método de instancia: Material la invoca sin
+   * `this`, y un método normal perdería el `this.etiqueta` de acá adentro. `null`-safe porque la
+   * opción de vacío (`etiquetaVacio`) tiene `value = null`.
+   *
+   * **La rama `typeof item === 'string'` no es un atajo, es obligatoria — verificado con un test
+   * de clic real en Chrome, no a ojo.** `MatAutocompleteTrigger` registra su propio
+   * `NG_VALUE_ACCESSOR` sobre el mismo `<input>` (`MAT_AUTOCOMPLETE_VALUE_ACCESSOR`, en
+   * `autocomplete.mjs`), y `selectValueAccessor` de `@angular/forms` prefiere ese accessor
+   * "custom" por sobre el `DefaultValueAccessor` — así que `[ngModel]="texto()"` de acá abajo en
+   * realidad escribe a través del `writeValue` DEL TRIGGER, no de un accessor de texto plano. Ese
+   * `writeValue` llama `displayWith` con lo que sea que traiga: cuando el usuario elige una
+   * opción, con el **ítem** (ahí hace falta `etiqueta(item)`); pero cada vez que acá adentro se
+   * hace `texto.set(...)` (tipear, `seleccionar()`, `onBlur()`), ese mismo `writeValue` se
+   * termina llamando otra vez con el **string** de `texto()` — y si se le pasa un string a
+   * `etiqueta`, que espera el objeto de cada pantalla (p.ej. `periodo => \`${periodo.mes}/...\``),
+   * devuelve `undefined`/vacío y el input se autoborra un instante después de mostrar la etiqueta
+   * bien. Confirmado con un test de integración (clic real sobre `.mat-mdc-option`, no una llamada
+   * directa a `seleccionar()`): sin esta rama, el valor se ve bien un instante y después se limpia
+   * solo. Con la rama, un string se devuelve tal cual — es exactamente lo mismo que `etiqueta`
+   * daría para un ítem que ya es un string (el `etiqueta` por defecto del componente es
+   * `String(item ?? '')`), así que no cambia nada para combos de opciones primitivas.
+   */
+  readonly mostrar = (item: any): string => {
+    if (item == null) return '';
+    if (typeof item === 'string') return item;
+    return this.etiqueta(item);
+  };
+
   seleccionar(evento: MatAutocompleteSelectedEvent): void {
     // Elegir de la lista —incluida la opción de vacío, que llega acá con item = null— es
     // intención explícita del usuario, igual que tipear: se abandona cualquier id pendiente de

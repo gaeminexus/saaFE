@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MatAutocompleteTrigger } from '@angular/material/autocomplete';
@@ -103,15 +103,20 @@ describe('InlineAutocompleteComponent', () => {
     expect(componente.texto()).toBe('Torres Chávez');
   });
 
-  it('salir del campo sin elegir de la lista limpia el valor: no se inventa uno libre', () => {
+  it('salir del campo sin elegir de la lista limpia el valor: no se inventa uno libre', (done) => {
     const emitidos: any[] = [];
     componente.valorChange.subscribe((v) => emitidos.push(v));
 
     componente.onTexto('torres pero sin elegir');
-    componente.onBlur();
+    componente.onBlur({ panelOpen: false } as any);
 
-    expect(componente.texto()).toBe('');
-    expect(emitidos).toContain(null);
+    // La limpieza se difiere un tick (setTimeout) para que una selección en vuelo pueda ganarle —
+    // ver el comentario de `onBlur`. Acá no hay ninguna en vuelo, así que igual limpia.
+    setTimeout(() => {
+      expect(componente.texto()).toBe('');
+      expect(emitidos).toContain(null);
+      done();
+    }, 0);
   });
 
   it('salir del campo con un valor ya elegido no lo borra', () => {
@@ -119,10 +124,34 @@ describe('InlineAutocompleteComponent', () => {
     const emitidos: any[] = [];
     componente.valorChange.subscribe((v) => emitidos.push(v));
 
-    componente.onBlur();
+    componente.onBlur({ panelOpen: false } as any);
 
     expect(componente.texto()).toBe('Peñafiel');
     expect(emitidos).toEqual([]);
+  });
+
+  it('un blur con el panel todavía abierto (clic en una opción) no limpia nada', (done) => {
+    componente.onTexto('mano');
+    componente.onBlur({ panelOpen: true } as any);
+
+    setTimeout(() => {
+      // Con el panel abierto, `onBlur` corta antes de programar cualquier limpieza — ni siquiera
+      // el `setTimeout` llega a correr.
+      expect(componente.texto()).toBe('mano');
+      done();
+    }, 0);
+  });
+
+  it('displayWith (mostrar) muestra la etiqueta del ítem y no revienta con null', () => {
+    expect(componente.mostrar(OPCIONES[0])).toBe('Peñafiel');
+    expect(componente.mostrar(null)).toBe('');
+  });
+
+  it('displayWith (mostrar) devuelve un string tal cual, sin pasarlo por `etiqueta`', () => {
+    // `MatAutocompleteTrigger` termina llamando a `mostrar` también con el string de `texto()`
+    // (ver el comentario de `mostrar`) — si esto llamara a `etiqueta` con un string, `etiqueta`
+    // recibiría algo que no es su ítem esperado y devolvería vacío, autoborrando el campo.
+    expect(componente.mostrar('un texto cualquiera')).toBe('un texto cualquiera');
   });
 
   it('asignar `valor` desde fuera precarga el texto', () => {
@@ -186,5 +215,58 @@ describe('InlineAutocompleteComponent', () => {
       componente.seleccionar({ option: { value: OPCIONES[1] } } as any);
       expect(emitidos).toEqual([OPCIONES[1]]);
     });
+  });
+
+  describe('clic real en una opción del panel (Mike, 2026-09-08: "elige y se borra")', () => {
+    /**
+     * Las pruebas de arriba llaman `componente.seleccionar(...)`/`onTexto(...)` directo: nunca
+     * pasan por el `<input [ngModel]="texto()">` real ni por `MatAutocompleteTrigger`, que es
+     * quien de verdad controla el `value` del DOM y quien registra su propio
+     * `NG_VALUE_ACCESSOR` en el mismo `<input>` (`MAT_AUTOCOMPLETE_VALUE_ACCESSOR`,
+     * `autocomplete.mjs`). Como `selectValueAccessor` de `@angular/forms` prefiere el accessor
+     * "custom" (el del trigger) sobre el `DefaultValueAccessor`, `[ngModel]="texto()"` en verdad
+     * escribe a través de `MatAutocompleteTrigger.writeValue`, que reenvía a `displayWith` — así
+     * que agregar `[displayWith]="mostrar"` podía, en teoría, romper la ruta normal si `mostrar`
+     * llegara a recibir el string de `texto()` en vez del ítem. Esta prueba hace el clic real
+     * sobre una opción del overlay (no una llamada directa a `seleccionar()`) para comprobar en
+     * el DOM de verdad que el input queda con la etiqueta correcta y no con `[object Object]`, y
+     * que después se puede seguir tecleando sin que quede corrompido.
+     */
+    it('clic en una opción dentro del panel: el input muestra la etiqueta, no [object Object]', fakeAsync(() => {
+      componente.modo = 'campo';
+      fixture.detectChanges();
+
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('input');
+      input.dispatchEvent(new Event('focus'));
+      input.value = 'nunez';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      tick();
+
+      const opcion = document.querySelector('.mat-mdc-option') as HTMLElement;
+      expect(opcion).withContext('el panel debe tener la opción "Núñez" renderizada').not.toBeNull();
+      opcion.click();
+      fixture.detectChanges();
+      tick();
+      fixture.detectChanges();
+      tick();
+
+      expect(input.value).toBe('Núñez');
+      expect(componente.texto()).toBe('Núñez');
+
+      // Sigue andando después: no quedó ningún estado corrompido por el `displayWith`.
+      input.value = 'torres';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      tick();
+
+      expect(input.value).toBe('torres');
+      expect(componente.texto()).toBe('torres');
+      expect(componente.filtradas().map((o) => o.nombre)).toEqual(['Torres Chávez']);
+
+      // Limpiar los timers/overlay pendientes para no filtrar el `fakeAsync`.
+      document.body.click();
+      tick(1000);
+    }));
   });
 });

@@ -35,7 +35,7 @@
     autocomplete="off"
   />
 }
-<mat-autocomplete #auto="matAutocomplete" (optionSelected)="seleccionar($event)">
+<mat-autocomplete #auto="matAutocomplete" [displayWith]="mostrar" (optionSelected)="seleccionar($event)">
   @if (etiquetaVacio) {
     <mat-option [value]="null">{{ etiquetaVacio }}</mat-option>
   }
