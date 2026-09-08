@@ -38,7 +38,18 @@ export class RubrosRrh {
   public static readonly ESTADO_LIQUIDACION = 196;
   public static readonly TIPO_DESCUENTO_RECURRENTE = 197;
   public static readonly ESTADO_DESCUENTO_RECURRENTE = 198;
-  public static readonly TIPO_CUENTA_BANCARIA = 199;
+  /**
+   * Unificado al rubro 23 (`Rubros.TIPO_CUENTAS_BANCARIAS` en el backend, `Rubros.java:87`) el
+   * 2026-09-08 — antes era el 199 propio de RRHH. Medido contra producción (`e2-24`): los dos
+   * catálogos numeran IGUAL (1=Ahorro(s), 2=Corriente), `RHH.CBEM.CBEMTPCT` guarda el código
+   * alterno (no la PK) y las 19 filas existentes ya son todas valor 1 — cero migración de datos,
+   * cero riesgo para el archivo de nómina. El punto de unificar: hoy el tipo de cuenta del
+   * empleado, el del partícipe y el que usan `TSR.CTBN`/`PGS.PGTR` y los formateadores del banco
+   * coincidían por casualidad, no por diseño — nada impedía que alguien editara un catálogo sin
+   * tocar el otro y los desincronizara con el tiempo. La etiqueta del alterno 1 pasa de "AHORROS"
+   * a "AHORRO" (rubro 23 lo llama así) — mismo concepto, solo cambia el texto mostrado.
+   */
+  public static readonly TIPO_CUENTA_BANCARIA = 23;
   public static readonly PARENTESCO_CARGA = 200;
   public static readonly TIPO_GASTO_PERSONAL = 201;
   public static readonly TIPO_ACUMULADO = 202;

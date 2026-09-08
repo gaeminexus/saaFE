@@ -51,7 +51,7 @@ export interface DetalleOrdenPagoNomina {
 
   // Snapshot del momento de la orden; no se relee del empleado
   numeroCuenta: string; // DRPGNMCT
-  tipoCuenta: number; // DRPGTPCT - rubro 199
+  tipoCuenta: number; // DRPGTPCT - rubro 23 (unificado con el de partícipes y el del archivo bancario de TSR, 2026-09-08; antes 199)
   banco: string; // DRPGBNCO
   identificacion: string; // DRPGIDNT
   nombreBeneficiario: string; // DRPGNMBN
