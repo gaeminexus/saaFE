@@ -246,8 +246,8 @@
             @for (linea of lineasAsientoDeSugerencia(sugerencia); track linea.codigo) {
             <div class="sugerencia-linea">
               <span class="linea-fecha">{{ formatearSoloFecha(linea.asiento?.fechaAsiento) }}</span>
-              <span class="linea-asiento">Asiento #{{ numeroAsientoMostrar(linea.asiento) }}</span>
-              <span class="linea-desc">{{ linea.descripcion }}</span>
+              <span class="linea-asiento" [matTooltip]="'Asiento #' + numeroAsientoMostrar(linea.asiento)">#{{ numeroAsientoMostrar(linea.asiento) }}</span>
+              <span class="linea-desc" [matTooltip]="linea.descripcion">{{ linea.descripcion }}</span>
               <span class="linea-valor">{{ valorNetoAsiento(linea) | number : '1.2-2' }}</span>
             </div>
             }
@@ -324,8 +324,8 @@
             />
             <div class="fila-info fila-info-asiento">
               <span class="fila-fecha">{{ formatearSoloFecha(fila.asiento?.fechaAsiento) }}</span>
-              <span class="tipo-badge">Asiento #{{ numeroAsientoMostrar(fila.asiento) }}</span>
-              <span class="fila-desc">{{ fila.descripcion }}</span>
+              <span class="tipo-badge" [matTooltip]="'Asiento #' + numeroAsientoMostrar(fila.asiento)">#{{ numeroAsientoMostrar(fila.asiento) }}</span>
+              <span class="fila-desc" [matTooltip]="fila.descripcion">{{ fila.descripcion }}</span>
               <span class="fila-valor" [class.valor-negativo]="valorNetoAsiento(fila) < 0">
                 {{ valorNetoAsiento(fila) | number : '1.2-2' }}
               </span>
@@ -414,7 +414,7 @@
               @for (enlace of detalleGrupoAsiento; track enlace.codigo) {
               <div class="grupo-detalle-fila">
                 {{ formatearSoloFecha(enlace.detalleAsiento?.asiento?.fechaAsiento) }} -
-                <span class="tipo-badge">Asiento #{{ numeroAsientoMostrar(enlace.detalleAsiento?.asiento) }}</span>
+                <span class="tipo-badge" [matTooltip]="'Asiento #' + numeroAsientoMostrar(enlace.detalleAsiento?.asiento)">#{{ numeroAsientoMostrar(enlace.detalleAsiento?.asiento) }}</span>
                 {{ enlace.detalleAsiento?.descripcion }}
               </div>
               }

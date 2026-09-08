@@ -358,11 +358,18 @@ mat-card-title {
   font-size: 0.82rem;
 
   &.fila-info-extracto {
-    grid-template-columns: 90px 1fr 90px;
+    // minmax(0, 1fr) y no 1fr: un track 1fr no se encoge por debajo del
+    // min-content de su contenido, así que una descripción larga nunca
+    // llegaría a activar el ellipsis de .fila-desc.
+    grid-template-columns: 90px minmax(0, 1fr) 90px;
   }
 
   &.fila-info-asiento {
-    grid-template-columns: 90px 100px 1fr 90px;
+    // La columna del badge se dimensiona a su contenido (auto), no a un ancho
+    // fijo: con numeroAlterno ("Asiento #CRE-2026-08-0052") un ancho fijo de
+    // 100px se desbordaba sobre la descripción. Igual razón que arriba para
+    // minmax(0, 1fr) en la columna de descripción.
+    grid-template-columns: 90px auto minmax(0, 1fr) 90px;
   }
 
   .fila-fecha {
@@ -451,6 +458,11 @@ mat-card-title {
 
   .linea-desc {
     flex: 1;
+    // Defensivo: en flexbox un ítem con overflow no-visible ya resuelve su
+    // min-width automático a 0 (por eso este bloque no mostraba el mismo
+    // desborde que el de la grilla, que sí tenía una columna de ancho fijo),
+    // pero se deja explícito para no depender de esa regla implícita.
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
