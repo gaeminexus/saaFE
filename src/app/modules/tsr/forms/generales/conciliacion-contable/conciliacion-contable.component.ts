@@ -11,6 +11,7 @@ import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
@@ -719,7 +720,12 @@ export class ConciliacionContableComponent implements OnInit {
     }
 
     this.isImprimiendoGeneral = true;
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    // Excepción a la convención de esta pantalla (que usa `getUsuarioLog()?.nombre || ''` en el
+    // resto de operaciones, sin tocar): un parámetro de reporte se imprime en el pie del PDF, y
+    // ahí un `''` no se distingue de un reporte sin firmar. `usuarioSesion()` revisa más fuentes
+    // de storage y cae a 'SYSTEM' si no encuentra ninguna — nunca vacío (2026-09-08, confirmado
+    // que `getUsuarioLog()` sí puede devolver `''` cuando `usuarioLog` no está en storage).
+    const usuario = usuarioSesion();
     this.jasperService
       .generar(
         'tsr',
@@ -758,7 +764,8 @@ export class ConciliacionContableComponent implements OnInit {
 
     const codigo = fila.cuentaBancaria.codigo;
     this.imprimiendoCuenta = codigo;
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    // Misma excepción que en `imprimirConciliacionGeneral` — ver el comentario ahí.
+    const usuario = usuarioSesion();
     this.jasperService
       .generar('tsr', ReportesTesoreria.CONCILIACION_CUENTA, {
         P_CNBC_CODIGO: codigo,
