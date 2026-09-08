@@ -69,7 +69,7 @@ export class ConsultaCobrosComponent {
 
   reversandoId = signal<number | null>(null);
 
-  filtroTexto = '';
+  filtroTexto = signal('');
   /** null = ambos estados. */
   filtroEstado = signal<number | null>(null);
 
@@ -77,7 +77,7 @@ export class ConsultaCobrosComponent {
 
   filasFiltradas = computed(() => {
     const estado = this.filtroEstado();
-    const texto = this.filtroTexto.trim().toLowerCase();
+    const texto = this.filtroTexto().trim().toLowerCase();
     return this.filas().filter((f) => {
       if (estado != null && Number(f.estado) !== estado) return false;
       if (!texto) return true;

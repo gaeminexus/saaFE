@@ -13,7 +13,7 @@
   <div class="filtros">
     <mat-form-field appearance="outline" class="filtro-texto">
       <mat-label>Buscar por partícipe, referencia o código</mat-label>
-      <input matInput [(ngModel)]="filtroTexto" placeholder="Ej.: Pérez, TRF-1204, 41" />
+      <input matInput [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" placeholder="Ej.: Pérez, TRF-1204, 41" />
     </mat-form-field>
     <mat-button-toggle-group [value]="filtroEstado()" (change)="filtroEstado.set($event.value)">
       <mat-button-toggle [value]="null">Todos</mat-button-toggle>
