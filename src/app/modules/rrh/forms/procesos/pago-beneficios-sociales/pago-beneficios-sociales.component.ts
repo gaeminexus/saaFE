@@ -30,6 +30,7 @@ import {
 } from '../../../model/orden-beneficio-social';
 import { RubrosRrh } from '../../../model/rubros-rrh';
 import { OrdenBeneficioSocialService } from '../../../service/orden-beneficio-social.service';
+import { LiquidacionBeneficioSocialService } from '../../../service/liquidacion-beneficio-social.service';
 import { aniosDisponibles } from '../../parametrizacion/utiles-parametrizacion';
 import { aValorDeInput } from '../../asistencia/utiles-asistencia';
 import { opcionesAviso } from '../../comunes/avisos';
@@ -70,6 +71,7 @@ const ESTADO_VISUAL_LABELS: Record<EstadoVisualOrden, string> = {
 })
 export class PagoBeneficiosSocialesComponent implements OnInit {
   private ordenService = inject(OrdenBeneficioSocialService);
+  private liquidacionService = inject(LiquidacionBeneficioSocialService);
   private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatosS = inject(FuncionesDatosService);
   private appState = inject(AppStateService);
@@ -95,9 +97,20 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
 
   cargando = signal<boolean>(false);
   cargandoDetalle = signal<boolean>(false);
+  calculando = signal<boolean>(false);
   generando = signal<boolean>(false);
   /** `idOrden` de la fila con una acción en curso — deshabilita solo sus botones, no toda la tabla. */
   procesando = signal<number | null>(null);
+
+  /**
+   * Se puso en `true` tras un "Calcular liquidaciones" exitoso para la combinación actual
+   * (año/tipo/región) y se resetea apenas cambia cualquiera de esos tres — es una guarda de
+   * sesión, liviana a propósito: no hay endpoint para preguntarle al backend "¿hay liquidaciones
+   * sueltas pendientes de agrupar?", así que no se pretende más certeza de la que se tiene. Sólo
+   * evita el caso más común (apretar "Generar orden" sin haber calculado nunca en esta sesión);
+   * no reemplaza la respuesta real del backend, que sigue siendo la fuente de verdad.
+   */
+  hayCalculoReciente = signal<boolean>(false);
 
   readonly etiquetaAnio = (a: number): string => String(a ?? '');
   readonly etiquetaRegion = (r: DetalleRubro): string => r.descripcion;
@@ -106,12 +119,37 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
   columnasOrden = ['numero', 'region', 'emision', 'empleados', 'total', 'estado', 'acciones'];
   columnasDetalle = ['empleado', 'periodo', 'baseCalculo', 'dias', 'valor', 'situacion'];
 
-  puedeGenerar = computed(() => {
-    if (this.generando()) return false;
+  /** Paso 1: calcular. Sólo pide región cuando hace falta — igual que "Generar orden". */
+  puedeCalcular = computed(() => {
+    if (this.calculando()) return false;
     const tipo = this.tipoBeneficio();
     if (tipo === null) return false;
     if (tipo === TipoBeneficioSocial.DECIMO_CUARTO && this.region() === null) return false;
     return true;
+  });
+
+  /** Paso 2: agrupar en una orden. Exige haber calculado antes en esta sesión (ver `hayCalculoReciente`). */
+  puedeGenerar = computed(() => {
+    if (this.generando()) return false;
+    if (!this.hayCalculoReciente()) return false;
+    const tipo = this.tipoBeneficio();
+    if (tipo === null) return false;
+    if (tipo === TipoBeneficioSocial.DECIMO_CUARTO && this.region() === null) return false;
+    return true;
+  });
+
+  /** Orden ya viva (no anulada) para el año/tipo/región actuales — para avisar antes de que el usuario intente generar otra. */
+  ordenViva = computed(() => {
+    const tipo = this.tipoBeneficio();
+    if (tipo === null) return null;
+    const region = tipo === TipoBeneficioSocial.DECIMO_CUARTO ? this.region() : null;
+    return (
+      this.ordenes().find((o) => {
+        if (Number(o.estado) === EstadoOrdenBeneficioSocial.ANULADA) return false;
+        if (region !== null && o.region !== region) return false;
+        return true;
+      }) ?? null
+    );
   });
 
   ngOnInit(): void {
@@ -120,13 +158,20 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
 
   onAnioChange(anio: number): void {
     this.anio.set(anio);
+    this.hayCalculoReciente.set(false);
     this.recargar();
   }
 
   onTipoBeneficioChange(tipo: number | null): void {
     this.tipoBeneficio.set(tipo);
     if (tipo !== TipoBeneficioSocial.DECIMO_CUARTO) this.region.set(null);
+    this.hayCalculoReciente.set(false);
     this.recargar();
+  }
+
+  onRegionChange(region: number | null): void {
+    this.region.set(region);
+    this.hayCalculoReciente.set(false);
   }
 
   // ─── Carga ─────────────────────────────────────────────────────────────────
@@ -171,6 +216,53 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
   }
 
   // ─── Procesos ──────────────────────────────────────────────────────────────
+
+  /**
+   * Paso 1: calcula/actualiza las liquidaciones sueltas (RHH.LQBS) del año/tipo/región elegidos.
+   * Antes de esto, "Generar orden" siempre respondía "no hay liquidaciones pendientes" — no
+   * calculaba nada, sólo agrupaba lo que ya existiera (2026-09-08, defecto reportado: el usuario
+   * no podía pagar los décimos cuartos porque este paso nunca se llamaba desde la pantalla).
+   * Idempotente en el backend (`BeneficioSocialServiceImpl`): recalcular no duplica ni pisa lo ya
+   * pagado, así que no hace falta pedir confirmación para repetirlo.
+   */
+  calcular(): void {
+    if (!this.puedeCalcular()) return;
+
+    const idEmpresa = this.idEmpresaActual();
+    if (!idEmpresa) {
+      this.avisar('No se pudo determinar la empresa de la sesión.', true);
+      return;
+    }
+
+    const tipo = this.tipoBeneficio()!;
+    const datos = {
+      idEmpresa,
+      anio: this.anio(),
+      region: tipo === TipoBeneficioSocial.DECIMO_CUARTO ? this.region()! : undefined,
+      usuarioRegistro: usuarioSesion(),
+    };
+
+    this.calculando.set(true);
+    const llamada =
+      tipo === TipoBeneficioSocial.DECIMO_TERCERO
+        ? this.liquidacionService.generarDecimoTercero(datos)
+        : tipo === TipoBeneficioSocial.DECIMO_CUARTO
+          ? this.liquidacionService.generarDecimoCuarto(datos)
+          : this.liquidacionService.generarFondosReserva(datos);
+
+    llamada.subscribe({
+      next: (generados) => {
+        this.calculando.set(false);
+        this.hayCalculoReciente.set(true);
+        this.avisar(`Se calcularon ${generados} liquidación(es).`);
+        this.recargar();
+      },
+      error: (err) => {
+        this.calculando.set(false);
+        this.avisar(mensajeDeError(err, 'No se pudieron calcular las liquidaciones.'), true);
+      },
+    });
+  }
 
   generar(): void {
     if (!this.puedeGenerar()) return;

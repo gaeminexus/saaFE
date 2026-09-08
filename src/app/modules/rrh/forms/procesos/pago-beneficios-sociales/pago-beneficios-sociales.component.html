@@ -46,24 +46,51 @@
           [etiqueta]="etiquetaRegion"
           [valorPor]="valorRegion"
           [ngModel]="region()"
-          (ngModelChange)="region.set($event)"
+          (ngModelChange)="onRegionChange($event)"
           placeholder="Escriba la región"
         />
       }
 
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="generar()"
-        [disabled]="!puedeGenerar()"
-        matTooltip="Agrupa las liquidaciones sueltas del año y tipo seleccionados en una orden nueva"
-      >
-        <mat-icon>playlist_add</mat-icon>
-        Generar orden
-      </button>
+      <div class="pasos-proceso">
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="calcular()"
+          [disabled]="!puedeCalcular()"
+          matTooltip="Paso 1: calcula o actualiza las liquidaciones sueltas de cada empleado para el año y tipo seleccionados"
+        >
+          <mat-icon>calculate</mat-icon>
+          1. Calcular liquidaciones
+        </button>
+
+        <mat-icon class="flecha-paso">arrow_forward</mat-icon>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="generar()"
+          [disabled]="!puedeGenerar()"
+          [matTooltip]="
+            hayCalculoReciente()
+              ? 'Agrupa las liquidaciones sueltas del año y tipo seleccionados en una orden nueva'
+              : 'Primero hay que calcular las liquidaciones (paso 1)'
+          "
+        >
+          <mat-icon>playlist_add</mat-icon>
+          2. Generar orden
+        </button>
+      </div>
 
       @if (tipoBeneficio() === TipoBeneficioSocial.DECIMO_CUARTO && region() === null) {
-        <span class="pista">Seleccione la región para poder generar el décimo cuarto.</span>
+        <span class="pista">Seleccione la región para poder calcular y generar el décimo cuarto.</span>
+      } @else if (!hayCalculoReciente()) {
+        <span class="pista">Primero calcule las liquidaciones — "Generar orden" sólo agrupa lo que ya esté calculado.</span>
+      }
+
+      @if (ordenViva(); as viva) {
+        <span class="pista pista-orden-viva">
+          Ya existe una orden {{ viva.estadoTexto | lowercase }} (N° {{ viva.numero }}) para esta combinación.
+        </span>
       }
     </div>
   }

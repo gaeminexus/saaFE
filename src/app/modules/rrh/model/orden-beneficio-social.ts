@@ -1,7 +1,9 @@
 /**
  * RHH.ODBS — orden de pago de beneficio social (décimos acumulados). Contrato:
- * `docs/rrh/API-PAGO-BENEFICIOS-SOCIALES.md`. Los endpoints todavía no existen en el backend al
- * momento de escribir esto (2026-09-01): estos tipos siguen el contrato congelado, no código real.
+ * `docs/rrh/API-PAGO-BENEFICIOS-SOCIALES.md`. Estos tipos se escribieron contra el contrato
+ * congelado cuando el backend todavía no existía (2026-09-01); `OrdenBeneficioSocialRest.java`
+ * ya existe en saaBE y responde en producción (confirmado 2026-09-08), pero no se re-auditó campo
+ * por campo contra el `.java` real en esta pasada — si algo no cierra, verificar ahí primero.
  */
 
 /** `ODBSESTD`, rubro `RHH_ESTADO_ORDEN_BENEFICIO`. Ver contrato §2. */
@@ -188,3 +190,25 @@ export interface AnularOrdenBeneficioSocialRequest {
   motivo: string;
   usuario: string;
 }
+
+/**
+ * Los tres `POST /lqbs/generar*` (`LiquidacionBeneficioSocialRest.java`, saaBE — código real, no
+ * el contrato congelado de `odbs` de arriba). Calculan/actualizan las liquidaciones sueltas de
+ * `RHH.LQBS`; "Generar orden" (`/odbs/generar`) sólo AGRUPA lo que esto ya calculó — sin este
+ * paso previo nunca hay nada que agrupar, aunque la provisión del décimo siga acumulándose.
+ *
+ * Los tres son **idempotentes**: `BeneficioSocialServiceImpl` busca primero si ya existe la
+ * liquidación de ese empleado/tipo/año (`selectByEmpleadoTipoAnio`) y la actualiza en vez de
+ * duplicarla — recalcular no crea filas de más ni pisa `valorPagado`/`estado` de una ya pagada
+ * (persiste "conservando lo que ya se pagó").
+ */
+export interface GenerarLiquidacionesRequest {
+  idEmpresa: number;
+  anio: number;
+  /** Sólo para décimo cuarto: RHH_REGION_DECIMO_CUARTO. Va en la RUTA, no acá — ver el servicio. */
+  region?: number;
+  usuarioRegistro: string;
+}
+
+/** Respuesta de los tres `POST /lqbs/generar*`: el entero crudo, no un objeto `{exito,...}`. */
+export type ResultadoGenerarLiquidaciones = number;

@@ -25,6 +25,22 @@
     flex-wrap: wrap;
   }
 
+  .pasos-proceso {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  .flecha-paso {
+    color: $text-muted;
+  }
+
+  .pista-orden-viva {
+    color: $info-color;
+    font-weight: $font-weight-medium;
+  }
+
   .fila-confirmacion {
     display: flex;
     align-items: center;

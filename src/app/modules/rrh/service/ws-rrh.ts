@@ -81,6 +81,11 @@ export class ServiciosRhh {
   // única línea la que hay que tocar, no los componentes que la consumen.
   public static RS_ODBS = `${API_URL}/odbs`;
 
+  // Liquidaciones de beneficio social — RHH.LQBS (@Path("lqbs") en LiquidacionBeneficioSocialRest,
+  // saaBE). "Generar orden" de /odbs SOLO agrupa liquidaciones que YA EXISTEN acá; el paso que las
+  // calcula es este (2026-09-08, defecto: la pantalla nunca llamaba a este paso).
+  public static RS_LQBS = `${API_URL}/lqbs`;
+
   // Planilla de control del IESS (docs/rrh/API-PLANILLA-IESS.md §7.a). @Path("plie") en el
   // backend: es el POJO calculado (sin tabla), NO confundir con RS_PLIS de abajo.
   public static RS_PLIE = `${API_URL}/plie`;
