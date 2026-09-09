@@ -155,6 +155,23 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       eliminarSaldosCero:  [true],
     });
 
+    // "A fecha de corte" ('2') no pide fecha inicial — el reporte no la acepta (§ nombreReporte).
+    // Se quita el `required` y se deshabilita el control mientras esa opción esté elegida, y se
+    // repone tal como estaba (con su validador y sin tocar el valor que ya tenía el usuario) al
+    // volver a cualquiera de las otras dos.
+    this.form.get('acumulacion')?.valueChanges.subscribe((valor) => {
+      const fechaInicioCtrl = this.form.get('fechaInicio');
+      if (valor === '2') {
+        fechaInicioCtrl?.disable({ emitEvent: false });
+        fechaInicioCtrl?.clearValidators();
+      } else {
+        fechaInicioCtrl?.enable({ emitEvent: false });
+        fechaInicioCtrl?.setValidators(Validators.required);
+      }
+      fechaInicioCtrl?.setErrors(null);
+      fechaInicioCtrl?.updateValueAndValidity({ emitEvent: false });
+    });
+
     this.cargarReportes();
   }
 
@@ -201,16 +218,23 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
     this.generado.set(false);
     this.balanceData.set([]);
 
-    const v = this.form.value;
+    // `getRawValue()`, no `.value`: con "A fecha de corte" el control `fechaInicio` queda
+    // deshabilitado, y `.value` excluye los controles deshabilitados del objeto — daría
+    // `fechaInicio: undefined` justo cuando más hace falta calcular el sustituto de abajo.
+    const v = this.form.getRawValue();
     const empresa = this.appState.getEmpresa()?.codigo
       ?? parseInt(localStorage.getItem('idSucursal') || '0', 10);
 
     this.balanceService.generarBalance({
-      fechaInicio: this.funcionesDatos.formatearFechaParaBackend(v.fechaInicio, TipoFormatoFechaBackend.SOLO_FECHA)!,
+      fechaInicio: this.funcionesDatos.formatearFechaParaBackend(this.fechaInicioParaGenerar(v), TipoFormatoFechaBackend.SOLO_FECHA)!,
       fechaFin: this.funcionesDatos.formatearFechaParaBackend(v.fechaFin, TipoFormatoFechaBackend.SOLO_FECHA)!,
       empresa,
       codigoAlterno: Number(v.codigoAlterno),
-      acumulacion: Number(v.acumulacion),
+      // "A fecha de corte" ('2') sigue siendo ACUMULADO (1) para el motor de cálculo — el
+      // backend sólo conoce 0/1 (`ReporteTipoAcumulacion`); lo que cambia es qué `fechaInicio`
+      // se le manda y qué Jasper se imprime después, no el tipo de cálculo. Ver el comentario
+      // largo de `fechaInicioParaGenerar()` sobre por qué esto no rompe el saldo final.
+      acumulacion: v.acumulacion === '0' ? 0 : 1,
       incluyeCentrosCosto: v.incluyeCentrosCosto,
       reporteDistribuido: v.reporteDistribuido,
       eliminarSaldosCero: v.eliminarSaldosCero,
@@ -317,26 +341,57 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Cuál de los seis Jasper corresponde, según el estado que ya tiene el formulario — sin combo
-   * nuevo (2026-09-08). Dos ejes:
+   * Cuál de los seis Jasper corresponde, según el estado que ya tiene el formulario. Dos ejes:
    * - `mostrarDebeHaber()` → variante `_DBHB` o no (explícito, ya existe en pantalla).
-   * - `acumulacion` ('0' Por periodo / '1' Acumulado) → **RNGO_FIFF** (por rango) o **ACUM_CNFI**
-   *   (acumulado con fecha inicial).
-   *
-   * **`ACUM_SNFI`/`ACUM_SNFI_DBHB` no son alcanzables desde esta pantalla.** Confirmado leyendo
-   * los `.jrxml` reales: `ACUM_SNFI` ni siquiera declara el parámetro `P_FECHAINICIAL` — es
-   * literalmente "sin fecha inicial, a fecha de corte". Este formulario exige `fechaInicio` como
-   * campo obligatorio siempre (`Validators.required`), así que nunca hay un estado que represente
-   * "sin fecha inicial". Haría falta una tercera opción en "Acumulación" (algo como "A fecha de
-   * corte") para que SNFI tenga sentido acá — no la inventé, se lo avisé al árbitro.
+   * - `acumulacion`: '0' Por periodo → **RNGO_FIFF**; '1' Acumulado → **ACUM_CNFI**; '2' A fecha
+   *   de corte → **ACUM_SNFI** (2026-09-09: habilitada a pedido del usuario — es la que
+   *   corresponde al estado de situación financiera regulatorio, Resolución SBS-2013-0507, a
+   *   diferencia de las otras dos que son de control interno).
    */
   private nombreReporte(): string {
     const conDebeHaber = this.mostrarDebeHaber();
-    const acumulado = this.form.value.acumulacion === '1';
-    if (acumulado) {
+    const acumulacion = this.form.value.acumulacion;
+    if (acumulacion === '2') {
+      return conDebeHaber ? ReportesContables.ACUM_SNFI_DBHB : ReportesContables.ACUM_SNFI;
+    }
+    if (acumulacion === '1') {
       return conDebeHaber ? ReportesContables.ACUM_CNFI_DBHB : ReportesContables.ACUM_CNFI;
     }
     return conDebeHaber ? ReportesContables.RNGO_FIFF_DBHB : ReportesContables.RNGO_FIFF;
+  }
+
+  /**
+   * Qué `fechaInicio` mandarle a `generarBalance()` (que la exige siempre, no acepta null —
+   * `TempReportesRest.generarBalance:178`) cuando el usuario eligió "A fecha de corte" y el
+   * control real quedó deshabilitado y sin valor.
+   *
+   * **Verificado en `TempReportesServiceImpl.actualizaDebeHaberMovimiento` antes de escribir
+   * esto, no asumido**: con `acumulacion = ACUMULADO`, el saldo final de cada cuenta se arma como
+   * `saldoCuenta(fechaInicio - 1 día) + movimientos(fechaInicio..fechaFin)` — y eso es
+   * matemáticamente **el mismo saldo a `fechaFin` sin importar qué `fechaInicio` se elija**: el
+   * saldo anterior ya absorbe todo lo previo. O sea que el número final ("Saldo Actual") **no se
+   * rompe con ningún valor que se mande acá** — el backend no necesitaba ningún cambio para esto,
+   * confirmado antes de tocar código.
+   *
+   * Lo único que sí cambia según qué `fechaInicio` se mande es **cómo se reparte** ese total entre
+   * "Saldo Anterior" y las columnas Debe/Haber del período. Elegí el **primer día del ejercicio
+   * de `fechaFin`** (1 de enero de ese año): es la convención estándar de "acumulado del
+   * ejercicio" — Saldo Anterior = lo acumulado hasta el cierre del año anterior, Debe/Haber =
+   * movimiento del año en curso hasta la fecha de corte. Si el criterio correcto fuera otro
+   * (p.ej. repetir `fechaFin`, que mostraría Debe/Haber en cero), es un cambio de una línea acá —
+   * avisado al árbitro para que lo confirme, no es una decisión cerrada.
+   */
+  private fechaInicioParaGenerar(v: { fechaInicio: Date | null; fechaFin: Date; acumulacion: string }): Date {
+    if (v.acumulacion !== '2') {
+      return v.fechaInicio!;
+    }
+    const fechaFin = new Date(v.fechaFin);
+    return new Date(fechaFin.getFullYear(), 0, 1);
+  }
+
+  /** Para la plantilla: oculta/deshabilita el campo Fecha Inicio cuando no se pide. */
+  esFechaDeCorte(): boolean {
+    return this.form.value.acumulacion === '2';
   }
 
   puedeImprimirPdf(): boolean {
@@ -349,34 +404,42 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const v = this.form.value;
+    // getRawValue(): con "A fecha de corte" el control fechaInicio está deshabilitado y `.value`
+    // no lo incluiría (no que importe acá: esa rama ni siquiera manda P_FECHAINICIAL).
+    const v = this.form.getRawValue();
     const empresa = this.appState.getEmpresa()?.codigo
       ?? parseInt(localStorage.getItem('idSucursal') || '0', 10);
 
+    const parametros: Record<string, any> = {
+      P_DTMTSCRP: idEjecucion,
+      // Mismo fallback que usa generarBalance() más arriba en esta pantalla.
+      P_PJRQ_CODIGO: empresa,
+      // Resolución SBS-2013-0507: el catálogo formal llega hasta seis dígitos, las cuentas
+      // auxiliares internas de 7+ quedan afuera. Es una decisión regulatoria, no una
+      // preferencia del usuario — por eso va fijo en 6 y no como control de la pantalla
+      // (2026-09-09, confirmado con el árbitro; si algún día hace falta ver el analítico
+      // interno, es una conversación aparte, no cambiar esto a ciegas).
+      P_NIVEL_MAXIMO: 6,
+      P_FECHAFINAL: this.funcionesDatos.formatearFechaParaBackend(v.fechaFin, TipoFormatoFechaBackend.SOLO_FECHA),
+      P_USUARIO: usuarioSesion(),
+      // ⚠️ P_FILTRO/P_MAYORIZADO: no hay ningún campo del formulario que los alimente hoy — se
+      // mandan vacíos a propósito (no se inventó contenido). PENDIENTE (anotado con el árbitro
+      // 2026-09-09): P_MAYORIZADO sí importa en un estado formal — un balance sobre un período
+      // no mayorizado es provisional y debería decirlo en la cara del reporte. Falta decidir de
+      // dónde sale ese dato (¿el período tiene un flag de mayorización que esta pantalla no
+      // carga hoy?) antes de dejar de mandarlo vacío.
+      P_FILTRO: '',
+      P_MAYORIZADO: '',
+    };
+    // "A fecha de corte": ACUM_SNFI/ACUM_SNFI_DBHB no declaran este parámetro — mandarlo sería
+    // ensuciar la llamada con algo que el reporte no conoce (confirmado en el .jrxml).
+    if (!this.esFechaDeCorte()) {
+      parametros['P_FECHAINICIAL'] = this.funcionesDatos.formatearFechaParaBackend(v.fechaInicio, TipoFormatoFechaBackend.SOLO_FECHA);
+    }
+
     this.imprimiendo.set(true);
     this.jasperService
-      .generar('cnt', this.nombreReporte(), {
-        P_DTMTSCRP: idEjecucion,
-        // Mismo fallback que usa generarBalance() más arriba en esta pantalla.
-        P_PJRQ_CODIGO: empresa,
-        // Resolución SBS-2013-0507: el catálogo formal llega hasta seis dígitos, las cuentas
-        // auxiliares internas de 7+ quedan afuera. Es una decisión regulatoria, no una
-        // preferencia del usuario — por eso va fijo en 6 y no como control de la pantalla
-        // (2026-09-09, confirmado con el árbitro; si algún día hace falta ver el analítico
-        // interno, es una conversación aparte, no cambiar esto a ciegas).
-        P_NIVEL_MAXIMO: 6,
-        P_FECHAINICIAL: this.funcionesDatos.formatearFechaParaBackend(v.fechaInicio, TipoFormatoFechaBackend.SOLO_FECHA),
-        P_FECHAFINAL: this.funcionesDatos.formatearFechaParaBackend(v.fechaFin, TipoFormatoFechaBackend.SOLO_FECHA),
-        P_USUARIO: usuarioSesion(),
-        // ⚠️ P_FILTRO/P_MAYORIZADO: no hay ningún campo del formulario que los alimente hoy — se
-        // mandan vacíos a propósito (no se inventó contenido). PENDIENTE (anotado con el árbitro
-        // 2026-09-09): P_MAYORIZADO sí importa en un estado formal — un balance sobre un período
-        // no mayorizado es provisional y debería decirlo en la cara del reporte. Falta decidir de
-        // dónde sale ese dato (¿el período tiene un flag de mayorización que esta pantalla no
-        // carga hoy?) antes de dejar de mandarlo vacío.
-        P_FILTRO: '',
-        P_MAYORIZADO: '',
-      })
+      .generar('cnt', this.nombreReporte(), parametros)
       .subscribe({
         next: (blob) => {
           this.imprimiendo.set(false);

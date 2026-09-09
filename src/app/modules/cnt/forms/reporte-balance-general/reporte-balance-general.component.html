@@ -15,8 +15,11 @@
                  (input)="capturarFechaInicioRaw($event)"
                  (dateChange)="onFechaInicioPickerChange($event.value)"
                  (blur)="syncFechaInicioFromRaw($event)" />
-          <mat-datepicker-toggle matIconSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+          <mat-datepicker-toggle matIconSuffix [for]="pickerInicio" [disabled]="esFechaDeCorte()"></mat-datepicker-toggle>
           <mat-datepicker #pickerInicio></mat-datepicker>
+          @if (esFechaDeCorte()) {
+            <mat-hint>No aplica: el reporte es a una sola fecha de corte</mat-hint>
+          }
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -44,6 +47,7 @@
           <mat-select formControlName="acumulacion">
             <mat-option value="0">Por periodo</mat-option>
             <mat-option value="1">Acumulado</mat-option>
+            <mat-option value="2">A fecha de corte</mat-option>
           </mat-select>
         </mat-form-field>
       </div>
