@@ -107,6 +107,15 @@
         Exportar CSV
       </button>
 
+      <button mat-stroked-button color="primary" (click)="imprimirPdf()" [disabled]="!puedeImprimirPdf()">
+        @if (imprimiendo()) {
+          <mat-spinner diameter="18" class="spinner-btn"></mat-spinner>
+        } @else {
+          <mat-icon>picture_as_pdf</mat-icon>
+        }
+        Imprimir PDF
+      </button>
+
       <mat-checkbox
         [checked]="mostrarDebeHaber()"
         (change)="onMostrarDebeHaberChange($event.checked)"

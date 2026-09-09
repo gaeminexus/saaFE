@@ -10,10 +10,14 @@ import { ReporteBalanceService } from '../../service/reporte-balance.service';
 import { ReporteContableService } from '../../service/reporte-contable.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { ExportService } from '../../../../shared/services/export.service';
+import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../shared/services/descarga-reporte';
+import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { ReportesContables } from '../descarga-reporte';
 
 @Component({
   selector: 'cnt-reporte-balance-general',
@@ -32,6 +36,7 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   private appState              = inject(AppStateService);
   private funcionesDatos        = inject(FuncionesDatosService);
   private exportService         = inject(ExportService);
+  private jasperService         = inject(JasperReportesService);
 
   // ── Catálogos ────────────────────────────────────────────────
   reportes = signal<ReporteContable[]>([]);
@@ -46,6 +51,9 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   totalRegistros = signal<number | null>(null);
   fechaProceso  = signal<string | null>(null);
   balanceData   = signal<TemporalReporte[]>([]);
+
+  // ── Reporte Jasper (2026-09-08) ──
+  imprimiendo = signal(false);
 
   // ── Computed totales ────────────────────────────────────
   totalSaldoAnterior = computed(() =>
@@ -306,6 +314,79 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       headers,
       dataKeys
     );
+  }
+
+  /**
+   * Cuál de los seis Jasper corresponde, según el estado que ya tiene el formulario — sin combo
+   * nuevo (2026-09-08). Dos ejes:
+   * - `mostrarDebeHaber()` → variante `_DBHB` o no (explícito, ya existe en pantalla).
+   * - `acumulacion` ('0' Por periodo / '1' Acumulado) → **RNGO_FIFF** (por rango) o **ACUM_CNFI**
+   *   (acumulado con fecha inicial).
+   *
+   * **`ACUM_SNFI`/`ACUM_SNFI_DBHB` no son alcanzables desde esta pantalla.** Confirmado leyendo
+   * los `.jrxml` reales: `ACUM_SNFI` ni siquiera declara el parámetro `P_FECHAINICIAL` — es
+   * literalmente "sin fecha inicial, a fecha de corte". Este formulario exige `fechaInicio` como
+   * campo obligatorio siempre (`Validators.required`), así que nunca hay un estado que represente
+   * "sin fecha inicial". Haría falta una tercera opción en "Acumulación" (algo como "A fecha de
+   * corte") para que SNFI tenga sentido acá — no la inventé, se lo avisé al árbitro.
+   */
+  private nombreReporte(): string {
+    const conDebeHaber = this.mostrarDebeHaber();
+    const acumulado = this.form.value.acumulacion === '1';
+    if (acumulado) {
+      return conDebeHaber ? ReportesContables.ACUM_CNFI_DBHB : ReportesContables.ACUM_CNFI;
+    }
+    return conDebeHaber ? ReportesContables.RNGO_FIFF_DBHB : ReportesContables.RNGO_FIFF;
+  }
+
+  puedeImprimirPdf(): boolean {
+    return this.generado() && this.idEjecucion() != null && !this.imprimiendo();
+  }
+
+  imprimirPdf(): void {
+    const idEjecucion = this.idEjecucion();
+    if (!this.puedeImprimirPdf() || idEjecucion == null) {
+      return;
+    }
+
+    const v = this.form.value;
+    const empresa = this.appState.getEmpresa()?.codigo
+      ?? parseInt(localStorage.getItem('idSucursal') || '0', 10);
+
+    this.imprimiendo.set(true);
+    this.jasperService
+      .generar('cnt', this.nombreReporte(), {
+        P_DTMTSCRP: idEjecucion,
+        // Mismo fallback que usa generarBalance() más arriba en esta pantalla.
+        P_PJRQ_CODIGO: empresa,
+        // Resolución SBS-2013-0507: el catálogo formal llega hasta seis dígitos, las cuentas
+        // auxiliares internas de 7+ quedan afuera. Es una decisión regulatoria, no una
+        // preferencia del usuario — por eso va fijo en 6 y no como control de la pantalla
+        // (2026-09-09, confirmado con el árbitro; si algún día hace falta ver el analítico
+        // interno, es una conversación aparte, no cambiar esto a ciegas).
+        P_NIVEL_MAXIMO: 6,
+        P_FECHAINICIAL: this.funcionesDatos.formatearFechaParaBackend(v.fechaInicio, TipoFormatoFechaBackend.SOLO_FECHA),
+        P_FECHAFINAL: this.funcionesDatos.formatearFechaParaBackend(v.fechaFin, TipoFormatoFechaBackend.SOLO_FECHA),
+        P_USUARIO: usuarioSesion(),
+        // ⚠️ P_FILTRO/P_MAYORIZADO: no hay ningún campo del formulario que los alimente hoy — se
+        // mandan vacíos a propósito (no se inventó contenido). PENDIENTE (anotado con el árbitro
+        // 2026-09-09): P_MAYORIZADO sí importa en un estado formal — un balance sobre un período
+        // no mayorizado es provisional y debería decirlo en la cara del reporte. Falta decidir de
+        // dónde sale ese dato (¿el período tiene un flag de mayorización que esta pantalla no
+        // carga hoy?) antes de dejar de mandarlo vacío.
+        P_FILTRO: '',
+        P_MAYORIZADO: '',
+      })
+      .subscribe({
+        next: (blob) => {
+          this.imprimiendo.set(false);
+          guardarArchivo(blob, `balance-general-${idEjecucion}.pdf`);
+        },
+        error: (error) => {
+          this.imprimiendo.set(false);
+          mensajeReporteFallido(error).then((mensaje) => this.errorMsg.set(mensaje));
+        },
+      });
   }
 
   onMostrarDebeHaberChange(checked: boolean): void {
