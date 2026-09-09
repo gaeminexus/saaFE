@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { AnularDocumentoVentaResponse, AnularRetencionVentaRequest } from '../../model/anulacion-documento-venta';
+import { ReenviarSriRetencionV2Response } from '../../model/reenviar-sri-retencion';
 import { RetencionV2Emitir } from '../../model/retencion-v2-emitir';
 import { ServiciosCxc } from '../ws-cxc';
 
@@ -90,6 +91,20 @@ export class RetencionV2EmitirService {
     return this.http
       .post<any>(`${ServiciosCxc.RS_RTV2}/consultarYActualizarEstado`, { idRetencion }, this.httpOptions)
       .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Reenvía al SRI una retención que quedó atascada (docs/cxc/API-REENVIAR-RETENCION-AL-SRI.md).
+   * Sin cuerpo: todo lo que hace falta se deriva de `idRetencion` en el backend.
+   *
+   * A diferencia de `handleError`, acá los códigos de error (404/409/500) sí importan y traen un
+   * `mensaje` explícito que hay que mostrar tal cual — por eso usa `handleErrorAnulacion`
+   * (mensajeDeError + throwError), no el `handleError` genérico que silencia todo como `null`.
+   */
+  reenviarSRI(idRetencion: number): Observable<ReenviarSriRetencionV2Response> {
+    return this.http
+      .post<ReenviarSriRetencionV2Response>(`${ServiciosCxc.RS_RTV2}/reenviarSRI/${idRetencion}`, null, this.httpOptions)
+      .pipe(catchError(this.handleErrorAnulacion));
   }
 
   private handleError(error: HttpErrorResponse): Observable<null> {

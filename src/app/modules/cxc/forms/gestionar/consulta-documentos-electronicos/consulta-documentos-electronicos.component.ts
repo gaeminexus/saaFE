@@ -45,6 +45,12 @@ export interface DocumentoElectronico {
   total: number;
   estadoEmision: number | string | null;
   ambiente: number;
+  /**
+   * Solo para tipo RETENCION: el `estado` de RetencionV2 (1/3/4/5/6, el flujo de emisión
+   * electrónica — docs/cxc/API-REENVIAR-RETENCION-AL-SRI.md §3). NO es lo mismo que
+   * `estadoEmision` (LSRI 603, el flag genérico Pendiente/Emitida/Anulada de arriba).
+   */
+  estadoRetencion?: number;
 }
 
 @Component({
@@ -77,6 +83,8 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   anulando    = signal(false);
   estados     = signal<Array<{ value: string; label: string }>>([]);
   sinBusqueda = signal(true);
+  /** id de la retención cuyo reenvío al SRI está en curso; null si ninguna. */
+  idReenviando = signal<number | null>(null);
 
   private get usuarioSesion(): string {
     try {
@@ -507,6 +515,42 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     });
   }
 
+  /**
+   * Visible solo para retenciones en estado ∈ {3,4,6} (firmada / enviada / no autorizada) —
+   * docs/cxc/API-REENVIAR-RETENCION-AL-SRI.md §3. Con 5 (autorizada) o 1 (creada) no se muestra.
+   * No es el mismo botón que "Actualizar estado SRI" (consultarYActualizarEstado): ese solo
+   * consulta autorización y no sirve mientras el SRI nunca recibió el comprobante.
+   */
+  puedeReenviarSRI(row: DocumentoElectronico): boolean {
+    if (row.tipo !== 'RETENCION') return false;
+    const estado = Number(row.estadoRetencion);
+    return [3, 4, 6].includes(estado);
+  }
+
+  reenviarSRI(row: DocumentoElectronico): void {
+    if (!this.puedeReenviarSRI(row) || this.idReenviando() !== null) return;
+    if (!window.confirm('Se volverá a enviar el comprobante al SRI. ¿Continuar?')) return;
+
+    this.idReenviando.set(row.id);
+    this.retService.reenviarSRI(row.id).subscribe({
+      next: (resp) => {
+        this.idReenviando.set(null);
+        // El mensaje del backend se muestra TAL CUAL, sin reemplazarlo: trae la causa real que
+        // dio el SRI, no un texto genérico.
+        if (resp?.exito) {
+          this.mostrarExito(resp.mensaje);
+        } else {
+          this.mostrarAdvertencia(resp?.mensaje || 'El SRI no autorizó el reenvío.');
+        }
+        this.buscar();
+      },
+      error: (err: Error) => {
+        this.idReenviando.set(null);
+        this.mostrarError(mensajeDeError(err, 'No se pudo reenviar el comprobante al SRI'));
+      },
+    });
+  }
+
   consultarSri(row: DocumentoElectronico): void {
     const clave = row.autorizacion;
     if (!clave) { this.mostrarInfo('Este documento no tiene clave de acceso disponible'); return; }
@@ -662,6 +706,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(r.total || r.totalRetenido),
       estadoEmision:         r.estadoEmision,
       ambiente:              Number(r.ambiente || 1),
+      estadoRetencion:       r.estado !== undefined && r.estado !== null ? Number(r.estado) : undefined,
     };
   }
 
@@ -712,4 +757,5 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   private mostrarExito(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: ['snackbar-success'] }); }
   private mostrarInfo(msg: string): void  { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
   private mostrarError(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 4500, panelClass: ['snackbar-error'] }); }
+  private mostrarAdvertencia(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 7000, panelClass: ['snackbar-warning'] }); }
 }

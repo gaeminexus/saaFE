@@ -295,6 +295,16 @@
         <button mat-stroked-button (click)="copiarAutorizacion()">
           <mat-icon>content_copy</mat-icon> Copiar clave
         </button>
+        @if (puedeReenviarSRI()) {
+          <button mat-stroked-button color="accent" (click)="reenviarAlSri()" [disabled]="reenviando()">
+            @if (reenviando()) {
+              <mat-spinner diameter="18" style="display:inline-block;vertical-align:middle;margin-right:6px"></mat-spinner>
+            } @else {
+              <mat-icon>send</mat-icon>
+            }
+            {{ reenviando() ? 'Reenviando...' : 'Reenviar al SRI' }}
+          </button>
+        }
         <button mat-stroked-button (click)="imprimirDocumento()">
           <mat-icon>print</mat-icon> Imprimir Retención
         </button>

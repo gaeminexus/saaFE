@@ -7,6 +7,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
@@ -78,6 +79,9 @@ export class Retencionesv2Component implements OnInit {
   guardando = signal(false);
   documentoActual = signal<RetencionV2Emitir | null>(null);
   deshabilitado = false;
+
+  /** Mientras corre POST /rtv2/reenviarSRI/{id}: llama a dos web services del SRI, puede demorar. */
+  reenviando = signal(false);
 
   personaSeleccionada = signal<Titular | null>(null);
   textoTitularSeleccionado = computed(() => this.displayPersona(this.personaSeleccionada()));
@@ -488,13 +492,20 @@ export class Retencionesv2Component implements OnInit {
     this.service.procesarCompleta(payload).subscribe({
       next: (resp: any) => {
         this.guardando.set(false);
+        // El `estado` numérico (1/3/4/5/6, el flujo de emisión de RetencionV2 — ver
+        // docs/cxc/API-REENVIAR-RETENCION-AL-SRI.md §3) vive en `resp.retencion.estado` en las
+        // dos ramas envueltas (grabado antes de autorizar, ver RetencionV2Rest:1427) y directo en
+        // `resp.estado` en la respuesta legacy sin envolver. OJO: `resp.estado` en las ramas
+        // envueltas es un STRING de negocio ("AUTORIZADO"/"NO_AUTORIZADO"/"DEVUELTA"), no este
+        // número — por eso `resp.retencion?.estado` va primero.
+        const estadoNumerico = this.extraerEstadoNumerico(resp);
 
         // HTTP 200 + exito === false → SRI no autorizó, pero el registro quedó guardado en BD
         if (resp?.exito === false) {
           this.mostrarAdvertencia(resp.mensaje || 'La retención fue guardada pero no fue autorizada por el SRI.');
           // El registro quedó guardado; asignar id si viene para habilitar impresión
           if (resp.idRetencion) {
-            this.documentoActual.set({ id: resp.idRetencion, autorizacion: resp.autorizacion, clave: resp.claveAcceso } as any);
+            this.documentoActual.set({ id: resp.idRetencion, autorizacion: resp.autorizacion, clave: resp.claveAcceso, estado: estadoNumerico } as any);
             this.deshabilitado = true;
             this.fechaControl.disable(); this.fechaEmiDocControl.disable();
           }
@@ -503,7 +514,7 @@ export class Retencionesv2Component implements OnInit {
 
         // HTTP 200 + exito === true → autorizado correctamente
         if (resp?.exito === true) {
-          this.documentoActual.set({ id: resp.idRetencion, autorizacion: resp.autorizacion, clave: resp.claveAcceso } as any);
+          this.documentoActual.set({ id: resp.idRetencion, autorizacion: resp.autorizacion, clave: resp.claveAcceso, estado: estadoNumerico } as any);
           this.deshabilitado = true;
           this.fechaControl.disable(); this.fechaEmiDocControl.disable();
           this.mostrarExito(resp.mensaje || 'Retención autorizada correctamente');
@@ -512,7 +523,7 @@ export class Retencionesv2Component implements OnInit {
 
         // Respuesta directa (objeto retención sin envolver — formato legacy)
         if (resp?.id) {
-          this.documentoActual.set(resp);
+          this.documentoActual.set({ ...resp, estado: estadoNumerico });
           this.deshabilitado = true;
           this.fechaControl.disable(); this.fechaEmiDocControl.disable();
           this.mostrarExito('Retención generada correctamente');
@@ -586,6 +597,56 @@ export class Retencionesv2Component implements OnInit {
         this.mostrarError('No se pudo copiar automáticamente. Seleccione la clave y use Ctrl+C.');
       }
     });
+  }
+
+  /**
+   * Visible solo con estado ∈ {3,4,6} (firmada / enviada / no autorizada) — docs/cxc/
+   * API-REENVIAR-RETENCION-AL-SRI.md §3. Con 5 (autorizada) o 1 (creada) no se muestra. La regla
+   * de estados la aplica el backend; esto solo evita el clic obvio, no la duplica.
+   */
+  puedeReenviarSRI(): boolean {
+    const estado = Number(this.documentoActual()?.estado);
+    return [3, 4, 6].includes(estado);
+  }
+
+  reenviarAlSri(): void {
+    const id = this.documentoActual()?.id;
+    if (!id || !this.puedeReenviarSRI() || this.reenviando()) return;
+    if (!window.confirm('Se volverá a enviar el comprobante al SRI. ¿Continuar?')) return;
+
+    this.reenviando.set(true);
+    this.service.reenviarSRI(id).subscribe({
+      next: (resp) => {
+        this.reenviando.set(false);
+        const actual = this.documentoActual();
+        if (actual) {
+          this.documentoActual.set({
+            ...actual,
+            estado: resp?.estado ?? actual.estado,
+            autorizacion: resp?.autorizacion || actual.autorizacion,
+            clave: resp?.clave || actual.clave,
+          });
+        }
+        // El mensaje del backend se muestra TAL CUAL, sin reemplazarlo: trae la causa real que
+        // dio el SRI (p. ej. un fault de su propia infraestructura), no un texto genérico.
+        if (resp?.exito) {
+          this.mostrarExito(resp.mensaje);
+        } else {
+          this.mostrarAdvertencia(resp?.mensaje || 'El SRI no autorizó el reenvío.');
+        }
+      },
+      error: (err) => {
+        this.reenviando.set(false);
+        this.mostrarError(mensajeDeError(err, 'No se pudo reenviar el comprobante al SRI'));
+      },
+    });
+  }
+
+  private extraerEstadoNumerico(resp: any): number | undefined {
+    const valor = resp?.retencion?.estado ?? resp?.estado;
+    if (valor === undefined || valor === null) return undefined;
+    const num = Number(valor);
+    return Number.isNaN(num) ? undefined : num;
   }
 
   estadoLabel(estado: number | null | undefined): string { return Number(estado) === 1 ? 'Activo' : 'Inactivo'; }
