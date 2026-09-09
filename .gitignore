@@ -183,3 +183,8 @@ certificates/
 
 # Documentación generada
 docs/generated/
+
+# Salida de la corrida de tests (Karma/JUnit). Se regenera en cada build y venia
+# generando ruido entre equipos: cada maquina lo reescribia con su hostname y su
+# version de Chrome. Retirado del control de versiones el 2026-09-09.
+test-results.xml
