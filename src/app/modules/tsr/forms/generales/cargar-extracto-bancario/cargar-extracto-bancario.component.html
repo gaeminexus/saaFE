@@ -95,6 +95,12 @@
         Este archivo ya fue cargado previamente (extracto #{{ resumen.idExtractoExistente }}). Si confirma,
         el backend rechazará la carga duplicada.
       </div>
+      } @else if (existeExtractoPrevio) {
+      <div class="alerta alerta-warn">
+        <mat-icon>warning</mat-icon>
+        Esta cuenta y período ya tienen un extracto cargado. Use "Recargar Extracto" para
+        eliminarlo junto con todos sus movimientos y reemplazarlo por este archivo.
+      </div>
       }
 
       <div class="stat-grid">
@@ -163,6 +169,18 @@
       }
     </mat-card-content>
     <mat-card-actions>
+      @if (existeExtractoPrevio) {
+      <button mat-raised-button color="warn" (click)="recargarExtracto()" [disabled]="isRecargando">
+        @if (isRecargando) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        <ng-container>
+          <mat-icon>sync_problem</mat-icon>
+          Recargar Extracto
+        </ng-container>
+        }
+      </button>
+      } @else {
       <button mat-raised-button color="primary" (click)="confirmarCarga()" [disabled]="isConfirmando">
         @if (isConfirmando) {
         <mat-spinner diameter="20"></mat-spinner>
@@ -173,6 +191,7 @@
         </ng-container>
         }
       </button>
+      }
     </mat-card-actions>
   </mat-card>
   }

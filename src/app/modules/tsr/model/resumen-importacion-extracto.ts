@@ -21,4 +21,6 @@ export interface ResumenImportacionExtracto {
     archivoYaCargado: boolean;
     idExtractoExistente: number | null;
     idExtractoCreado?: number | null;
+    /** Sólo en la respuesta de `POST /exbc/recargar/{id}/{idPeriodo}`: el extracto que se borró y reemplazó. */
+    idExtractoAnterior?: number | null;
 }

@@ -106,6 +106,32 @@ export class ExtractoBancarioService {
   }
 
   /**
+   * `POST /exbc/recargar/{idCuentaBancaria}/{idPeriodo}` — borra el extracto anterior de esta
+   * cuenta/período (y todos sus movimientos) y lo reemplaza por el archivo nuevo, saltándose el
+   * rechazo por hash de `confirmarImportacion` (contrato cerrado 2026-09-09, no usa
+   * `DELETE /exbc`: ese endpoint borra sin ninguna validación de conciliados/en tránsito). La
+   * respuesta es el mismo DTO de `/importar/validar`, con `idExtractoCreado`/`idExtractoAnterior`.
+   */
+  recargarImportacion(
+    archivo: File,
+    idCuentaBancaria: number,
+    idPeriodo: number,
+    idEmpresa: number,
+    usuarioCreacion: string
+  ): Observable<ResumenImportacionExtracto | null> {
+    const url = `${ServiciosTsr.RS_EXBC}/recargar/${idCuentaBancaria}/${idPeriodo}`;
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    // encodeURIComponent: ver comentario en validarImportacion().
+    formData.append('archivoNombre', encodeURIComponent(archivo.name));
+    formData.append('idEmpresa', String(idEmpresa));
+    formData.append('usuarioCreacion', usuarioCreacion || '');
+    return this.http
+      .post<ResumenImportacionExtracto>(url, formData)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
    * Manejo centralizado de errores HTTP.
    */
   private handleError(error: HttpErrorResponse): Observable<null> {

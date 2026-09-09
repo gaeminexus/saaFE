@@ -20,6 +20,25 @@ export function textoDeError(error: any, generico = 'No se pudo completar la ope
   return extraeMensaje(error) ?? generico;
 }
 
+/**
+ * Cuánto tiempo dejar un error del backend en pantalla, según lo largo que sea.
+ *
+ * Un mensaje fijo (los 4-6s que se usan en el resto de esta pantalla) alcanza para "Seleccione
+ * una cuenta", pero no para lo que devuelve `/exbc/recargar`: cuántos movimientos están
+ * conciliados o en tránsito y qué hacer para destrabarlo antes de recargar. Un mensaje así
+ * desaparece antes de leerse con una duración fija — mismo criterio que `duracionError()` de
+ * `rrh/forms/comunes/avisos.ts` (no se importa desde ahí para no crear una dependencia cruzada
+ * tsr→rrh por una función de una línea; los números son los mismos).
+ */
+export function duracionErrorTsr(mensaje: string): number {
+  const DURACION_MINIMA = 8000;
+  const DURACION_MAXIMA = 20000;
+  const TIEMPO_BASE = 5000;
+  const MS_POR_CARACTER = 30;
+  const estimada = TIEMPO_BASE + (mensaje ?? '').length * MS_POR_CARACTER;
+  return Math.min(DURACION_MAXIMA, Math.max(DURACION_MINIMA, estimada));
+}
+
 function extraeMensaje(error: any): string | null {
   if (error === null || error === undefined) return null;
 

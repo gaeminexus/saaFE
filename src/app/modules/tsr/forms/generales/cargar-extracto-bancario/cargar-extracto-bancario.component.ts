@@ -1,7 +1,12 @@
 import { Component, OnInit } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -13,7 +18,7 @@ import { ResumenImportacionExtracto } from '../../../model/resumen-importacion-e
 import { ConciliacionContableService } from '../../../service/conciliacion-contable.service';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { ExtractoBancarioService } from '../../../service/extracto-bancario.service';
-import { textoDeError } from '../texto-error';
+import { duracionErrorTsr, textoDeError } from '../texto-error';
 
 @Component({
   selector: 'app-cargar-extracto-bancario',
@@ -42,6 +47,12 @@ export class CargarExtractoBancarioComponent implements OnInit {
   isValidando: boolean = false;
   isConfirmando: boolean = false;
 
+  // ── Recarga de un extracto existente (2026-09-09) ──
+  /** La cuenta/período elegidos ya tienen un extracto cargado — viene de `extractoCargado` del resumen de conciliación contable, no de un endpoint nuevo. */
+  existeExtractoPrevio: boolean = false;
+  isVerificandoExtractoPrevio: boolean = false;
+  isRecargando: boolean = false;
+
   constructor(
     private cuentaBancariaService: CuentaBancariaService,
     private extractoBancarioService: ExtractoBancarioService,
@@ -51,6 +62,7 @@ export class CargarExtractoBancarioComponent implements OnInit {
     private usuarioService: UsuarioService,
     private snackBar: MatSnackBar,
     private router: Router,
+    private dialog: MatDialog,
     private funcionesDatosService: FuncionesDatosService
   ) {}
 
@@ -151,10 +163,45 @@ export class CargarExtractoBancarioComponent implements OnInit {
 
   onCuentaChange(): void {
     this.limpiarResultados();
+    this.verificarExtractoExistente();
   }
 
   onPeriodoChange(): void {
     this.limpiarResultados();
+    this.verificarExtractoExistente();
+  }
+
+  /**
+   * ¿La cuenta/período elegidos ya tienen un extracto cargado? Reusa `resumenPorPeriodo` — el
+   * mismo endpoint del que `conciliacion-contable` saca `extractoCargado` por cuenta — en vez de
+   * pedirle un endpoint nuevo al backend. Sin esto, la pantalla sólo se entera de que ya existe
+   * un extracto cuando el HASH del archivo coincide (`resumen.archivoYaCargado`, que valida
+   * `/importar/validar` DESPUÉS de elegir el archivo); esta verificación corre apenas se elige
+   * cuenta/período, así que el botón "Recargar" ya aparece antes incluso de tocar el archivo.
+   */
+  private verificarExtractoExistente(): void {
+    this.existeExtractoPrevio = false;
+    const empresa = this.appStateService.getEmpresa();
+    if (!empresa?.codigo || !this.cuentaSeleccionada || !this.periodoSeleccionado) {
+      return;
+    }
+
+    this.isVerificandoExtractoPrevio = true;
+    this.conciliacionContableService.resumenPorPeriodo(empresa.codigo, this.periodoSeleccionado).subscribe({
+      next: (resumen) => {
+        this.isVerificandoExtractoPrevio = false;
+        const fila = (Array.isArray(resumen) ? resumen : []).find(
+          (f) => f.cuentaBancaria?.codigo === this.cuentaSeleccionada
+        );
+        this.existeExtractoPrevio = !!fila?.extractoCargado;
+      },
+      error: () => {
+        this.isVerificandoExtractoPrevio = false;
+        // No se sabe con certeza si ya hay un extracto: se deja el botón normal de "Confirmar
+        // carga" (comportamiento de hoy) en vez de asumir que hay que recargar.
+        this.existeExtractoPrevio = false;
+      },
+    });
   }
 
   onFileSelected(event: Event): void {
@@ -249,6 +296,76 @@ export class CargarExtractoBancarioComponent implements OnInit {
           this.snackBar.open(`Error al confirmar carga: ${textoDeError(error)}`, 'Cerrar', {
             duration: 6000,
           });
+        },
+      });
+  }
+
+  /**
+   * `POST /exbc/recargar/{idCuentaBancaria}/{idPeriodo}` — borra el extracto anterior de esta
+   * cuenta/período y sus movimientos, y los reemplaza por el archivo nuevo. El flujo de
+   * validación previo (`validarArchivo()`) sigue corriendo igual: esto sólo cambia lo que hace
+   * el botón final, nunca se salta la vista del resumen.
+   */
+  recargarExtracto(): void {
+    if (!this.cuentaSeleccionada || !this.periodoSeleccionado || !this.archivoSeleccionado || !this.resumen) {
+      return;
+    }
+
+    const empresa = this.appStateService.getEmpresa();
+    if (!empresa?.codigo) {
+      this.snackBar.open('No se pudo determinar la empresa actual', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    const data: ConfirmDialogData = {
+      title: 'Recargar extracto',
+      message:
+        'Se ELIMINARÁ el extracto anterior de esta cuenta y período, y TODOS sus movimientos, ' +
+        'y se reemplazarán por los del archivo nuevo. Esto no se puede deshacer.',
+      type: 'danger',
+      confirmText: 'Sí, recargar',
+    };
+
+    this.dialog
+      .open(ConfirmDialogComponent, { width: '480px', data })
+      .afterClosed()
+      .subscribe((confirmado: boolean) => {
+        if (!confirmado) return;
+        this.ejecutarRecarga(empresa.codigo);
+      });
+  }
+
+  private ejecutarRecarga(idEmpresa: number): void {
+    if (!this.cuentaSeleccionada || !this.periodoSeleccionado || !this.archivoSeleccionado) {
+      return;
+    }
+    const usuario = this.usuarioService.getUsuarioLog();
+
+    this.isRecargando = true;
+    this.extractoBancarioService
+      .recargarImportacion(
+        this.archivoSeleccionado,
+        this.cuentaSeleccionada,
+        this.periodoSeleccionado,
+        idEmpresa,
+        usuario?.nombre || ''
+      )
+      .subscribe({
+        next: (resultado) => {
+          this.isRecargando = false;
+          this.cargaExitosa = true;
+          this.idExtractoCreado = resultado?.idExtractoCreado ?? null;
+          this.snackBar.open(
+            `Extracto recargado: ${resultado?.totalFilas ?? 0} movimiento(s) cargado(s)` +
+              (resultado?.idExtractoAnterior ? ` (reemplazó al extracto #${resultado.idExtractoAnterior})` : ''),
+            'Cerrar',
+            { duration: 6000 }
+          );
+        },
+        error: (error) => {
+          this.isRecargando = false;
+          const mensaje = textoDeError(error, 'No se pudo recargar el extracto');
+          this.snackBar.open(mensaje, 'Cerrar', { duration: duracionErrorTsr(mensaje) });
         },
       });
   }
