@@ -144,6 +144,7 @@ export class InformesMensualesCreditoComponent implements OnInit {
 
   private readonly colsCCPM: ColumnaTabla[] = [
     { campo: 'identificacion',             header: 'Identificación' },
+    { campo: 'razonSocial',                header: 'Partícipe' },
     { campo: 'numeroOperacion',            header: 'Operación' },
     { campo: 'tipoCredito',               header: 'Tipo Créd.' },
     { campo: 'diasMorosidad',             header: 'Días Mora',       esNumero: true },
@@ -168,6 +169,8 @@ export class InformesMensualesCreditoComponent implements OnInit {
     { campo: 'valorIncendio',            header: 'Incendio',         esNumero: true },
     { campo: 'fechaExigibilidad',        header: 'Fec. Exigib.',     esFecha: true },
     { campo: 'fechaPrestamo',            header: 'Fec. Préstamo',    esFecha: true },
+    { campo: 'fechaVencimiento',         header: 'Fec. Vencim.',     esFecha: true },
+    { campo: 'montoSolicitado',          header: 'Monto Solicitado', esNumero: true },
   ];
 
   constructor(

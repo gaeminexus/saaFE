@@ -70,4 +70,11 @@ export interface Ccpm {
   ejecucionReporte: { codigo: number; mes: number; anio: number };
 
   fechaPrestamo: any; // Fecha de desembolso del préstamo (campo adicional vs G48)
+
+  /** CCPMRZSC – Nombre / razón social del partícipe */
+  razonSocial: string | null;
+  /** CCPMFCVN – Fecha de vencimiento del préstamo (vencimiento de la última cuota) */
+  fechaVencimiento: any;
+  /** CCPMMNSL – Monto solicitado del préstamo */
+  montoSolicitado: number | null;
 }
