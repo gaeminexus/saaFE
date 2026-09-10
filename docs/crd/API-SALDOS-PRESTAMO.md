@@ -63,7 +63,7 @@ existe **no** aparece en la respuesta (no es error).
 | `idPrestamo` | `number` | `PRSTCDGO` |
 | `saldoCapital` | `number` | Σ `SaldosCuota.saldoCapital` sobre las cuotas pendientes del préstamo (las que devuelve `selectCuotasPendientesByPrestamoOrdenadas`). Redondeado a 2 decimales. |
 | `saldoTotal` | `number` | Exactamente `calcularTotalPendientePrestamo(id)`: Σ `getTotalPendiente()` sobre las mismas cuotas. |
-| `capitalPagado` | `number` | **Regla mixta, por estado de la cuota** (decisión del usuario, 2026-09-10 — ver §3bis). Cuota **liquidada** (`DTPRESTD` 4 PAGADA o 7 CANCELADA_ANTICIPADA) → aporta el **capital de la cuota** (`DTPRCPTL`). Cuota **no liquidada** (parcial, en mora, pendiente, o estado nulo) → aporta el **capital abonado en `PGPR`** (`SUM(PGPRCPPG)` de sus pagos vigentes). La columna en pantalla se llama **«Capital Pagado»**. ⛔ NO es la suma de los seis componentes ni `PGPRVLRR`: incluirían interés, mora y seguros, y la fila dejaría de cuadrar. Se obtiene con **dos `SUM(...) GROUP BY`** en la base — una fila por préstamo cada uno, nunca las filas de pagos. |
+| `capitalPagado` | `number` | **Regla por ESTADO de la cuota** (decisión del usuario, 2026-09-10 — ver §3bis y la tabla de estados). Liquidada (4, 7) → el **capital de la cuota**. Parcial (6) o en mora (5) → el **abonado en `PGPR`**. **Cualquier otro estado, incluido PENDIENTE y el nulo → 0, aunque tenga pagos registrados.** La columna en pantalla se llama **«Capital Pagado»**. ⛔ NO es la suma de los seis componentes ni `PGPRVLRR`. Se obtiene con **dos `SUM(...) GROUP BY`** en la base — una fila por préstamo cada uno, nunca las filas de pagos. |
 | `cuotasEnMora` | `number` | Cuotas pendientes con `fechaVencimiento < inicio del día de hoy` — el mismo criterio del proceso diario de mora (`DTPRFCVN < corte`, estado no PAGADA ni CANCELADA_ANTICIPADA). La cuota que vence hoy **no** está en mora. |
 
 **Préstamos en estado terminal** (cancelado, etc.): se devuelven igual, con lo que sumen sus cuotas
@@ -83,17 +83,52 @@ parcial. Una primera versión sumaba `PGPRCPPG` de todos los pagos y devolvía d
 los préstamos migrados cuyas cuotas figuran pagadas sin pago registrado. Se detectó en préstamos
 con **cuota 0**, pero la causa no es la cuota 0: es la migración.
 
-⭐ **La regla mantiene la fila cuadrada, y ése es el argumento que la sostiene.** El motor calcula
-el saldo **sólo sobre las cuotas no liquidadas**, así que:
+### Tabla de estados — qué aporta cada cuota
+
+Segunda aclaración del usuario (2026-09-10): *«para el caso de cuotas en estado pendientes, ahí
+aunque exista un valor de pago, se debe asumir que todo el capital de esa cuota no fue pagado»*.
+
+| `DTPRESTD` | Estado | Aporta a `capitalPagado` |
+|---|---|---|
+| 4 | PAGADA | **`DTPRCPTL`** (capital de la cuota) |
+| 7 | CANCELADA_ANTICIPADA | **`DTPRCPTL`** |
+| 5 | EN_MORA | **`SUM(PGPRCPPG)`** de sus pagos vigentes |
+| 6 | PARCIAL | **`SUM(PGPRCPPG)`** de sus pagos vigentes |
+| 1 | PENDIENTE | **0** — aunque tenga pagos registrados |
+| 0, 2, 3, 8, `NULL` | RAIZ, ACTIVA, EMITIDA, VENCIDA, sin estado | **0** (supuesto del árbitro, ver abajo) |
+
+⚠️ **Los estados de la última fila son un supuesto, no una decisión explícita del usuario.** Él
+nombró pagada, parcial, mora y pendiente. Se resolvió que **sólo 5 y 6 consultan `PGPR`** y todo lo
+demás aporta 0, porque es lo conservador: no inflar el capital pagado con datos de una migración
+que no son confiables. **`VENCIDA` (8) y el estado nulo son los dos candidatos a revisar** si al
+medir aparecen muchas cuotas ahí con pagos reales.
+
+### ⚠️ La consecuencia de excluir PENDIENTE: la fila puede no cuadrar, y es a propósito
+
+El motor calcula el saldo de **toda** cuota no liquidada como `capital − abonado en PGPR`,
+**incluidas las pendientes**. Como `capitalPagado` ignora lo abonado en una cuota pendiente, en un
+préstamo donde eso ocurra:
 
 ```
-Σ capital de cuotas liquidadas  +  Σ abonado en PGPR de las no liquidadas   (= capitalPagado)
-+ Σ (capital − abonado) de las no liquidadas                                (= saldoCapital)
-= Σ capital de todas las cuotas                                             (= capital del préstamo)
+Monto − Capital Pagado  >  Saldo Capital     (por el monto del pago ignorado)
 ```
+
+Para las cuotas liquidadas, parciales y en mora la identidad se mantiene exacta:
+
+```
+Σ capital(liquidadas) + Σ abonado(parciales y mora)      (= capitalPagado)
++ Σ (capital − abonado)(no liquidadas)                   (= saldoCapital)
+= Σ capital(todas)                                       (= capital del préstamo)
+```
+
+**Se acepta la diferencia a propósito:** una cuota PENDIENTE con pago registrado es un dato
+anómalo de la migración (si se hubiera pagado algo, estaría PARCIAL), y el usuario prefiere no
+contarlo como capital pagado antes que inflar la cifra. ⛔ **No se «arregla» haciendo que el motor
+ignore esos pagos en el saldo**: el saldo lo consumen otras pantallas y procesos de pago, y
+cambiarlo ahí tendría alcance mucho mayor que esta columna.
 
 Cualquier otra combinación —sumar `PGPR` también en las liquidadas, o el capital también en las
-parciales— rompe esa identidad y hace que **Monto − Capital Pagado ≠ Saldo Capital** en pantalla.
+parciales— sí es un error: rompe la identidad para el caso normal, no sólo para el anómalo.
 
 ⚠️ **`CANCELADA_ANTICIPADA` (7) cuenta como liquidada**, igual que `PAGADA` (4): en una
 precancelación el capital se paga. Es el mismo par de estados que ya usan
