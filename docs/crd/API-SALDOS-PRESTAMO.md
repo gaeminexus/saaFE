@@ -112,6 +112,12 @@ pendientes (normalmente 0). No se filtra por estado del préstamo: la pantalla y
 - **Fecha de corte de `cuotasEnMora`**: `LocalDate.now().atStartOfDay()` del servidor. Si el
   servidor está en UTC, el corte se corre cinco horas (mismo riesgo ya señalado para el timer de
   mora). No inventar una zona en el código: usar la misma convención que `ProcesoMoraPrestamo`.
-- El cálculo es **por préstamo, en bucle**: para una página de 100 filas son 100 lecturas de
-  cuotas. Es el precio de reusar la lógica del motor en vez de replicarla; una exportación de miles
-  de filas va a tardar segundos, no milisegundos. Aceptado a propósito.
+- ⛔ **El cálculo va EN LOTE, y no es optativo.** La primera versión (2026-09-10, `20b10b49`)
+  llamaba `calcularSaldosCuota(cuota)` por cuota, y ese método del motor **consulta los pagos de
+  cada cuota** (`selectVigentesByIdDetallePrestamo`, `MotorPagoPrestamoServiceImpl:116`): una
+  página de 100 préstamos eran miles de consultas y la pantalla quedó inusable. El árbitro aceptó
+  «una lectura de cuotas por préstamo» sin verificar qué hacía el método por dentro. La versión
+  vigente trae en **tres consultas** los préstamos existentes, todas las cuotas pendientes y todos
+  los pagos vigentes (fragmentando los `IN` de a 900 por el tope de Oracle), y calcula en memoria
+  con la sobrecarga pura `calcularSaldosCuota(cuota, pagosVigentes)`, que es la misma matemática.
+  Si alguien vuelve al bucle «porque es más simple», reaparece el problema.
