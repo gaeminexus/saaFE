@@ -12,6 +12,8 @@ import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-
 import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 
 import { CuentaBancaria } from '../../../tsr/model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../tsr/service/cuenta-bancaria.service';
@@ -148,6 +150,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private funcionesDatos = inject(FuncionesDatosService);
   private comprobantes = inject(ComprobanteCobroService);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
 
   // ---- búsqueda ----
@@ -1414,6 +1417,9 @@ export class CobrosPersonalesComponent implements OnDestroy {
         ];
         const esMultilinea = prestamos.length > 1 || aportes.length > 0;
 
+        // No se verifica: muestra el resultado del cobro que el `.subscribe()` de arriba ya
+        // registró (recibe los datos por parámetro, sin llamada propia al backend) — no abre una
+        // funcionalidad nueva. Mismo criterio que los diálogos de error de cxp/gestion-documentos.
         this.dialog.open(CobroRegistradoDialogComponent, {
           data: {
             tipoOperacion,
@@ -1609,6 +1615,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
       extras.push({ label: 'Archivado en', valor: rutaComprobante });
     }
 
+    // No se verifica: `mostrarRecibo` recibe el resultado de una operación ya autorizada por
+    // parámetro y solo lo muestra, sin llamada propia al backend — no abre una funcionalidad nueva.
     this.dialog.open(ReciboOperacionDialogComponent, {
       data: {
         tipo,
@@ -1701,43 +1709,61 @@ export class CobrosPersonalesComponent implements OnDestroy {
   abrirPago(modoInicial: 'efectivo' | 'aportes' = 'efectivo'): void {
     const contexto = this.contextoActual();
     if (!contexto) return;
-    this.dialog
-      .open(PagoPrestamoDialogComponent, {
-        data: { ...contexto, modoInicial },
-        width: '780px',
-        maxWidth: '96vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(salida));
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_COBROS_PERSONALES_PAGO_DE_PRESTAMO,
+      () => {
+        this.dialog
+          .open(PagoPrestamoDialogComponent, {
+            data: { ...contexto, modoInicial },
+            width: '780px',
+            maxWidth: '96vw',
+            autoFocus: false,
+          })
+          .afterClosed()
+          .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(salida));
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirAbonoCapital(): void {
     const contexto = this.contextoActual();
     if (!contexto) return;
-    this.dialog
-      .open(AbonoCapitalDialogComponent, {
-        data: { ...contexto, valorSugerido: this.valorSugeridoParaDialogo() },
-        width: '820px',
-        maxWidth: '96vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(salida));
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_COBROS_PERSONALES_ABONO_A_CAPITAL,
+      () => {
+        this.dialog
+          .open(AbonoCapitalDialogComponent, {
+            data: { ...contexto, valorSugerido: this.valorSugeridoParaDialogo() },
+            width: '820px',
+            maxWidth: '96vw',
+            autoFocus: false,
+          })
+          .afterClosed()
+          .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(salida));
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirPrecancelacion(): void {
     const contexto = this.contextoActual();
     if (!contexto) return;
-    this.dialog
-      .open(PrecancelacionDialogComponent, {
-        data: contexto,
-        width: '820px',
-        maxWidth: '96vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(salida));
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_COBROS_PERSONALES_PRECANCELACION,
+      () => {
+        this.dialog
+          .open(PrecancelacionDialogComponent, {
+            data: contexto,
+            width: '820px',
+            maxWidth: '96vw',
+            autoFocus: false,
+          })
+          .afterClosed()
+          .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(salida));
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirHistorial(): void {

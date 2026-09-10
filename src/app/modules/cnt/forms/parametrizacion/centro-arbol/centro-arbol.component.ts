@@ -7,6 +7,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTreeNestedDataSource } from '@angular/material/tree';
 
 import { CentroCostoUtilsService } from '../../../../../shared/services/centro-costo-utils.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { CentroCosto } from '../../../model/centro-costo';
 import { CentroCostoService } from '../../../service/centro-costo.service';
 import { CentroArbolFormComponent } from './centro-arbol-form.component';
@@ -48,7 +50,8 @@ export class CentroArbolComponent implements OnInit {
     private centroCostoService: CentroCostoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private centroUtils: CentroCostoUtilsService
+    private centroUtils: CentroCostoUtilsService,
+    private permisosService: PermisosService
   ) {}
 
   ngOnInit(): void {
@@ -269,22 +272,28 @@ export class CentroArbolComponent implements OnInit {
       presetCodigo,
     });
 
-    const dialogRef = this.dialog.open(CentroArbolFormComponent, {
-      width: '720px',
-      disableClose: true,
-      data: {
-        item: null,
-        parent: parent ? this.findCentroCostoByNode(parent) : null,
-        presetNumero: presetNumero,
-        presetNivel,
-        maxDepth: this.getMaxDepthAllowed(),
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_FORMULARIO_CENTRO_ARBOL,
+      () => {
+        const dialogRef = this.dialog.open(CentroArbolFormComponent, {
+          width: '720px',
+          disableClose: true,
+          data: {
+            item: null,
+            parent: parent ? this.findCentroCostoByNode(parent) : null,
+            presetNumero: presetNumero,
+            presetNivel,
+            maxDepth: this.getMaxDepthAllowed(),
+          },
+        });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.loadData();
+          }
+        });
       },
-    });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadData();
-      }
-    });
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -302,22 +311,28 @@ export class CentroArbolComponent implements OnInit {
       presetCodigo,
     });
 
-    const dialogRef = this.dialog.open(CentroArbolFormComponent, {
-      width: '720px',
-      disableClose: true,
-      data: {
-        item: null,
-        parent: null, // Sin padre para nivel 1
-        presetNumero: presetNumero,
-        presetNivel,
-        maxDepth: this.getMaxDepthAllowed(),
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_FORMULARIO_CENTRO_ARBOL,
+      () => {
+        const dialogRef = this.dialog.open(CentroArbolFormComponent, {
+          width: '720px',
+          disableClose: true,
+          data: {
+            item: null,
+            parent: null, // Sin padre para nivel 1
+            presetNumero: presetNumero,
+            presetNivel,
+            maxDepth: this.getMaxDepthAllowed(),
+          },
+        });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.loadData();
+          }
+        });
       },
-    });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadData();
-      }
-    });
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -339,16 +354,22 @@ export class CentroArbolComponent implements OnInit {
   onEdit(node: CentroCostoNode): void {
     const centroCosto = this.findCentroCostoByNode(node);
     if (!centroCosto) return;
-    const dialogRef = this.dialog.open(CentroArbolFormComponent, {
-      width: '720px',
-      disableClose: true,
-      data: { item: centroCosto, parent: null },
-    });
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadData();
-      }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_FORMULARIO_CENTRO_ARBOL,
+      () => {
+        const dialogRef = this.dialog.open(CentroArbolFormComponent, {
+          width: '720px',
+          disableClose: true,
+          data: { item: centroCosto, parent: null },
+        });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.loadData();
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   onDelete(node: CentroCostoNode): void {

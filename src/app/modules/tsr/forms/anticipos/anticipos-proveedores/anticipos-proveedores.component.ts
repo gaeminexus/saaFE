@@ -21,6 +21,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 @Component({
   selector: 'app-anticipos-proveedores',
@@ -39,6 +41,7 @@ export class AnticiposProveedoresComponent {
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
   private exportService = inject(ExportService);
+  private permisosService = inject(PermisosService);
 
   private readonly ROL_PROVEEDOR = 2;
   private readonly RUBRO_ROL_P = 55;
@@ -446,17 +449,23 @@ export class AnticiposProveedoresComponent {
 
   private abrirDialogoAnulacion(id: number, anticipo: any,
                                 verificacion: VerificacionAnulacionAnticipo): void {
-    const ref = this.dialog.open(AnularAnticipoDialogComponent, {
-      width: '640px',
-      maxWidth: '96vw',
-      disableClose: true,
-      data: { tipo: 'proveedor', anticipo, verificacion },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_PROVEEDORES_ANULAR_ANTICIPO,
+      () => {
+        const ref = this.dialog.open(AnularAnticipoDialogComponent, {
+          width: '640px',
+          maxWidth: '96vw',
+          disableClose: true,
+          data: { tipo: 'proveedor', anticipo, verificacion },
+        });
 
-    ref.afterClosed().subscribe((res: AnularAnticipoDialogResult | null) => {
-      if (!res) return;
-      this.ejecutarAnulacion(id, anticipo, res);
-    });
+        ref.afterClosed().subscribe((res: AnularAnticipoDialogResult | null) => {
+          if (!res) return;
+          this.ejecutarAnulacion(id, anticipo, res);
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 5000 }),
+    );
   }
 
   private ejecutarAnulacion(id: number, anticipo: any, res: AnularAnticipoDialogResult): void {

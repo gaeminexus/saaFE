@@ -17,6 +17,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PagoCuotaDialogComponent } from './pago-cuota-dialog.component';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 
 import { BancoExterno } from '../../../tsr/model/banco-externo.model';
 import { CuentaAsoprep } from '../../model/cuenta-asoprep';
@@ -71,6 +73,7 @@ export class PagoCuotasComponent implements OnInit {
   private bancoExternoService = inject(BancoExternoService);
   private exportService = inject(ExportService);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -577,35 +580,41 @@ export class PagoCuotasComponent implements OnInit {
           return;
         }
 
-        const dialogRef = this.dialog.open(PagoCuotaDialogComponent, {
-          width: '650px',
-          maxWidth: '95vw',
-          disableClose: true,
-          data: {
-            prestamo,
-            detallePrestamo: detalle,
-            bancos: bancosActivos,
-            cuentasAsoprep: cuentasAsoprep,
+        this.permisosService.ejecutarSiPermitido(
+          Permisos.CRD_PAGO_DE_CUOTA,
+          () => {
+            const dialogRef = this.dialog.open(PagoCuotaDialogComponent, {
+              width: '650px',
+              maxWidth: '95vw',
+              disableClose: true,
+              data: {
+                prestamo,
+                detallePrestamo: detalle,
+                bancos: bancosActivos,
+                cuentasAsoprep: cuentasAsoprep,
+              },
+            });
+
+            dialogRef.afterClosed().subscribe((result: DatosPago | undefined) => {
+              if (result) {
+                console.log('Datos de pago recibidos:', result);
+                const destinoPago = detalle
+                  ? `cuota #${detalle.numeroCuota} del préstamo #${prestamo.idAsoprep}`
+                  : `préstamo #${prestamo.idAsoprep}`;
+
+                this.snackBar.open(
+                  `Pago de $${result.monto.toFixed(2)} registrado exitosamente para ${destinoPago}`,
+                  'Cerrar',
+                  { duration: 3000 }
+                );
+                // TODO: Enviar datos al backend para procesar el pago
+                // TODO: Refrescar lista de préstamos después del pago
+                // this.cargarPrestamos();
+              }
+            });
           },
-        });
-
-        dialogRef.afterClosed().subscribe((result: DatosPago | undefined) => {
-          if (result) {
-            console.log('Datos de pago recibidos:', result);
-            const destinoPago = detalle
-              ? `cuota #${detalle.numeroCuota} del préstamo #${prestamo.idAsoprep}`
-              : `préstamo #${prestamo.idAsoprep}`;
-
-            this.snackBar.open(
-              `Pago de $${result.monto.toFixed(2)} registrado exitosamente para ${destinoPago}`,
-              'Cerrar',
-              { duration: 3000 }
-            );
-            // TODO: Enviar datos al backend para procesar el pago
-            // TODO: Refrescar lista de préstamos después del pago
-            // this.cargarPrestamos();
-          }
-        });
+          (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+        );
       },
       error: () => {
         this.snackBar.open('No se pudo cargar la tabla de banco externo', 'Cerrar', {
@@ -971,6 +980,8 @@ export class PagoCuotasComponent implements OnInit {
    * Regresa a la pantalla anterior
    */
   regresarAPantallaAnterior(): void {
+    // Navegación relativa de regreso ('../') — regla del árbitro: en cada par A⇄B se verifica la
+    // ida, no la vuelta. No se cablea.
     this.router.navigate(['../'], { relativeTo: this.route });
   }
 

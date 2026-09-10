@@ -1,3 +1,5 @@
+import { Permisos } from '../../../shared/model/permisos';
+
 /** Tipo de documento que originó el pago con el que se giró el cheque. */
 export type TipoPagoCheque = 'FACTURA' | 'EGRESO' | 'ANTICIPO' | 'EXTERNO';
 
@@ -56,6 +58,8 @@ export interface ChequeSiguiente {
 export interface DestinoVerPago {
   ruta: string;
   queryParams?: Record<string, any>;
+  /** Permiso de la pantalla destino (ver docs/seguridad/ITEM7-MAPEO-BOTONES-PERMISOS.md) — cambia según `tipoPago`, por eso viaja acá y no como valor fijo en cada componente. */
+  idPermiso: number;
 }
 
 /**
@@ -71,11 +75,11 @@ export function destinoVerPago(tipoPago: TipoPagoCheque | null, idDocumento: num
   const queryParams = idDocumento != null ? { id: idDocumento } : undefined;
   switch (tipoPago) {
     case 'FACTURA':
-      return { ruta: '/menucuentaxpagar/procesos/consulta-documentos', queryParams: idDocumento != null ? { idFactura: idDocumento } : undefined };
+      return { ruta: '/menucuentaxpagar/procesos/consulta-documentos', queryParams: idDocumento != null ? { idFactura: idDocumento } : undefined, idPermiso: Permisos.CXP_CONSULTA_DOCUMENTOS };
     case 'EGRESO':
-      return { ruta: '/menutesoreria/procesos/registrar/egresos', queryParams };
+      return { ruta: '/menutesoreria/procesos/registrar/egresos', queryParams, idPermiso: Permisos.TSR_EGRESOS };
     case 'ANTICIPO':
-      return { ruta: '/menutesoreria/procesos/anticipos/proveedores', queryParams };
+      return { ruta: '/menutesoreria/procesos/anticipos/proveedores', queryParams, idPermiso: Permisos.TSR_PROVEEDORES };
     default:
       return null;
   }

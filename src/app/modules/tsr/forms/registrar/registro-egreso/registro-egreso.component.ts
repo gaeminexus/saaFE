@@ -29,6 +29,8 @@ import { CuentaBancariaTitular } from '../../../model/cuenta-bancaria-titular';
 import { ESTADO_EGRESO_LABELS, Egreso, EstadoEgresoTesoreria } from '../../../model/egreso';
 import { Titular } from '../../../model/titular';
 import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-titular.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { EgresoService } from '../../../service/egreso.service';
 
 /**
@@ -61,6 +63,7 @@ export class RegistroEgresoComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private permisosService = inject(PermisosService);
 
   private readonly ROL_PROVEEDOR = 2;
   readonly FormaPagoAplicacion = FormaPagoAplicacion;
@@ -375,7 +378,11 @@ export class RegistroEgresoComponent implements OnInit {
 
   /** El pago del egreso se aprueba desde la pantalla de aprobación de pagos. */
   irAPagos(): void {
-    this.router.navigate(['/menutesoreria/pagos/aprobacion']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_APROBACION_DE_PAGOS,
+      () => this.router.navigate(['/menutesoreria/pagos/aprobacion']),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   // ═══ b) CONSULTA ════════════════════════════════════════

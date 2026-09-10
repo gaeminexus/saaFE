@@ -12,6 +12,8 @@ import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.s
 import { EstadoPagoProgramado } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 /**
  * T2 del circuito de pagos por transferencia
@@ -36,6 +38,7 @@ export class ArchivoBancoComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private permisosService = inject(PermisosService);
 
   cuentasBancarias = signal<CuentaBancaria[]>([]);
 
@@ -276,11 +279,19 @@ export class ArchivoBancoComponent implements OnInit {
 
   /** T3 junta carga de respuesta y confirmación manual: un solo destino para ambas. */
   irAConfirmacion(idLote: number): void {
-    this.router.navigate(['/menutesoreria/pagos/confirmacion'], { queryParams: { idLote } });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_RECEPCION_Y_CONFIRMACION,
+      () => this.router.navigate(['/menutesoreria/pagos/confirmacion'], { queryParams: { idLote } }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   irAConsulta(): void {
-    this.router.navigate(['/menutesoreria/pagos/consulta']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_CONSULTA_Y_GESTION,
+      () => this.router.navigate(['/menutesoreria/pagos/consulta']),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   formatearFecha(fecha: any): string {

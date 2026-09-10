@@ -11,6 +11,8 @@ import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/ti
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { PermisoLicencia } from '../../../model/permiso-licencia';
 import { EmpleadoService } from '../../../service/empleado.service';
 import { PermisoLicenciaService } from '../../../service/permiso-licencia.service';
@@ -48,6 +50,7 @@ export class PermisosLicenciasListComponent implements OnInit {
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private funcionesDatosS = inject(FuncionesDatosService);
+  private permisosService = inject(PermisosService);
 
   @ViewChild('fechaInicioInput', { read: ElementRef }) fechaInicioInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('fechaFinInput', { read: ElementRef }) fechaFinInputRef!: ElementRef<HTMLInputElement>;
@@ -341,32 +344,44 @@ export class PermisosLicenciasListComponent implements OnInit {
   }
 
   openForm(mode: 'new' | 'edit' | 'view', data?: PermisoLicencia): void {
-    const dialogRef = this.dialog.open(PermisosLicenciasFormComponent, {
-      width: '900px',
-      maxHeight: '90vh',
-      data: { mode, data },
-      disableClose: true,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_PERMISO,
+      () => {
+        const dialogRef = this.dialog.open(PermisosLicenciasFormComponent, {
+          width: '900px',
+          maxHeight: '90vh',
+          data: { mode, data },
+          disableClose: true,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.buscar();
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.buscar();
+          }
+        });
+      },
+      (mensaje) => this.showError(mensaje.toUpperCase()),
+    );
   }
 
   openApprovalDialog(row: PermisoLicencia, action: 'aprobar' | 'rechazar' | 'cancelar'): void {
-    const dialogRef = this.dialog.open(PermisosAprobacionDialogComponent, {
-      width: '500px',
-      data: { permiso: row, action },
-      disableClose: true,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_APROBACION_DE_PERMISOS,
+      () => {
+        const dialogRef = this.dialog.open(PermisosAprobacionDialogComponent, {
+          width: '500px',
+          data: { permiso: row, action },
+          disableClose: true,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.buscar();
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.buscar();
+          }
+        });
+      },
+      (mensaje) => this.showError(mensaje.toUpperCase()),
+    );
   }
 
   onPageChange(event: PageEvent): void {

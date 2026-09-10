@@ -24,6 +24,8 @@ import { JasperReportesService } from '../../../../../shared/services/jasper-rep
 import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -150,6 +152,7 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private permisosService = inject(PermisosService);
 
   readonly ESTADO_CIERRE_CONCILIACION = ESTADO_CIERRE_CONCILIACION;
 
@@ -286,7 +289,11 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
 
   /** Consulta y gestión no filtra todavía por `idPago` — el queryParam queda listo para cuando esa pantalla lo lea. */
   irAConsultaPago(idPago: number): void {
-    this.router.navigate(['/menutesoreria/pagos/consulta'], { queryParams: { idPago } });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_CONSULTA_Y_GESTION,
+      () => this.router.navigate(['/menutesoreria/pagos/consulta'], { queryParams: { idPago } }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   // ── Tabla "Conciliados del mes" — matSort + paginador (85 filas típicas) ──

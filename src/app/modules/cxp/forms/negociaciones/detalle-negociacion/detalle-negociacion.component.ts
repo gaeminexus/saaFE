@@ -13,6 +13,8 @@ import { PagoNegociacion } from '../../../model/pago-negociacion';
 import { AdendumNegociacion } from '../../../model/adendum-negociacion';
 import { PathNegociacion } from '../../../model/path-negociacion';
 import { NegociacionProveedorService } from '../../../service/negociacion-proveedor.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { FormaPagoNegociacionService } from '../../../service/forma-pago-negociacion.service';
 import { PagoNegociacionService } from '../../../service/pago-negociacion.service';
 import { AdendumNegociacionService } from '../../../service/adendum-negociacion.service';
@@ -45,6 +47,7 @@ export class DetalleNegociacionComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private negService = inject(NegociacionProveedorService);
+  private permisosService = inject(PermisosService);
   private cuotaService = inject(FormaPagoNegociacionService);
   private pagoService = inject(PagoNegociacionService);
   private adendumService = inject(AdendumNegociacionService);
@@ -93,6 +96,8 @@ export class DetalleNegociacionComponent implements OnInit {
     if (this.idNegociacion) this.cargarTodo();
   }
 
+  // Vuelta a Negociaciones (la ida ya se verifica en negociaciones.component.ts:171/239) —
+  // no se verifica, regla "ida sí, vuelta no" (ÍTEM 7 de seguridades).
   volver(): void { this.router.navigate(['/menucuentaxpagar/negociaciones']); }
 
   cargarTodo(): void {
@@ -243,9 +248,15 @@ export class DetalleNegociacionComponent implements OnInit {
 
   abrirRegistrarPago(cuota: CuotaConPagos): void {
     const data: PagoDialogData = { cuota, idUsuario: this.idUsuario };
-    this.dialog.open(PagoDialogComponent, { width: '700px', maxWidth: '98vw', data }).afterClosed().subscribe(guardado => {
-      if (guardado) { this.mostrarExito('Pago registrado'); this.cargarTodo(); }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_PAGO,
+      () => {
+        this.dialog.open(PagoDialogComponent, { width: '700px', maxWidth: '98vw', data }).afterClosed().subscribe(guardado => {
+          if (guardado) { this.mostrarExito('Pago registrado'); this.cargarTodo(); }
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   eliminarPago(p: PagoNegociacion): void {
@@ -257,9 +268,15 @@ export class DetalleNegociacionComponent implements OnInit {
 
   abrirAdendum(ad?: AdendumNegociacion): void {
     const data: AdendumDialogData = { negociacion: this.negociacion()!, valorVigente: this.valorVigente(), adendum: ad || null, idUsuario: this.idUsuario };
-    this.dialog.open(AdendumDialogComponent, { width: '700px', maxWidth: '98vw', data }).afterClosed().subscribe(guardado => {
-      if (guardado) { this.mostrarExito(ad ? 'Adendum actualizado' : 'Adendum registrado'); this.cargarTodo(); }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_ADENDUM,
+      () => {
+        this.dialog.open(AdendumDialogComponent, { width: '700px', maxWidth: '98vw', data }).afterClosed().subscribe(guardado => {
+          if (guardado) { this.mostrarExito(ad ? 'Adendum actualizado' : 'Adendum registrado'); this.cargarTodo(); }
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   eliminarAdendum(ad: AdendumNegociacion): void {

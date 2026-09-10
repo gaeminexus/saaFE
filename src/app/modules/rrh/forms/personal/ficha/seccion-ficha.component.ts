@@ -9,6 +9,7 @@ import { AccionesGrid } from '../../../../../shared/basics/constantes';
 import { ServiceLocatorRrhService } from '../../../../../shared/basics/service-locator/service-locator-rrh.service';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { armarCuerpo, referenciaSinResolver } from '../../comunes/cuerpo-entidad';
 import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-formulario.component';
@@ -89,6 +90,7 @@ export class SeccionFichaComponent implements OnChanges {
     private snackBar: MatSnackBar,
     private router: Router,
     private estadoListaService: EstadoListaService,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnChanges(cambios: SimpleChanges): void {
@@ -163,12 +165,16 @@ export class SeccionFichaComponent implements OnChanges {
    */
   private abrirVistaPropia(destino: number | string): boolean {
     if (!this.seccion.rutaFormulario) return false;
-    this.router.navigate([
-      '/menurecursoshumanos/personal/ficha',
-      this.empleadoCodigo,
-      this.seccion.rutaFormulario,
-      destino,
-    ]);
+    this.permisosService.ejecutarSiPermitido(
+      this.seccion.idPermiso,
+      () => this.router.navigate([
+        '/menurecursoshumanos/personal/ficha',
+        this.empleadoCodigo,
+        this.seccion.rutaFormulario,
+        destino,
+      ]),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
     return true;
   }
 

@@ -826,6 +826,10 @@ export class PagosTransferenciaComponent implements OnInit {
       textoDobleConfirmacion: 'Verifiqué en el estado de cuenta que estos pagos se ejecutaron.',
     };
 
+    // Sin verificación de permiso: PagosTransferenciaComponent (legado, pagos/transferencias-legacy)
+    // no tiene puerta de entrada activa (ni menú ni navigate) y por eso no tiene nodo en el árbol
+    // de permisos — ver docs/seguridad/ITEM7-MAPEO-BOTONES-PERMISOS.md. Aplica a las 3 llamadas a
+    // MotivoDialogComponent de este archivo (líneas 829, 999 y 1071 originales).
     this.dialog.open(MotivoDialogComponent, { width: '540px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
       this.ejecutarConfirmacionManual(motivo);

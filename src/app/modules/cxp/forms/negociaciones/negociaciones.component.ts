@@ -18,6 +18,8 @@ import { Titular } from '../../../tsr/model/titular';
 import { Empresa } from '../../../../shared/model/empresa';
 import { NegociacionProveedor } from '../../model/negociacion-proveedor';
 import { NegociacionProveedorService } from '../../service/negociacion-proveedor.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 
 type Vista = 'lista' | 'form';
 
@@ -33,6 +35,7 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private negService = inject(NegociacionProveedorService);
+  private permisosService = inject(PermisosService);
   private funcionesDatos = inject(FuncionesDatosService);
 
   // ─── VISTA ─────────────────────────────────────────────────
@@ -168,7 +171,11 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
   }
 
   verDetalle(neg: NegociacionProveedor): void {
-    this.router.navigate(['/menucuentaxpagar/negociaciones/detalle', neg.id]);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_DETALLE_DE_NEGOCIACION,
+      () => this.router.navigate(['/menucuentaxpagar/negociaciones/detalle', neg.id]),
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   cancelarForm(): void { this.vista.set('lista'); }
@@ -236,7 +243,11 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
         this.vista.set('lista');
         this.cargar();
         if (!this.modoEdicion() && resp?.id) {
-          this.router.navigate(['/menucuentaxpagar/negociaciones/detalle', resp.id]);
+          this.permisosService.ejecutarSiPermitido(
+            Permisos.CXP_DETALLE_DE_NEGOCIACION,
+            () => this.router.navigate(['/menucuentaxpagar/negociaciones/detalle', resp.id]),
+            (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+          );
         }
       },
       error: (err: any) => this.mostrarError('Error al guardar: ' + mensajeDeError(err, JSON.stringify(err))),

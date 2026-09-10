@@ -14,6 +14,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -59,6 +61,7 @@ export class ConsultaCobrosComponent implements OnInit {
   private appState = inject(AppStateService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
 
@@ -191,22 +194,28 @@ export class ConsultaCobrosComponent implements OnInit {
       textoConfirmar: 'Sí, anular',
     };
 
-    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo) return;
 
-      this.anulando.set(row.id);
-      this.aplicacionPagoService.revertir(row.id, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
-        next: () => {
-          this.anulando.set(null);
-          this.mostrarExito('Cobro anulado correctamente');
-          this.buscar();
-        },
-        error: (err) => {
-          this.anulando.set(null);
-          this.mostrarError(mensajeDeError(err, 'No se pudo anular el cobro'));
-        },
-      });
-    });
+          this.anulando.set(row.id);
+          this.aplicacionPagoService.revertir(row.id, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+            next: () => {
+              this.anulando.set(null);
+              this.mostrarExito('Cobro anulado correctamente');
+              this.buscar();
+            },
+            error: (err) => {
+              this.anulando.set(null);
+              this.mostrarError(mensajeDeError(err, 'No se pudo anular el cobro'));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   /** Exporta lo que se está viendo — ya filtrado en el servidor (GET /aplc/listar). */

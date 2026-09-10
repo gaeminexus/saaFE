@@ -18,6 +18,8 @@ import {
   AnularAnticipoDialogComponent,
   AnularAnticipoDialogResult,
 } from '../dialogs/anular-anticipo-dialog/anular-anticipo-dialog.component';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 type TipoTitular = 'cliente' | 'proveedor';
 
@@ -43,6 +45,7 @@ export class SeguimientoAnticiposComponent {
   private anticipoS = inject(AnticipoService);
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
+  private permisosService = inject(PermisosService);
 
   private readonly ROL_CLIENTE = 1;
   private readonly ROL_PROVEEDOR = 2;
@@ -188,15 +191,21 @@ export class SeguimientoAnticiposComponent {
 
   private abrirDialogo(id: number, anticipo: AnticipoSeguimiento,
                        verificacion: VerificacionAnulacionAnticipo): void {
-    this.dialog.open(AnularAnticipoDialogComponent, {
-      width: '640px',
-      maxWidth: '96vw',
-      disableClose: true,
-      data: { tipo: this.tipo(), anticipo, verificacion },
-    }).afterClosed().subscribe((res: AnularAnticipoDialogResult | null) => {
-      if (!res) return;
-      this.ejecutarAnulacion(id, anticipo, res);
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_SEGUIMIENTO_ANULAR_ANTICIPO,
+      () => {
+        this.dialog.open(AnularAnticipoDialogComponent, {
+          width: '640px',
+          maxWidth: '96vw',
+          disableClose: true,
+          data: { tipo: this.tipo(), anticipo, verificacion },
+        }).afterClosed().subscribe((res: AnularAnticipoDialogResult | null) => {
+          if (!res) return;
+          this.ejecutarAnulacion(id, anticipo, res);
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 5000 }),
+    );
   }
 
   private ejecutarAnulacion(id: number, anticipo: AnticipoSeguimiento,

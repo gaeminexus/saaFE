@@ -11,6 +11,8 @@ import {
 import { FilaAbono, SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { AplicacionPagoCxp } from '../../../model/aplicacion-pago-cxp';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 export type TipoDocumentoAbonos = 'FACTURA' | 'LIQUIDACION';
 
@@ -52,6 +54,7 @@ export class HistorialAbonosFacturaComponent implements OnChanges {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private permisosService = inject(PermisosService);
 
   /** Id de la factura o liquidación de compra cuyo historial se muestra. */
   @Input({ required: true }) idDocumento!: number;
@@ -134,13 +137,19 @@ export class HistorialAbonosFacturaComponent implements OnChanges {
    * trabajo de otra pantalla, no de este ítem.
    */
   irACruceAnticipo(): void {
-    if (this.tipoDocumento === 'LIQUIDACION') {
-      this.router.navigate(['/menucuentaxpagar/pagos/cruce-anticipo']);
-      return;
-    }
-    this.router.navigate(['/menucuentaxpagar/pagos/cruce-anticipo'], {
-      queryParams: { idFactura: this.idDocumento },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_CRUCE_DE_ANTICIPO,
+      () => {
+        if (this.tipoDocumento === 'LIQUIDACION') {
+          this.router.navigate(['/menucuentaxpagar/pagos/cruce-anticipo']);
+          return;
+        }
+        this.router.navigate(['/menucuentaxpagar/pagos/cruce-anticipo'], {
+          queryParams: { idFactura: this.idDocumento },
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 6000 }),
+    );
   }
 
   /**
@@ -151,9 +160,15 @@ export class HistorialAbonosFacturaComponent implements OnChanges {
    */
   irAPagos(): void {
     if (this.tipoDocumento === 'LIQUIDACION') return;
-    this.router.navigate(['/menucuentaxpagar/pagos/transferencias'], {
-      queryParams: { idFactura: this.idDocumento },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_SOLICITUD_DE_PAGO,
+      () => {
+        this.router.navigate(['/menucuentaxpagar/pagos/transferencias'], {
+          queryParams: { idFactura: this.idDocumento },
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 6000 }),
+    );
   }
 
   private idUsuarioSesion(): number {

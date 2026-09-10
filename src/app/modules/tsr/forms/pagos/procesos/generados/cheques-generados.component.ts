@@ -24,6 +24,7 @@ import { ChequeListado, destinoVerPago } from '../../../../model/cheque-listado'
 import { CuentaBancaria } from '../../../../model/cuenta-bancaria';
 import { ChequeService } from '../../../../service/cheque.service';
 import { CuentaBancariaService } from '../../../../service/cuenta-bancaria.service';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
 
 const RUBRO_ESTADO_CHEQUE = 26;
 const ESTADO_GENERADO = 3;
@@ -64,6 +65,7 @@ export class ChequesGeneradosComponent implements OnInit, AfterViewChecked {
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private exportService = inject(ExportService);
+  private permisosService = inject(PermisosService);
 
   cuentas = signal<CuentaBancaria[]>([]);
   idCuentaFiltro = signal<number | null>(null);
@@ -226,7 +228,11 @@ export class ChequesGeneradosComponent implements OnInit, AfterViewChecked {
   verPago(row: ChequeListado): void {
     const destino = destinoVerPago(row.tipoPago, row.idDocumento);
     if (!destino) return;
-    this.router.navigate([destino.ruta], { queryParams: destino.queryParams });
+    this.permisosService.ejecutarSiPermitido(
+      destino.idPermiso,
+      () => this.router.navigate([destino.ruta], { queryParams: destino.queryParams }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Aceptar', { duration: 4000 }),
+    );
   }
 
   /** Exporta lo que se está viendo — ya filtrado en el servidor por cuenta/fecha/estado GENERADO. */

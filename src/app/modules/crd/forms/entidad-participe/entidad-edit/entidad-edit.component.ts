@@ -345,6 +345,9 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   /**
    * Regresa a la pantalla anterior con el código de entidad como query param
    */
+  // Vuelta a quien abrió este formulario (returnUrl dinámico, o EntidadConsulta por defecto si no
+  // hay returnUrl). Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se
+  // cablea ninguna de las dos ramas.
   regresar(): void {
     // Obtener el returnUrl y codigoEntidad de los query params de forma síncrona
     const params = this.route.snapshot.queryParams;

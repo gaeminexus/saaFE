@@ -13,6 +13,8 @@ import { ParticipeXCargaArchivo } from '../../../../model/participe-x-carga-arch
 import { FilialService } from '../../../../service/filial.service';
 import { CargaArchivoService } from '../../../../service/carga-archivo.service';
 import { DetalleCargaArchivoService } from '../../../../service/detalle-carga-archivo.service';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 import { ParticipeXCargaArchivoService } from '../../../../service/participe-x-carga-archivo.service';
 import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
 import { Usuario } from '../../../../../../shared/model/usuario';
@@ -165,7 +167,8 @@ export class CargaAporteBackComponent implements OnInit {
     private exportService: ExportService,
     private appStateService: AppStateService,
     private usuarioService: UsuarioService,
-    private router: Router
+    private router: Router,
+    private permisosService: PermisosService,
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -508,7 +511,11 @@ export class CargaAporteBackComponent implements OnInit {
           );
 
           // Navegar al componente de detalle con el ID de la carga
-          this.router.navigate(['/menucreditos/archivos-petro/carga/detalle', cargaArchivo.codigo]);
+          this.permisosService.ejecutarSiPermitido(
+            Permisos.CRD_DETALLE_DE_CARGA,
+            () => this.router.navigate(['/menucreditos/archivos-petro/carga/detalle', cargaArchivo.codigo]),
+            (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+          );
         } else {
           this.snackBar.open(
             `⚠️ Error al guardar: No se recibió el objeto CargaArchivo`,

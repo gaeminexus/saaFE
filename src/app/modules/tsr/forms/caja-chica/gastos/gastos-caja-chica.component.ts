@@ -37,6 +37,8 @@ import { CajaChicaService } from '../../../service/caja-chica.service';
 import { MovimientoCajaChicaService } from '../../../service/movimiento-caja-chica.service';
 import { PathCajaChicaService } from '../../../service/path-caja-chica.service';
 import { AdjuntosMovimientoDialogComponent } from './adjuntos-movimiento-dialog.component';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 const RUBRO_ROL_PROVEEDOR = 2;
 
@@ -78,6 +80,7 @@ export class GastosCajaChicaComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
 
   readonly TipoMovimientoCajaChica = TipoMovimientoCajaChica;
   readonly tiposMovimiento = [
@@ -652,11 +655,17 @@ export class GastosCajaChicaComponent implements OnInit {
   }
 
   verAdjuntos(m: MovimientoCajaChica): void {
-    this.dialog.open(AdjuntosMovimientoDialogComponent, {
-      width: '520px',
-      maxWidth: '96vw',
-      data: { idMovimiento: m.codigo, numero: m.codigo },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_ADJUNTOS_DEL_MOVIMIENTO,
+      () => {
+        this.dialog.open(AdjuntosMovimientoDialogComponent, {
+          width: '520px',
+          maxWidth: '96vw',
+          data: { idMovimiento: m.codigo, numero: m.codigo },
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   formatearFecha(fecha: any): string {

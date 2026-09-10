@@ -263,7 +263,8 @@ export class ParticipeInfoComponent implements OnInit, OnChanges {
 }
 
   /**
-   * Regresa a la pantalla anterior con el código de entidad como query param
+   * Regresa a la pantalla anterior con el código de entidad como query param.
+   * Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
    */
   regresar(): void {
     // Obtener el returnUrl y codigoEntidad de los query params

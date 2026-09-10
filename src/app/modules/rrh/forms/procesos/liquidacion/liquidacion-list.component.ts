@@ -6,6 +6,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { RubrosRrh } from '../../../model/rubros-rrh';
 import {
   EstadoLiquidacion,
@@ -62,6 +64,7 @@ export class LiquidacionListComponent implements OnInit {
     private estadoListaService: EstadoListaService,
     private router: Router,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -127,11 +130,19 @@ export class LiquidacionListComponent implements OnInit {
   }
 
   nuevo(): void {
-    this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', 'nuevo']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_LIQUIDACION,
+      () => this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', 'nuevo']),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   abrir(fila: any): void {
-    this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', fila.codigo]);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_LIQUIDACION,
+      () => this.router.navigate(['/menurecursoshumanos/procesos/liquidacion', fila.codigo]),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   recordarEstado(estado: Partial<EstadoLista>): void {

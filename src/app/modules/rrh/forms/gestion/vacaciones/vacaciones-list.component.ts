@@ -11,6 +11,8 @@ import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/ti
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
 import { SaldoVacaciones } from '../../../model/saldo-vacaciones';
@@ -53,6 +55,7 @@ export class VacacionesListComponent implements OnInit {
   private dialog = inject(MatDialog);
   private funcionesDatosS = inject(FuncionesDatosService);
   private appState = inject(AppStateService);
+  private permisosService = inject(PermisosService);
 
   @ViewChild('inicioDesdeInput', { read: ElementRef }) inicioDesdeInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('inicioHastaInput', { read: ElementRef }) inicioHastaInputRef!: ElementRef<HTMLInputElement>;
@@ -231,23 +234,33 @@ export class VacacionesListComponent implements OnInit {
   onFinHastaPickerChange(date: Date | null | undefined): void { this.hFinHasta.onPickerChange(date); }
 
   onNuevo(): void {
-    const dialogRef = this.dialog.open(VacacionesFormComponent, {
-      width: '900px',
-      disableClose: true,
-      data: { mode: 'new', item: null },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_VACACIONES,
+      () => {
+        const dialogRef = this.dialog.open(VacacionesFormComponent, {
+          width: '900px',
+          disableClose: true,
+          data: { mode: 'new', item: null },
+        });
 
-    dialogRef.afterClosed().subscribe((saved) => {
-      if (saved) this.buscar();
-    });
+        dialogRef.afterClosed().subscribe((saved) => {
+          if (saved) this.buscar();
+        });
+      },
+      (mensaje) => this.showError(mensaje.toUpperCase()),
+    );
   }
 
   onVer(row: SolicitudVacaciones): void {
-    this.dialog.open(VacacionesFormComponent, {
-      width: '900px',
-      disableClose: true,
-      data: { mode: 'view', item: row },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_VACACIONES,
+      () => this.dialog.open(VacacionesFormComponent, {
+        width: '900px',
+        disableClose: true,
+        data: { mode: 'view', item: row },
+      }),
+      (mensaje) => this.showError(mensaje.toUpperCase()),
+    );
   }
 
   onEditar(row: SolicitudVacaciones): void {
@@ -256,15 +269,21 @@ export class VacacionesListComponent implements OnInit {
       return;
     }
 
-    const dialogRef = this.dialog.open(VacacionesFormComponent, {
-      width: '900px',
-      disableClose: true,
-      data: { mode: 'edit', item: row },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_VACACIONES,
+      () => {
+        const dialogRef = this.dialog.open(VacacionesFormComponent, {
+          width: '900px',
+          disableClose: true,
+          data: { mode: 'edit', item: row },
+        });
 
-    dialogRef.afterClosed().subscribe((saved) => {
-      if (saved) this.buscar();
-    });
+        dialogRef.afterClosed().subscribe((saved) => {
+          if (saved) this.buscar();
+        });
+      },
+      (mensaje) => this.showError(mensaje.toUpperCase()),
+    );
   }
 
   onAprobar(row: SolicitudVacaciones): void {
@@ -437,16 +456,22 @@ export class VacacionesListComponent implements OnInit {
     action: 'approve' | 'reject' | 'cancel',
     row: SolicitudVacaciones,
   ): void {
-    const dialogRef = this.dialog.open(VacacionesAprobacionDialogComponent, {
-      width: '520px',
-      disableClose: true,
-      data: { action, item: row },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_APROBACION_DE_VACACIONES,
+      () => {
+        const dialogRef = this.dialog.open(VacacionesAprobacionDialogComponent, {
+          width: '520px',
+          disableClose: true,
+          data: { action, item: row },
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result) return;
-      this.actualizarEstado(row, result.action, result.observacion ?? null);
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (!result) return;
+          this.actualizarEstado(row, result.action, result.observacion ?? null);
+        });
+      },
+      (mensaje) => this.showError(mensaje.toUpperCase()),
+    );
   }
 
   /**

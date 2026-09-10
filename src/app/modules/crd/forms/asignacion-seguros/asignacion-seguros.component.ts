@@ -16,6 +16,8 @@ import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/ti
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 
 import { AsignacionSeguro, TipoSeguroPrestamo } from '../../model/asignacion-seguro';
 import { EstadoParticipe } from '../../model/estado-participe';
@@ -54,6 +56,7 @@ export class AsignacionSegurosComponent implements OnInit {
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
 
   readonly TIPOS: TipoSeguroOption[] = [
@@ -282,30 +285,36 @@ export class AsignacionSegurosComponent implements OnInit {
     const cantidadPrestamos = this.prestamosTabActivo().length;
     const montoTotal = this.totalSaldoTabActivo();
 
-    const dialogRef = this.dialog.open(AsignarSeguroDialogComponent, {
-      width: '520px',
-      maxWidth: '95vw',
-      disableClose: true,
-      data: { tipoSeguro: tipo, tipoLabel, cantidadPrestamos, montoTotal },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_ASIGNAR_SEGURO,
+      () => {
+        const dialogRef = this.dialog.open(AsignarSeguroDialogComponent, {
+          width: '520px',
+          maxWidth: '95vw',
+          disableClose: true,
+          data: { tipoSeguro: tipo, tipoLabel, cantidadPrestamos, montoTotal },
+        });
 
-    dialogRef.afterClosed().subscribe((result: AsignacionSeguro | undefined) => {
-      if (!result) return;
+        dialogRef.afterClosed().subscribe((result: AsignacionSeguro | undefined) => {
+          if (!result) return;
 
-      const mapa = { ...this.polizasAsignadas() };
-      mapa[tipo] = result;
-      this.polizasAsignadas.set(mapa);
+          const mapa = { ...this.polizasAsignadas() };
+          mapa[tipo] = result;
+          this.polizasAsignadas.set(mapa);
 
-      this.snackBar.open(
-        `Seguro de ${tipoLabel} asignado correctamente (simulado) — ${cantidadPrestamos} préstamos cubiertos`,
-        'Cerrar',
-        { duration: 3500 },
-      );
+          this.snackBar.open(
+            `Seguro de ${tipoLabel} asignado correctamente (simulado) — ${cantidadPrestamos} préstamos cubiertos`,
+            'Cerrar',
+            { duration: 3500 },
+          );
 
-      // TODO(pendiente-backend): reemplazar este stub por la llamada real (incluyendo subida del
-      // archivo adjunto) una vez el equipo de backend publique el endpoint de asignación de
-      // seguros de préstamo.
-      console.warn('[Asignación de Seguros] Asignación simulada — endpoint real pendiente del equipo de backend:', result);
-    });
+          // TODO(pendiente-backend): reemplazar este stub por la llamada real (incluyendo subida del
+          // archivo adjunto) una vez el equipo de backend publique el endpoint de asignación de
+          // seguros de préstamo.
+          console.warn('[Asignación de Seguros] Asignación simulada — endpoint real pendiente del equipo de backend:', result);
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 }

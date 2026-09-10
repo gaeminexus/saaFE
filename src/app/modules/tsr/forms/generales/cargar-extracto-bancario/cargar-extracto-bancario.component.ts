@@ -19,6 +19,8 @@ import { ConciliacionContableService } from '../../../service/conciliacion-conta
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { ExtractoBancarioService } from '../../../service/extracto-bancario.service';
 import { duracionErrorTsr, textoDeError } from '../texto-error';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 @Component({
   selector: 'app-cargar-extracto-bancario',
@@ -63,7 +65,8 @@ export class CargarExtractoBancarioComponent implements OnInit {
     private snackBar: MatSnackBar,
     private router: Router,
     private dialog: MatDialog,
-    private funcionesDatosService: FuncionesDatosService
+    private funcionesDatosService: FuncionesDatosService,
+    private permisosService: PermisosService
   ) {}
 
   ngOnInit(): void {
@@ -372,9 +375,13 @@ export class CargarExtractoBancarioComponent implements OnInit {
 
   verDetalle(): void {
     if (this.idExtractoCreado) {
-      this.router.navigate(['/menutesoreria/procesos/extractos-bancarios/detalle'], {
-        queryParams: { idExtracto: this.idExtractoCreado },
-      });
+      this.permisosService.ejecutarSiPermitido(
+        Permisos.TSR_DETALLE_DE_EXTRACTO,
+        () => this.router.navigate(['/menutesoreria/procesos/extractos-bancarios/detalle'], {
+          queryParams: { idExtracto: this.idExtractoCreado },
+        }),
+        (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+      );
     }
   }
 

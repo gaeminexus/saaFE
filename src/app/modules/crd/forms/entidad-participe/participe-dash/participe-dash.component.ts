@@ -28,6 +28,8 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
@@ -197,7 +199,8 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef,
-    private jasperReportes: JasperReportesService
+    private jasperReportes: JasperReportesService,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -273,7 +276,10 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
   }
 
   /**
-   * Regresa a la pantalla anterior (entidad-consulta o base-inicial-participes según origen)
+   * Regresa a la pantalla anterior (entidad-consulta o base-inicial-participes según origen).
+   * Vuelta a quien abrió ParticipeDash (la ida ya se verifica en base-inicial-participes.component.ts:196
+   * y entidad-consulta.component.ts:738 y otros). Regla del árbitro: en cada par A⇄B se verifica la
+   * ida, no la vuelta — no se cablea ninguna de las dos ramas.
    */
   regresarAPantallaAnterior(): void {
     this.route.queryParams.subscribe((params: any) => {
@@ -339,13 +345,17 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     // Navegar a entidad-participe-info con los códigos de entidad y partícipe
     // Mantener el query param para poder regresar a la misma entidad
-    this.router.navigate(['/menucreditos/entidad-participe-info'], {
-      queryParams: {
-        codigoEntidad: this.entidadEncontrada.codigo,
-        codigoParticipe: this.participeEncontrado.codigo,
-        returnUrl: `/menucreditos/participe-dash`,
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_INFORMACION_DEL_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/entidad-participe-info'], {
+        queryParams: {
+          codigoEntidad: this.entidadEncontrada!.codigo,
+          codigoParticipe: this.participeEncontrado!.codigo,
+          returnUrl: `/menucreditos/participe-dash`,
+        },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -358,12 +368,16 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.router.navigate(['/menucreditos/certificados-participe'], {
-      queryParams: {
-        codigoEntidad: this.entidadEncontrada.codigo,
-        returnUrl: `/menucreditos/participe-dash`,
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_CERTIFICADOS_DEL_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/certificados-participe'], {
+        queryParams: {
+          codigoEntidad: this.entidadEncontrada!.codigo,
+          returnUrl: `/menucreditos/participe-dash`,
+        },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -2507,20 +2521,26 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       campoEstadoActual: 'idEstado',
     };
 
-    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      autoFocus: 'first-tabbable',
-      restoreFocus: true,
-      disableClose: false,
-      data: dialogData,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE_AUDITORIA,
+      () => {
+        const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+          width: '600px',
+          maxWidth: '90vw',
+          autoFocus: 'first-tabbable',
+          restoreFocus: true,
+          disableClose: false,
+          data: dialogData,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result && result.nuevoEstado !== undefined && result.motivo) {
-        this.ejecutarCambioEstadoPrestamo(prestamo, result.nuevoEstado, result.motivo);
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result && result.nuevoEstado !== undefined && result.motivo) {
+            this.ejecutarCambioEstadoPrestamo(prestamo, result.nuevoEstado, result.motivo);
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -2772,26 +2792,32 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       event.stopPropagation(); // Evitar que se expandan/colapsen los pagos
     }
 
-    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
-      width: '500px',
-      data: {
-        entidad: cuota,
-        // Remapeamos codigo → codigoAlterno para que el diálogo devuelva codigoAlterno
-        // directamente (DTPRESTD), evitando cualquier conversión posterior
-        estadosDisponibles: this.estadosCuota.map((e) => ({ ...e, codigo: e.codigoAlterno })),
-        titulo: 'Cambiar Estado de Cuota',
-        entidadTipo: 'Cuota',
-        campoNombre: 'numeroCuota',
-        campoIdentificacion: 'codigo',
-        campoEstadoActual: 'estado', // cuota.estado almacena codigoAlterno (DTPRESTD)
-      } as CambiarEstadoDialogData,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE_AUDITORIA,
+      () => {
+        const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+          width: '500px',
+          data: {
+            entidad: cuota,
+            // Remapeamos codigo → codigoAlterno para que el diálogo devuelva codigoAlterno
+            // directamente (DTPRESTD), evitando cualquier conversión posterior
+            estadosDisponibles: this.estadosCuota.map((e) => ({ ...e, codigo: e.codigoAlterno })),
+            titulo: 'Cambiar Estado de Cuota',
+            entidadTipo: 'Cuota',
+            campoNombre: 'numeroCuota',
+            campoIdentificacion: 'codigo',
+            campoEstadoActual: 'estado', // cuota.estado almacena codigoAlterno (DTPRESTD)
+          } as CambiarEstadoDialogData,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.ejecutarCambioEstadoCuota(cuota, result.nuevoEstado, result.motivo);
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.ejecutarCambioEstadoCuota(cuota, result.nuevoEstado, result.motivo);
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -3110,18 +3136,24 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
 
     const estado = this.obtenerEstadoAporte(aporte);
 
-    this.dialog.open(AportePagosDialogComponent, {
-      width: '900px',
-      maxWidth: '96vw',
-      maxHeight: '90vh',
-      autoFocus: false,
-      data: {
-        aporte,
-        tipoAporte: aporte.tipoAporte?.nombre,
-        estadoTexto: estado.texto,
-        estadoClase: estado.clase,
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PAGOS_DEL_APORTE,
+      () => {
+        this.dialog.open(AportePagosDialogComponent, {
+          width: '900px',
+          maxWidth: '96vw',
+          maxHeight: '90vh',
+          autoFocus: false,
+          data: {
+            aporte,
+            tipoAporte: aporte.tipoAporte?.nombre,
+            estadoTexto: estado.texto,
+            estadoClase: estado.clase,
+          },
+        });
       },
-    });
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -3132,24 +3164,30 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       event.stopPropagation();
     }
 
-    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
-      width: '500px',
-      data: {
-        entidad: aporte,
-        estadosDisponibles: this.estadosPrestamo,
-        titulo: 'Cambiar Estado de Aporte',
-        entidadTipo: 'Aporte',
-        campoNombre: 'glosa',
-        campoIdentificacion: 'codigo',
-        campoEstadoActual: 'estado',
-      } as CambiarEstadoDialogData,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE_AUDITORIA,
+      () => {
+        const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+          width: '500px',
+          data: {
+            entidad: aporte,
+            estadosDisponibles: this.estadosPrestamo,
+            titulo: 'Cambiar Estado de Aporte',
+            entidadTipo: 'Aporte',
+            campoNombre: 'glosa',
+            campoIdentificacion: 'codigo',
+            campoEstadoActual: 'estado',
+          } as CambiarEstadoDialogData,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.ejecutarCambioEstadoAporte(aporte, result.nuevoEstado, result.motivo);
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.ejecutarCambioEstadoAporte(aporte, result.nuevoEstado, result.motivo);
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -3255,28 +3293,34 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     // Obtener el estado actual
     const estadoActual = this.obtenerEstadoPreferenteTipo(tipoAporte);
 
-    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
-      width: '500px',
-      data: {
-        entidad: {
-          codigo: tipoAporte.codigoTipo,
-          nombre: tipoAporte.tipoAporte,
-          estadoActual: estadoActual?.texto || 'N/A',
-        },
-        estadosDisponibles: this.estadosPrestamo,
-        titulo: 'Cambiar Estado del Tipo de Aporte',
-        entidadTipo: 'Tipo de Aporte',
-        campoNombre: 'nombre',
-        campoIdentificacion: 'codigo',
-        campoEstadoActual: 'estadoActual',
-      } as CambiarEstadoDialogData,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE_AUDITORIA,
+      () => {
+        const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+          width: '500px',
+          data: {
+            entidad: {
+              codigo: tipoAporte.codigoTipo,
+              nombre: tipoAporte.tipoAporte,
+              estadoActual: estadoActual?.texto || 'N/A',
+            },
+            estadosDisponibles: this.estadosPrestamo,
+            titulo: 'Cambiar Estado del Tipo de Aporte',
+            entidadTipo: 'Tipo de Aporte',
+            campoNombre: 'nombre',
+            campoIdentificacion: 'codigo',
+            campoEstadoActual: 'estadoActual',
+          } as CambiarEstadoDialogData,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.ejecutarCambioEstadoTipoAporte(tipoAporte, result.nuevoEstado, result.motivo);
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.ejecutarCambioEstadoTipoAporte(tipoAporte, result.nuevoEstado, result.motivo);
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -3581,19 +3625,25 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       ? `${prestamo.producto?.nombre || 'Préstamo'} #${prestamo.idAsoprep || prestamo.codigo}`
       : 'Préstamo';
 
-    this.dialog.open(PrestamoPagosDialogComponent, {
-      width: '920px',
-      maxWidth: '96vw',
-      maxHeight: '88vh',
-      autoFocus: false,
-      data: {
-        detalle: detalleConPagos.detalle,
-        pagos: detalleConPagos.pagos,
-        esPrestamoConSeguro,
-        tituloPrestamo,
-        participante: this.entidadEncontrada?.razonSocial ?? undefined,
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PAGOS_DEL_PRESTAMO,
+      () => {
+        this.dialog.open(PrestamoPagosDialogComponent, {
+          width: '920px',
+          maxWidth: '96vw',
+          maxHeight: '88vh',
+          autoFocus: false,
+          data: {
+            detalle: detalleConPagos.detalle,
+            pagos: detalleConPagos.pagos,
+            esPrestamoConSeguro,
+            tituloPrestamo,
+            participante: this.entidadEncontrada?.razonSocial ?? undefined,
+          },
+        });
       },
-    });
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   cargarPagosDetalle(detalleConPagos: DetalleConPagos): Promise<void> {

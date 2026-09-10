@@ -12,6 +12,8 @@ import { ExportService } from '../../../../../shared/services/export.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 @Component({
   selector: 'app-base-inicial-participes',
@@ -28,6 +30,7 @@ export class BaseInicialParticipesComponent implements OnInit {
   private exportService = inject(ExportService);
   private router       = inject(Router);
   private snackBar     = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
 
   // ── Estado ──────────────────────────────────────────────────
   loading    = signal(false);
@@ -193,9 +196,13 @@ export class BaseInicialParticipesComponent implements OnInit {
   // Navegación a DatosSaa
   // ─────────────────────────────────────────────────────────────
   irADatosSaa(registro: BaseInicialParticipes): void {
-    this.router.navigate(['/menucreditos/participe-dash'], {
-      queryParams: { codigoEntidad: registro.idSaa, from: 'base-inicial-participes' },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/participe-dash'], {
+        queryParams: { codigoEntidad: registro.idSaa, from: 'base-inicial-participes' },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   // ─────────────────────────────────────────────────────────────

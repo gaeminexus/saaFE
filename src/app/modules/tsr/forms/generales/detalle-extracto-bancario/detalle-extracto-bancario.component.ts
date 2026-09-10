@@ -163,6 +163,9 @@ export class DetalleExtractoBancarioComponent implements OnInit {
     }
   }
 
+  // Sin verificación: vuelta a ConsultaExtractosBancariosComponent (la ida ya se
+  // verifica en consulta-extractos-bancarios.component.ts:188) — regla del árbitro,
+  // "en cada par A⇄B se verifica la ida, no la vuelta".
   regresar(): void {
     this.router.navigate(['/menutesoreria/procesos/extractos-bancarios/consulta']);
   }

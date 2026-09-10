@@ -14,6 +14,8 @@ import { TipoAsiento } from '../../model/tipo-asiento';
 import { Asiento } from '../../model/asiento';
 import { DetalleAsiento } from '../../model/detalle-asiento';
 import { ExportService } from '../../../../shared/services/export.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { Router } from '@angular/router';
@@ -81,7 +83,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
     private snackBar: MatSnackBar,
     private exportService: ExportService,
     private router: Router,
-    private funcionesDatos: FuncionesDatosService
+    private funcionesDatos: FuncionesDatosService,
+    private permisosService: PermisosService
   ) {}
 
   // ── Datepicker: Fecha Asiento Desde ─────────────────────────
@@ -714,9 +717,13 @@ export class ReporteListadoAsientosComponent implements OnInit {
    * Navega a la pantalla de edición de asiento
    */
   editarAsiento(asiento: Asiento): void {
-    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico', asiento.codigo], {
-      queryParams: { fromReport: 'true' }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_ASIENTOS_DINAMICO,
+      () => this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico', asiento.codigo], {
+        queryParams: { fromReport: 'true' }
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**

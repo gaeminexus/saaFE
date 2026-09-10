@@ -15,6 +15,8 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
@@ -117,6 +119,7 @@ export class ResumenDiarioComponent implements OnInit {
     private dialog: MatDialog,
     private router: Router,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -264,11 +267,19 @@ export class ResumenDiarioComponent implements OnInit {
   readonly buscarPorEmpleado = (e: Empleado): string[] => [String(e.identificacion ?? ''), e.apellidos ?? '', e.nombres ?? ''];
 
   irAHorasExtra(): void {
-    this.router.navigate(['/menurecursoshumanos/procesos/horas-extra']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_HORAS_EXTRA,
+      () => this.router.navigate(['/menurecursoshumanos/procesos/horas-extra']),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   irAMarcaciones(): void {
-    this.router.navigate(['/menurecursoshumanos/asistencia/marcaciones']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_MARCACIONES,
+      () => this.router.navigate(['/menurecursoshumanos/asistencia/marcaciones']),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   exportarCsv(): void {

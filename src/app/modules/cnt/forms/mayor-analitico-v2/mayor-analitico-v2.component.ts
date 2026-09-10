@@ -16,6 +16,8 @@ import { ReporteMyanService } from '../../service/reporte-myan.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { MayorAnaliticoAsientoDialogComponent } from '../../dialog/mayor-analitico-asiento-dialog/mayor-analitico-asiento-dialog.component';
 import { ExportService } from '../../../../shared/services/export.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 
 type VistaMyan = 'cuenta' | 'todos';
 
@@ -36,6 +38,7 @@ export class MayorAnaliticoV2Component implements OnInit, OnDestroy, AfterViewCh
   private appState        = inject(AppStateService);
   private funcionesDatos  = inject(FuncionesDatosService);
   private exportService   = inject(ExportService);
+  private permisosService = inject(PermisosService);
 
   // ── Estado general ──────────────────────────────────────────
   loading          = signal(false);
@@ -487,13 +490,17 @@ export class MayorAnaliticoV2Component implements OnInit, OnDestroy, AfterViewCh
   }
 
   abrirAsientoRelacionado(detalle: DetalleMayorAnalitico): void {
-    this.dialog.open(MayorAnaliticoAsientoDialogComponent, {
-      width: '95vw',
-      maxWidth: '1600px',
-      maxHeight: '92vh',
-      data: { detalle },
-      panelClass: 'mayor-analitico-asiento-dialog-panel',
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_MAYOR_ANALITICO_V2_ASIENTO_DEL_MAYOR,
+      () => this.dialog.open(MayorAnaliticoAsientoDialogComponent, {
+        width: '95vw',
+        maxWidth: '1600px',
+        maxHeight: '92vh',
+        data: { detalle },
+        panelClass: 'mayor-analitico-asiento-dialog-panel',
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   // ── Exports CSV ────────────────────────────────────────────

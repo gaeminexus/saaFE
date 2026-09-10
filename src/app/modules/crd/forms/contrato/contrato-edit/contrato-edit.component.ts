@@ -190,6 +190,8 @@ export class ContratoEditComponent implements OnInit, CanComponentDeactivate {
   }
 
   volver(): void {
+    // Vuelta a ContratoConsulta (la ida ya se verifica en contrato-consulta.component.ts:331/335).
+    // Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
     this.router.navigate(['/menucontabilidad/menucreditos/contrato-consulta']);
   }
 

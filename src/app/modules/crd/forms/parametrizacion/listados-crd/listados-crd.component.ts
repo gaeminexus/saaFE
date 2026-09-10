@@ -25,6 +25,8 @@ import { TipoPrestamoService } from '../../../service/tipo-prestamo.service';
 import { Validators } from '@angular/forms';
 import { SelectFieldConfig } from '../../../../../shared/basics/table/dynamic-form/model/select.interface';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 @Component({
   selector: 'app-listados-crd.component',
@@ -80,7 +82,8 @@ export class ListadosCrdComponent implements OnInit {
     private route: ActivatedRoute,
     private filialService: FilialService,
     private tipoPrestamoService: TipoPrestamoService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) { }
 
   // Método para navegar al tab correspondiente
@@ -445,14 +448,20 @@ export class ListadosCrdComponent implements OnInit {
    * manual de las corridas automáticas.
    */
   abrirProcesosVarios(): void {
-    this.dialog.open(ProcesosVariosDialogComponent, {
-      width: '760px',
-      maxWidth: '96vw',
-      autoFocus: false,
-      // El proceso puede tardar minutos: cerrar por accidente con Esc o un clic fuera dejaría al
-      // usuario sin saber si terminó ni con qué resultado.
-      disableClose: true,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PROCESOS_VARIOS,
+      () => {
+        this.dialog.open(ProcesosVariosDialogComponent, {
+          width: '760px',
+          maxWidth: '96vw',
+          autoFocus: false,
+          // El proceso puede tardar minutos: cerrar por accidente con Esc o un clic fuera dejaría al
+          // usuario sin saber si terminó ni con qué resultado.
+          disableClose: true,
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
 }

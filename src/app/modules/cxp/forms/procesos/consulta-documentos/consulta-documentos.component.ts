@@ -6,6 +6,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { Observable, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -64,6 +66,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private funcionesDatosS = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
+  private permisosService = inject(PermisosService);
   private appState = inject(AppStateService);
 
   private _rawFiltroFechaDesde = '';
@@ -349,14 +352,20 @@ export class ConsultaDocumentosComponent implements OnInit {
   }
 
   private abrirDialogoAnular(tipo: string, id: number, movimientos: MovimientoRelacionadoCompra[] | null): void {
-    this.dialog.open(AnularDocumentoCompraDialogComponent, {
-      width: '560px',
-      disableClose: true,
-      data: { tipoLabel: this.tipoTablaLabel(tipo), numero: this.numeroDocumento(), movimientos },
-    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
-      if (!result) return;
-      this.ejecutarAnulacion(tipo, id, result);
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_ANULAR_DOCUMENTO_DE_COMPRA,
+      () => {
+        this.dialog.open(AnularDocumentoCompraDialogComponent, {
+          width: '560px',
+          disableClose: true,
+          data: { tipoLabel: this.tipoTablaLabel(tipo), numero: this.numeroDocumento(), movimientos },
+        }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+          if (!result) return;
+          this.ejecutarAnulacion(tipo, id, result);
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 6000 }),
+    );
   }
 
   private usuarioSesion(): string {

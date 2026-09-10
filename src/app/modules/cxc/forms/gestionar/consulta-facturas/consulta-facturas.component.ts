@@ -6,6 +6,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { FacturaEmitir } from '../../../model/factura-emitir';
@@ -41,6 +43,7 @@ export class ConsultaFacturasComponent implements OnInit {
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private appState = inject(AppStateService);
+  private permisosService = inject(PermisosService);
   anulandoMovimientos = signal(false);
 
   private get usuarioSesion(): string {
@@ -242,27 +245,33 @@ export class ConsultaFacturasComponent implements OnInit {
   }
 
   private abrirDialogoAnular(row: FacturaEmitir, movimientos: MovimientoRelacionado[]): void {
-    this.dialog.open(AnularDocumentoCompraDialogComponent, {
-      width: '560px',
-      disableClose: true,
-      data: { tipoLabel: 'Factura', numero: row.numero || String(row.id), movimientos },
-    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
-      if (!result) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_CONSULTA_FACTURAS_ANULAR_DOCUMENTO_DE_COMPRA,
+      () => {
+        this.dialog.open(AnularDocumentoCompraDialogComponent, {
+          width: '560px',
+          disableClose: true,
+          data: { tipoLabel: 'Factura', numero: row.numero || String(row.id), movimientos },
+        }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+          if (!result) return;
 
-      this.facturaService.anularFactura({
-        idFactura: Number(row.id),
-        usuario: this.usuarioSesion,
-        idUsuario: this.appState.getIdUsuario(),
-        motivo: result.motivo,
-        anularEnCascada: result.anularEnCascada,
-      }).subscribe({
-        next: (resp) => {
-          this.mostrarExito(resp.mensaje || 'Factura anulada correctamente');
-          this.buscar();
-        },
-        error: (err: Error) => this.mostrarError(mensajeDeError(err, 'No se pudo anular la factura')),
-      });
-    });
+          this.facturaService.anularFactura({
+            idFactura: Number(row.id),
+            usuario: this.usuarioSesion,
+            idUsuario: this.appState.getIdUsuario(),
+            motivo: result.motivo,
+            anularEnCascada: result.anularEnCascada,
+          }).subscribe({
+            next: (resp) => {
+              this.mostrarExito(resp.mensaje || 'Factura anulada correctamente');
+              this.buscar();
+            },
+            error: (err: Error) => this.mostrarError(mensajeDeError(err, 'No se pudo anular la factura')),
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   autorizar(row: FacturaEmitir): void {
@@ -353,9 +362,15 @@ export class ConsultaFacturasComponent implements OnInit {
       this.mostrarInfo('La factura no tiene identificador para consultar sus abonos');
       return;
     }
-    this.router.navigate(['/menucuentasxcobrar/cobros/abonos-factura'], {
-      queryParams: { idFactura: row.id },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_ABONOS_A_FACTURA,
+      () => {
+        this.router.navigate(['/menucuentasxcobrar/cobros/abonos-factura'], {
+          queryParams: { idFactura: row.id },
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   copiarClave(row: FacturaEmitir): void {

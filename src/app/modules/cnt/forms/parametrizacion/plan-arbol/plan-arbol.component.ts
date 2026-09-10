@@ -25,6 +25,8 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { PlanCuentaUtilsService } from '../../../../../shared/services/plan-cuenta-utils.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { PlanCuentaAddEditComponent } from '../../../dialog/plan-cuenta-add-edit/plan-cuenta-add-edit.component';
 import { NaturalezaCuenta } from '../../../model/naturaleza-cuenta';
 import { PlanCuenta } from '../../../model/plan-cuenta';
@@ -120,6 +122,7 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     private exportService: ExportService,
     private planUtils: PlanCuentaUtilsService,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -699,22 +702,28 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
       }
       // Obtener nodo raíz (cuentaContable == '0') para usar su codigo como idPadre real
       const rootParent = this.planCuentas.find((p) => p.cuentaContable === '0') || null;
-      const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
-        width: '720px',
-        disableClose: true,
-        data: {
-          parent: rootParent, // pasamos el root real para asignar idPadre correcto
-          naturalezas: this.naturalezas,
-          presetCuenta: String(nextRoot),
-          presetNivel: 1,
-          maxDepth: this.getMaxDepthAllowed(),
+      this.permisosService.ejecutarSiPermitido(
+        Permisos.CNT_AGREGAR_EDITAR_CUENTA,
+        () => {
+          const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
+            width: '720px',
+            disableClose: true,
+            data: {
+              parent: rootParent, // pasamos el root real para asignar idPadre correcto
+              naturalezas: this.naturalezas,
+              presetCuenta: String(nextRoot),
+              presetNivel: 1,
+              maxDepth: this.getMaxDepthAllowed(),
+            },
+          });
+          dialogRef.afterClosed().subscribe((result) => {
+            if (result) {
+              this.loadData();
+            }
+          });
         },
-      });
-      dialogRef.afterClosed().subscribe((result) => {
-        if (result) {
-          this.loadData();
-        }
-      });
+        (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+      );
       return;
     }
 
@@ -726,37 +735,49 @@ export class PlanArbolComponent implements OnInit, AfterViewInit {
     const presetCuenta = this.generateNewCuentaContable(parent);
     const presetNivel = parent ? (parent.level || 0) + 1 : 1;
 
-    const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
-      width: '720px',
-      disableClose: true,
-      data: {
-        parent: parent || null,
-        naturalezas: this.naturalezas,
-        presetCuenta,
-        presetNivel,
-        maxDepth: this.getMaxDepthAllowed(),
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_AGREGAR_EDITAR_CUENTA,
+      () => {
+        const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
+          width: '720px',
+          disableClose: true,
+          data: {
+            parent: parent || null,
+            naturalezas: this.naturalezas,
+            presetCuenta,
+            presetNivel,
+            maxDepth: this.getMaxDepthAllowed(),
+          },
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadData();
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.loadData();
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   onEdit(item: PlanCuentaNode) {
-    const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
-      width: '700px',
-      disableClose: true,
-      data: { item, naturalezas: this.naturalezas },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_AGREGAR_EDITAR_CUENTA,
+      () => {
+        const dialogRef = this.dialog.open(PlanCuentaAddEditComponent, {
+          width: '700px',
+          disableClose: true,
+          data: { item, naturalezas: this.naturalezas },
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadData();
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.loadData();
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   onDelete(node: PlanCuentaNode) {

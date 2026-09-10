@@ -305,6 +305,8 @@ export class CruceAnticipoClienteComponent implements OnInit {
     return d.toLocaleDateString('es-EC', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
+  // Vuelta a AbonosFactura (la ida ya se verifica en abonos-factura.component.ts:151,
+  // irACruceAnticipo) — no se verifica, regla "ida sí, vuelta no" (ÍTEM 7 de seguridades).
   volverAAbonos(): void {
     this.router.navigate(['/menucuentasxcobrar/cobros/abonos-factura'], {
       queryParams: { idFactura: this.idFactura },

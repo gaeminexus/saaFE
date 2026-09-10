@@ -1,5 +1,6 @@
 import { EntidadesRrh } from '../../../model/entidades-rrh';
 import { RubrosRrh } from '../../../model/rubros-rrh';
+import { Permisos } from '../../../../../shared/model/permisos';
 import {
   CampoFormulario,
   ColumnaTabla,
@@ -51,6 +52,8 @@ export interface SeccionFicha {
   mensajeVacio: string;
   /** Si la sección tiene formulario en vista propia, el segmento de ruta que lo abre. */
   rutaFormulario?: string;
+  /** Permiso que protege ese formulario en vista propia — solo tiene sentido junto a `rutaFormulario`. */
+  idPermiso?: number;
   resumen?: (filas: any[]) => LineaResumen[];
 }
 
@@ -211,6 +214,7 @@ export function seccionesFicha(col: ColeccionesFicha): SeccionFicha[] {
       ],
       permiteBorrar: false,
       rutaFormulario: 'contratos',
+      idPermiso: Permisos.RRH_FORMULARIO_DE_CONTRATO,
       camposEscalares: [
         'tipoRelacionLaboral',
         'jornada',
@@ -314,6 +318,7 @@ export function seccionesFicha(col: ColeccionesFicha): SeccionFicha[] {
       ],
       permiteBorrar: true,
       rutaFormulario: 'cuentas-bancarias',
+      idPermiso: Permisos.RRH_FORMULARIO_DE_CUENTA_BANCARIA,
       camposEscalares: ['tipoCuenta', 'principal', 'estado'],
       camposReferencia: ['banco'],
       resumen: (filas) => {

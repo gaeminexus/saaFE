@@ -31,6 +31,8 @@ import { ClasificarProductosDialogComponent, ClasificarProductosDialogResult } f
 import { RegistrarDocumentoDialogComponent, RegistrarDocumentoDialogResult } from '../dialogs/registrar-documento-dialog/registrar-documento-dialog.component';
 import { SubirXmlDialogComponent, SubirXmlDialogResult } from '../dialogs/subir-xml-dialog/subir-xml-dialog.component';
 import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 // Estados que aún no están registrados en BD (pendientes de proceso)
 const ESTADOS_PENDIENTES = [1, 2, 4, 5, 6];
@@ -395,6 +397,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   private processService = inject(CargaDocumentosService);
   private cargaTxtService = inject(CargaArchivoTxtService);
   private dialog = inject(MatDialog);
+  private permisosService = inject(PermisosService);
   private funcionesDatos = inject(FuncionesDatosService);
   private periodoService = inject(PeriodoService);
   private destroyRef = inject(DestroyRef);
@@ -606,14 +609,20 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   abrirClasificacionProductos(): void {
     const idCarga = this.cargaTxtSeleccionada();
     if (!idCarga) { this.mostrarError('Seleccione una carga TXT.'); return; }
-    const ref = this.dialog.open(ClasificarProductosDialogComponent, {
-      data: { idCargaTxt: idCarga, idEmpresa: this.idEmpresa },
-      width: '1100px',
-      maxWidth: '97vw',
-    });
-    ref.afterClosed().subscribe((huboCambios: ClasificarProductosDialogResult | undefined) => {
-      if (huboCambios) { this.consultarProgreso(idCarga, false); }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_CLASIFICAR_PRODUCTOS,
+      () => {
+        const ref = this.dialog.open(ClasificarProductosDialogComponent, {
+          data: { idCargaTxt: idCarga, idEmpresa: this.idEmpresa },
+          width: '1100px',
+          maxWidth: '97vw',
+        });
+        ref.afterClosed().subscribe((huboCambios: ClasificarProductosDialogResult | undefined) => {
+          if (huboCambios) { this.consultarProgreso(idCarga, false); }
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   // ─── PROGRESO DEL LOTE (§6.3) ───────────────────────────
@@ -946,14 +955,20 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   // ─── SUBIR XML ──────────────────────────────────────────
 
   abrirSelectorXml(doc: DocumentoCxp): void {
-    const ref = this.dialog.open(SubirXmlDialogComponent, {
-      data: { documento: doc },
-      width: '520px',
-      maxWidth: '95vw',
-    });
-    ref.afterClosed().subscribe((result: SubirXmlDialogResult | null) => {
-      if (result?.file) { this.subirXml(result.file, doc, result.esReembolso); }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_SUBIR_XML,
+      () => {
+        const ref = this.dialog.open(SubirXmlDialogComponent, {
+          data: { documento: doc },
+          width: '520px',
+          maxWidth: '95vw',
+        });
+        ref.afterClosed().subscribe((result: SubirXmlDialogResult | null) => {
+          if (result?.file) { this.subirXml(result.file, doc, result.esReembolso); }
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   private subirXml(file: File, doc: DocumentoCxp, esReembolso: boolean): void {
@@ -1005,14 +1020,20 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   // ─── REGISTRAR EN BD ────────────────────────────────────
 
   registrar(doc: DocumentoCxp): void {
-    const ref = this.dialog.open(RegistrarDocumentoDialogComponent, {
-      data: { documento: doc },
-      width: '520px',
-      maxWidth: '95vw',
-    });
-    ref.afterClosed().subscribe((result: RegistrarDocumentoDialogResult | null) => {
-      if (result) this.confirmarRegistro(doc, result);
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_REGISTRAR_DOCUMENTO,
+      () => {
+        const ref = this.dialog.open(RegistrarDocumentoDialogComponent, {
+          data: { documento: doc },
+          width: '520px',
+          maxWidth: '95vw',
+        });
+        ref.afterClosed().subscribe((result: RegistrarDocumentoDialogResult | null) => {
+          if (result) this.confirmarRegistro(doc, result);
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   private confirmarRegistro(doc: DocumentoCxp, opciones: RegistrarDocumentoDialogResult): void {
@@ -1067,23 +1088,29 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
         + 'El documento vuelve a XML_CARGADO y podrá regenerar el asiento con Recontabilizar.',
       textoConfirmar: 'Anular contabilidad',
     };
-    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
-      this.procesando.set(true);
-      this.processService.anularContabilidad(doc.id, { motivo, idUsuario: this.idUsuario }).subscribe({
-        next: (resp) => {
-          this.procesando.set(false);
-          this.mostrarExito(resp?.mensaje || 'Contabilidad anulada');
-          this.cargar();
-        },
-        error: (err) => {
-          this.procesando.set(false);
-          // 409 legítimo (estado equivocado o pagos vigentes): mostrar el mensaje del servidor
-          // tal cual, no es un fallo que haya que reformular.
-          this.mostrarErrorDialog('No se pudo anular la contabilidad', this.extraerMensajeError(err));
-        },
-      });
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo) return;
+          this.procesando.set(true);
+          this.processService.anularContabilidad(doc.id, { motivo, idUsuario: this.idUsuario }).subscribe({
+            next: (resp) => {
+              this.procesando.set(false);
+              this.mostrarExito(resp?.mensaje || 'Contabilidad anulada');
+              this.cargar();
+            },
+            error: (err) => {
+              this.procesando.set(false);
+              // 409 legítimo (estado equivocado o pagos vigentes): mostrar el mensaje del servidor
+              // tal cual, no es un fallo que haya que reformular.
+              this.mostrarErrorDialog('No se pudo anular la contabilidad', this.extraerMensajeError(err));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   /**
@@ -1139,14 +1166,20 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   }
 
   abrirResolverReemplazar(doc: DocumentoCxp): void {
-    const ref = this.dialog.open(SubirXmlDialogComponent, {
-      data: { documento: doc },
-      width: '520px',
-      maxWidth: '95vw',
-    });
-    ref.afterClosed().subscribe((result: SubirXmlDialogResult | null) => {
-      if (result?.file) { this.resolverNovedad(doc, 'REEMPLAZAR', result.file, result.esReembolso); }
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_SUBIR_XML,
+      () => {
+        const ref = this.dialog.open(SubirXmlDialogComponent, {
+          data: { documento: doc },
+          width: '520px',
+          maxWidth: '95vw',
+        });
+        ref.afterClosed().subscribe((result: SubirXmlDialogResult | null) => {
+          if (result?.file) { this.resolverNovedad(doc, 'REEMPLAZAR', result.file, result.esReembolso); }
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   // ─── MARCAR / DESMARCAR REEMBOLSO ───────────────────────
@@ -1222,17 +1255,23 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   }
 
   abrirDialogoReembolsos(doc: DocumentoCxp): void {
-    const ref = this.dialog.open(ReembolsosFacturaDialogComponent, {
-      data: {
-        idFacturaCompra: doc.idDocumentoBD,
-        contabilizacionPendiente: doc.estadoDocumento === 2,
-        idUsuario: this.idUsuario,
-        idEmpresa: this.idEmpresa,
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_REEMBOLSOS_DE_FACTURA,
+      () => {
+        const ref = this.dialog.open(ReembolsosFacturaDialogComponent, {
+          data: {
+            idFacturaCompra: doc.idDocumentoBD,
+            contabilizacionPendiente: doc.estadoDocumento === 2,
+            idUsuario: this.idUsuario,
+            idEmpresa: this.idEmpresa,
+          },
+          width: '1200px',
+          maxWidth: '98vw',
+        });
+        ref.afterClosed().subscribe(() => this.cargar());
       },
-      width: '1200px',
-      maxWidth: '98vw',
-    });
-    ref.afterClosed().subscribe(() => this.cargar());
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   // ─── REVERTIR (estado 3 → 6) ───────────────────────────────────
@@ -1293,7 +1332,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
     return txt.value;
   }
 
-  /** Abre el dialog de condiciones bloqueantes al registrar */
+  /**
+   * Abre el dialog de condiciones bloqueantes al registrar. Sin verificación de permiso propia:
+   * es el resultado de `registrar()`, que ya verificó CXP_REGISTRAR_DOCUMENTO antes de llamar al
+   * backend — mismo criterio que los diálogos "resultado de una operación ya autorizada" de crd
+   * (CobroRegistradoDialog/ReciboOperacionDialog, ÍTEM 7 de seguridades).
+   */
   private mostrarBloqueantes(bloqueantes: ErrorBloqueante[]): void {
     this.dialog.open(RegistroBloqueantesDialogComponent, {
       data: { bloqueantes },
@@ -1302,7 +1346,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
     });
   }
 
-  /** Abre un dialog de error genérico con título y detalle opcional */
+  /**
+   * Abre un dialog de error genérico. Sin verificación propia: solo se llama desde flujos que ya
+   * verificaron su propio permiso (registrar(), anularContabilidad(), recontabilizar()) — es el
+   * resultado, no una puerta nueva.
+   */
   private mostrarErrorDialog(mensaje: string, detalle?: string): void {
     this.dialog.open(ErrorRegistroDialogComponent, {
       data: { mensaje, detalle },
@@ -1311,7 +1359,10 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
     });
   }
 
-  /** Abre un dialog con la tabla de diferencias entre el TXT del SRI y el XML subido */
+  /**
+   * Sin verificación propia: solo se llama desde `subirXml()`, que siempre cuelga de un flujo ya
+   * verificado (abrirSelectorXml → CXP_SUBIR_XML, o abrirResolverReemplazar → CXP_SUBIR_XML).
+   */
   private mostrarErrorValidacionXml(errores: { campo: string; esperado: string; enXml: string }[]): void {
     this.dialog.open(XmlValidacionErrorDialogComponent, {
       data: { errores },

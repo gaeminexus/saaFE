@@ -7,6 +7,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { forkJoin } from 'rxjs';
 import { ExterHistoricoDialogComponent } from '../../../dialog/exter-historico-dialog/exter-historico-dialog.component';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 import { Entidad } from '../../../model/entidad';
 import { CodigoEstadoParticipe } from '../../../model/estado-participe';
@@ -93,6 +95,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatosService = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
   private exterService = inject(ExterService);
 
@@ -1043,13 +1046,19 @@ export class EntidadParticipeInfoComponent implements OnInit {
   verDatosHistoricos(): void {
     const exter = this.exterData();
     if (!exter) return;
-    this.dialog.open(ExterHistoricoDialogComponent, {
-      data: { exter },
-      width: '820px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      disableClose: false
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_HISTORICO_DE_EXTERNOS,
+      () => {
+        this.dialog.open(ExterHistoricoDialogComponent, {
+          data: { exter },
+          width: '820px',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          disableClose: false
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   getNombreTipoCuenta(codigoAlterno: number): string {
@@ -1166,6 +1175,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
     this.direccionForm.reset({ estado: 1 });
   }
 
+  // Vuelta a quien abrió esta pantalla (returnUrl dinámico, o ParticipeDash por defecto). Regla del
+  // árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea ninguna de las dos ramas.
   regresar(): void {
     // Intentar obtener el returnUrl de los query params
     const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');

@@ -11,6 +11,8 @@ import { ParticipeGeneracionArchivo } from '../../../../model/participe-generaci
 import { EstadoGeneracionPetro } from '../../../../model/generacion-archivo-petro';
 import { FilialService } from '../../../../service/filial.service';
 import { GeneracionArchivoPetroService } from '../../../../service/generacion-archivo-petro.service';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -67,6 +69,7 @@ export class GenerarArchivoPetroComponent implements OnInit {
     private generacionArchivoPetroService: GeneracionArchivoPetroService,
     private participeGeneracionArchivoService: ParticipeGeneracionArchivoService,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {
     const anioActual = new Date().getFullYear();
     for (let anio = anioActual - 2; anio <= anioActual + 5; anio++) {
@@ -239,7 +242,11 @@ export class GenerarArchivoPetroComponent implements OnInit {
               { duration: 5000 }
             );
             this.buscarMesesGenerados();
-            this.router.navigate(['/menucreditos/archivos-petro/generar/detalle', codigoGeneracion]);
+            this.permisosService.ejecutarSiPermitido(
+              Permisos.CRD_DETALLE_DE_GENERACION,
+              () => this.router.navigate(['/menucreditos/archivos-petro/generar/detalle', codigoGeneracion]),
+              (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+            );
           },
           error: (error: Error) => {
             this.isGenerating.set(false);

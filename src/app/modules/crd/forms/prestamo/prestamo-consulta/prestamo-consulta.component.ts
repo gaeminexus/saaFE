@@ -37,6 +37,8 @@ import {
   FuncionesDatosService,
   TipoFormatoFechaBackend,
 } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { PrestamoDetalleDialogComponent } from '../../../dialog/prestamo-detalle-dialog/prestamo-detalle-dialog.component';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
 import {
@@ -179,6 +181,7 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
     private snackBar: MatSnackBar,
     private dialog: MatDialog,
     private router: Router,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -990,25 +993,35 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
-    this.dialog.open(PrestamoDetalleDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      data: { codigoPrestamo: prestamo.codigo },
-      panelClass: 'prestamo-detalle-dialog',
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DETALLE_DEL_PRESTAMO,
+      () => {
+        this.dialog.open(PrestamoDetalleDialogComponent, {
+          width: '900px',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          data: { codigoPrestamo: prestamo.codigo },
+          panelClass: 'prestamo-detalle-dialog',
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirIngreso(prestamo: Prestamo): void {
-    this.router.navigate(['/menucreditos/prestamo-edit'], {
-      state: { prestamo },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PRESTAMOS_INGRESO,
+      () => this.router.navigate(['/menucreditos/prestamo-edit'], { state: { prestamo } }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   generarTablaDesdeConsulta(prestamo: Prestamo): void {
-    this.router.navigate(['/menucreditos/prestamo-edit'], {
-      state: { prestamo, enfocarGenerarTabla: true },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PRESTAMOS_INGRESO,
+      () => this.router.navigate(['/menucreditos/prestamo-edit'], { state: { prestamo, enfocarGenerarTabla: true } }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   toggleFiltrosPrincipales(): void {

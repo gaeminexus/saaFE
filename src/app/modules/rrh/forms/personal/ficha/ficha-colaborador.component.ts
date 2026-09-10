@@ -13,6 +13,8 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
 import { Empleado } from '../../../model/empleado';
 import { ESTADOS_EN_FIRME } from '../../../model/estados-liquidacion';
@@ -104,6 +106,7 @@ export class FichaColaboradorComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private funcionesDatosS: FuncionesDatosService,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -228,7 +231,12 @@ export class FichaColaboradorComponent implements OnInit {
 
   /** Las pastillas que llevan a otra pantalla se navegan; el resto no hacen nada. */
   irA(pastilla: PastillaFicha): void {
-    if (pastilla.enlace) this.router.navigate(pastilla.enlace);
+    if (!pastilla.enlace) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_LIQUIDACION,
+      () => this.router.navigate(pastilla.enlace!),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   onGuardado(empleado: Empleado): void {
@@ -262,6 +270,8 @@ export class FichaColaboradorComponent implements OnInit {
   }
 
   volver(): void {
+    // No se verifica: vuelta a ColaboradoresComponent ("volver" literal; la ida ya
+    // se verifica en colaboradores.component.ts al abrir esta ficha).
     this.router.navigate(['/menurecursoshumanos/personal/colaboradores']);
   }
 

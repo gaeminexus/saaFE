@@ -12,7 +12,7 @@
       @for (c of cajasEnAlerta(); track c.idCaja) {
         <a
           class="chip-alerta"
-          routerLink="/menutesoreria/procesos/caja-chica/reposicion"
+          (click)="irAReposicion()"
           matTooltip="Saldo disponible: {{ c.saldo | number: '1.2-2' }} de {{ c.fondo | number: '1.2-2' }}"
         >
           <mat-icon>warning</mat-icon>
@@ -25,7 +25,7 @@
     <div top-banner class="alertas-caja-chica">
       <a
         class="chip-alerta"
-        routerLink="/menutesoreria/procesos/conciliacion/cierre"
+        (click)="irAConciliacionCierre()"
         matTooltip="Partidas en tránsito sin saldar hace más de 60 días"
       >
         <mat-icon>warning</mat-icon>

@@ -21,6 +21,8 @@ import {
 import { AccionesGeneracionPetroService } from '../../../../service/acciones-generacion-petro.service';
 import { DetalleGeneracionArchivoService } from '../../../../service/detalle-generacion-archivo.service';
 import { GeneracionArchivoPetroService } from '../../../../service/generacion-archivo-petro.service';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 
 interface MesCirculo {
   numero: number;
@@ -72,6 +74,7 @@ export class ConsultaGeneracionArchivoComponent implements OnInit {
     private detalleGeneracionArchivoService: DetalleGeneracionArchivoService,
     private accionesPetro: AccionesGeneracionPetroService,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -283,9 +286,13 @@ export class ConsultaGeneracionArchivoComponent implements OnInit {
 
   verDetalle(item: GeneracionArchivoPetro): void {
     if (!item.codigo) return;
-    this.router.navigate(['/menucreditos/archivos-petro/generar/detalle', item.codigo], {
-      state: { generacion: item },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DETALLE_DE_GENERACION,
+      () => this.router.navigate(['/menucreditos/archivos-petro/generar/detalle', item.codigo], {
+        state: { generacion: item },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   // ── Descarga y eliminación ───────────────────────────────────

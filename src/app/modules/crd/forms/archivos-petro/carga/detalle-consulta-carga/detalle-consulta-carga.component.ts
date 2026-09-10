@@ -19,6 +19,8 @@ import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { DetalleRubroService } from '../../../../../../shared/services/detalle-rubro.service';
 import { DetalleRubro } from '../../../../../../shared/model/detalle-rubro';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 import { NovedadCargaService } from '../../../../service/novedad-carga.service';
 import { NovedadCarga, NovedadAgrupada } from '../../../../model/novedad-carga';
 import { ConfirmDialogComponent } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
@@ -320,7 +322,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     private novedadParticipeCargaService: NovedadParticipeCargaService,
     private afectacionValoresParticipeCargaService: AfectacionValoresParticipeCargaService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {
     // Generar años del 2025 al 2035
     for (let anio = 2025; anio <= 2035; anio++) {
@@ -832,49 +835,55 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    * Mostrar diálogo de coincidencias para partícipe no encontrado
    */
   private mostrarCoincidencias(registro: ParticipeXCargaArchivo): void {
-    const dialogRef = this.dialog.open(CoincidenciasEntidadDialogComponent, {
-      width: '800px',
-      data: {
-        nombreBusqueda: registro.nombre,
-        registroOriginal: registro
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(entidadSeleccionada => {
-      if (entidadSeleccionada) {
-
-        // Llamar al servicio para actualizar el código Petro con la entidad seleccionada
-        this.isLoading = true;
-        this.serviciosAsoprepService.actualizaCodigoPetroEntidad(
-          registro.codigoPetro,
-          registro.codigo!,
-          entidadSeleccionada.codigo
-        ).subscribe({
-          next: (participeActualizado: ParticipeXCargaArchivo | null) => {
-            if (participeActualizado) {
-              // Actualizar el registro en la lista local
-              this.actualizarRegistroEnNovedades(registro, participeActualizado);
-
-              this.snackBar.open(
-                `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
-                'Cerrar',
-                { duration: 3000 }
-              );
-            }
-
-            this.isLoading = false;
-          },
-          error: (error: any) => {
-            this.snackBar.open(
-              '❌ Error al asociar la entidad',
-              'Cerrar',
-              { duration: 5000 }
-            );
-            this.isLoading = false;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_COINCIDENCIAS_DE_ENTIDAD,
+      () => {
+        const dialogRef = this.dialog.open(CoincidenciasEntidadDialogComponent, {
+          width: '800px',
+          data: {
+            nombreBusqueda: registro.nombre,
+            registroOriginal: registro
           }
         });
-      }
-    });
+
+        dialogRef.afterClosed().subscribe(entidadSeleccionada => {
+          if (entidadSeleccionada) {
+
+            // Llamar al servicio para actualizar el código Petro con la entidad seleccionada
+            this.isLoading = true;
+            this.serviciosAsoprepService.actualizaCodigoPetroEntidad(
+              registro.codigoPetro,
+              registro.codigo!,
+              entidadSeleccionada.codigo
+            ).subscribe({
+              next: (participeActualizado: ParticipeXCargaArchivo | null) => {
+                if (participeActualizado) {
+                  // Actualizar el registro en la lista local
+                  this.actualizarRegistroEnNovedades(registro, participeActualizado);
+
+                  this.snackBar.open(
+                    `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
+                    'Cerrar',
+                    { duration: 3000 }
+                  );
+                }
+
+                this.isLoading = false;
+              },
+              error: (error: any) => {
+                this.snackBar.open(
+                  '❌ Error al asociar la entidad',
+                  'Cerrar',
+                  { duration: 5000 }
+                );
+                this.isLoading = false;
+              }
+            });
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**
@@ -1062,6 +1071,9 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           error: (err) => {
             this.archivoYaProcesado.set(false);
             const mensaje = mensajeDeError(err, 'Error al procesar el archivo');
+            // No se verifica: muestra el resultado (el error) de un proceso que ya se autorizó al
+            // entrar a esta pantalla, no abre una funcionalidad nueva — mismo criterio que los
+            // diálogos de error de cxp/gestion-documentos.component.ts.
             this.dialog.open(ProcesoArchivoErrorDialogComponent, {
               width: '760px',
               maxWidth: '95vw',
@@ -1079,6 +1091,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
    * Vuelve a la pantalla anterior
    */
   volverAtras(): void {
+    // Vuelta a ConsultaArchivosPetro (la ida ya se verifica en consulta-archivos-petro.component.ts:260).
+    // Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
     this.router.navigate(['/menucreditos/consulta-archivos-petro']);
   }
 
@@ -1223,44 +1237,50 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         }
 
         // Abrir el dialog con las entidades encontradas
-        const dialogRef = this.dialog.open(CoincidenciasEntidadDialogComponent, {
-          width: '800px',
-          data: {
-            nombreBusqueda: registro.nombre,
-            registroOriginal: registro
-          }
-        });
-
-        // Cargar manualmente las coincidencias en el diálogo
-        dialogRef.componentInstance.coincidencias = entidades;
-        dialogRef.componentInstance.isLoading = false;
-
-        dialogRef.afterClosed().subscribe(entidadSeleccionada => {
-          if (entidadSeleccionada) {
-            this.isLoading = true;
-            this.serviciosAsoprepService.actualizaCodigoPetroEntidad(
-              registro.codigoPetro,
-              registro.codigo!,
-              entidadSeleccionada.codigo
-            ).subscribe({
-              next: (participeActualizado: ParticipeXCargaArchivo | null) => {
-                if (participeActualizado) {
-                  this.actualizarRegistroEnNovedades(registro, participeActualizado);
-                  this.snackBar.open(
-                    `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
-                    'Cerrar',
-                    { duration: 3000 }
-                  );
-                }
-                this.isLoading = false;
-              },
-              error: (error: any) => {
-                this.snackBar.open('❌ Error al asociar la entidad', 'Cerrar', { duration: 5000 });
-                this.isLoading = false;
+        this.permisosService.ejecutarSiPermitido(
+          Permisos.CRD_COINCIDENCIAS_DE_ENTIDAD,
+          () => {
+            const dialogRef = this.dialog.open(CoincidenciasEntidadDialogComponent, {
+              width: '800px',
+              data: {
+                nombreBusqueda: registro.nombre,
+                registroOriginal: registro
               }
             });
-          }
-        });
+
+            // Cargar manualmente las coincidencias en el diálogo
+            dialogRef.componentInstance.coincidencias = entidades;
+            dialogRef.componentInstance.isLoading = false;
+
+            dialogRef.afterClosed().subscribe(entidadSeleccionada => {
+              if (entidadSeleccionada) {
+                this.isLoading = true;
+                this.serviciosAsoprepService.actualizaCodigoPetroEntidad(
+                  registro.codigoPetro,
+                  registro.codigo!,
+                  entidadSeleccionada.codigo
+                ).subscribe({
+                  next: (participeActualizado: ParticipeXCargaArchivo | null) => {
+                    if (participeActualizado) {
+                      this.actualizarRegistroEnNovedades(registro, participeActualizado);
+                      this.snackBar.open(
+                        `✓ Entidad "${entidadSeleccionada.razonSocial}" asociada correctamente`,
+                        'Cerrar',
+                        { duration: 3000 }
+                      );
+                    }
+                    this.isLoading = false;
+                  },
+                  error: (error: any) => {
+                    this.snackBar.open('❌ Error al asociar la entidad', 'Cerrar', { duration: 5000 });
+                    this.isLoading = false;
+                  }
+                });
+              }
+            });
+          },
+          (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+        );
       },
       error: (error: any) => {
         this.snackBar.open('❌ Error al buscar coincidencias', 'Cerrar', { duration: 5000 });
@@ -1749,6 +1769,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   }
 
   togglePanelAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_AFECTACION_FINANCIERA_DE_CUOTAS,
+      () => this.abrirAfectacionFinancieraCuotas(novedad),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
+  }
+
+  private abrirAfectacionFinancieraCuotas(novedad: NovedadParticipeCarga): void {
     this.resetAfectacionFinancieraState();
     this.novedadFinancieraSeleccionada.set(novedad);
     this.isLoadingAfectacionFinanciera.set(true);
@@ -2915,10 +2943,16 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     const idCarga = this.cargaArchivo?.codigo;
     if (!idCarga) return;
 
-    const ref = this.dialog.open(RevalidarCargaDialogComponent, { width: '480px', data: { idCarga } });
-    ref.afterClosed().subscribe((revalidado) => {
-      if (revalidado) this.cargarDatos(idCarga);
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_REVALIDAR_CARGA,
+      () => {
+        const ref = this.dialog.open(RevalidarCargaDialogComponent, { width: '480px', data: { idCarga } });
+        ref.afterClosed().subscribe((revalidado) => {
+          if (revalidado) this.cargarDatos(idCarga);
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**

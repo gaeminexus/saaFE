@@ -12,6 +12,8 @@ import { DateComponent } from '../../../../../shared/basics/table/dynamic-form/c
 import { DateFieldConfig } from '../../../../../shared/basics/table/dynamic-form/model/date.interface';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import {
   EstadoPeriodo,
@@ -108,6 +110,7 @@ export class PeriodosNominaComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private router: Router,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -166,7 +169,11 @@ export class PeriodosNominaComponent implements OnInit {
 
   abrirPanel(periodo: PeriodoNomina): void {
     if (!periodo?.codigo) return;
-    this.router.navigate(['/menurecursoshumanos/procesos/periodos-nomina', periodo.codigo]);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_DASH_DEL_PERIODO,
+      () => this.router.navigate(['/menurecursoshumanos/procesos/periodos-nomina', periodo.codigo]),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   // ─── Alta en línea, dentro del propio contenedor del mes ──────────────────

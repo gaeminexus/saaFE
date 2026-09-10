@@ -22,6 +22,8 @@ import { DetalleCargaArchivoService } from '../../../../service/detalle-carga-ar
 import { ParticipeXCargaArchivoService } from '../../../../service/participe-x-carga-archivo.service';
 import { NovedadParticipeCargaService } from '../../../../service/novedad-participe-carga.service';
 import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 
 import { AfectacionParticipeDialogComponent } from '../../../../dialog/afectacion-participe-dialog/afectacion-participe-dialog.component';
 import { RevalidarCargaDialogComponent } from '../../../../dialog/revalidar-carga-dialog/revalidar-carga-dialog.component';
@@ -98,6 +100,7 @@ export class AfectacionPorParticipeComponent implements OnInit {
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private cargaArchivoService = inject(CargaArchivoService);
   private detalleCargaArchivoService = inject(DetalleCargaArchivoService);
   private participeXCargaArchivoService = inject(ParticipeXCargaArchivoService);
@@ -146,6 +149,8 @@ export class AfectacionPorParticipeComponent implements OnInit {
   }
 
   volver(): void {
+    // Vuelta a ConsultaArchivosPetro (la ida ya se verifica en consulta-archivos-petro.component.ts:271).
+    // Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
     this.router.navigate(['/menucreditos/archivos-petro/carga/consulta']);
   }
 
@@ -402,38 +407,50 @@ export class AfectacionPorParticipeComponent implements OnInit {
   }
 
   abrirParticipe(p: ParticipeConNovedades): void {
-    const ref = this.dialog.open(AfectacionParticipeDialogComponent, {
-      width: '1100px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      data: {
-        idCarga: this.idCarga,
-        codigoPetro: p.codigoPetro,
-        nombreParticipe: p.nombre,
-        // TODAS las novedades (sin el filtro tipoNovedad > 3) — el diálogo las necesita completas
-        // para el fan-out de afectaciones y el matching de destinos (ver `todasNovedades` arriba).
-        novedades: p.todasNovedades,
-        // Solo las "motivo" (tipoNovedad > 3) para la sección MOTIVOS del diálogo.
-        motivos: p.novedades,
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_AFECTACION_DEL_PARTICIPE,
+      () => {
+        const ref = this.dialog.open(AfectacionParticipeDialogComponent, {
+          width: '1100px',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          data: {
+            idCarga: this.idCarga,
+            codigoPetro: p.codigoPetro,
+            nombreParticipe: p.nombre,
+            // TODAS las novedades (sin el filtro tipoNovedad > 3) — el diálogo las necesita completas
+            // para el fan-out de afectaciones y el matching de destinos (ver `todasNovedades` arriba).
+            novedades: p.todasNovedades,
+            // Solo las "motivo" (tipoNovedad > 3) para la sección MOTIVOS del diálogo.
+            motivos: p.novedades,
+          },
+        });
 
-    ref.afterClosed().subscribe((guardado) => {
-      if (guardado) {
-        // El guardado cambió el reparto de este partícipe — refresca la lista completa para que
-        // el chip de exceso/faltante (que sale del prevuelo) quede al día.
-        this.cargarTodo();
-      }
-    });
+        ref.afterClosed().subscribe((guardado) => {
+          if (guardado) {
+            // El guardado cambió el reparto de este partícipe — refresca la lista completa para que
+            // el chip de exceso/faltante (que sale del prevuelo) quede al día.
+            this.cargarTodo();
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirRevalidarCarga(): void {
-    const ref = this.dialog.open(RevalidarCargaDialogComponent, { width: '480px', data: { idCarga: this.idCarga } });
-    ref.afterClosed().subscribe((revalidado) => {
-      // Después de revalidar los pozos cambian — recargar es parte de la acción, no un paso
-      // aparte que el operador tenga que acordarse de hacer.
-      if (revalidado) this.cargarTodo();
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_AFECTACION_POR_PARTICIPE_REVALIDAR_CARGA,
+      () => {
+        const ref = this.dialog.open(RevalidarCargaDialogComponent, { width: '480px', data: { idCarga: this.idCarga } });
+        ref.afterClosed().subscribe((revalidado) => {
+          // Después de revalidar los pozos cambian — recargar es parte de la acción, no un paso
+          // aparte que el operador tenga que acordarse de hacer.
+          if (revalidado) this.cargarTodo();
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   formatMoneda(n: number | null | undefined): string {

@@ -11,6 +11,8 @@ import { CargaArchivoService } from '../../../../service/carga-archivo.service';
 import { ServiciosAsoprepService } from '../../../../../asoprep/service/servicios-asoprep.service';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
 import { ConfirmDialogComponent } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 
 interface MesCirculo {
   numero: number;
@@ -58,7 +60,8 @@ export class ConsultaArchivosPetroComponent implements OnInit {
     private serviciosAsoprepService: ServiciosAsoprepService,
     private funcionesDatosService: FuncionesDatosService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -257,7 +260,11 @@ export class ConsultaArchivosPetroComponent implements OnInit {
    */
   verDetalle(carga: CargaArchivo): void {
     if (carga.codigo) {
-      this.router.navigate(['/menucreditos/archivos-petro/carga/detalle', carga.codigo]);
+      this.permisosService.ejecutarSiPermitido(
+        Permisos.CRD_DETALLE_DE_CARGA,
+        () => this.router.navigate(['/menucreditos/archivos-petro/carga/detalle', carga.codigo]),
+        (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+      );
     }
   }
 
@@ -268,7 +275,11 @@ export class ConsultaArchivosPetroComponent implements OnInit {
    */
   verDetallePorParticipe(carga: CargaArchivo): void {
     if (carga.codigo) {
-      this.router.navigate(['/menucreditos/archivos-petro/carga/afectacion-por-participe', carga.codigo]);
+      this.permisosService.ejecutarSiPermitido(
+        Permisos.CRD_AFECTACION_POR_PARTICIPE,
+        () => this.router.navigate(['/menucreditos/archivos-petro/carga/afectacion-por-participe', carga.codigo]),
+        (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+      );
     }
   }
 

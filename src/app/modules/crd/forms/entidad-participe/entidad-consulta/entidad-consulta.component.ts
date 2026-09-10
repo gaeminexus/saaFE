@@ -25,6 +25,8 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import {
   FuncionesDatosService,
   TipoFormatoFechaBackend,
@@ -83,6 +85,7 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   private fb = inject(FormBuilder);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
   private entidadService = inject(EntidadService);
   private filialService = inject(FilialService);
@@ -707,11 +710,15 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
   }
 
   nuevaEntidad(): void {
-    this.router.navigate(['/menucreditos/entidad-edit'], {
-      queryParams: {
-        returnUrl: '/menucreditos/entidad-consulta',
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_EDICION_DE_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/entidad-edit'], {
+        queryParams: {
+          returnUrl: '/menucreditos/entidad-consulta',
+        },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   editarEntidad(entidad: Entidad): void {
@@ -720,12 +727,16 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    this.router.navigate(['/menucreditos/entidad-participe-info'], {
-      queryParams: {
-        codigoEntidad: entidad.codigo,
-        returnUrl: '/menucreditos/entidad-consulta',
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_INFORMACION_DEL_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/entidad-participe-info'], {
+        queryParams: {
+          codigoEntidad: entidad.codigo,
+          returnUrl: '/menucreditos/entidad-consulta',
+        },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   verComoParticipe(entidad: Entidad): void {
@@ -735,12 +746,16 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
     }
 
     // Navegar a participe-dash con el código de entidad precargado
-    this.router.navigate(['/menucreditos/participe-dash'], {
-      queryParams: {
-        codigoEntidad: entidad.codigo,
-        from: 'entidad-consulta', // Indicador de origen para ocultar búsqueda
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/participe-dash'], {
+        queryParams: {
+          codigoEntidad: entidad.codigo,
+          from: 'entidad-consulta', // Indicador de origen para ocultar búsqueda
+        },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   exportarCSV(): void {
@@ -899,21 +914,27 @@ export class EntidadConsultaComponent implements OnInit, AfterViewInit {
       campoCodigoEstado: 'codigoExterno',
     };
 
-    const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      autoFocus: 'first-tabbable',
-      restoreFocus: true,
-      disableClose: false,
-      panelClass: 'custom-dialog-container',
-      data: dialogData,
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_AUDITORIA,
+      () => {
+        const dialogRef = this.dialog.open(AuditoriaDialogComponent, {
+          width: '600px',
+          maxWidth: '90vw',
+          autoFocus: 'first-tabbable',
+          restoreFocus: true,
+          disableClose: false,
+          panelClass: 'custom-dialog-container',
+          data: dialogData,
+        });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result && result.nuevoEstado !== undefined && result.motivo) {
-        this.ejecutarCambioEstado(entidad, result.nuevoEstado, result.motivo);
-      }
-    });
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result && result.nuevoEstado !== undefined && result.motivo) {
+            this.ejecutarCambioEstado(entidad, result.nuevoEstado, result.motivo);
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**

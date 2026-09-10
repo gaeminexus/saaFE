@@ -379,6 +379,8 @@ export class LiquidacionFormComponent implements OnInit {
   }
 
   volver(): void {
+    // No se verifica: vuelta a LiquidacionListComponent (la ida ya se verifica en
+    // liquidacion-list.component.ts, abrir()/nuevo()).
     this.router.navigate(['/menurecursoshumanos/procesos/liquidacion']);
   }
 

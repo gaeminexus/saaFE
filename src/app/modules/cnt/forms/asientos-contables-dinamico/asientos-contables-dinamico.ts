@@ -26,6 +26,8 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 import { Asiento } from '../../model/asiento';
 import { CentroCosto } from '../../model/centro-costo';
 import { PlanCuenta } from '../../model/plan-cuenta';
@@ -139,7 +141,8 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
     private route: ActivatedRoute,
     private router: Router,
     private jasperReportes: JasperReportesService,
-    private subdetalleAsientoService: SubdetalleAsientoService
+    private subdetalleAsientoService: SubdetalleAsientoService,
+    private permisosService: PermisosService
   ) {}
 
   ngOnInit(): void {
@@ -2664,34 +2667,40 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
     const item: CuentaItem = row.itemRef;
     if (!item) return;
 
-    const dialogRef = this.dialog.open(SubdetalleAsientoDialogComponent, {
-      width: '95vw',
-      maxWidth: '95vw',
-      height: '85vh',
-      data: {
-        cuentaInfo: `${item.cuenta?.cuentaContable ?? ''} — ${item.cuenta?.nombre ?? ''}`,
-        codigoDetalle: item.codigoDetalle,
-        subdetalles: item.subdetalles ?? [],
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_SUBDETALLE_DE_ASIENTO,
+      () => {
+        const dialogRef = this.dialog.open(SubdetalleAsientoDialogComponent, {
+          width: '95vw',
+          maxWidth: '95vw',
+          height: '85vh',
+          data: {
+            cuentaInfo: `${item.cuenta?.cuentaContable ?? ''} — ${item.cuenta?.nombre ?? ''}`,
+            codigoDetalle: item.codigoDetalle,
+            subdetalles: item.subdetalles ?? [],
+          },
+        });
+
+        dialogRef.afterClosed().subscribe((resultado: SubdetalleDialogResult | null) => {
+          if (resultado !== null && resultado !== undefined) {
+            // El diálogo calcula internamente los deletedCodes comparando contra lo que cargó desde BD
+            item.subdetallesEliminados = [
+              ...(item.subdetallesEliminados ?? []),
+              ...resultado.deletedCodes,
+            ];
+
+            item.subdetalles = resultado.items;
+            // Refrescar la tabla para actualizar el contador del badge
+            this.calcularTotalesGrid();
+            this.showMessage(
+              `${resultado.items.length} subdetalle(s) configurado(s). Se guardarán al presionar "Grabar Detalle".`,
+              'success'
+            );
+          }
+        });
       },
-    });
-
-    dialogRef.afterClosed().subscribe((resultado: SubdetalleDialogResult | null) => {
-      if (resultado !== null && resultado !== undefined) {
-        // El diálogo calcula internamente los deletedCodes comparando contra lo que cargó desde BD
-        item.subdetallesEliminados = [
-          ...(item.subdetallesEliminados ?? []),
-          ...resultado.deletedCodes,
-        ];
-
-        item.subdetalles = resultado.items;
-        // Refrescar la tabla para actualizar el contador del badge
-        this.calcularTotalesGrid();
-        this.showMessage(
-          `${resultado.items.length} subdetalle(s) configurado(s). Se guardarán al presionar "Grabar Detalle".`,
-          'success'
-        );
-      }
-    });
+      (mensaje) => this.showMessage(mensaje.toUpperCase(), 'error'),
+    );
   }
 
   /**
@@ -2775,7 +2784,11 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
    * Volver a la pantalla de reporte listado asientos
    */
   volverAReporte(): void {
-    this.router.navigate(['/menucontabilidad/reportes/listado-asientos']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_LISTADO_DE_ASIENTOS,
+      () => this.router.navigate(['/menucontabilidad/reportes/listado-asientos']),
+      (mensaje) => this.showMessage(mensaje.toUpperCase(), 'error'),
+    );
   }
 }
 

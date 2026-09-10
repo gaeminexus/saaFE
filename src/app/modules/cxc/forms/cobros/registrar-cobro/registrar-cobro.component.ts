@@ -216,6 +216,8 @@ export class RegistrarCobroComponent implements OnInit {
     });
   }
 
+  // Vuelta a AbonosFactura (la ida ya se verifica en abonos-factura.component.ts:157,
+  // irARegistrarCobro) — no se verifica, regla "ida sí, vuelta no" (ÍTEM 7 de seguridades).
   volverAAbonos(): void {
     this.router.navigate(['/menucuentasxcobrar/cobros/abonos-factura'], {
       queryParams: { idFactura: this.idFactura },

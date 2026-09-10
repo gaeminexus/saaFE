@@ -1,20 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarHorizontalPosition, MatSnackBarVerticalPosition } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
+import { PermisosService } from '../../../../shared/services/permisos.service';
 import { PermisosRrh } from '../../model/permisos-rrh';
 import { SaldoVacacionesService } from '../../service/saldo-vacaciones.service';
 
 @Component({
   selector: 'app-menurecursoshumanos',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule, SideMenuCustomComponent, MatIconModule, MatTooltipModule, RouterLink],
+  imports: [CommonModule, MaterialFormModule, SideMenuCustomComponent, MatIconModule, MatTooltipModule],
   templateUrl: './menurecursoshumanos.component.html',
   styleUrls: ['./menurecursoshumanos.component.scss'],
 })
@@ -23,6 +25,11 @@ export class MenurecursoshumanosComponent implements OnInit {
 
   private saldoS = inject(SaldoVacacionesService);
   private appState = inject(AppStateService);
+  private router = inject(Router);
+  private permisosService = inject(PermisosService);
+  private snackBar = inject(MatSnackBar);
+  private horizontalPosition: MatSnackBarHorizontalPosition = 'center';
+  private verticalPosition: MatSnackBarVerticalPosition = 'top';
 
   /**
    * true cuando no existe ningún saldo de vacaciones del año en curso — el
@@ -49,6 +56,18 @@ export class MenurecursoshumanosComponent implements OnInit {
       },
       error: () => this.faltaAcreditarAnioActual.set(false),
     });
+  }
+
+  /** El chip de aviso del banner ya no usa routerLink — es una puerta que necesita verificarse igual que la opción de menú. */
+  irAAcreditarVacaciones(): void {
+    this.permisosService.ejecutarSiPermitido(
+      PermisosRrh.ACREDITAR_VACACIONES,
+      () => this.router.navigate(['/menurecursoshumanos/procesos/acreditar-vacaciones']),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Aceptar', {
+        horizontalPosition: this.horizontalPosition,
+        verticalPosition: this.verticalPosition,
+      }),
+    );
   }
 
   navItems: NavItem[] = [

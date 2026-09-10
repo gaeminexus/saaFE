@@ -433,6 +433,8 @@ export class DetalleGeneracionArchivoComponent implements OnInit {
   }
 
   volverAtras(): void {
+    // Vuelta a ConsultaGeneracionArchivo (la ida ya se verifica en consulta-generacion-archivo.component.ts:286).
+    // Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
     this.router.navigate(['/menucreditos/archivos-petro/generar/consulta']);
   }
 }

@@ -9,6 +9,8 @@ import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
 
 import { CentroCostoUtilsService } from '../../../../../shared/services/centro-costo-utils.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { CentroCosto } from '../../../model/centro-costo';
 import { CentroCostoService } from '../../../service/centro-costo.service';
 import { CentroGridFormComponent } from './centro-grid-form.component';
@@ -67,7 +69,8 @@ export class CentroGridComponent implements OnInit, AfterViewInit, AfterViewChec
     private centroCostoService: CentroCostoService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
-    private centroUtils: CentroCostoUtilsService
+    private centroUtils: CentroCostoUtilsService,
+    private permisosService: PermisosService
   ) {}
 
   ngOnInit(): void {
@@ -220,20 +223,26 @@ export class CentroGridComponent implements OnInit, AfterViewInit, AfterViewChec
   }
 
   onEdit(centroCosto: CentroCosto): void {
-    const dialogRef = this.dialog.open(CentroGridFormComponent, {
-      width: '600px',
-      data: { item: centroCosto },
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        this.loadData();
-        this.snackBar.open('Centro de costo actualizado exitosamente', 'Cerrar', {
-          duration: 3000,
-          panelClass: ['success-snackbar'],
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_FORMULARIO_CENTRO_GRID,
+      () => {
+        const dialogRef = this.dialog.open(CentroGridFormComponent, {
+          width: '600px',
+          data: { item: centroCosto },
         });
-      }
-    });
+
+        dialogRef.afterClosed().subscribe((result) => {
+          if (result) {
+            this.loadData();
+            this.snackBar.open('Centro de costo actualizado exitosamente', 'Cerrar', {
+              duration: 3000,
+              panelClass: ['success-snackbar'],
+            });
+          }
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   onDelete(centroCosto: CentroCosto): void {

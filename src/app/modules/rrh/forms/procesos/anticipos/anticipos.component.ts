@@ -16,6 +16,8 @@ import { EmpleadoService } from '../../../service/empleado.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { opcionesAviso } from '../../comunes/avisos';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 import { AnticipoTrabajador, ESTADO_ANTICIPO_LABELS, EstadoAnticipo } from '../../../model/anticipo-trabajador';
 import { AnticipoTrabajadorService } from '../../../service/anticipo-trabajador.service';
@@ -39,6 +41,7 @@ export class AnticiposComponent implements OnInit {
   private funcionesDatosS = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
 
   readonly EstadoAnticipo = EstadoAnticipo;
   readonly estadoOptions = Object.entries(ESTADO_ANTICIPO_LABELS).map(([codigo, texto]) => ({
@@ -132,10 +135,16 @@ export class AnticiposComponent implements OnInit {
   }
 
   nuevoAnticipo(): void {
-    this.dialog.open(AnticipoFormDialogComponent, { width: '640px', maxWidth: '98vw' })
-      .afterClosed().subscribe((creado: boolean) => {
-        if (creado) this.buscar();
-      });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FORMULARIO_DE_ANTICIPO,
+      () => {
+        this.dialog.open(AnticipoFormDialogComponent, { width: '640px', maxWidth: '98vw' })
+          .afterClosed().subscribe((creado: boolean) => {
+            if (creado) this.buscar();
+          });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   puedeAprobar(row: AnticipoTrabajador): boolean {
@@ -180,20 +189,26 @@ export class AnticiposComponent implements OnInit {
   aprobar(row: AnticipoTrabajador): void {
     if (!this.puedeAprobar(row)) return;
 
-    this.dialog.open(AprobarAnticipoDialogComponent, {
-      width: '520px',
-      data: { anticipo: row },
-    }).afterClosed().subscribe((resultado) => {
-      if (!resultado) return;
-      if (resultado.numeroCheque != null) {
-        this.snackBar.open(
-          `Se giró el cheque N° ${resultado.numeroCheque} para el anticipo.`,
-          'Cerrar',
-          { ...opcionesAviso(false, ''), duration: 12000 },
-        );
-      }
-      this.buscar();
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_APROBAR_ANTICIPO,
+      () => {
+        this.dialog.open(AprobarAnticipoDialogComponent, {
+          width: '520px',
+          data: { anticipo: row },
+        }).afterClosed().subscribe((resultado) => {
+          if (!resultado) return;
+          if (resultado.numeroCheque != null) {
+            this.snackBar.open(
+              `Se giró el cheque N° ${resultado.numeroCheque} para el anticipo.`,
+              'Cerrar',
+              { ...opcionesAviso(false, ''), duration: 12000 },
+            );
+          }
+          this.buscar();
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   anular(row: AnticipoTrabajador): void {
@@ -205,22 +220,28 @@ export class AnticiposComponent implements OnInit {
       textoConfirmar: 'Sí, anular',
     };
 
-    this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_ANTICIPOS_A_TRABAJADORES_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo) return;
 
-      this.procesando.set(row.codigo);
-      this.anticipoService.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
-        next: () => {
-          this.procesando.set(null);
-          this.mostrarExito('Anticipo anulado');
-          this.buscar();
-        },
-        error: (err) => {
-          this.procesando.set(null);
-          this.mostrarError(mensajeDeError(err, 'No se pudo anular el anticipo'));
-        },
-      });
-    });
+          this.procesando.set(row.codigo);
+          this.anticipoService.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+            next: () => {
+              this.procesando.set(null);
+              this.mostrarExito('Anticipo anulado');
+              this.buscar();
+            },
+            error: (err) => {
+              this.procesando.set(null);
+              this.mostrarError(mensajeDeError(err, 'No se pudo anular el anticipo'));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   empleadoLabel(value: Empleado | null | undefined): string {

@@ -9,6 +9,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
@@ -76,6 +78,7 @@ export class ColaboradoresComponent implements OnInit {
     private estadoListaService: EstadoListaService,
     private router: Router,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -179,7 +182,11 @@ export class ColaboradoresComponent implements OnInit {
 
   abrir(fila: Empleado): void {
     if (!fila?.codigo) return;
-    this.router.navigate(['/menurecursoshumanos/personal/ficha', fila.codigo]);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_FICHA_DEL_COLABORADOR,
+      () => this.router.navigate(['/menurecursoshumanos/personal/ficha', fila.codigo]),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   recordarEstado(estado: Partial<EstadoLista>): void {

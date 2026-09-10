@@ -213,6 +213,9 @@ export class ContratoFormComponent implements OnInit {
   }
 
   volver(): void {
+    // No se verifica: vuelta a FichaColaboradorComponent tras guardar/cancelar — la
+    // entrada a este formulario se decide en seccion-ficha.component.ts (abrirVistaPropia),
+    // que ya verifica su propio permiso antes de traer al usuario acá.
     this.router.navigate(['/menurecursoshumanos/personal/ficha', this.empleadoCodigo], {
       queryParams: { seccion: 'contratos' },
     });

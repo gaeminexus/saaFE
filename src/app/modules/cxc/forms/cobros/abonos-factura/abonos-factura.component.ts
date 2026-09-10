@@ -17,6 +17,8 @@ import { Titular } from '../../../../tsr/model/titular';
 import { AplicacionPagoCxc } from '../../../model/aplicacion-pago-cxc';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 /**
  * Historial y saldo de una factura de venta. Se llega desde la acción
@@ -35,6 +37,7 @@ export class AbonosFacturaComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private permisosService = inject(PermisosService);
 
   private readonly ROL_CLIENTE = 1;
 
@@ -131,10 +134,16 @@ export class AbonosFacturaComponent implements OnInit {
       textoConfirmar: 'Sí, revertir',
     };
 
-    this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
-      if (!motivo) return;
-      this.revertir(fila.id, motivo);
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_ABONOS_A_FACTURA_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
+          if (!motivo) return;
+          this.revertir(fila.id, motivo);
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 6000 }),
+    );
   }
 
   private revertir(idAplicacion: number, motivo: string): void {
@@ -148,17 +157,31 @@ export class AbonosFacturaComponent implements OnInit {
   }
 
   irACruceAnticipo(): void {
-    this.router.navigate(['/menucuentasxcobrar/cobros/cruce-anticipo'], {
-      queryParams: { idFactura: this.idFactura },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_CRUCE_DE_ANTICIPO,
+      () => {
+        this.router.navigate(['/menucuentasxcobrar/cobros/cruce-anticipo'], {
+          queryParams: { idFactura: this.idFactura },
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 6000 }),
+    );
   }
 
   irARegistrarCobro(): void {
-    this.router.navigate(['/menucuentasxcobrar/cobros/registrar'], {
-      queryParams: { idFactura: this.idFactura },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_REGISTRAR_COBRO,
+      () => {
+        this.router.navigate(['/menucuentasxcobrar/cobros/registrar'], {
+          queryParams: { idFactura: this.idFactura },
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 6000 }),
+    );
   }
 
+  // Vuelta a ConsultaFacturas (la ida ya se verifica en consulta-facturas.component.ts:360,
+  // verAbonos) — no se verifica, regla "ida sí, vuelta no" (ÍTEM 7 de seguridades).
   volverAConsulta(): void {
     this.router.navigate(['/menucuentasxcobrar/gestionar/facturas']);
   }

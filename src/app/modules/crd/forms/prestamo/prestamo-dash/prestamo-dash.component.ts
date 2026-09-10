@@ -9,7 +9,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -229,6 +232,8 @@ export class PrestamoDashComponent implements OnInit {
   private readonly prestamoService = inject(PrestamoService);
   private readonly funcionesDatos = inject(FuncionesDatosService);
   private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly permisosService = inject(PermisosService);
   private readonly compactFormatter = new Intl.NumberFormat('es-EC', {
     notation: 'compact',
     maximumFractionDigits: 1,
@@ -981,7 +986,11 @@ export class PrestamoDashComponent implements OnInit {
   }
 
   irAConsulta(): void {
-    this.router.navigate(['/menucreditos/prestamo-consulta']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PRESTAMOS_CONSULTA,
+      () => this.router.navigate(['/menucreditos/prestamo-consulta']),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   exportarReportesPDF(): void {

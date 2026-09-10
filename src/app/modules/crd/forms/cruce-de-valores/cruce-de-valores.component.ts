@@ -11,6 +11,8 @@ import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-
 import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 
 import { AbonoCapitalDialogComponent } from '../../dialog/pagos/abono-capital-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago, contextoDesdePrestamo } from '../../dialog/pagos/contexto-prestamo';
@@ -102,6 +104,7 @@ export class CruceDeValoresComponent {
   private saldoPrestamo = inject(SaldoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
 
   /**
@@ -792,6 +795,8 @@ export class CruceDeValoresComponent {
     const nombres: Record<number, string> = {};
     for (const f of this.fondos) nombres[f.idTipoAporte] = f.nombre;
 
+    // No se verifica: lee `pc.resultado`, ya guardado de una operación previa ya autorizada, sin
+    // llamada propia al backend — muestra un resultado, no abre una funcionalidad nueva.
     this.dialog.open(ReciboOperacionDialogComponent, {
       data: {
         tipo: 'PAGO_APORTES',
@@ -841,39 +846,57 @@ export class CruceDeValoresComponent {
   }
 
   abrirPago(pc: PrestamoCruce, modoInicial: 'efectivo' | 'aportes' = 'aportes'): void {
-    this.dialog
-      .open(PagoPrestamoDialogComponent, {
-        data: { ...this.contextoDe(pc), modoInicial },
-        width: '780px',
-        maxWidth: '96vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(pc, salida));
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PAGO_DE_PRESTAMO,
+      () => {
+        this.dialog
+          .open(PagoPrestamoDialogComponent, {
+            data: { ...this.contextoDe(pc), modoInicial },
+            width: '780px',
+            maxWidth: '96vw',
+            autoFocus: false,
+          })
+          .afterClosed()
+          .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(pc, salida));
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirAbonoCapital(pc: PrestamoCruce): void {
-    this.dialog
-      .open(AbonoCapitalDialogComponent, {
-        data: this.contextoDe(pc),
-        width: '820px',
-        maxWidth: '96vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(pc, salida));
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_ABONO_A_CAPITAL,
+      () => {
+        this.dialog
+          .open(AbonoCapitalDialogComponent, {
+            data: this.contextoDe(pc),
+            width: '820px',
+            maxWidth: '96vw',
+            autoFocus: false,
+          })
+          .afterClosed()
+          .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(pc, salida));
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirPrecancelacion(pc: PrestamoCruce): void {
-    this.dialog
-      .open(PrecancelacionDialogComponent, {
-        data: this.contextoDe(pc),
-        width: '820px',
-        maxWidth: '96vw',
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(pc, salida));
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_PRECANCELACION,
+      () => {
+        this.dialog
+          .open(PrecancelacionDialogComponent, {
+            data: this.contextoDe(pc),
+            width: '820px',
+            maxWidth: '96vw',
+            autoFocus: false,
+          })
+          .afterClosed()
+          .subscribe((salida?: SalidaDialogoPago) => this.procesarSalida(pc, salida));
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   abrirHistorial(pc: PrestamoCruce): void {

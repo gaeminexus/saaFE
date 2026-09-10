@@ -14,9 +14,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { DetallePrestamo } from '../../../model/detalle-prestamo';
 import {
   CodigoEstadoCuota,
@@ -105,7 +108,9 @@ export class CuotaConsultaComponent implements OnInit {
     private detallePrestamoService: DetallePrestamoService,
     private exportService: ExportService,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -327,13 +332,19 @@ export class CuotaConsultaComponent implements OnInit {
   }
 
   verDetallesPrestamo(codigoPrestamo: number): void {
-    this.dialog.open(PrestamoDetalleDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      data: { codigoPrestamo },
-      panelClass: 'prestamo-detalle-dialog'
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_CONSULTA_CUOTAS_DETALLE_DEL_PRESTAMO,
+      () => {
+        this.dialog.open(PrestamoDetalleDialogComponent, {
+          width: '900px',
+          maxWidth: '95vw',
+          maxHeight: '90vh',
+          data: { codigoPrestamo },
+          panelClass: 'prestamo-detalle-dialog'
+        });
+      },
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   private formatearFecha(fecha: Date | null): string {

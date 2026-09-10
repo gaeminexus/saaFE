@@ -17,6 +17,8 @@ import {
   ConfirmDialogData,
 } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import {
   AccionPeriodo,
   ESTADOS_PREVISUALIZA_ASIENTO,
@@ -114,6 +116,7 @@ export class PeriodoNominaDashComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -255,11 +258,15 @@ export class PeriodoNominaDashComponent implements OnInit {
     this.periodoService.previsualizarAsiento(this.periodo()!.codigo, tipo).subscribe({
       next: (lineas) => {
         this.ocupado.set(false);
-        this.dialog.open(PrevisualizacionAsientoDialogComponent, {
-          width: '900px',
-          maxWidth: '95vw',
-          data: { titulo, lineas: lineas ?? [] },
-        });
+        this.permisosService.ejecutarSiPermitido(
+          Permisos.RRH_PREVISUALIZACION_DEL_ASIENTO,
+          () => this.dialog.open(PrevisualizacionAsientoDialogComponent, {
+            width: '900px',
+            maxWidth: '95vw',
+            data: { titulo, lineas: lineas ?? [] },
+          }),
+          (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+        );
       },
       error: (err) => {
         this.ocupado.set(false);
@@ -298,7 +305,11 @@ export class PeriodoNominaDashComponent implements OnInit {
 
   /** Lleva a las novedades del mes, que es donde se resuelve el bloqueo. */
   irANovedadesIess(): void {
-    this.router.navigate(['/menurecursoshumanos/procesos/novedades-iess']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_NOVEDADES_DEL_MES_IESS,
+      () => this.router.navigate(['/menurecursoshumanos/procesos/novedades-iess']),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   reabrir(): void {
@@ -414,6 +425,8 @@ export class PeriodoNominaDashComponent implements OnInit {
   }
 
   volver(): void {
+    // No se verifica: vuelta a PeriodosNominaComponent (la ida ya se verifica en
+    // periodos-nomina.component.ts al abrir este dash).
     this.router.navigate(['/menurecursoshumanos/procesos/periodos-nomina']);
   }
 

@@ -12,6 +12,8 @@ import { AppStateService } from '../../../../../shared/services/app-state.servic
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { PortapapelesService } from '../../../../../shared/services/portapapeles.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { FileService } from '../../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
@@ -74,6 +76,7 @@ export class LiquidacionesComponent implements OnInit {
   @ViewChild('fechaHastaFiltroInput', { read: ElementRef }) fechaHastaFiltroInputRef!: ElementRef<HTMLInputElement>;
 
   private dialog = inject(MatDialog);
+  private permisosService = inject(PermisosService);
   private snackBar = inject(MatSnackBar);
   private portapapeles = inject(PortapapelesService);
   private jasperReportes = inject(JasperReportesService);
@@ -889,26 +892,32 @@ export class LiquidacionesComponent implements OnInit {
   }
 
   private abrirDialogoAnularLiquidacion(id: number, numero: string | undefined, movimientos: MovimientoRelacionado[]): void {
-    this.dialog.open(AnularDocumentoCompraDialogComponent, {
-      width: '560px',
-      disableClose: true,
-      data: { tipoLabel: 'Liquidación', numero: numero || String(id), movimientos },
-    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
-      if (!result) return;
-      this.procesandoAccion.set(true);
-      this.service.anular({
-        idLiquidacion: id,
-        motivo: result.motivo,
-        usuario: this.nombreUsuarioSesion(),
-        idUsuario: this.appState.getIdUsuario(),
-        anularEnCascada: result.anularEnCascada,
-      })
-        .pipe(finalize(() => this.procesandoAccion.set(false)))
-        .subscribe({
-          next: (resultado) => this.aplicarResultadoAccion(id, resultado, 'Liquidación anulada'),
-          error: (err) => this.errorAccion(err, 'No se pudo anular la liquidación'),
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_ANULAR_DOCUMENTO_DE_COMPRA,
+      () => {
+        this.dialog.open(AnularDocumentoCompraDialogComponent, {
+          width: '560px',
+          disableClose: true,
+          data: { tipoLabel: 'Liquidación', numero: numero || String(id), movimientos },
+        }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+          if (!result) return;
+          this.procesandoAccion.set(true);
+          this.service.anular({
+            idLiquidacion: id,
+            motivo: result.motivo,
+            usuario: this.nombreUsuarioSesion(),
+            idUsuario: this.appState.getIdUsuario(),
+            anularEnCascada: result.anularEnCascada,
+          })
+            .pipe(finalize(() => this.procesandoAccion.set(false)))
+            .subscribe({
+              next: (resultado) => this.aplicarResultadoAccion(id, resultado, 'Liquidación anulada'),
+              error: (err) => this.errorAccion(err, 'No se pudo anular la liquidación'),
+            });
         });
-    });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   private aplicarResultadoAccion(id: number, resultado: ResultadoProcesoLiquidacion, mensajeExito: string): void {
@@ -985,14 +994,20 @@ export class LiquidacionesComponent implements OnInit {
     const numeroCompleto = doc.numero
       || [doc.numEstablecimiento, doc.numPtoEmision, doc.secuencial].filter(Boolean).join('-');
 
-    this.router.navigate(['/menucuentasxcobrar/emitir/retenciones-v2'], {
-      queryParams: {
-        codDocSustento: LIQUIDACION_COMPRA,
-        numDocSustento: numeroCompleto,
-        fechaEmisionDocSustento: this.aFechaISOFecha(doc.fecha),
-        idProveedor: doc.titular?.codigo ?? '',
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_RETENCIONES,
+      () => {
+        this.router.navigate(['/menucuentasxcobrar/emitir/retenciones-v2'], {
+          queryParams: {
+            codDocSustento: LIQUIDACION_COMPRA,
+            numDocSustento: numeroCompleto,
+            fechaEmisionDocSustento: this.aFechaISOFecha(doc.fecha),
+            idProveedor: doc.titular?.codigo ?? '',
+          },
+        });
       },
-    });
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   private aFechaISOFecha(fecha: any): string {

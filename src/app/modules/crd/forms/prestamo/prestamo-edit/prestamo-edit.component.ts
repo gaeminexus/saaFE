@@ -989,6 +989,8 @@ export class PrestamoEditComponent implements OnInit {
   }
 
   irConsulta(): void {
+    // Vuelta a PrestamoConsulta (la ida ya se verifica en prestamo-consulta.component.ts:1003/1009).
+    // Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
     this.router.navigate(['/menucreditos/prestamo-consulta']);
   }
 

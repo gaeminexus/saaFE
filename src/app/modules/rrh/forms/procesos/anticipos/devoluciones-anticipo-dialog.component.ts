@@ -8,6 +8,8 @@ import {
 } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { opcionesAviso } from '../../comunes/avisos';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -39,6 +41,7 @@ export class DevolucionesAnticipoDialogComponent implements OnInit {
   private appState = inject(AppStateService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
 
   readonly EstadoDevolucionAnticipo = EstadoDevolucionAnticipo;
 
@@ -120,23 +123,29 @@ export class DevolucionesAnticipoDialogComponent implements OnInit {
       textoConfirmar: 'Sí, anular',
     };
 
-    this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_ANTICIPOS_A_TRABAJADORES_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo) return;
 
-      this.procesando.set(d.codigo);
-      this.devolucionS.anular(d.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
-        next: () => {
-          this.procesando.set(null);
-          this.huboCambios = true;
-          this.avisar('Devolución anulada.');
-          this.cargar();
-        },
-        error: (err) => {
-          this.procesando.set(null);
-          this.avisar(mensajeDeError(err, 'No se pudo anular la devolución.'), true);
-        },
-      });
-    });
+          this.procesando.set(d.codigo);
+          this.devolucionS.anular(d.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+            next: () => {
+              this.procesando.set(null);
+              this.huboCambios = true;
+              this.avisar('Devolución anulada.');
+              this.cargar();
+            },
+            error: (err) => {
+              this.procesando.set(null);
+              this.avisar(mensajeDeError(err, 'No se pudo anular la devolución.'), true);
+            },
+          });
+        });
+      },
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   cerrar(): void {

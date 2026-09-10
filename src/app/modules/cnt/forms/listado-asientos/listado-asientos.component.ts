@@ -14,6 +14,8 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 import { Asiento, EstadoAsiento } from '../../model/asiento';
 import { AsientoService } from '../../service/asiento.service';
 
@@ -79,7 +81,8 @@ export class ListadoAsientosComponent implements OnInit, AfterViewInit, AfterVie
     private snackBar: MatSnackBar,
     private router: Router,
     private dialog: MatDialog,
-    private funcionesDatos: FuncionesDatosService
+    private funcionesDatos: FuncionesDatosService,
+    private permisosService: PermisosService
   ) {}
 
   // ── Datepicker: Fecha Desde ───────────────────────────────────
@@ -506,25 +509,37 @@ export class ListadoAsientosComponent implements OnInit, AfterViewInit, AfterVie
    * Navega a la edición de un asiento
    */
   editarAsiento(asiento: Asiento): void {
-    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
-      queryParams: { id: asiento.codigo, mode: 'edit' },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_ASIENTOS_DINAMICO,
+      () => this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
+        queryParams: { id: asiento.codigo, mode: 'edit' },
+      }),
+      (mensaje) => this.showMessage(mensaje.toUpperCase(), 'error'),
+    );
   }
 
   /**
    * Ver detalles de un asiento
    */
   verDetalle(asiento: Asiento): void {
-    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
-      queryParams: { id: asiento.codigo, mode: 'view' },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_ASIENTOS_DINAMICO,
+      () => this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico'], {
+        queryParams: { id: asiento.codigo, mode: 'view' },
+      }),
+      (mensaje) => this.showMessage(mensaje.toUpperCase(), 'error'),
+    );
   }
 
   /**
    * Crear nuevo asiento
    */
   nuevoAsiento(): void {
-    this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_ASIENTOS_DINAMICO,
+      () => this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico']),
+      (mensaje) => this.showMessage(mensaje.toUpperCase(), 'error'),
+    );
   }
 
   /**

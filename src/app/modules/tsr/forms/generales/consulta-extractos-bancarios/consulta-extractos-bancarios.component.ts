@@ -16,6 +16,8 @@ import { DetalleExtractoBancarioService } from '../../../service/detalle-extract
 import { ExtractoBancarioService } from '../../../service/extracto-bancario.service';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { textoDeError } from '../texto-error';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 
 const TODOS_LOS_PERIODOS = -1;
 
@@ -59,7 +61,8 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
     private router: Router,
     private funcionesDatosService: FuncionesDatosService,
     private exportService: ExportService,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService
   ) {}
 
   ngOnInit(): void {
@@ -185,9 +188,13 @@ export class ConsultaExtractosBancariosComponent implements OnInit {
   }
 
   verDetalle(extracto: ExtractoBancario): void {
-    this.router.navigate(['/menutesoreria/procesos/extractos-bancarios/detalle'], {
-      queryParams: { idExtracto: extracto.codigo },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_DETALLE_DE_EXTRACTO,
+      () => this.router.navigate(['/menutesoreria/procesos/extractos-bancarios/detalle'], {
+        queryParams: { idExtracto: extracto.codigo },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   /**

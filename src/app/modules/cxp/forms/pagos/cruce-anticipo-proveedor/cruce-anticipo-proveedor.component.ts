@@ -330,6 +330,8 @@ export class CruceAnticipoProveedorComponent implements OnInit {
     });
   }
 
+  // Vuelta a ConsultaDocumentos (la ida ya se verifica en historial-abonos-factura.component.ts:138/141,
+  // embebido en ConsultaDocumentosComponent) — no se verifica, regla "ida sí, vuelta no" (ÍTEM 7).
   volverAFactura(): void {
     this.router.navigate(['/menucuentaxpagar/procesos/consulta-documentos']);
   }

@@ -13,6 +13,8 @@ import { DateFieldConfig } from '../../../../../shared/basics/table/dynamic-form
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Empleado } from '../../../model/empleado';
@@ -116,6 +118,7 @@ export class MarcacionesComponent implements OnInit {
     private funcionesDatosS: FuncionesDatosService,
     private router: Router,
     private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -288,7 +291,11 @@ export class MarcacionesComponent implements OnInit {
   }
 
   irAResumen(): void {
-    this.router.navigate(['/menurecursoshumanos/asistencia/resumen-diario']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_RESUMEN_DIARIO,
+      () => this.router.navigate(['/menurecursoshumanos/asistencia/resumen-diario']),
+      (mensaje) => this.avisar(mensaje.toUpperCase(), true),
+    );
   }
 
   private avisar(mensaje: string, esError = false): void {

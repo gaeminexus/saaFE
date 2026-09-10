@@ -8,6 +8,8 @@ import { forkJoin, of, Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { ExportService } from '../../../../../shared/services/export.service';
@@ -75,6 +77,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   private funcionesDatosS   = inject(FuncionesDatosService);
   private snackBar          = inject(MatSnackBar);
   private dialog            = inject(MatDialog);
+  private permisosService   = inject(PermisosService);
   private portapapeles      = inject(PortapapelesService);
   private appState          = inject(AppStateService);
 
@@ -443,38 +446,44 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   }
 
   private abrirDialogoAnular(row: DocumentoElectronico, tipoLabel: string, movimientos: MovimientoRelacionado[]): void {
-    this.dialog.open(AnularDocumentoCompraDialogComponent, {
-      width: '560px', disableClose: true,
-      data: { tipoLabel, numero: row.numero || String(row.id), movimientos },
-    }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
-      if (!result) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_DOCUMENTOS_ELECTRONICOS_ANULAR_DOCUMENTO_DE_COMPRA,
+      () => {
+        this.dialog.open(AnularDocumentoCompraDialogComponent, {
+          width: '560px', disableClose: true,
+          data: { tipoLabel, numero: row.numero || String(row.id), movimientos },
+        }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
+          if (!result) return;
 
-      this.anulando.set(true);
-      const usuario = this.usuarioSesion;
-      const idUsuario = this.appState.getIdUsuario();
-      const { motivo, anularEnCascada } = result;
-      const req$: Observable<any> = (() => {
-        switch (row.tipo) {
-          case 'FACTURA':      return this.facturaService.anularFactura({ idFactura: row.id, usuario, idUsuario, motivo, anularEnCascada });
-          case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, idUsuario, motivo, anularEnCascada });
-          case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, idUsuario, motivo, anularEnCascada });
-          case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, idUsuario, motivo, anularEnCascada });
-          case 'LIQUIDACION':  return this.liquidacionService.anular({ idLiquidacion: row.id, usuario, idUsuario, motivo, anularEnCascada });
-          default: return of(null);
-        }
-      })();
-      req$.subscribe({
-        next: (resp: any) => {
-          this.anulando.set(false);
-          this.mostrarExito(resp?.mensaje || `${tipoLabel} anulada correctamente`);
-          this.buscar();
-        },
-        error: (err: Error) => {
-          this.anulando.set(false);
-          this.mostrarError(mensajeDeError(err, 'No se pudo anular el documento'));
-        },
-      });
-    });
+          this.anulando.set(true);
+          const usuario = this.usuarioSesion;
+          const idUsuario = this.appState.getIdUsuario();
+          const { motivo, anularEnCascada } = result;
+          const req$: Observable<any> = (() => {
+            switch (row.tipo) {
+              case 'FACTURA':      return this.facturaService.anularFactura({ idFactura: row.id, usuario, idUsuario, motivo, anularEnCascada });
+              case 'NOTA_CREDITO': return this.ncService.anular({ idNotaCredito: row.id, usuario, idUsuario, motivo, anularEnCascada });
+              case 'NOTA_DEBITO':  return this.ndService.anular({ idNotaDebito: row.id, usuario, idUsuario, motivo, anularEnCascada });
+              case 'RETENCION':    return this.retService.anular({ idRetencion: row.id, usuario, idUsuario, motivo, anularEnCascada });
+              case 'LIQUIDACION':  return this.liquidacionService.anular({ idLiquidacion: row.id, usuario, idUsuario, motivo, anularEnCascada });
+              default: return of(null);
+            }
+          })();
+          req$.subscribe({
+            next: (resp: any) => {
+              this.anulando.set(false);
+              this.mostrarExito(resp?.mensaje || `${tipoLabel} anulada correctamente`);
+              this.buscar();
+            },
+            error: (err: Error) => {
+              this.anulando.set(false);
+              this.mostrarError(mensajeDeError(err, 'No se pudo anular el documento'));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   /** Busca NCs relacionadas con la factura. Si existen, abre advertencia y retorna Observable<boolean>. */
@@ -483,36 +492,42 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       this.mostrarInfo('Este documento no tiene clave de acceso disponible');
       return;
     }
-    const req$ = (() => {
-      switch (row.tipo) {
-        case 'FACTURA':      return this.facturaService.consultarYActualizarEstado(row.id);
-        case 'NOTA_CREDITO': return this.ncService.consultarYActualizarEstado(row.id);
-        case 'NOTA_DEBITO':  return this.ndService.consultarYActualizarEstado(row.id);
-        case 'RETENCION':    return this.retService.consultarYActualizarEstado(row.id);
-        case 'LIQUIDACION':  return this.liquidacionService.consultarYActualizarEstado(row.id);
-        default: return of(null);
-      }
-    })();
-    this.imprimiendo.set(true);
-    req$.subscribe({
-      next: (resp) => {
-        this.imprimiendo.set(false);
-        if (resp) {
-          this.dialog.open(ActualizarEstadoResultadoDialogComponent, {
-            data: resp,
-            width: '520px',
-            disableClose: false,
-          });
-        } else {
-          this.mostrarExito('Consulta realizada');
-        }
-        this.buscar();
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_ACTUALIZAR_ESTADO_RESULTADO,
+      () => {
+        const req$ = (() => {
+          switch (row.tipo) {
+            case 'FACTURA':      return this.facturaService.consultarYActualizarEstado(row.id);
+            case 'NOTA_CREDITO': return this.ncService.consultarYActualizarEstado(row.id);
+            case 'NOTA_DEBITO':  return this.ndService.consultarYActualizarEstado(row.id);
+            case 'RETENCION':    return this.retService.consultarYActualizarEstado(row.id);
+            case 'LIQUIDACION':  return this.liquidacionService.consultarYActualizarEstado(row.id);
+            default: return of(null);
+          }
+        })();
+        this.imprimiendo.set(true);
+        req$.subscribe({
+          next: (resp) => {
+            this.imprimiendo.set(false);
+            if (resp) {
+              this.dialog.open(ActualizarEstadoResultadoDialogComponent, {
+                data: resp,
+                width: '520px',
+                disableClose: false,
+              });
+            } else {
+              this.mostrarExito('Consulta realizada');
+            }
+            this.buscar();
+          },
+          error: () => {
+            this.imprimiendo.set(false);
+            this.mostrarError('No se pudo consultar el estado en el SRI');
+          },
+        });
       },
-      error: () => {
-        this.imprimiendo.set(false);
-        this.mostrarError('No se pudo consultar el estado en el SRI');
-      },
-    });
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   /**
@@ -562,11 +577,17 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       if (fStr) { const f = JSON.parse(fStr); if (f?.ambiente) ambiente = Number(f.ambiente); }
     } catch { /* ignore */ }
 
-    this.dialog.open(ConsultaSriDialogComponent, {
-      width: '620px',
-      disableClose: false,
-      data: { clave, ambiente, tipoLabel: row.tipoLabel },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_CONSULTA_AL_SRI,
+      () => {
+        this.dialog.open(ConsultaSriDialogComponent, {
+          width: '620px',
+          disableClose: false,
+          data: { clave, ambiente, tipoLabel: row.tipoLabel },
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   copiarClave(row: DocumentoElectronico): void {

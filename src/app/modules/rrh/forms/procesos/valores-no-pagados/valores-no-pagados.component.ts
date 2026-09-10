@@ -7,6 +7,8 @@ import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/i
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { ExportService } from '../../../../../shared/services/export.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
@@ -55,6 +57,7 @@ export class ValoresNoPagadosComponent implements OnInit {
   private exportService = inject(ExportService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
 
   readonly EstadoValorNoPagado = EstadoValorNoPagado;
   readonly estadoOptions = Object.entries(ESTADO_VALOR_NO_PAGADO_LABELS).map(([codigo, texto]) => ({
@@ -173,10 +176,16 @@ export class ValoresNoPagadosComponent implements OnInit {
   }
 
   registrar(): void {
-    this.dialog.open(RegistrarValorNoPagadoDialogComponent, { width: '640px', maxWidth: '98vw' })
-      .afterClosed().subscribe((creado: boolean) => {
-        if (creado) this.buscar();
-      });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_REGISTRAR_VALOR_NO_PAGADO,
+      () => {
+        this.dialog.open(RegistrarValorNoPagadoDialogComponent, { width: '640px', maxWidth: '98vw' })
+          .afterClosed().subscribe((creado: boolean) => {
+            if (creado) this.buscar();
+          });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   /**
@@ -197,23 +206,29 @@ export class ValoresNoPagadosComponent implements OnInit {
       textoConfirmar: 'Sí, anular',
     };
 
-    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.RRH_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo) return;
 
-      this.anulando.set(row.codigo);
-      const usuario = this.appState.getUsuario()?.nombre ?? sessionStorage.getItem('userName') ?? '';
-      this.valorNoPagadoService.anular(row.codigo, { motivo, usuario }).subscribe({
-        next: () => {
-          this.anulando.set(null);
-          this.mostrarExito('Valor no pagado anulado correctamente');
-          this.buscar();
-        },
-        error: (err) => {
-          this.anulando.set(null);
-          this.mostrarError(mensajeDeError(err, 'No se pudo anular el valor no pagado'));
-        },
-      });
-    });
+          this.anulando.set(row.codigo);
+          const usuario = this.appState.getUsuario()?.nombre ?? sessionStorage.getItem('userName') ?? '';
+          this.valorNoPagadoService.anular(row.codigo, { motivo, usuario }).subscribe({
+            next: () => {
+              this.anulando.set(null);
+              this.mostrarExito('Valor no pagado anulado correctamente');
+              this.buscar();
+            },
+            error: (err) => {
+              this.anulando.set(null);
+              this.mostrarError(mensajeDeError(err, 'No se pudo anular el valor no pagado'));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   /** Exporta lo que se está viendo — ya filtrado en el servidor (GET /vnpg/listar). */

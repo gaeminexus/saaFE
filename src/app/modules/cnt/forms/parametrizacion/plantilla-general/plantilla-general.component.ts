@@ -18,6 +18,8 @@ import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { DetallePlantilla, TipoMovimiento } from '../../../model/detalle-plantilla-general';
 import { EstadoPlantilla, Plantilla } from '../../../model/plantilla-general';
 import { DetallePlantillaService } from '../../../service/detalle-plantilla.service';
@@ -83,7 +85,8 @@ export class PlantillaGeneralComponent implements OnInit {
     private snackBar: MatSnackBar,
     private router: Router,
     private route: ActivatedRoute,
-    private funcionesDatosService: FuncionesDatosService
+    private funcionesDatosService: FuncionesDatosService,
+    private permisosService: PermisosService
   ) {
     this.plantillaForm = this.createForm();
     // Inicializar dataSource con array vacío
@@ -990,6 +993,9 @@ export class PlantillaGeneralComponent implements OnInit {
 
     this.showMessage('Navegando a crear asiento desde plantilla...', 'info');
 
+    // No se verifica: la ruta '/menucontabilidad/asientos' no existe (bug reportado,
+    // ver docs/seguridad/ITEM7-MAPEO-BOTONES-PERMISOS.md) — no hay pantalla destino
+    // que proteger hasta que se arregle.
     // Navegar al componente de asientos con parámetro
     this.router.navigate(['/menucontabilidad/asientos'], {
       queryParams: { plantilla: this.plantillaSeleccionada.codigo },
@@ -1169,27 +1175,33 @@ export class PlantillaGeneralComponent implements OnInit {
    * Abre el diálogo con los planes de cuenta cargados
    */
   private abrirDialogoConPlanes(planCuentas: any[], detalleExistente?: DetallePlantilla): void {
-    const dialogRef = this.dialog.open(DetallePlantillaDialogComponent, {
-      width: '720px',
-      data: {
-        planCuentas,
-        detalle: detalleExistente,
-        mostrarAuxiliar1: this.tipoSistema === 1,
-        detallesExistentes: this.dataSourceDetalles.data, // Pasar detalles para calcular siguiente auxiliar1
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_DETALLE_DE_PLANTILLA,
+      () => {
+        const dialogRef = this.dialog.open(DetallePlantillaDialogComponent, {
+          width: '720px',
+          data: {
+            planCuentas,
+            detalle: detalleExistente,
+            mostrarAuxiliar1: this.tipoSistema === 1,
+            detallesExistentes: this.dataSourceDetalles.data, // Pasar detalles para calcular siguiente auxiliar1
+          },
+        });
 
-    dialogRef.afterClosed().subscribe((result: any) => {
-      if (result) {
-        if (detalleExistente) {
-          // Lógica de edición
-          this.procesarEdicionDetalle(detalleExistente, result);
-        } else {
-          // Lógica de creación
-          this.procesarNuevoDetalle(result);
-        }
-      }
-    });
+        dialogRef.afterClosed().subscribe((result: any) => {
+          if (result) {
+            if (detalleExistente) {
+              // Lógica de edición
+              this.procesarEdicionDetalle(detalleExistente, result);
+            } else {
+              // Lógica de creación
+              this.procesarNuevoDetalle(result);
+            }
+          }
+        });
+      },
+      (mensaje) => this.showMessage(mensaje.toUpperCase(), 'error'),
+    );
   }
 
   /**

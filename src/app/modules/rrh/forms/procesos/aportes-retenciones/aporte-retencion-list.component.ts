@@ -260,6 +260,9 @@ export class AporteRetencionListComponent implements AfterViewInit {
       item,
     };
 
+    // No se verifica: AporteRetencionListComponent no tiene nodo en el árbol de permisos —
+    // su entrada de menú está comentada desde 2026-08-26, pantalla a medio construir sin
+    // entidad en el backend.
     this.dialog.open(AporteRetencionFormComponent, {
       width: '900px',
       maxWidth: '95vw',

@@ -9,6 +9,8 @@ import { MatTableDataSource } from '@angular/material/table';
 
 import { EstadoTipoAsiento, TipoAsiento } from '../../../model/tipo-asiento';
 import { TipoAsientoService } from '../../../service/tipo-asiento.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import {
   TipoAsientoDialog,
   TipoAsientoDialogData,
@@ -35,7 +37,8 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
   constructor(
     private tipoAsientoService: TipoAsientoService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService
   ) {}
 
   ngOnInit(): void {
@@ -136,6 +139,14 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
       isEdit: true,
     };
 
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_FORMULARIO_TIPO_DE_ASIENTO,
+      () => this.abrirDialogEditar(dialogData),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
+  }
+
+  private abrirDialogEditar(dialogData: TipoAsientoDialogData): void {
     const dialogRef = this.dialog.open(TipoAsientoDialog, {
       width: '500px',
       data: dialogData,
@@ -223,6 +234,14 @@ export class TipoAsientoGeneralGridComponent implements OnInit {
       isEdit: false,
     };
 
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CNT_FORMULARIO_TIPO_DE_ASIENTO,
+      () => this.abrirDialogNuevo(dialogData),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
+  }
+
+  private abrirDialogNuevo(dialogData: TipoAsientoDialogData): void {
     const dialogRef = this.dialog.open(TipoAsientoDialog, {
       width: '500px',
       data: dialogData,

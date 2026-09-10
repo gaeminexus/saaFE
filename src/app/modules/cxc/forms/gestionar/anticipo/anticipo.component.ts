@@ -9,6 +9,8 @@ import { AppStateService } from '../../../../../shared/services/app-state.servic
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -44,6 +46,7 @@ export class AnticipoComponent implements OnInit {
 
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private anticipoService = inject(AnticipoClienteService);
   private personaCuentaContableService = inject(PersonaCuentaContableService);
   private funcionesDatosS = inject(FuncionesDatosService);
@@ -447,31 +450,37 @@ export class AnticipoComponent implements OnInit {
       textoDobleConfirmacion: 'Entiendo que esto revierte los cruces contra factura(s) listados arriba.',
     };
 
-    this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
-      if (!motivo || !row.id) return;
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_ANTICIPOS_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo || !row.id) return;
 
-      this.anulando.set(row.id);
-      this.anticipoService.anular(row.id, {
-        motivo,
-        idUsuario: this.appState.getIdUsuario(),
-        confirmarReversionCruces: hayCruces,
-      }).subscribe({
-        next: (resp) => {
-          this.anulando.set(null);
-          if (resp && resp.exito === false) {
-            this.mostrarError(resp.mensaje || 'No se pudo anular el anticipo');
-            return;
-          }
-          this.mostrarExito(resp?.mensaje || 'Anticipo anulado correctamente');
-          if (this.id === row.id) this.anticipoActual.set({ ...row, estado: ESTADO_ANTICIPO_ANULADO });
-          this.cargarRegistros();
-        },
-        error: (err) => {
-          this.anulando.set(null);
-          this.mostrarError(mensajeDeError(err, 'No se pudo anular el anticipo'));
-        },
-      });
-    });
+          this.anulando.set(row.id);
+          this.anticipoService.anular(row.id, {
+            motivo,
+            idUsuario: this.appState.getIdUsuario(),
+            confirmarReversionCruces: hayCruces,
+          }).subscribe({
+            next: (resp) => {
+              this.anulando.set(null);
+              if (resp && resp.exito === false) {
+                this.mostrarError(resp.mensaje || 'No se pudo anular el anticipo');
+                return;
+              }
+              this.mostrarExito(resp?.mensaje || 'Anticipo anulado correctamente');
+              if (this.id === row.id) this.anticipoActual.set({ ...row, estado: ESTADO_ANTICIPO_ANULADO });
+              this.cargarRegistros();
+            },
+            error: (err) => {
+              this.anulando.set(null);
+              this.mostrarError(mensajeDeError(err, 'No se pudo anular el anticipo'));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   exportarCSV(): void {

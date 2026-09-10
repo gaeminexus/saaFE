@@ -2,12 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarHorizontalPosition, MatSnackBarVerticalPosition } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 import { Permisos } from '../../../../shared/model/permisos';
 import { AppStateService } from '../../../../shared/services/app-state.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
 import { SaldoCajaChica } from '../../model/saldo-caja-chica';
 import { CajaChicaService } from '../../service/caja-chica.service';
 import { PartidaTransitoAntigua } from '../../model/conciliacion-cierre';
@@ -16,7 +18,7 @@ import { ConciliacionCierreService } from '../../service/conciliacion-cierre.ser
 @Component({
   selector: 'app-menutesoreria',
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, RouterLink, SideMenuCustomComponent],
+  imports: [CommonModule, MatButtonModule, MatIconModule, MatTooltipModule, SideMenuCustomComponent],
   templateUrl: './menutesoreria.component.html',
   styleUrls: ['./menutesoreria.component.scss'],
 })
@@ -32,10 +34,16 @@ export class MenutesoreriaComponent implements OnInit {
   /** true cuando no se pudo determinar la empresa de la sesión — antes esto dejaba los banners vacíos sin decir por qué. */
   sinEmpresa = signal(false);
 
+  horizontalPosition: MatSnackBarHorizontalPosition = 'center';
+  verticalPosition: MatSnackBarVerticalPosition = 'top';
+
   constructor(
     private cajaChicaS: CajaChicaService,
     private conciliacionCierreS: ConciliacionCierreService,
     private appState: AppStateService,
+    private router: Router,
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -422,4 +430,29 @@ export class MenutesoreriaComponent implements OnInit {
     },
     { displayName: 'Regresar', iconName: 'arrow_back', route: '/menu' },
   ];
+
+  /** Atajo del banner de alerta de cajas chicas (mismo permiso que el nodo del menú). */
+  irAReposicion(): void {
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_REPOSICION,
+      () => this.router.navigate(['/menutesoreria/procesos/caja-chica/reposicion']),
+      (mensaje) => this.openSnackBar(mensaje.toUpperCase()),
+    );
+  }
+
+  /** Atajo del banner de partidas en tránsito (mismo permiso que el nodo del menú). */
+  irAConciliacionCierre(): void {
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.TSR_CONCILIACION_CIERRE,
+      () => this.router.navigate(['/menutesoreria/procesos/conciliacion/cierre']),
+      (mensaje) => this.openSnackBar(mensaje.toUpperCase()),
+    );
+  }
+
+  openSnackBar(mensaje: string): void {
+    this.snackBar.open(mensaje, 'Aceptar', {
+      horizontalPosition: this.horizontalPosition,
+      verticalPosition: this.verticalPosition,
+    });
+  }
 }

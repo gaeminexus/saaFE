@@ -15,6 +15,8 @@ import {
 } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { MaterialFormModule } from '../../../../../../shared/modules/material-form.module';
 import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
+import { PermisosService } from '../../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../../shared/model/permisos';
 import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
@@ -64,6 +66,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   private verificacionService = inject(VerificacionCuentaCertificadoService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
+  private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
 
   filtrosForm!: FormGroup;
@@ -731,11 +734,15 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
       return;
     }
 
-    this.router.navigate(['/menucreditos/participe-dash'], {
-      queryParams: {
-        codigoEntidad: entidad.codigo,
-        from: 'entidad-consulta',
-      },
-    });
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_DASH_DEL_PARTICIPE,
+      () => this.router.navigate(['/menucreditos/participe-dash'], {
+        queryParams: {
+          codigoEntidad: entidad.codigo,
+          from: 'entidad-consulta',
+        },
+      }),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 }

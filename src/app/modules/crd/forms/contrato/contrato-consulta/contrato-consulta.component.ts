@@ -14,11 +14,14 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { ContratoService } from '../../../service/contrato.service';
 import { FilialService } from '../../../service/filial.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import { Contrato } from '../../../model/contrato';
 import { Filial } from '../../../model/filial';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -68,7 +71,9 @@ export class ContratoConsultaComponent implements OnInit {
     private filialService: FilialService,
     private exportService: ExportService,
     private funcionesDatos: FuncionesDatosService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -328,10 +333,18 @@ export class ContratoConsultaComponent implements OnInit {
   }
 
   editar(codigo: number): void {
-    this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit', codigo]);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_INGRESO,
+      () => this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit', codigo]),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 
   nuevo(): void {
-    this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit']);
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_INGRESO,
+      () => this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit']),
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
   }
 }
