@@ -83,15 +83,16 @@ parcial. Una primera versión sumaba `PGPRCPPG` de todos los pagos y devolvía d
 los préstamos migrados cuyas cuotas figuran pagadas sin pago registrado. Se detectó en préstamos
 con **cuota 0**, pero la causa no es la cuota 0: es la migración.
 
-### Regla que manda sobre todas: préstamo CANCELADO_ANTICIPADO
+### Regla que manda sobre todas: préstamo CANCELADO (estados 3, 4 y 5)
 
 Tercera aclaración del usuario (2026-09-10): *«si un préstamo está en estado cancelado anticipado
 o una cuota está en ese estado, entonces quiere decir que todo el capital de ese préstamo ya fue
 pagado»*.
 
-⇒ Si `PRST.PRSTIDST = 4` (`EstadoPrestamo.CANCELADO_ANTICIPADO`, el que escribe la precancelación
-en `ProcesoPagoPrestamoServiceImpl:1163`), entonces **`capitalPagado` = Σ `DTPRCPTL` de TODAS las
-cuotas del préstamo**, sin mirar el estado de cada una. Esta regla **precede** a la tabla de abajo.
+⇒ Si `PRST.PRSTIDST` es **3 `CANCELADO`, 4 `CANCELADO_ANTICIPADO` o 5 `CANCELADO_POR_NOVACION`**,
+entonces **`capitalPagado` = Σ `DTPRCPTL` de TODAS las cuotas del préstamo**, sin mirar el estado
+de cada una. Esta regla **precede** a la tabla de abajo. El 4 es el que escribe la precancelación
+en `ProcesoPagoPrestamoServiceImpl:1163`.
 
 **Por qué hace falta si las cuotas precanceladas ya quedan en 7:** porque no siempre quedan. Hay un
 defecto conocido (P21) en el que precancelar un préstamo sin ninguna cuota pagada previa deja el
@@ -99,10 +100,20 @@ ancla en `PAGADA` en vez de `CANCELADA_ANTICIPADA`, y en la cartera migrada pued
 actualizar. El estado del préstamo es el dato de más alto nivel y el más confiable: si dice
 precancelado, el capital se pagó entero.
 
-⚠️ **Sólo el estado 4.** `CANCELADO` (3) y `CANCELADO_POR_NOVACION` (5) **no** aplican esta regla:
-el usuario nombró únicamente el anticipado. En un cancelado normal las cuotas quedan en `PAGADA` y
-la tabla de abajo ya las cubre; en una novación el capital **no se pagó con dinero**, se trasladó
-al préstamo nuevo, así que aplicarla inflaría la cifra. Ver «Decidido y pendiente» al final.
+✅ **AMPLIADO por el usuario (2026-09-10): la regla aplica a los TRES estados cancelados** —
+`CANCELADO` (3), `CANCELADO_ANTICIPADO` (4) y `CANCELADO_POR_NOVACION` (5)—, que son exactamente
+los que `MotorPagoPrestamoServiceImpl.esEstadoTerminalPrestamo` (~:801) trata como terminales.
+
+**El argumento es el cuadre de la fila:** un préstamo cancelado tiene **saldo 0**. Si su capital
+pagado no fuera el total, la fila mostraría monto $10.000, capital pagado $0 y saldo $0 — que no
+cierra y confunde a quien la lee. Con la regla, `Monto − Capital Pagado = Saldo Capital` se
+sostiene también en los cancelados.
+
+⚠️ **Salvedad contable, registrada y aceptada:** en `CANCELADO_POR_NOVACION` el capital no se pagó
+con dinero, se trasladó al préstamo nuevo. Para la fila de ese préstamo la cifra es correcta (ya no
+se debe), pero **un reporte que sume «capital pagado» de toda la cartera contaría dos veces** el
+capital novado: una en el préstamo viejo y otra cuando se pague el nuevo. Esta columna es de
+consulta por préstamo, no una fuente para totales de cartera.
 
 ### Tabla de estados — qué aporta cada cuota
 
@@ -220,7 +231,8 @@ cálculo deja de cuadrar con el saldo.
 1. El **estado de la cuota manda** sobre `PGPR`, porque la base viene de una migración con
    registros de pago incompletos.
 2. Una cuota **PENDIENTE aporta 0** aunque tenga pagos registrados.
-3. Un préstamo en **CANCELADO_ANTICIPADO** tiene todo su capital pagado, sin mirar las cuotas.
+3. Un préstamo en cualquiera de los **tres estados cancelados** (3, 4, 5) tiene todo su capital
+   pagado, sin mirar el estado de sus cuotas.
 
 **Supuestos del árbitro, a confirmar cuando haya datos** (el bloque 5 del `crd/sql/221` los mide):
 
@@ -229,5 +241,4 @@ cálculo deja de cuadrar con el saldo.
 | Cuota `VENCIDA` (8) | aporta **0** | El usuario nombró parcial y mora, no vencida. Si el bloque 5 muestra muchas cuotas en 8 con capital abonado, hay que sumarlas como a las 5 y 6. |
 | Cuota sin estado (`NULL`) | aporta **0** | Conservador. Frecuente en cartera migrada: si el bloque 5 muestra volumen ahí, revisar. |
 | Cuota `RAIZ`/`ACTIVA`/`EMITIDA` (0, 2, 3) | aportan **0** | No son estados de cuota viva en la operación normal. |
-| Préstamo `CANCELADO` (3) | **sin** regla de préstamo | Sus cuotas quedan en `PAGADA`, así que la regla por cuota ya da el total. Si aparecen cancelados con cuotas sin marcar, habría que extender la regla. |
-| Préstamo `CANCELADO_POR_NOVACION` (5) | **sin** regla de préstamo | El capital **no se pagó**: se trasladó al préstamo nuevo. Extender la regla acá sería un error, no una omisión. |
+| Préstamo `CANCELADO` (3) y `CANCELADO_POR_NOVACION` (5) | ✅ **con** regla de préstamo, igual que el 4 | Decidido por el usuario el 2026-09-10: un préstamo cancelado tiene saldo 0, y la fila sólo cuadra si el capital pagado es el total. Salvedad de la novación registrada en §3bis. |
