@@ -171,11 +171,14 @@ export class MenucreditosComponent {
       iconName: 'currency_exchange',
       route: '/menucreditos/parametrizacion',
       children: [
-        {
-          displayName: 'Archivos Descuentos',
-          iconName: 'system_update_alt',
-          // route: '/menucreditos/navegacion-cascada'
-        },
+        // "Archivos Descuentos" comentado el 2026-09-10: no tiene pantalla programada (sin
+        // `route`, y sin ningún `path` bajo `menucreditos` que lo respalde — ver
+        // docs/seguridad/INVENTARIO-PANTALLAS-SAA.md, ÍTEM 2(a)). Por decisión del usuario, una
+        // opción de menú sin pantalla no se muestra. No borrar: recuperable el día que exista.
+        // {
+        //   displayName: 'Archivos Descuentos',
+        //   iconName: 'system_update_alt',
+        // },
         {
           displayName: 'Archivos Petro',
           iconName: 'cards_stack',
@@ -267,11 +270,17 @@ export class MenucreditosComponent {
           iconName: 'handshake',
           route: '/menucreditos/acuerdo-condonacion',
         },
-        {
-          displayName: 'Dash',
-          iconName: 'finance',
-          // route: '/menucreditos/participe-dash'
-        },
+        // "Dash" comentado el 2026-09-10: sin `route` activa (estaba comentada) y por lo tanto sin
+        // opción de menú real — ver docs/seguridad/INVENTARIO-PANTALLAS-SAA.md, ÍTEM 2(a). El
+        // destino `/menucreditos/participe-dash` (ParticipeDashComponent) sigue vivo y alcanzable
+        // desde entidad-consulta, participe-inicial y pago-jubilados, y sigue teniendo nodo propio
+        // en el árbol de permisos (Permisos.CRD_DASH_DEL_PARTICIPE) — comentar esta entrada de
+        // menú no lo deja huérfano. No borrar: recuperable el día que se decida mostrarlo acá.
+        // {
+        //   displayName: 'Dash',
+        //   iconName: 'finance',
+        //   route: '/menucreditos/participe-dash',
+        // },
       ],
     },
     {

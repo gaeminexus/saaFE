@@ -1,7 +1,7 @@
 import { Component, HostBinding, Input, OnInit, forwardRef } from '@angular/core';
 import { MatSnackBarHorizontalPosition, MatSnackBarVerticalPosition, MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
-import { UsuarioService } from '../../../../services/usuario.service';
+import { PermisosService } from '../../../../services/permisos.service';
 import { NavItem } from '../../model/nav-item';
 import { NavService } from '../../service/nav.service';
 import { MaterialFormModule } from '../../../../modules/material-form.module';
@@ -39,7 +39,7 @@ export class MenuListComponent implements OnInit {
   constructor(
     public navService: NavService,
     public router: Router,
-    private usuarioService: UsuarioService,
+    private permisosService: PermisosService,
     private snackBar: MatSnackBar,
   ) {
     // La inicialización de @Input properties se hace en ngOnInit o ngOnChanges
@@ -70,35 +70,20 @@ export class MenuListComponent implements OnInit {
   }
 
   onItemSelected(item: NavItem): void {
-    /*if (!item.children || !item.children.length) {
-      if (item.idPermiso) {
-        this.usuarioService.verificaPermiso(
-          this.usuarioService.getEmpresaLog().codigo,
-          this.usuarioService.getUsuarioLog().codigo,
-          item.idPermiso
-        ).subscribe(result =>
-          {
-            if (result === 'OK') {
-              this.router.navigate([item.route]);
-              this.navService.closeNav();
-            } else {
-              this.openSnackBar(result.toUpperCase());
-            }
-          }
-        );
-      } else {
-        this.router.navigate([item.route]);
-        this.navService.closeNav();
-      }
-    }*/
-    if (!item.children || !item.children.length) {
-      this.router.navigate([item.route]);
-      this.navService.setMuestraFondo(false);
-      this.navService.closeNav();
-    }
+    // Expandir un grupo no da acceso a nada — no se verifica permiso acá.
     if (item.children && item.children.length) {
       this.expanded = !this.expanded;
+      return;
     }
+    this.permisosService.ejecutarSiPermitido(
+      item.idPermiso,
+      () => {
+        this.router.navigate([item.route]);
+        this.navService.setMuestraFondo(false);
+        this.navService.closeNav();
+      },
+      (mensaje) => this.openSnackBar(mensaje.toUpperCase()),
+    );
   }
 
   openSnackBar(mensaje: string): void {
