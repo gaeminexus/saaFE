@@ -40,16 +40,17 @@ export class PrestamoDetalleDialogComponent implements OnInit {
   loading = true;
   error = '';
 
-  /** Saldo calculado desde las cuotas (POST /prst/saldos) — `Prestamo.saldoTotal`/`saldoCapital` están muertos, ver contrato. */
+  /** Saldo calculado desde las cuotas (POST /prst/saldos) — `Prestamo.saldoTotal`/`saldoCapital`/`totalPagado` están muertos, ver contrato. */
   saldoTotal: number | null = null;
   saldoCapital: number | null = null;
+  capitalPagado: number | null = null;
   saldoCargando = true;
 
   displayedColumns = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'interesMora', 'cuota', 'saldo', 'estado'];
 
   constructor(
     public dialogRef: MatDialogRef<PrestamoDetalleDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { codigoPrestamo: number; saldoTotal?: number; saldoCapital?: number },
+    @Inject(MAT_DIALOG_DATA) public data: { codigoPrestamo: number; saldoTotal?: number; saldoCapital?: number; capitalPagado?: number },
     private prestamoService: PrestamoService,
     private detallePrestamoService: DetallePrestamoService,
     private exportService: ExportService
@@ -62,9 +63,10 @@ export class PrestamoDetalleDialogComponent implements OnInit {
 
   /** Usa el saldo que ya trae `data` (resuelto por la consulta); si no vino, lo pide él mismo. */
   private cargarSaldo(): void {
-    if (this.data.saldoTotal != null && this.data.saldoCapital != null) {
+    if (this.data.saldoTotal != null && this.data.saldoCapital != null && this.data.capitalPagado != null) {
       this.saldoTotal = this.data.saldoTotal;
       this.saldoCapital = this.data.saldoCapital;
+      this.capitalPagado = this.data.capitalPagado;
       this.saldoCargando = false;
       return;
     }
@@ -74,6 +76,7 @@ export class PrestamoDetalleDialogComponent implements OnInit {
         const saldo = (resultado || []).find((r) => r.idPrestamo === this.data.codigoPrestamo);
         this.saldoTotal = saldo?.saldoTotal ?? null;
         this.saldoCapital = saldo?.saldoCapital ?? null;
+        this.capitalPagado = saldo?.capitalPagado ?? null;
         this.saldoCargando = false;
       },
       error: () => {
@@ -223,7 +226,7 @@ export class PrestamoDetalleDialogComponent implements OnInit {
       ['Tasa Nominal', `${this.prestamo.tasaNominal || 0}%`],
       ['Saldo Capital', this.formatearSaldo(this.saldoCapital)],
       ['Saldo Total', this.formatearSaldo(this.saldoTotal)],
-      ['Total Pagado', `$${this.prestamo.totalPagado?.toFixed(2) || '0.00'}`],
+      ['Capital Pagado', this.formatearSaldo(this.capitalPagado)],
       ['Fecha Solicitud', this.formatearFecha(this.prestamo.fecha)],
       ['Fecha Inicio', this.formatearFecha(this.prestamo.fechaInicio)],
       ['Fecha Fin', this.formatearFecha(this.prestamo.fechaFin)]

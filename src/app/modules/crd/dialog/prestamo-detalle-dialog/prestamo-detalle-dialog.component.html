@@ -114,8 +114,16 @@
             </span>
           </div>
           <div class="info-item">
-            <span class="label">Total Pagado:</span>
-            <span class="value">${{ prestamo.totalPagado | number:'1.2-2' }}</span>
+            <span class="label">Capital Pagado:</span>
+            <span class="value">
+              @if (saldoCargando) {
+                …
+              } @else if (capitalPagado === null) {
+                —
+              } @else {
+                ${{ capitalPagado | number:'1.2-2' }}
+              }
+            </span>
           </div>
         </div>
 

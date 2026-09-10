@@ -12,4 +12,6 @@ export interface SaldoPrestamoResumen {
   saldoTotal: number;
   /** Cuotas pendientes con fecha de vencimiento anterior a hoy */
   cuotasEnMora: number;
+  /** Suma del capital efectivamente pagado sobre las cuotas del préstamo (Monto − Capital Pagado ≈ Saldo Capital) */
+  capitalPagado: number;
 }

@@ -131,7 +131,7 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
     'estadoPrestamo',
     'cuotasMora',
     'montoSolicitado',
-    'totalPagado',
+    'capitalPagado',
     'saldoCapital',
     'saldoTotal',
     'acciones',
@@ -803,6 +803,10 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
     return this.obtenerSaldo(p)?.saldoTotal ?? null;
   }
 
+  obtenerCapitalPagado(p: Prestamo): number | null {
+    return this.obtenerSaldo(p)?.capitalPagado ?? null;
+  }
+
   cuotasEnMora(p: Prestamo): number {
     return this.obtenerSaldo(p)?.cuotasEnMora ?? 0;
   }
@@ -871,6 +875,11 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
     return saldo ? saldo.saldoTotal : '';
   }
 
+  private valorExportCapitalPagado(p: Prestamo): number | string {
+    const saldo = this.obtenerSaldo(p);
+    return saldo ? saldo.capitalPagado : '';
+  }
+
   exportarCSV(): void {
     const data = this.prestamos();
     if (!data.length) {
@@ -893,7 +902,7 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
       Producto: p.producto?.nombre || '',
       Fecha: p.fecha ? new Date(p.fecha).toLocaleDateString('es-ES') : '',
       MontoSolicitado: p.montoSolicitado || 0,
-      TotalPagado: p.totalPagado || 0,
+      CapitalPagado: this.valorExportCapitalPagado(p),
       SaldoCapital: this.valorExportSaldoCapital(p),
       SaldoTotal: this.valorExportSaldoTotal(p),
     }));
@@ -909,7 +918,7 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
       'Producto',
       'Fecha',
       'MontoSolicitado',
-      'TotalPagado',
+      'CapitalPagado',
       'SaldoCapital',
       'SaldoTotal',
     ];
@@ -994,6 +1003,7 @@ export class PrestamoConsultaComponent implements OnInit, AfterViewInit, OnDestr
             codigoPrestamo: prestamo.codigo,
             saldoTotal: saldo?.saldoTotal,
             saldoCapital: saldo?.saldoCapital,
+            capitalPagado: saldo?.capitalPagado,
           },
           panelClass: 'prestamo-detalle-dialog',
         });
