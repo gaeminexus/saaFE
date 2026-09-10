@@ -11,6 +11,8 @@ export interface PadronParticipeDTO {
   numeroAportes: number;
   estadoMora: string;
   mesesEnMora: number | null;
+  /** "SI" / "NO" — conserva la condición de partícipe: SI hasta 6 meses de mora de aportes */
+  mantieneCalidadParticipe: string;
   habilitadoVoto: string;
   elegibleMiembro: string;
   /** "SI" / "NO" — indica si el partícipe tiene algún préstamo en mora */
