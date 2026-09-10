@@ -842,8 +842,10 @@ export class Retencionesv2Component implements OnInit {
     this.snackBar.open(mensaje, 'Cerrar', { duration: 3500, panelClass: ['snackbar-success'], horizontalPosition: 'center', verticalPosition: 'bottom' });
   }
 
+  // La clase amber real está definida globalmente como `.snackbar-warn` (src/styles/styles.scss),
+  // no `.snackbar-warning` — con ese nombre el snackbar quedaba sin color (bug preexistente).
   private mostrarAdvertencia(mensaje: string): void {
-    this.snackBar.open(mensaje, 'Cerrar', { duration: 7000, panelClass: ['snackbar-warning'], horizontalPosition: 'center', verticalPosition: 'bottom' });
+    this.snackBar.open(mensaje, 'Cerrar', { duration: 7000, panelClass: ['snackbar-warn'], horizontalPosition: 'center', verticalPosition: 'bottom' });
   }
 
   private mostrarError(mensaje: string): void {

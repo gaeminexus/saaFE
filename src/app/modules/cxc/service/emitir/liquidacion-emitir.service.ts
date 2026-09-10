@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
+import { ContabilizarDocumentoResponse } from '../../model/contabilizar-documento';
 import { LiquidacionEmitir } from '../../model/liquidacion-emitir';
 import { DetalleLiquidacionEmitir } from '../../model/detalle-liquidacion-emitir';
 import { FormaPagoLiquidacion } from '../../model/forma-pago-liquidacion';
@@ -160,6 +161,18 @@ export class LiquidacionEmitirService {
   movimientosRelacionados(id: number): Observable<MovimientoRelacionado[]> {
     return this.http.get<MovimientoRelacionado[]>(
       `${ServiciosCxc.RS_LQCS}/movimientosRelacionados/${id}`
+    );
+  }
+
+  /**
+   * Repara el asiento/cruce de una liquidación ya autorizada
+   * (docs/cxc/API-CONTABILIZAR-DOCUMENTO-AUTORIZADO.md). Idempotente.
+   * Sin catchError, igual que el resto del archivo: el 404/409/500 también trae un body
+   * (mensaje) que el componente lee directo del HttpErrorResponse.
+   */
+  contabilizar(id: number): Observable<ContabilizarDocumentoResponse> {
+    return this.http.post<ContabilizarDocumentoResponse>(
+      `${ServiciosCxc.RS_LQCS}/contabilizar/${id}`, null, this.httpOptions
     );
   }
 

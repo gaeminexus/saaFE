@@ -12,6 +12,7 @@ import { PermisosService } from '../../../../../shared/services/permisos.service
 import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../../shared/model/pagos-cobros/movimiento-relacionado';
+import { ContabilizarDocumentoResponse } from '../../../model/contabilizar-documento';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
@@ -48,11 +49,13 @@ export interface DocumentoElectronico {
   estadoEmision: number | string | null;
   ambiente: number;
   /**
-   * Solo para tipo RETENCION: el `estado` de RetencionV2 (1/3/4/5/6, el flujo de emisión
-   * electrónica — docs/cxc/API-REENVIAR-RETENCION-AL-SRI.md §3). NO es lo mismo que
-   * `estadoEmision` (LSRI 603, el flag genérico Pendiente/Emitida/Anulada de arriba).
+   * El `estado` de los cinco documentos electrónicos (1/3/4/5/6: creada/firmada/enviada/
+   * autorizada/no autorizada — el flujo de emisión electrónica, mismo campo sobrecargado de
+   * `CriterioVentaVigente` en los cinco, docs/cxc/API-CONTABILIZAR-DOCUMENTO-AUTORIZADO.md §5.3).
+   * NO es lo mismo que `estadoEmision` (LSRI 603, el flag genérico Pendiente/Emitida/Anulada de
+   * arriba) — se llamaba `estadoRetencion` cuando solo cubría RETENCION (reenviar al SRI).
    */
-  estadoRetencion?: number;
+  estadoElectronico?: number;
 }
 
 @Component({
@@ -88,6 +91,8 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   sinBusqueda = signal(true);
   /** id de la retención cuyo reenvío al SRI está en curso; null si ninguna. */
   idReenviando = signal<number | null>(null);
+  /** id del documento cuya contabilización está en curso; null si ninguna. */
+  idContabilizando = signal<number | null>(null);
 
   private get usuarioSesion(): string {
     try {
@@ -538,7 +543,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
    */
   puedeReenviarSRI(row: DocumentoElectronico): boolean {
     if (row.tipo !== 'RETENCION') return false;
-    const estado = Number(row.estadoRetencion);
+    const estado = Number(row.estadoElectronico);
     return [3, 4, 6].includes(estado);
   }
 
@@ -562,6 +567,56 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       error: (err: Error) => {
         this.idReenviando.set(null);
         this.mostrarError(mensajeDeError(err, 'No se pudo reenviar el comprobante al SRI'));
+      },
+    });
+  }
+
+  /**
+   * Visible solo para documentos autorizados (`estado = 5`), en los cinco tipos —
+   * docs/cxc/API-CONTABILIZAR-DOCUMENTO-AUTORIZADO.md §4/§5.3. NO calcula si falta el asiento o
+   * el cruce: eso lo decide el backend (es idempotente, responde `yaEstabaCompleto` si no había
+   * nada que hacer) — duplicar esa cuenta acá es cómo el frontend y el backend se desincronizan.
+   */
+  puedeContabilizar(row: DocumentoElectronico): boolean {
+    return Number(row.estadoElectronico) === 5;
+  }
+
+  contabilizar(row: DocumentoElectronico): void {
+    if (!this.puedeContabilizar(row) || this.idContabilizando() !== null) return;
+    if (!window.confirm('Se generará el asiento contable y la aplicación de pago si corresponde. ¿Continuar?')) return;
+
+    const req$: Observable<ContabilizarDocumentoResponse | null> = (() => {
+      switch (row.tipo) {
+        case 'FACTURA':      return this.facturaService.contabilizar(row.id);
+        case 'NOTA_CREDITO': return this.ncService.contabilizar(row.id);
+        case 'NOTA_DEBITO':  return this.ndService.contabilizar(row.id);
+        case 'RETENCION':    return this.retService.contabilizar(row.id);
+        case 'LIQUIDACION':  return this.liquidacionService.contabilizar(row.id);
+        default: return of(null);
+      }
+    })();
+
+    this.idContabilizando.set(row.id);
+    req$.subscribe({
+      next: (resp) => {
+        this.idContabilizando.set(null);
+        if (!resp) { this.mostrarError('Tipo de documento sin contabilización configurada'); return; }
+        // El mensaje del backend se muestra TAL CUAL. Si vienen erroresContables, uno por línea
+        // (mismo tratamiento que retencionesv2.component.ts le da a VALIDACION_CONTABLE) — el
+        // texto ya viene redactado para el usuario, no hay que resumirlo.
+        if (resp.exito) {
+          this.mostrarExito(resp.mensaje);
+        } else if (Array.isArray(resp.erroresContables) && resp.erroresContables.length) {
+          const lista = resp.erroresContables.map((e: string) => `• ${e}`).join('\n');
+          this.mostrarAdvertencia(`${resp.mensaje}\n${lista}`);
+        } else {
+          this.mostrarAdvertencia(resp.mensaje || 'No se pudo completar la contabilización.');
+        }
+        this.buscar();
+      },
+      error: (err: unknown) => {
+        this.idContabilizando.set(null);
+        this.mostrarError(mensajeDeError(err, 'No se pudo contabilizar el documento'));
       },
     });
   }
@@ -670,6 +725,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(f.total),
       estadoEmision:         f.estadoEmision,
       ambiente:              Number(f.ambiente || 1),
+      estadoElectronico:     this.toEstadoElectronico(f.estado),
     };
   }
 
@@ -689,6 +745,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(n.total),
       estadoEmision:         n.estadoEmision,
       ambiente:              Number(n.ambiente || 1),
+      estadoElectronico:     this.toEstadoElectronico(n.estado),
     };
   }
 
@@ -708,6 +765,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(n.total),
       estadoEmision:         n.estadoEmision,
       ambiente:              Number(n.ambiente || 1),
+      estadoElectronico:     this.toEstadoElectronico(n.estado),
     };
   }
 
@@ -727,7 +785,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(r.total || r.totalRetenido),
       estadoEmision:         r.estadoEmision,
       ambiente:              Number(r.ambiente || 1),
-      estadoRetencion:       r.estado !== undefined && r.estado !== null ? Number(r.estado) : undefined,
+      estadoElectronico:     this.toEstadoElectronico(r.estado),
     };
   }
 
@@ -747,6 +805,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       total:                 this.toNum(l.total),
       estadoEmision:         l.estadoEmision,
       ambiente:              Number(l.ambiente || 1),
+      estadoElectronico:     this.toEstadoElectronico(l.estado),
     };
   }
 
@@ -775,8 +834,15 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     return Number.isFinite(n) ? n : 0;
   }
 
+  private toEstadoElectronico(value: unknown): number | undefined {
+    return value !== undefined && value !== null ? Number(value) : undefined;
+  }
+
   private mostrarExito(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 3000, panelClass: ['snackbar-success'] }); }
   private mostrarInfo(msg: string): void  { this.snackBar.open(msg, 'Cerrar', { duration: 3000 }); }
   private mostrarError(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 4500, panelClass: ['snackbar-error'] }); }
-  private mostrarAdvertencia(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 7000, panelClass: ['snackbar-warning'] }); }
+  // La clase amber real está definida globalmente como `.snackbar-warn` (src/styles/styles.scss),
+  // no `.snackbar-warning` — con ese nombre el snackbar quedaba sin color (bug preexistente,
+  // corregido acá y en retencionesv2.component.ts porque los dos necesitan el ámbar de verdad).
+  private mostrarAdvertencia(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 7000, panelClass: ['snackbar-warn'] }); }
 }

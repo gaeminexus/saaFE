@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { AnularDocumentoVentaResponse, AnularRetencionVentaRequest } from '../../model/anulacion-documento-venta';
+import { ContabilizarDocumentoResponse } from '../../model/contabilizar-documento';
 import { ReenviarSriRetencionV2Response } from '../../model/reenviar-sri-retencion';
 import { RetencionV2Emitir } from '../../model/retencion-v2-emitir';
 import { ServiciosCxc } from '../ws-cxc';
@@ -104,6 +105,13 @@ export class RetencionV2EmitirService {
   reenviarSRI(idRetencion: number): Observable<ReenviarSriRetencionV2Response> {
     return this.http
       .post<ReenviarSriRetencionV2Response>(`${ServiciosCxc.RS_RTV2}/reenviarSRI/${idRetencion}`, null, this.httpOptions)
+      .pipe(catchError(this.handleErrorAnulacion));
+  }
+
+  /** Repara el asiento/cruce de una retención ya autorizada (docs/cxc/API-CONTABILIZAR-DOCUMENTO-AUTORIZADO.md). Idempotente. */
+  contabilizar(idRetencion: number): Observable<ContabilizarDocumentoResponse> {
+    return this.http
+      .post<ContabilizarDocumentoResponse>(`${ServiciosCxc.RS_RTV2}/contabilizar/${idRetencion}`, null, this.httpOptions)
       .pipe(catchError(this.handleErrorAnulacion));
   }
 

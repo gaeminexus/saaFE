@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { AnularDocumentoVentaResponse, AnularNotaCreditoVentaRequest } from '../../model/anulacion-documento-venta';
+import { ContabilizarDocumentoResponse } from '../../model/contabilizar-documento';
 import { NotaCreditoEmitir } from '../../model/nota-credito-emitir';
 import { ServiciosCxc } from '../ws-cxc';
 
@@ -91,6 +92,13 @@ export class NotaCreditoEmitirService {
     return this.http
       .post<any>(`${ServiciosCxc.RS_NTCR}/consultarYActualizarEstado`, { idNotaCredito }, this.httpOptions)
       .pipe(catchError(this.handleError));
+  }
+
+  /** Repara el asiento/cruce de una nota de crédito ya autorizada (docs/cxc/API-CONTABILIZAR-DOCUMENTO-AUTORIZADO.md). Idempotente. */
+  contabilizar(idNotaCredito: number): Observable<ContabilizarDocumentoResponse> {
+    return this.http
+      .post<ContabilizarDocumentoResponse>(`${ServiciosCxc.RS_NTCR}/contabilizar/${idNotaCredito}`, null, this.httpOptions)
+      .pipe(catchError(this.handleErrorAnulacion));
   }
 
   private handleError(error: HttpErrorResponse): Observable<null> {

@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { MovimientoRelacionado } from '../../../../shared/model/pagos-cobros/movimiento-relacionado';
 import { AnularDocumentoVentaResponse, AnularFacturaVentaRequest } from '../../model/anulacion-documento-venta';
+import { ContabilizarDocumentoResponse } from '../../model/contabilizar-documento';
 import { FacturaEmitir } from '../../model/factura-emitir';
 import { FormaPagoFactura } from '../../model/forma-pago-factura';
 import { ServiciosCxc } from '../ws-cxc';
@@ -118,6 +119,13 @@ export class FacturaEmitirService {
     return this.http
       .post<any>(`${ServiciosCxc.RS_FCTR}/consultarYActualizarEstado`, { idFactura }, this.httpOptions)
       .pipe(catchError(this.handleError));
+  }
+
+  /** Repara el asiento/cruce de una factura ya autorizada (docs/cxc/API-CONTABILIZAR-DOCUMENTO-AUTORIZADO.md). Idempotente. */
+  contabilizar(idFactura: number): Observable<ContabilizarDocumentoResponse> {
+    return this.http
+      .post<ContabilizarDocumentoResponse>(`${ServiciosCxc.RS_FCTR}/contabilizar/${idFactura}`, null, this.httpOptions)
+      .pipe(catchError(this.handleErrorAnulacion));
   }
 
   private handleError(error: HttpErrorResponse): Observable<null> {
