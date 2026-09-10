@@ -63,11 +63,43 @@ existe **no** aparece en la respuesta (no es error).
 | `idPrestamo` | `number` | `PRSTCDGO` |
 | `saldoCapital` | `number` | Σ `SaldosCuota.saldoCapital` sobre las cuotas pendientes del préstamo (las que devuelve `selectCuotasPendientesByPrestamoOrdenadas`). Redondeado a 2 decimales. |
 | `saldoTotal` | `number` | Exactamente `calcularTotalPendientePrestamo(id)`: Σ `getTotalPendiente()` sobre las mismas cuotas. |
-| `capitalPagado` | `number` | Σ `PGPRCPPG` (**sólo capital**) de TODOS los pagos vigentes del préstamo — no sólo los de las cuotas pendientes: es el acumulado histórico. La columna en pantalla se llama **«Capital Pagado»** (decisión del usuario, 2026-09-10), y así cierra con sus vecinas: **Monto − Capital Pagado ≈ Saldo Capital**. ⛔ NO es la suma de los seis componentes ni `PGPRVLRR`: esas incluyen interés, mora y seguros, y la fila dejaría de cuadrar. Se obtiene con un `SUM(...) GROUP BY` en la base — **una fila por préstamo**, no las filas de pagos. |
+| `capitalPagado` | `number` | **Regla mixta, por estado de la cuota** (decisión del usuario, 2026-09-10 — ver §3bis). Cuota **liquidada** (`DTPRESTD` 4 PAGADA o 7 CANCELADA_ANTICIPADA) → aporta el **capital de la cuota** (`DTPRCPTL`). Cuota **no liquidada** (parcial, en mora, pendiente, o estado nulo) → aporta el **capital abonado en `PGPR`** (`SUM(PGPRCPPG)` de sus pagos vigentes). La columna en pantalla se llama **«Capital Pagado»**. ⛔ NO es la suma de los seis componentes ni `PGPRVLRR`: incluirían interés, mora y seguros, y la fila dejaría de cuadrar. Se obtiene con **dos `SUM(...) GROUP BY`** en la base — una fila por préstamo cada uno, nunca las filas de pagos. |
 | `cuotasEnMora` | `number` | Cuotas pendientes con `fechaVencimiento < inicio del día de hoy` — el mismo criterio del proceso diario de mora (`DTPRFCVN < corte`, estado no PAGADA ni CANCELADA_ANTICIPADA). La cuota que vence hoy **no** está en mora. |
 
 **Préstamos en estado terminal** (cancelado, etc.): se devuelven igual, con lo que sumen sus cuotas
 pendientes (normalmente 0). No se filtra por estado del préstamo: la pantalla ya muestra el estado.
+
+## 3bis. Por qué el capital pagado NO sale sólo de la tabla de pagos
+
+**La base viene de una migración y los registros de pago de cuota no siempre están completos.**
+Decisión del usuario, textual (2026-09-10):
+
+> *«si una cuota está pagada, entonces se suma como capital pagado el valor de capital de esa
+> cuota; sólo si está en parcial o en mora, ahí sí debe buscar el capital abonado de esa cuota en
+> la tabla de pago y sumarlo».*
+
+El **estado de la cuota es el dato confiable**; `PGPR` sólo lo es para lo que se pagó de forma
+parcial. Una primera versión sumaba `PGPRCPPG` de todos los pagos y devolvía de menos —o cero— en
+los préstamos migrados cuyas cuotas figuran pagadas sin pago registrado. Se detectó en préstamos
+con **cuota 0**, pero la causa no es la cuota 0: es la migración.
+
+⭐ **La regla mantiene la fila cuadrada, y ése es el argumento que la sostiene.** El motor calcula
+el saldo **sólo sobre las cuotas no liquidadas**, así que:
+
+```
+Σ capital de cuotas liquidadas  +  Σ abonado en PGPR de las no liquidadas   (= capitalPagado)
++ Σ (capital − abonado) de las no liquidadas                                (= saldoCapital)
+= Σ capital de todas las cuotas                                             (= capital del préstamo)
+```
+
+Cualquier otra combinación —sumar `PGPR` también en las liquidadas, o el capital también en las
+parciales— rompe esa identidad y hace que **Monto − Capital Pagado ≠ Saldo Capital** en pantalla.
+
+⚠️ **`CANCELADA_ANTICIPADA` (7) cuenta como liquidada**, igual que `PAGADA` (4): en una
+precancelación el capital se paga. Es el mismo par de estados que ya usan
+`selectCuotasPendientesByPrestamoOrdenadas` en el backend y `esCuotaLiquidada` en el frontend, así
+que las tres definiciones de «liquidada» siguen coincidiendo. Si alguna vez se separan, este
+cálculo deja de cuadrar con el saldo.
 
 **Errores:** `400` si el cuerpo es nulo, vacío o supera 500 códigos; `500` con
 `"Error al calcular saldos: <mensaje>"` (estilo de la casa). Un préstamo que falle al calcular
