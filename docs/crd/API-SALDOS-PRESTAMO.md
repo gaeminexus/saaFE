@@ -63,7 +63,7 @@ existe **no** aparece en la respuesta (no es error).
 | `idPrestamo` | `number` | `PRSTCDGO` |
 | `saldoCapital` | `number` | Σ `SaldosCuota.saldoCapital` sobre las cuotas pendientes del préstamo (las que devuelve `selectCuotasPendientesByPrestamoOrdenadas`). Redondeado a 2 decimales. |
 | `saldoTotal` | `number` | Exactamente `calcularTotalPendientePrestamo(id)`: Σ `getTotalPendiente()` sobre las mismas cuotas. |
-| `totalPagado` | `number` | Suma de los seis componentes pagados (capital, interés, desgravamen, mora, interés vencido, seguro de incendio) de TODOS los pagos vigentes del préstamo — no sólo los de cuotas pendientes: es el acumulado histórico. Se usan los componentes y no `PGPRVLRR` para que en la misma fila cierren Monto − Total Pagado ≈ Saldo Total, que se calculan restando esos mismos componentes. |
+| `capitalPagado` | `number` | Σ `PGPRCPPG` (**sólo capital**) de TODOS los pagos vigentes del préstamo — no sólo los de las cuotas pendientes: es el acumulado histórico. La columna en pantalla se llama **«Capital Pagado»** (decisión del usuario, 2026-09-10), y así cierra con sus vecinas: **Monto − Capital Pagado ≈ Saldo Capital**. ⛔ NO es la suma de los seis componentes ni `PGPRVLRR`: esas incluyen interés, mora y seguros, y la fila dejaría de cuadrar. Se obtiene con un `SUM(...) GROUP BY` en la base — **una fila por préstamo**, no las filas de pagos. |
 | `cuotasEnMora` | `number` | Cuotas pendientes con `fechaVencimiento < inicio del día de hoy` — el mismo criterio del proceso diario de mora (`DTPRFCVN < corte`, estado no PAGADA ni CANCELADA_ANTICIPADA). La cuota que vence hoy **no** está en mora. |
 
 **Préstamos en estado terminal** (cancelado, etc.): se devuelven igual, con lo que sumen sus cuotas
