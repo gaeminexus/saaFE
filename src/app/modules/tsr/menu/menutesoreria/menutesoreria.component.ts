@@ -6,6 +6,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterLink } from '@angular/router';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
+import { Permisos } from '../../../../shared/model/permisos';
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { SaldoCajaChica } from '../../model/saldo-caja-chica';
 import { CajaChicaService } from '../../service/caja-chica.service';
@@ -64,57 +65,57 @@ export class MenutesoreriaComponent implements OnInit {
     {
       displayName: 'Parametrización',
       iconName: 'tune',
-      idPermiso: 811,
+      idPermiso: Permisos.TSR_PARAMETRIZACION,
       children: [
         {
           displayName: 'Bancos',
           iconName: 'account_balance',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_BANCOS,
           children: [
             {
               displayName: 'Nacionales y Extranjeros',
               iconName: 'public',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_NACIONALES_Y_EXTRANJEROS,
               route: '/menutesoreria/parametrizacion/bancos/nacionales-extranjeros',
             },
             {
               displayName: 'Mis Bancos',
               iconName: 'account_balance_wallet',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_MIS_BANCOS,
               children: [
                 {
                   displayName: 'Bancos',
                   iconName: 'account_balance',
-                  idPermiso: 830,
+                  idPermiso: Permisos.TSR_MIS_BANCOS_BANCOS,
                   route: '/menutesoreria/parametrizacion/bancos/mis-bancos/bancos',
                 },
                 {
                   displayName: 'Cuentas Bancarias',
                   iconName: 'credit_card',
-                  idPermiso: 830,
+                  idPermiso: Permisos.TSR_CUENTAS_BANCARIAS,
                   route: '/menutesoreria/parametrizacion/bancos/mis-bancos/cuentas-bancarias',
                 },
                 {
                   displayName: 'Chequeras',
                   iconName: 'receipt_long',
-                  idPermiso: 830,
+                  idPermiso: Permisos.TSR_CHEQUERAS,
                   children: [
                     {
                       displayName: 'Solicitud Chequera',
                       iconName: 'playlist_add',
-                      idPermiso: 830,
+                      idPermiso: Permisos.TSR_SOLICITUD_CHEQUERA,
                       route: '/menutesoreria/parametrizacion/bancos/mis-bancos/chequeras/solicitud',
                     },
                     {
                       displayName: 'Recepción Chequera',
                       iconName: 'assignment_turned_in',
-                      idPermiso: 830,
+                      idPermiso: Permisos.TSR_RECEPCION_CHEQUERA,
                       route: '/menutesoreria/parametrizacion/bancos/mis-bancos/chequeras/recepcion',
                     },
                     {
                       displayName: 'Cheques',
                       iconName: 'payments',
-                      idPermiso: 830,
+                      idPermiso: Permisos.TSR_CHEQUES,
                       route: '/menutesoreria/parametrizacion/bancos/mis-bancos/chequeras/cheques',
                     },
                   ],
@@ -131,13 +132,13 @@ export class MenutesoreriaComponent implements OnInit {
         {
           displayName: 'Titulares',
           iconName: 'account_box',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_TITULARES,
           route: '/menutesoreria/parametrizacion/titulares',
         },
         {
           displayName: 'Cajas Chicas',
           iconName: 'savings',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_CAJAS_CHICAS,
           route: '/menutesoreria/parametrizacion/caja-chica',
         },
       ],
@@ -145,35 +146,35 @@ export class MenutesoreriaComponent implements OnInit {
     {
       displayName: 'Procesos',
       iconName: 'sync_alt',
-      idPermiso: 811,
+      idPermiso: Permisos.TSR_PROCESOS,
       children: [
         {
           displayName: 'Estado de Cuenta',
           iconName: 'account_balance_wallet',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_ESTADO_DE_CUENTA,
           route: '/menutesoreria/procesos/estado-cuenta-titular',
         },
         {
           displayName: 'Anticipos',
           iconName: 'payments',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_ANTICIPOS,
           children: [
             {
               displayName: 'Clientes',
               iconName: 'person',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CLIENTES,
               route: '/menutesoreria/procesos/anticipos/clientes',
             },
             {
               displayName: 'Proveedores',
               iconName: 'business',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_PROVEEDORES,
               route: '/menutesoreria/procesos/anticipos/proveedores',
             },
             {
               displayName: 'Seguimiento',
               iconName: 'fact_check',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_SEGUIMIENTO,
               route: '/menutesoreria/procesos/anticipos/seguimiento',
             },
           ],
@@ -181,18 +182,18 @@ export class MenutesoreriaComponent implements OnInit {
         {
           displayName: 'Registrar',
           iconName: 'edit_note',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_REGISTRAR,
           children: [
             {
               displayName: 'Ingresos',
               iconName: 'arrow_downward',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_INGRESOS,
               route: '/menutesoreria/procesos/registrar/ingresos',
             },
             {
               displayName: 'Egresos',
               iconName: 'arrow_upward',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_EGRESOS,
               route: '/menutesoreria/procesos/registrar/egresos',
             },
           ],
@@ -200,7 +201,9 @@ export class MenutesoreriaComponent implements OnInit {
         // "Cobros" (Cierre de Caja, Depósitos, Consultas, Procesos — 10 pantallas) se retiró del
         // menú el 2026-09-07 por decisión del usuario (docs/logica-negocio/tsr/PLAN-MENU-TESORERIA-Y-CHEQUES.md
         // M1): las rutas y los componentes NO se tocan, siguen alcanzables por URL. Si hace falta
-        // devolverlo al menú, es descomentar este bloque.
+        // devolverlo al menú, es descomentar este bloque. Nota 2026-09-10: este bloque no tiene
+        // código de permiso asignado en el árbol (docs/seguridad/CODIGOS-PERMISOS-SAA.md) — si se
+        // reactiva, hay que pedirle uno al árbitro antes.
         // {
         //   displayName: 'Cobros',
         //   iconName: 'attach_money',
@@ -286,24 +289,24 @@ export class MenutesoreriaComponent implements OnInit {
         {
           displayName: 'Caja Chica',
           iconName: 'savings',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_CAJA_CHICA,
           children: [
             {
               displayName: 'Gastos',
               iconName: 'point_of_sale',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_GASTOS,
               route: '/menutesoreria/procesos/caja-chica/gastos',
             },
             {
               displayName: 'Reposición',
               iconName: 'sync',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_REPOSICION,
               route: '/menutesoreria/procesos/caja-chica/reposicion',
             },
             {
               displayName: 'Cierre',
               iconName: 'fact_check',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CIERRE,
               route: '/menutesoreria/procesos/caja-chica/cierre',
             },
           ],
@@ -314,30 +317,30 @@ export class MenutesoreriaComponent implements OnInit {
           // de cheques (TSR.PAGO) que sigue quieto, sin tocar.
           displayName: 'Pagos por transferencia',
           iconName: 'account_balance',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_PAGOS_POR_TRANSFERENCIA,
           children: [
             {
               displayName: 'Aprobación de pagos',
               iconName: 'checklist',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_APROBACION_DE_PAGOS,
               route: '/menutesoreria/pagos/aprobacion',
             },
             {
               displayName: 'Generación de archivo',
               iconName: 'description',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_GENERACION_DE_ARCHIVO,
               route: '/menutesoreria/pagos/archivo-banco',
             },
             {
               displayName: 'Recepción y confirmación',
               iconName: 'task_alt',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_RECEPCION_Y_CONFIRMACION,
               route: '/menutesoreria/pagos/confirmacion',
             },
             {
               displayName: 'Consulta y gestión',
               iconName: 'list_alt',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CONSULTA_Y_GESTION,
               route: '/menutesoreria/pagos/consulta',
             },
           ],
@@ -350,30 +353,30 @@ export class MenutesoreriaComponent implements OnInit {
           // no cambiaron, solo el menú.
           displayName: 'Cheques',
           iconName: 'receipt_long',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_PROCESOS_CHEQUES,
           children: [
             {
               displayName: 'Cheques generados',
               iconName: 'done_all',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CHEQUES_GENERADOS,
               route: '/menutesoreria/procesos/pagos/procesos/cheques-generados',
             },
             {
               displayName: 'Cheques impresos',
               iconName: 'print',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CHEQUES_IMPRESOS,
               route: '/menutesoreria/procesos/pagos/procesos/cheques-impresos',
             },
             {
               displayName: 'Cheques entregados',
               iconName: 'task_alt',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CHEQUES_ENTREGADOS,
               route: '/menutesoreria/procesos/pagos/procesos/cheques-entregados',
             },
             {
               displayName: 'Consulta de cheques',
               iconName: 'manage_search',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CONSULTA_DE_CHEQUES,
               route: '/menutesoreria/procesos/pagos/consulta/cheques',
             },
           ],
@@ -381,36 +384,36 @@ export class MenutesoreriaComponent implements OnInit {
         {
           displayName: 'Extractos Bancarios',
           iconName: 'receipt_long',
-          idPermiso: 830,
+          idPermiso: Permisos.TSR_EXTRACTOS_BANCARIOS,
           children: [
             {
               displayName: 'Cargar Extracto',
               iconName: 'upload_file',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CARGAR_EXTRACTO,
               route: '/menutesoreria/procesos/extractos-bancarios/cargar',
             },
             {
               displayName: 'Consulta de Extractos',
               iconName: 'search',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CONSULTA_DE_EXTRACTOS,
               route: '/menutesoreria/procesos/extractos-bancarios/consulta',
             },
             {
               displayName: 'Conciliación Contable',
               iconName: 'fact_check',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CONCILIACION_CONTABLE,
               route: '/menutesoreria/procesos/conciliacion-contable',
             },
             {
               displayName: 'Conciliación — Cierre',
               iconName: 'lock',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_CONCILIACION_CIERRE,
               route: '/menutesoreria/procesos/conciliacion/cierre',
             },
             {
               displayName: 'Tablero de Cumplimiento',
               iconName: 'dashboard',
-              idPermiso: 830,
+              idPermiso: Permisos.TSR_TABLERO_DE_CUMPLIMIENTO,
               route: '/menutesoreria/procesos/extractos-bancarios/tablero',
             },
           ],

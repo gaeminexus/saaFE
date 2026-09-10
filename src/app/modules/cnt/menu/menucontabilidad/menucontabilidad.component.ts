@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { SideMenuCustomComponent } from '../../../../shared/basics/menu/forms/side-menu-custom/side-menu-custom.component';
 import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
+import { Permisos } from '../../../../shared/model/permisos';
 
 @Component({
   selector: 'app-menucontabilidad',
@@ -14,29 +15,29 @@ export class MenuContabilidadComponent {
     {
       displayName: 'Parametrización',
       iconName: 'tune',
-      idPermiso: 811,
+      idPermiso: Permisos.CNT_PARAMETRIZACION,
       children: [
         {
           displayName: 'Naturaleza de Cuentas',
           iconName: 'category',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_NATURALEZA_DE_CUENTAS,
           route: '/menucontabilidad/naturaleza-cuentas',
         },
         {
           displayName: 'Plan de Cuentas',
           iconName: 'account_tree',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_PLAN_DE_CUENTAS,
           children: [
             {
               displayName: 'Plan Arbol',
               iconName: 'account_tree',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_PLAN_ARBOL,
               route: '/menucontabilidad/plan-cuentas',
             },
             {
               displayName: 'Plan Grid',
               iconName: 'view_list',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_PLAN_GRID,
               route: '/menucontabilidad/plan-grid',
             },
           ],
@@ -44,18 +45,18 @@ export class MenuContabilidadComponent {
         {
           displayName: 'Centro de Costos',
           iconName: 'business_center',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_CENTRO_DE_COSTOS,
           children: [
             {
               displayName: 'Centro Costos Árbol',
               iconName: 'account_tree',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_CENTRO_COSTOS_ARBOL,
               route: '/menucontabilidad/centro-costos/arbol',
             },
             {
               displayName: 'Centro Costos Grid',
               iconName: 'view_list',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_CENTRO_COSTOS_GRID,
               route: '/menucontabilidad/centro-costos/grid',
             },
           ],
@@ -63,18 +64,18 @@ export class MenuContabilidadComponent {
         {
           displayName: 'Tipos de Asientos',
           iconName: 'receipt_long',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_TIPOS_DE_ASIENTOS,
           children: [
             {
               displayName: 'General',
               iconName: 'edit_note',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_GENERAL,
               route: '/menucontabilidad/tipos-asientos/general',
             },
             {
               displayName: 'Sistema',
               iconName: 'settings',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_SISTEMA,
               route: '/menucontabilidad/tipos-asientos/sistema',
             },
           ],
@@ -82,18 +83,18 @@ export class MenuContabilidadComponent {
         {
           displayName: 'Plantillas',
           iconName: 'description',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_PLANTILLAS,
           children: [
             {
               displayName: 'General',
               iconName: 'edit_note',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_PLANTILLAS_GENERAL,
               route: '/menucontabilidad/plantillas/general',
             },
             {
               displayName: 'Sistema',
               iconName: 'settings',
-              idPermiso: 830,
+              idPermiso: Permisos.CNT_PLANTILLAS_SISTEMA,
               route: '/menucontabilidad/plantillas/sistema',
             },
           ],
@@ -101,13 +102,13 @@ export class MenuContabilidadComponent {
         {
           displayName: 'Períodos Contables',
           iconName: 'calendar_month',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_PERIODOS_CONTABLES,
           route: '/menucontabilidad/periodo-contable',
         },
         {
           displayName: 'Reportes Contables',
           iconName: 'receipt_long',
-          idPermiso: 831,
+          idPermiso: Permisos.CNT_REPORTES_CONTABLES,
           route: '/menucontabilidad/parametrizacion/reportes-contables',
         },
       ],
@@ -115,18 +116,18 @@ export class MenuContabilidadComponent {
     {
       displayName: 'Procesos',
       iconName: 'sync_alt',
-      idPermiso: 811,
+      idPermiso: Permisos.CNT_PROCESOS,
       children: [
         {
           displayName: 'Asientos Dinámico',
           iconName: 'dynamic_form',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_ASIENTOS_DINAMICO,
           route: '/menucontabilidad/procesos/asientos-dinamico',
         },
         {
           displayName: 'Listado de Asientos',
           iconName: 'list_alt',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_LISTADO_DE_ASIENTOS,
           route: '/menucontabilidad/reportes/listado-asientos',
         },
         /*{
@@ -144,13 +145,13 @@ export class MenuContabilidadComponent {
         {
           displayName: 'Mayorización - Proceso',
           iconName: 'account_balance',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_MAYORIZACION_PROCESO,
           route: '/menucontabilidad/mayorizacion-proceso',
         },
         {
           displayName: 'Detalle Mayorización',
           iconName: 'table_view',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_DETALLE_MAYORIZACION,
           route: '/menucontabilidad/procesos/detalle-mayorizacion',
         },
       ],
@@ -158,18 +159,18 @@ export class MenuContabilidadComponent {
     {
       displayName: 'Reportes',
       iconName: 'bar_chart',
-      idPermiso: 811,
+      idPermiso: Permisos.CNT_REPORTES,
       children: [
         {
           displayName: 'Listado de Asientos',
           iconName: 'list_alt',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_REPORTES_LISTADO_DE_ASIENTOS,
           route: '/menucontabilidad/reportes/listado-asientos',
         },
         {
           displayName: 'Balance General',
           iconName: 'balance',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_BALANCE_GENERAL,
           route: '/menucontabilidad/reportes/balance-general',
         },
         /*{
@@ -181,13 +182,13 @@ export class MenuContabilidadComponent {
         {
           displayName: 'Mayor Analítico',
           iconName: 'analytics',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_MAYOR_ANALITICO,
           route: '/menucontabilidad/reportes/mayor-analitico',
         },
         {
           displayName: 'Mayor Analítico V2',
           iconName: 'view_column',
-          idPermiso: 830,
+          idPermiso: Permisos.CNT_MAYOR_ANALITICO_V2,
           route: '/menucontabilidad/reportes/mayor-analitico-v2',
         },
         /*{
