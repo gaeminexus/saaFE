@@ -83,7 +83,30 @@ parcial. Una primera versión sumaba `PGPRCPPG` de todos los pagos y devolvía d
 los préstamos migrados cuyas cuotas figuran pagadas sin pago registrado. Se detectó en préstamos
 con **cuota 0**, pero la causa no es la cuota 0: es la migración.
 
+### Regla que manda sobre todas: préstamo CANCELADO_ANTICIPADO
+
+Tercera aclaración del usuario (2026-09-10): *«si un préstamo está en estado cancelado anticipado
+o una cuota está en ese estado, entonces quiere decir que todo el capital de ese préstamo ya fue
+pagado»*.
+
+⇒ Si `PRST.PRSTIDST = 4` (`EstadoPrestamo.CANCELADO_ANTICIPADO`, el que escribe la precancelación
+en `ProcesoPagoPrestamoServiceImpl:1163`), entonces **`capitalPagado` = Σ `DTPRCPTL` de TODAS las
+cuotas del préstamo**, sin mirar el estado de cada una. Esta regla **precede** a la tabla de abajo.
+
+**Por qué hace falta si las cuotas precanceladas ya quedan en 7:** porque no siempre quedan. Hay un
+defecto conocido (P21) en el que precancelar un préstamo sin ninguna cuota pagada previa deja el
+ancla en `PAGADA` en vez de `CANCELADA_ANTICIPADA`, y en la cartera migrada puede haber cuotas sin
+actualizar. El estado del préstamo es el dato de más alto nivel y el más confiable: si dice
+precancelado, el capital se pagó entero.
+
+⚠️ **Sólo el estado 4.** `CANCELADO` (3) y `CANCELADO_POR_NOVACION` (5) **no** aplican esta regla:
+el usuario nombró únicamente el anticipado. En un cancelado normal las cuotas quedan en `PAGADA` y
+la tabla de abajo ya las cubre; en una novación el capital **no se pagó con dinero**, se trasladó
+al préstamo nuevo, así que aplicarla inflaría la cifra. Ver «Decidido y pendiente» al final.
+
 ### Tabla de estados — qué aporta cada cuota
+
+Aplica **sólo cuando el préstamo NO está en estado 4**:
 
 Segunda aclaración del usuario (2026-09-10): *«para el caso de cuotas en estado pendientes, ahí
 aunque exista un valor de pago, se debe asumir que todo el capital de esa cuota no fue pagado»*.
@@ -189,3 +212,22 @@ cálculo deja de cuadrar con el saldo.
   los pagos vigentes (fragmentando los `IN` de a 900 por el tope de Oracle), y calcula en memoria
   con la sobrecarga pura `calcularSaldosCuota(cuota, pagosVigentes)`, que es la misma matemática.
   Si alguien vuelve al bucle «porque es más simple», reaparece el problema.
+
+## 7. Decidido y pendiente sobre `capitalPagado`
+
+**Decidido por el usuario (2026-09-10):**
+
+1. El **estado de la cuota manda** sobre `PGPR`, porque la base viene de una migración con
+   registros de pago incompletos.
+2. Una cuota **PENDIENTE aporta 0** aunque tenga pagos registrados.
+3. Un préstamo en **CANCELADO_ANTICIPADO** tiene todo su capital pagado, sin mirar las cuotas.
+
+**Supuestos del árbitro, a confirmar cuando haya datos** (el bloque 5 del `crd/sql/221` los mide):
+
+| Caso | Resuelto como | Por qué, y qué lo cambiaría |
+|---|---|---|
+| Cuota `VENCIDA` (8) | aporta **0** | El usuario nombró parcial y mora, no vencida. Si el bloque 5 muestra muchas cuotas en 8 con capital abonado, hay que sumarlas como a las 5 y 6. |
+| Cuota sin estado (`NULL`) | aporta **0** | Conservador. Frecuente en cartera migrada: si el bloque 5 muestra volumen ahí, revisar. |
+| Cuota `RAIZ`/`ACTIVA`/`EMITIDA` (0, 2, 3) | aportan **0** | No son estados de cuota viva en la operación normal. |
+| Préstamo `CANCELADO` (3) | **sin** regla de préstamo | Sus cuotas quedan en `PAGADA`, así que la regla por cuota ya da el total. Si aparecen cancelados con cuotas sin marcar, habría que extender la regla. |
+| Préstamo `CANCELADO_POR_NOVACION` (5) | **sin** regla de préstamo | El capital **no se pagó**: se trasladó al préstamo nuevo. Extender la regla acá sería un error, no una omisión. |
