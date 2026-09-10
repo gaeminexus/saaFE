@@ -54,33 +54,29 @@ export class PermisosRrh {
   // Procesos
   /**
    * Sin equivalente en el árbol nuevo (`docs/seguridad/CODIGOS-PERMISOS-SAA.md` no tiene ningún
-   * nodo RRH llamado "Nómina" ni parecido). Por instrucción del árbitro: se deja el valor viejo tal
-   * cual, no se borra ni se inventa un código. Esta constante tampoco tiene ningún uso en
-   * `src/app` (confirmado por grep) — es la otra de las dos "sin uso" del inventario.
+   * nodo RRH llamado "Nómina" ni parecido). `undefined` a propósito, no el valor viejo (880): ese
+   * número es hoy un nodo de PCC que `lap1-15-arbol-permisos-saa.sql` va a borrar, así que dejarlo
+   * apuntaría a un código ajeno o inexistente. Con `idPermiso` ausente, `PermisosService` no
+   * bloquea (activación incremental) — el día que esta pantalla tenga nodo propio, se le asigna acá.
+   * Sin ningún uso en `src/app` (confirmado por grep).
    */
-  public static readonly NOMINA = 880;
+  public static readonly NOMINA: number | undefined = undefined;
   public static readonly ROLES_PAGO = 1541;                // RRH_ROLES_DE_PAGO
   /**
    * Sin equivalente en el árbol nuevo — el nodo de menú "Aportes y retenciones" que la usaba está
-   * comentado desde 2026-08-26 (pantalla a medio construir, sin entidad en el backend) y por eso el
-   * árbitro no le generó código al armar el árbol desde el inventario. Mismo criterio que `NOMINA`:
-   * se deja el valor viejo, no se borra ni se inventa uno. Si la pantalla se termina y se vuelve a
-   * colgar del menú, hay que pedir un código nuevo antes.
+   * comentado desde 2026-08-26 (pantalla a medio construir, sin entidad en el backend). Mismo
+   * criterio que `NOMINA`: `undefined`, no el valor viejo (882, también nodo de PCC que el
+   * `lap1-15` borra). Si la pantalla se termina y se cuelga del menú, se le pide un código nuevo.
    */
-  public static readonly APORTES_RETENCIONES = 882;
+  public static readonly APORTES_RETENCIONES: number | undefined = undefined;
   public static readonly LIQUIDACION = 1548;                // RRH_LIQUIDACION
   public static readonly DESCUENTOS_RECURRENTES = 1540;    // RRH_DESCUENTOS_RECURRENTES
   public static readonly PERIODOS_NOMINA = 1531;            // RRH_PERIODOS_DE_NOMINA
   public static readonly NOVEDADES_NOMINA = 1534;           // RRH_NOVEDADES_DEL_PERIODO
-  /**
-   * ⚠️ El árbol nuevo distingue dos nodos donde el viejo tenía uno solo: `RRH_HORAS_EXTRA` (1526,
-   * bajo ASISTENCIA) y `RRH_PROCESOS_HORAS_EXTRA` (1538, bajo PROCESOS) — hoy
-   * `menurecursoshumanos.component.ts` usa esta MISMA constante en los dos nodos de menú (líneas
-   * 191 y 253). Mapeada acá a `RRH_HORAS_EXTRA` (la de Asistencia, la hoja "primaria"). El nodo de
-   * Procesos queda temporalmente con el mismo código que el de Asistencia hasta que el árbitro
-   * confirme si hace falta separarlos con una constante nueva y recablear esa línea del menú.
-   */
-  public static readonly HORAS_EXTRA = 1526;                // RRH_HORAS_EXTRA (ver nota — también cubre RRH_PROCESOS_HORAS_EXTRA=1538)
+  /** Horas extra — nodo de Asistencia. Distinto de `HORAS_EXTRA_PROCESOS`: el árbol espeja el menú, y una pantalla que aparece dos veces puede necesitar ocultarse de un lugar sin ocultarse del otro. */
+  public static readonly HORAS_EXTRA = 1526;                // RRH_HORAS_EXTRA
+  /** Horas extra — nodo de Procesos (misma pantalla que `HORAS_EXTRA`, permiso independiente). Confirmado por el árbitro 2026-09-10: no es fusionable con el de Asistencia. */
+  public static readonly HORAS_EXTRA_PROCESOS = 1538;        // RRH_PROCESOS_HORAS_EXTRA
   public static readonly PROYECCION_IR = 1539;               // RRH_PROYECCION_DE_IMPUESTO_A_LA_RENTA
   public static readonly REPORTES_NOMINA = 1547;             // RRH_REPORTES_DE_NOMINA
   public static readonly ORDENES_PAGO = 1542;                 // RRH_ORDENES_DE_PAGO

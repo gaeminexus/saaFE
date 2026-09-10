@@ -250,7 +250,7 @@ export class MenurecursoshumanosComponent implements OnInit {
         {
           displayName: 'Horas extra',
           iconName: 'more_time',
-          idPermiso: PermisosRrh.HORAS_EXTRA,
+          idPermiso: PermisosRrh.HORAS_EXTRA_PROCESOS,
           route: '/menurecursoshumanos/procesos/horas-extra',
         },
         {
