@@ -581,9 +581,26 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     return Number(row.estadoElectronico) === 5;
   }
 
+  /**
+   * Solo la ETIQUETA cambia para LIQUIDACION: a diferencia de los otros cuatro, su contabilidad
+   * vive dentro del método que también crea el documento CXP entero (cabecera, detalles, formas
+   * de pago, path del XML, codSustento) — no hay un paso de "solo el asiento" que aislar. El
+   * tratamiento de la respuesta es el mismo para los cinco (§ contabilizar() más abajo): la
+   * diferencia es de rótulo, no de lógica.
+   */
+  etiquetaContabilizar(row: DocumentoElectronico): string {
+    return row.tipo === 'LIQUIDACION' ? 'Generar documento CXP' : 'Contabilizar';
+  }
+
+  private mensajeConfirmacionContabilizar(row: DocumentoElectronico): string {
+    return row.tipo === 'LIQUIDACION'
+      ? 'Se generará el documento de cuentas por pagar (cabecera, detalles y formas de pago) y su asiento contable. ¿Continuar?'
+      : 'Se generará el asiento contable y la aplicación de pago si corresponde. ¿Continuar?';
+  }
+
   contabilizar(row: DocumentoElectronico): void {
     if (!this.puedeContabilizar(row) || this.idContabilizando() !== null) return;
-    if (!window.confirm('Se generará el asiento contable y la aplicación de pago si corresponde. ¿Continuar?')) return;
+    if (!window.confirm(this.mensajeConfirmacionContabilizar(row))) return;
 
     const req$: Observable<ContabilizarDocumentoResponse | null> = (() => {
       switch (row.tipo) {

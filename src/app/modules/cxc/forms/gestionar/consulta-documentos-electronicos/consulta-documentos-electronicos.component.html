@@ -224,7 +224,7 @@
     @if (puedeContabilizar(row)) {
       <button mat-menu-item (click)="contabilizar(row)" [disabled]="idContabilizando() !== null">
         <mat-icon>account_balance</mat-icon>
-        <span>Contabilizar</span>
+        <span>{{ etiquetaContabilizar(row) }}</span>
       </button>
     }
     <button mat-menu-item (click)="reenviarMail(row)" [disabled]="!puedeEmitida(row)">
