@@ -39,7 +39,8 @@ export class PermisosService {
           const valor = valorAlfanumerico ? valorAlfanumerico : (detalle?.descripcion ?? '').trim();
           return valor === '1';
         }),
-        // Interruptor no legible (error de red, rubro ausente) => no validar.
+        // "¿Este sistema valida permisos?" sin respuesta => comportarse como antes de que existiera
+        // el módulo de seguridades. Un rubro ilegible no puede dejar a toda la empresa afuera.
         catchError(() => of(false)),
         shareReplay(1),
       );
@@ -63,7 +64,9 @@ export class PermisosService {
         const idEmpresa = this.usuarioService.getEmpresaLog()?.codigo;
         const idUsuario = this.usuarioService.getUsuarioLog()?.codigo;
         if (!idEmpresa || !idUsuario) {
-          return of<ResultadoPermiso>({ permitido: true });
+          // "¿Este usuario puede entrar acá?" sin respuesta => no. Sin sesión iniciada no hay
+          // empresa/usuario que verificar, y la puerta se cierra cuando la cerradura falla.
+          return of<ResultadoPermiso>({ permitido: false, mensaje: 'No se pudo verificar el permiso: no hay sesión activa.' });
         }
         return (this.usuarioService.verificaPermiso(idEmpresa, idUsuario, idPermiso) as Observable<string>).pipe(
           map((resultado: string): ResultadoPermiso =>
@@ -71,7 +74,9 @@ export class PermisosService {
               ? { permitido: true }
               : { permitido: false, mensaje: resultado },
           ),
-          catchError(() => of<ResultadoPermiso>({ permitido: true })),
+          // Mismo criterio que la guarda de sesión de arriba: un error de red en la verificación
+          // misma no puede traducirse en acceso concedido. Se niega, no se "no valida".
+          catchError(() => of<ResultadoPermiso>({ permitido: false, mensaje: 'No se pudo verificar el permiso. Intente nuevamente.' })),
         );
       }),
     );
