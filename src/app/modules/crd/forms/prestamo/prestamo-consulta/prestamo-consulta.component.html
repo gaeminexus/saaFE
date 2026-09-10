@@ -205,7 +205,7 @@
             <button
               mat-raised-button
               (click)="exportarCSV()"
-              [disabled]="prestamos().length === 0 || calculandoCuotasMoraExport()"
+              [disabled]="prestamos().length === 0 || calculandoSaldosExport()"
               class="btn-action btn-exportar"
             >
               <mat-icon>download</mat-icon>
@@ -214,7 +214,7 @@
             <button
               mat-raised-button
               (click)="exportarPDF()"
-              [disabled]="prestamos().length === 0 || calculandoCuotasMoraExport()"
+              [disabled]="prestamos().length === 0 || calculandoSaldosExport()"
               class="btn-action btn-exportar"
             >
               <mat-icon>picture_as_pdf</mat-icon>
@@ -299,9 +299,9 @@
             <ng-container matColumnDef="cuotasMora">
               <th mat-header-cell *matHeaderCellDef>Cuotas en Mora</th>
               <td mat-cell *matCellDef="let p" class="cuotas-mora-cell">
-                @if (cuotasMoraCargando(p)) {
+                @if (saldoCargando(p)) {
                   <mat-spinner diameter="18"></mat-spinner>
-                } @else if (cuotasMoraConError(p)) {
+                } @else if (saldoConError(p)) {
                   <span
                     class="cuotas-mora-badge cuotas-mora-error"
                     matTooltip="No se pudieron consultar las cuotas de este préstamo"
@@ -328,9 +328,30 @@
               <td mat-cell *matCellDef="let p">${{ p.totalPagado || 0 | number: '1.2-2' }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="saldoCapital">
+              <th mat-header-cell *matHeaderCellDef>Saldo Capital</th>
+              <td mat-cell *matCellDef="let p">
+                @if (saldoCargando(p)) {
+                  <span>…</span>
+                } @else if (saldoConError(p)) {
+                  <span matTooltip="No se pudo calcular">—</span>
+                } @else {
+                  <span>${{ obtenerSaldoCapital(p) | number: '1.2-2' }}</span>
+                }
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="saldoTotal">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Saldo Total</th>
-              <td mat-cell *matCellDef="let p">${{ p.saldoTotal || 0 | number: '1.2-2' }}</td>
+              <th mat-header-cell *matHeaderCellDef>Saldo Total</th>
+              <td mat-cell *matCellDef="let p">
+                @if (saldoCargando(p)) {
+                  <span>…</span>
+                } @else if (saldoConError(p)) {
+                  <span matTooltip="No se pudo calcular">—</span>
+                } @else {
+                  <span>${{ obtenerSaldoTotal(p) | number: '1.2-2' }}</span>
+                }
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="acciones">

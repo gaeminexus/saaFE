@@ -40,11 +40,16 @@ export class PrestamoDetalleDialogComponent implements OnInit {
   loading = true;
   error = '';
 
+  /** Saldo calculado desde las cuotas (POST /prst/saldos) — `Prestamo.saldoTotal`/`saldoCapital` están muertos, ver contrato. */
+  saldoTotal: number | null = null;
+  saldoCapital: number | null = null;
+  saldoCargando = true;
+
   displayedColumns = ['numeroCuota', 'fechaVencimiento', 'capital', 'interes', 'interesMora', 'cuota', 'saldo', 'estado'];
 
   constructor(
     public dialogRef: MatDialogRef<PrestamoDetalleDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { codigoPrestamo: number },
+    @Inject(MAT_DIALOG_DATA) public data: { codigoPrestamo: number; saldoTotal?: number; saldoCapital?: number },
     private prestamoService: PrestamoService,
     private detallePrestamoService: DetallePrestamoService,
     private exportService: ExportService
@@ -52,6 +57,29 @@ export class PrestamoDetalleDialogComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarDatos();
+    this.cargarSaldo();
+  }
+
+  /** Usa el saldo que ya trae `data` (resuelto por la consulta); si no vino, lo pide él mismo. */
+  private cargarSaldo(): void {
+    if (this.data.saldoTotal != null && this.data.saldoCapital != null) {
+      this.saldoTotal = this.data.saldoTotal;
+      this.saldoCapital = this.data.saldoCapital;
+      this.saldoCargando = false;
+      return;
+    }
+
+    this.prestamoService.saldos([this.data.codigoPrestamo]).subscribe({
+      next: (resultado) => {
+        const saldo = (resultado || []).find((r) => r.idPrestamo === this.data.codigoPrestamo);
+        this.saldoTotal = saldo?.saldoTotal ?? null;
+        this.saldoCapital = saldo?.saldoCapital ?? null;
+        this.saldoCargando = false;
+      },
+      error: () => {
+        this.saldoCargando = false;
+      },
+    });
   }
 
   cargarDatos(): void {
@@ -134,6 +162,14 @@ export class PrestamoDetalleDialogComponent implements OnInit {
     return null;
   }
 
+  /** «—» mientras el saldo no esté resuelto (cargando o error) — nunca un valor congelado ni un 0 falso. */
+  private formatearSaldo(valor: number | null): string {
+    if (this.saldoCargando || valor === null) {
+      return '—';
+    }
+    return `$${valor.toFixed(2)}`;
+  }
+
   formatearFecha(fecha: Date | null): string {
     if (!fecha) return 'N/A';
     const d = new Date(fecha);
@@ -185,7 +221,8 @@ export class PrestamoDetalleDialogComponent implements OnInit {
       ['Valor Cuota', `$${this.prestamo.valorCuota?.toFixed(2) || '0.00'}`],
       ['Plazo', `${this.prestamo.plazo || 0} meses`],
       ['Tasa Nominal', `${this.prestamo.tasaNominal || 0}%`],
-      ['Saldo Total', `$${this.prestamo.saldoTotal?.toFixed(2) || '0.00'}`],
+      ['Saldo Capital', this.formatearSaldo(this.saldoCapital)],
+      ['Saldo Total', this.formatearSaldo(this.saldoTotal)],
       ['Total Pagado', `$${this.prestamo.totalPagado?.toFixed(2) || '0.00'}`],
       ['Fecha Solicitud', this.formatearFecha(this.prestamo.fecha)],
       ['Fecha Inicio', this.formatearFecha(this.prestamo.fechaInicio)],

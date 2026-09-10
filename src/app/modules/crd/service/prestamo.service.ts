@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Prestamo } from '../model/prestamo';
+import { SaldoPrestamoResumen } from '../model/saldo-prestamo-resumen';
 import { ServiciosCrd } from './ws-crd';
 
 @Injectable({
@@ -105,6 +106,17 @@ export class PrestamoService {
     const url = `${ServiciosCrd.RS_PRST}/rechazar/${id}`;
     return this.http
       .post<Prestamo>(url, { usuario, observacion }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Saldos vigentes (capital, total, cuotas en mora) de hasta 500 préstamos en una sola llamada,
+   * calculados en el servidor desde las cuotas pendientes. Un código que no existe simplemente
+   * no aparece en la respuesta — no es un error.
+   */
+  saldos(codigos: number[]): Observable<SaldoPrestamoResumen[] | null> {
+    return this.http
+      .post<SaldoPrestamoResumen[]>(`${ServiciosCrd.RS_PRST}/saldos`, codigos, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

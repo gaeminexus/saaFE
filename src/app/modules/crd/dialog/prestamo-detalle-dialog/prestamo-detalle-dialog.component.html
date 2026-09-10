@@ -90,8 +90,28 @@
             <span class="value">{{ prestamo.tasaEfectiva }}%</span>
           </div>
           <div class="info-item">
+            <span class="label">Saldo Capital:</span>
+            <span class="value">
+              @if (saldoCargando) {
+                …
+              } @else if (saldoCapital === null) {
+                —
+              } @else {
+                ${{ saldoCapital | number:'1.2-2' }}
+              }
+            </span>
+          </div>
+          <div class="info-item">
             <span class="label">Saldo Total:</span>
-            <span class="value highlight">${{ prestamo.saldoTotal | number:'1.2-2' }}</span>
+            <span class="value highlight">
+              @if (saldoCargando) {
+                …
+              } @else if (saldoTotal === null) {
+                —
+              } @else {
+                ${{ saldoTotal | number:'1.2-2' }}
+              }
+            </span>
           </div>
           <div class="info-item">
             <span class="label">Total Pagado:</span>
