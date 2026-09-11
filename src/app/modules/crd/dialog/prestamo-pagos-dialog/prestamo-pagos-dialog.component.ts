@@ -116,9 +116,12 @@ export class PrestamoPagosDialogComponent {
 
   /**
    * Saldo pendiente de la cuota = suma de los pendientes de TODOS los conceptos (incluidos mora e
-   * interés vencido). No se lee `DTPR.DTPRSLDO` directo porque esa columna no siempre trae la mora
-   * y el interés en mora recién acumulados; sumando los conceptos, la tarjeta cuadra por
-   * construcción con la composición de la cuota.
+   * interés vencido), cada uno calculado como pactado − pagado (`concepto()`) — ninguno se lee de
+   * `d.saldoMora`/`d.saldoInteresVencido`/`d.saldoInteres`, que el backend pone en 0 apenas la
+   * cuota recibe cualquier pago (ver el comentario de `conceptosCompletos`). No se lee
+   * `DTPR.DTPRSLDO` directo porque esa columna no siempre trae la mora y el interés en mora recién
+   * acumulados; sumando los conceptos, la tarjeta cuadra por construcción con la composición de la
+   * cuota.
    */
   get saldoPendiente(): number {
     return +this.conceptosCompletos.reduce((s, c) => s + c.pendiente, 0).toFixed(2);
@@ -170,15 +173,22 @@ export class PrestamoPagosDialogComponent {
 
   /**
    * Conceptos en el orden de prelación con que el backend imputa el dinero. El `pendiente` de cada
-   * concepto es SIEMPRE lo que falta EN ESTA CUOTA: lo pactado menos lo pagado. Para mora, interés
-   * vencido e interés se usa su columna de saldo de DTPR (`DTPRSLMR` / `DTPRSLIV` / `DTPRSLIN`),
-   * que ya es el pendiente por cuota; para desgravamen, capital, seguro y pago extra se calcula
-   * pactado − pagado.
+   * concepto es SIEMPRE lo que falta EN ESTA CUOTA: lo pactado menos lo pagado (`concepto()`), sin
+   * excepción por concepto.
    *
-   * ⚠️ Capital NO usa `d.saldoCapital` (`DTPRSLCP`): esa columna es el saldo insoluto de capital de
-   * TODO el préstamo (saldo decreciente de la amortización), no el pendiente de la cuota. Usarla
-   * inflaba el pendiente de capital al saldo del préstamo completo y rompía la invariante de que la
-   * sumatoria de pendientes por concepto = saldo pendiente de la cuota (tarjeta superior).
+   * ⚠️ NO usar `d.saldoMora`/`d.saldoInteresVencido`/`d.saldoInteres` (`DTPRSLMR`/`DTPRSLIV`/
+   * `DTPRSLIN`) como si fueran el pendiente, aunque el nombre lo sugiera: verificado en
+   * `MotorPagoPrestamoServiceImpl:242-244`, el motor los pone en `0.0` en cuanto la cuota recibe
+   * CUALQUIER pago, sin mirar si ESE concepto puntual se cobró — a diferencia de la línea de
+   * `saldoCapital` ahí mismo, que sí recalcula de verdad. Leerlos directo hacía que una cuota
+   * PARCIAL con interés sin cobrar mostrara $0,00 de interés pendiente en vez de lo que realmente
+   * faltaba. Si alguien los vuelve a conectar acá, reaparece el mismo bug.
+   *
+   * ⚠️ Capital tampoco usa `d.saldoCapital` (`DTPRSLCP`): esa columna es el saldo insoluto de
+   * capital de TODO el préstamo (saldo decreciente de la amortización), no el pendiente de la
+   * cuota. Usarla inflaba el pendiente de capital al saldo del préstamo completo y rompía la
+   * invariante de que la sumatoria de pendientes por concepto = saldo pendiente de la cuota
+   * (tarjeta superior).
    */
   get conceptos(): ConceptoCuota[] {
     // Capital e interés se muestran siempre; el resto solo si tuvo movimiento o quedó algo
@@ -202,15 +212,14 @@ export class PrestamoPagosDialogComponent {
     const d = this.detalle;
     const filas: ConceptoCuota[] = [
       this.concepto('Desgravamen', 'health_and_safety', d.desgravamen, this.suma((p) => p.desgravamen)),
-      this.concepto('Mora', 'running_with_errors', d.mora, this.suma((p) => p.moraPagada), d.saldoMora),
+      this.concepto('Mora', 'running_with_errors', d.mora, this.suma((p) => p.moraPagada)),
       this.concepto(
         'Interés vencido',
         'schedule',
         d.interesVencido,
-        this.suma((p) => p.interesVencidoPagado),
-        d.saldoInteresVencido
+        this.suma((p) => p.interesVencidoPagado)
       ),
-      this.concepto('Interés', 'percent', d.interes, this.suma((p) => p.interesPagado), d.saldoInteres),
+      this.concepto('Interés', 'percent', d.interes, this.suma((p) => p.interesPagado)),
       this.concepto('Capital', 'account_balance', d.capital, this.suma((p) => p.capitalPagado)),
     ];
 
@@ -248,11 +257,10 @@ export class PrestamoPagosDialogComponent {
     nombre: string,
     icono: string,
     pactado: number | null | undefined,
-    pagado: number,
-    saldo?: number | null
+    pagado: number
   ): ConceptoCuota {
     const exigido = pactado ?? 0;
-    const pendiente = saldo != null ? Math.max(0, saldo) : Math.max(0, exigido - pagado);
+    const pendiente = Math.max(0, exigido - pagado);
     return { nombre, icono, pactado: exigido, pagado, pendiente };
   }
 
