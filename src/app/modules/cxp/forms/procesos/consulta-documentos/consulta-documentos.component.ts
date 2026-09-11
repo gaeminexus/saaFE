@@ -16,6 +16,7 @@ import { AppStateService } from '../../../../../shared/services/app-state.servic
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { DocumentoCxp } from '../../../model/documento-cxp';
+import { FacturaCompra } from '../../../model/factura-compra';
 import { AnularDocumentoCompraRequest, MovimientoRelacionadoCompra } from '../../../model/anulacion-documento-compra';
 import { HistorialAbonosFacturaComponent } from '../../pagos/historial-abonos-factura/historial-abonos-factura.component';
 import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
@@ -43,6 +44,18 @@ import { RetencionCompraV2Service } from '../../../service/retencion-compra-v2.s
 const TABLAS_ANULABLES = ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA', 'NOTA_CREDITO_COMPRA', 'NOTA_DEBITO_COMPRA'];
 /** La liquidación de compra no tiene movimientos que cascadear — anulación simple, sin consulta previa. */
 const TABLAS_LIQUIDACION = ['LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA'];
+
+/**
+ * Nota de venta de compra manual — vive en la MISMA tabla que la factura de compra electrónica
+ * (`FacturaCompraServiceImpl.registrarNotaVentaManual` graba en `FacturaCompra`, distinguida por
+ * `tipoComprobante`), no en una tabla propia. Por eso nunca aparece en `DocumentoCxp` (el índice
+ * que arma la carga de documentos XML/SRI — no hay XML detrás de una nota de venta física) y esta
+ * pantalla no la encontraba: no era un filtro que faltaba, era una fuente de datos que faltaba.
+ * `'02'` copiado tal cual de `FacturaCompraServiceImpl.TIPO_COMPROBANTE_NOTA_VENTA` (saaBE).
+ */
+const TIPO_COMPROBANTE_NOTA_VENTA = '02';
+/** Tabla destino sintética (no existe en el backend) para que la nota de venta entre en el mismo combo/grid que el resto. */
+const TABLA_NOTA_VENTA = 'NOTA_VENTA_COMPRA';
 
 /**
  * Columnas del detalle de una retención (RTCM/DRCM y RCV2/DRC2 comparten los
@@ -125,10 +138,70 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   cargar(): void {
     this.cargando.set(true);
-    this.docService.getByEmpresaEstado(this.idEmpresa, 3).subscribe({
-      next: (data) => { this.todosDocumentos = data || []; this.aplicarFiltros(); this.cargando.set(false); },
+    forkJoin({
+      documentos: this.docService.getByEmpresaEstado(this.idEmpresa, 3),
+      // Las notas de venta no están en DocumentoCxp (ver TABLA_NOTA_VENTA arriba): se traen
+      // aparte, directo de FacturaCompra, y se agregan a la misma lista. Si este fetch falla no
+      // se pierde el resto de la pantalla — es un agregado, no la fuente principal.
+      notasVenta: this.facturaService.selectByCriteria(this.criteriosNotaVentaManual()).pipe(catchError(() => of(null))),
+    }).subscribe({
+      next: ({ documentos, notasVenta }) => {
+        const sinteticos = (notasVenta || []).map((f) => this.notaVentaComoDocumentoCxp(f));
+        this.todosDocumentos = [...(documentos || []), ...sinteticos];
+        this.aplicarFiltros();
+        this.cargando.set(false);
+      },
       error: () => { this.snackBar.open('No se pudo cargar los documentos', 'Cerrar', { duration: 4000 }); this.cargando.set(false); },
     });
+  }
+
+  /** `empresa` + `tipoComprobante = '02'` (plano, no por campo padre) sobre FacturaCompra. */
+  private criteriosNotaVentaManual(): DatosBusqueda[] {
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaUnCampoSinTrunc(TipoDatos.LONG, 'empresa', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
+    dbEmpresa.setNumeroCampoRepetido(0);
+
+    const dbTipo = new DatosBusqueda();
+    dbTipo.asignaUnCampoSinTrunc(TipoDatos.STRING, 'tipoComprobante', TIPO_COMPROBANTE_NOTA_VENTA, TipoComandosBusqueda.IGUAL);
+    dbTipo.setNumeroCampoRepetido(0);
+
+    return [dbEmpresa, dbTipo];
+  }
+
+  /**
+   * Adapta una `FacturaCompra` (tipoComprobante='02') a la forma `DocumentoCxp` que ya consume
+   * toda la pantalla (lista, filtros, `verDetalle`). Los campos que ningún lugar de esta pantalla
+   * lee (`empresa`, `periodoContable`, `claveAcceso`, auditoría de carga XML) quedan con un valor
+   * vacío — no aplican a un documento que nunca tuvo XML.
+   */
+  private notaVentaComoDocumentoCxp(f: FacturaCompra): DocumentoCxp {
+    return {
+      id: -Number(f.id), // negativo a propósito: nunca colisiona con un id real de DocumentoCxp
+      empresa: null as any,
+      periodoContable: null as any,
+      claveAcceso: '',
+      rucEmisor: f.titular?.identificacion || '',
+      razonSocialEmisor: f.titular?.razonSocial || f.titular?.nombre || '',
+      tipoComprobante: 'Nota de Venta',
+      serieComprobante: f.numero || '',
+      fechaAutorizacion: '',
+      fechaEmision: this.strFecha(f.fecha),
+      valorSinImpuestos: Number(f.subtotal || 0),
+      iva: Number(f.vIVA || 0),
+      importeTotal: Number(f.total || 0),
+      estadoDocumento: 3,
+      pathXml: '',
+      idDocumentoBD: f.id,
+      tipoTablaDestino: TABLA_NOTA_VENTA,
+      novedad: '',
+      estadoNovedad: 3,
+      fechaRegistroBD: '',
+      usuarioRegistroBD: 0,
+      fechaCargaXml: '',
+      usuarioCargaXml: 0,
+      fechaReversion: '',
+      usuarioReversion: 0,
+    };
   }
 
   buscar(): void { this.aplicarFiltros(); }
@@ -196,7 +269,11 @@ export class ConsultaDocumentosComponent implements OnInit {
     const id = doc.idDocumentoBD;
 
     switch (doc.tipoTablaDestino) {
+      // La nota de venta manual ES una FacturaCompra (tipoComprobante='02', ver TABLA_NOTA_VENTA
+      // arriba): mismo detalle, mismas formas de pago, mismo servicio — solo cambia de dónde
+      // salió la fila de la lista (FacturaCompra directo, no DocumentoCxp).
       case 'FACTURA_COMPRA':
+      case TABLA_NOTA_VENTA:
         this.columnasDetalle = ['descripcion', 'cantidad', 'valor', 'subTotal', 'descuento', 'baseImponible', 'porcentajeIVA', 'valorIVA', 'total'];
         forkJoin({
           cab: this.facturaService.getById(id).pipe(catchError(() => of(null))),
@@ -412,12 +489,14 @@ export class ConsultaDocumentosComponent implements OnInit {
     });
   }
 
-  tieneFormasPago(): boolean { return ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
+  tieneFormasPago(): boolean { return ['FACTURA_COMPRA', TABLA_NOTA_VENTA, 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
 
   /** Las retenciones no llevan subtotales ni IVA propios: sólo base y valor retenido. */
   esRetencion(): boolean { return ['RETENCION_COMPRA', 'RETENCION_COMPRA_V2'].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
 
-  esFacturaCompra(): boolean { return this.docSeleccionado?.tipoTablaDestino === 'FACTURA_COMPRA'; }
+  // La nota de venta manual es una FacturaCompra de verdad (mismo id, misma tabla de pagos):
+  // abonos/saldo y reembolso funcionan igual que para una factura electrónica.
+  esFacturaCompra(): boolean { return ['FACTURA_COMPRA', TABLA_NOTA_VENTA].includes(this.docSeleccionado?.tipoTablaDestino || ''); }
 
   /**
    * El historial de abonos (/aplp) aplica a facturas y a liquidaciones de compra — antes solo
@@ -436,6 +515,7 @@ export class ConsultaDocumentosComponent implements OnInit {
       'NOTA_DEBITO_COMPRA': 'Nota Débito Compra',
       'LIQUIDACION_COMPRA': 'Liquidación Compra', 'LIQUIDACION_COMPRA_COMPRA': 'Liquidación Compra',
       'RETENCION_COMPRA': 'Retención Compra', 'RETENCION_COMPRA_V2': 'Retención Compra',
+      [TABLA_NOTA_VENTA]: 'Nota de Venta',
     };
     return map[tabla] || tabla;
   }
@@ -452,6 +532,7 @@ export class ConsultaDocumentosComponent implements OnInit {
       'NOTA_DEBITO_COMPRA': 'chip-nd',
       'LIQUIDACION_COMPRA': 'chip-liq', 'LIQUIDACION_COMPRA_COMPRA': 'chip-liq',
       'RETENCION_COMPRA': 'chip-ret', 'RETENCION_COMPRA_V2': 'chip-ret',
+      [TABLA_NOTA_VENTA]: 'chip-factura',
     };
     return map[tabla] || '';
   }
