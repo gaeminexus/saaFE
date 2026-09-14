@@ -52,7 +52,7 @@ misma decisión son cómo se llega a que un banco reciba la cédula y el otro el
 - Uno sin el otro → error.
 - `tipoIdentificacion` fuera de `1, 2, 3` → error. El exterior (`4`) no lo admite ningún formato bancario.
 - `identificacion` sin espacios; cédula = **10 dígitos**, RUC = **13 dígitos**, pasaporte = **5 a 15**
-  caracteres alfanuméricos. Es la misma regla con la que el banco rechaza el archivo
+  caracteres (el backend valida solo el largo; la pantalla además exige alfanumérico). Es la misma regla con la que el banco rechaza el archivo
   (`InternacionalArchivoPagoFormateador.validarLongitudIdentificacion`).
 - Mensajes en §3.
 
@@ -90,7 +90,7 @@ cuentas.
 | Código | Cuándo | Cuerpo |
 |---|---|---|
 | **200** | Guardada | La entidad `CuentaBancariaTitular`, con los dos campos |
-| **500** | Validación | Texto, uno de: `Debe indicar el tipo de identificación y la identificación de la cuenta, o dejar los dos vacíos.` · `Tipo de identificación de la cuenta no válido: {n}. Use 1 (cédula), 2 (RUC) o 3 (pasaporte).` · `La cédula de la cuenta debe tener 10 dígitos: '{x}'.` · `El RUC de la cuenta debe tener 13 dígitos: '{x}'.` · `El pasaporte de la cuenta debe tener entre 5 y 15 caracteres: '{x}'.` |
+| **500** | Validación | Texto con prefijo `Error al crear cuenta bancaria del titular: ` (POST) o `Error al actualizar cuenta bancaria del titular: ` (PUT), seguido de uno de: `Debe indicar el tipo de identificación y la identificación de la cuenta, o dejar los dos vacíos.` · `Tipo de identificación de la cuenta no válido: {n}. Use 1 (cédula), 2 (RUC) o 3 (pasaporte).` · `La cédula de la cuenta debe tener 10 dígitos: '{x}'.` · `El RUC de la cuenta debe tener 13 dígitos: '{x}'.` · `El pasaporte de la cuenta debe tener entre 5 y 15 caracteres: '{x}'.` |
 
 ⛔ **TRAMPA `merge` desnudo (registro §8.2):** `PUT /ctbn` graba `NULL` en todo campo ausente.
 **Editar una cuenta sin mandar `tipoIdentificacion`/`identificacion` BORRA la identificación cargada**,
@@ -102,7 +102,13 @@ Traen `tipoIdentificacion` e `identificacion`. Nada más cambia. También llegan
 
 ## 4. Orden de despliegue
 `e2-42` (SQL) → WAR → FE. **WAR sin SQL: `ORA-00904` en toda lectura de cuentas de titulares**,
-incluidos los pagos y código de `crd`. FE nuevo con WAR viejo: los campos se ignoran y no se graban.
+incluidos los pagos y código de `crd`.
+
+⛔ **CORREGIDO el 2026-09-14: el FE NO puede ir antes del WAR.** La primera versión de este contrato
+decía que un FE nuevo con WAR viejo «ignora los campos». Es falso: `POST/PUT /ctbn` deserializan la
+entidad con Jackson, que por defecto **rechaza propiedades desconocidas** (no hay configuración global
+que lo desactive; las pantallas de `cxc` lo desactivan a mano en su propio `ObjectMapper`). Con el WAR
+viejo, **guardar cualquier cuenta bancaria fallaría**. Se afirmó sin medirlo.
 
 ## 5. Después de desplegar
 El bloque 4 del `e2-42` lista las cuentas activas cuyo titular está con RUC y la cuenta sin
