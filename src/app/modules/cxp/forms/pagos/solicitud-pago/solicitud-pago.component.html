@@ -20,19 +20,37 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
-          <mat-label>Factura de compra a pagar</mat-label>
-          <input matInput readonly [value]="regFacturaElegida()?.numero || ''" placeholder="Seleccione una factura" />
-          <button
-            mat-icon-button
-            matSuffix
-            type="button"
-            matTooltip="Buscar factura pendiente"
-            [disabled]="!regProveedor()"
-            (click)="buscarFacturaRegistro()">
-            <mat-icon>receipt_long</mat-icon>
-          </button>
+          <mat-label>Tipo de documento</mat-label>
+          <mat-select [(ngModel)]="regTipoDocumento" name="regTipoDocumento"
+                      [disabled]="!regProveedor()"
+                      (ngModelChange)="cambiarTipoDocumento()">
+            @for (t of tiposDocumentoOptions; track t.valor) {
+              <mat-option [value]="t.valor">{{ t.etiqueta }}</mat-option>
+            }
+          </mat-select>
           @if (!regProveedor()) {
             <mat-hint>Elija primero el proveedor</mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Documento a pagar</mat-label>
+          <mat-select [(ngModel)]="regIdDocumento" name="regIdDocumento"
+                      [disabled]="!regProveedor() || cargandoDocumentos()"
+                      (ngModelChange)="onElegirDocumento()">
+            @for (d of documentosPendientes(); track d.id) {
+              <mat-option [value]="d.id">{{ etiquetaDocumento(d) }}</mat-option>
+            }
+          </mat-select>
+          @if (!regProveedor()) {
+            <mat-hint>Elija primero el proveedor</mat-hint>
+          } @else if (cargandoDocumentos()) {
+            <mat-hint>Consultando…</mat-hint>
+          } @else if (documentosPendientes().length === 0) {
+            <mat-hint class="hint-error">El proveedor no tiene {{ nombrePluralTipoActual }} pendientes</mat-hint>
+          }
+          @if (regTipoDocumento === 'LIQUIDACION_COMPRA') {
+            <mat-hint align="end">¿No aparece la liquidación? Debe estar autorizada y con "Generar documento CXP" ejecutado</mat-hint>
           }
         </mat-form-field>
       </div>
@@ -66,23 +84,23 @@
             type="number"
             min="0"
             step="0.01"
-            [max]="disponibleFactura"
+            [max]="disponibleDocumento"
             [(ngModel)]="regValor"
             name="regValor"
             (blur)="ajustarValorAlSaldo()" />
           @if (cargandoSaldo()) {
-            <mat-hint>Consultando el saldo de la factura...</mat-hint>
+            <mat-hint>Consultando el saldo del documento...</mat-hint>
           } @else if (regExcedeSaldo) {
             <mat-hint class="hint-error">
-              No puede superar lo disponible de la factura
-              ({{ disponibleFactura | number: '1.2-2' }})
+              No puede superar lo disponible del documento
+              ({{ disponibleDocumento | number: '1.2-2' }})
             </mat-hint>
           } @else if (regSaldo(); as s) {
             <mat-hint>
               Saldo pendiente: {{ s.saldoPendiente | number: '1.2-2' }}
               de {{ s.total | number: '1.2-2' }}
               @if (regComprometido() > 0) {
-                — disponible {{ disponibleFactura | number: '1.2-2' }}
+                — disponible {{ disponibleDocumento | number: '1.2-2' }}
               }
             </mat-hint>
           }
@@ -114,10 +132,10 @@
         <div class="mensaje-advertencia">
           <mat-icon>hourglass_top</mat-icon>
           <span>
-            Esta factura ya tiene {{ pagosComprometidos().length }} pago(s) sin confirmar por
+            Este documento ya tiene {{ pagosComprometidos().length }} pago(s) sin confirmar por
             {{ regComprometido() | number: '1.2-2' }}, que siguen reservando saldo. Del saldo
             pendiente de {{ s.saldoPendiente | number: '1.2-2' }} solo quedan
-            <strong>{{ disponibleFactura | number: '1.2-2' }}</strong> disponibles. Si alguno de
+            <strong>{{ disponibleDocumento | number: '1.2-2' }}</strong> disponibles. Si alguno de
             esos pagos ya no va, anúlelo desde Tesorería → Pagos por transferencia → Consulta y
             gestión, y vuelva aquí.
           </span>

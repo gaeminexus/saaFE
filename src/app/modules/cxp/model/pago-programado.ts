@@ -1,4 +1,5 @@
 import { SaldoFactura } from '../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { LiquidacionCompraCompra } from './liquidacion-compra-compra';
 
 /**
  * Asiento contable tal como llega anidado dentro de un pago. El pago no lo
@@ -25,6 +26,12 @@ export interface AsientoDePago {
 export interface PagoProgramado {
   id: number;
   facturaCompra?: { id: number; numero: string } | null;
+  /**
+   * Liquidación de compra (PGS.LQCC) que originó el pago — docs/pagos/API-PAGO-LIQUIDACION-Y-NOTA-VENTA.md
+   * §5. Excluyente con `facturaCompra`: un pago viene de una factura/nota de venta o de una
+   * liquidación, nunca de las dos.
+   */
+  liquidacionCompra?: LiquidacionCompraCompra | null;
   /**
    * Egreso de tesorería sin documento físico (TSR.EGRS) que originó el pago.
    * Viene con `facturaCompra: null`: el concepto del pago es su descripción.
@@ -78,9 +85,16 @@ export interface PagoProgramado {
   asiento?: AsientoDePago | null;
 }
 
-/** Body de POST /pgtr. */
+/**
+ * Body de POST /pgtr. Uno solo de `idFacturaCompra` / `idLiquidacionCompra`
+ * (docs/pagos/API-PAGO-LIQUIDACION-Y-NOTA-VENTA.md §1) — nunca los dos, ni
+ * ninguno.
+ */
 export interface RegistrarPagoRequest {
-  idFacturaCompra: number;
+  /** Id de `FacturaCompra` — factura o nota de venta (`tipoComprobante = '02'`). Excluyente con `idLiquidacionCompra`. */
+  idFacturaCompra?: number;
+  /** Id de `LiquidacionCompraCompra` (`PGS.LQCC`). Excluyente con `idFacturaCompra`. */
+  idLiquidacionCompra?: number;
   /**
    * Opcional desde el rediseño de aprobación (docs/logica-negocio/pagos/PLAN-REDISENO-APROBACION-PAGOS.md
    * §3.1/§3.2/§7 en saaBE): sin cuenta, el pago nace `POR_APROBAR` y la
@@ -115,6 +129,16 @@ export interface RegistrarPagoResponse extends SaldoFactura {
   exito: boolean;
   mensaje: string;
   pago?: number;
+  /**
+   * `FACTURA_COMPRA` o `LIQUIDACION_COMPRA` (docs/pagos/API-PAGO-LIQUIDACION-Y-NOTA-VENTA.md §1).
+   * En el pago de una liquidación, leer `facturaId`/`numeroFactura` (heredados de `SaldoFactura`)
+   * da `undefined`: usar `liquidacionId`/`numeroLiquidacion` en ese caso.
+   */
+  tipoDocumento?: 'FACTURA_COMPRA' | 'LIQUIDACION_COMPRA';
+  /** Solo cuando `tipoDocumento = 'LIQUIDACION_COMPRA'`. */
+  liquidacionId?: number;
+  /** Solo cuando `tipoDocumento = 'LIQUIDACION_COMPRA'`. */
+  numeroLiquidacion?: string;
   debitoAutomatico?: boolean;
   /** Solo en débito automático: id de la aplicación creada. */
   aplicacion?: number;
@@ -226,6 +250,7 @@ export interface RevertirPagoResponse extends SaldoFactura {
 /** Ver OrigenPagoExterno / documentos propios de CXP, §7.1 del plan. */
 export type OrigenPago =
   | 'FACTURA_COMPRA'
+  | 'LIQUIDACION_COMPRA'
   | 'EGRESO_TESORERIA'
   | 'ANTICIPO_PROVEEDOR'
   | 'CRD_DEVOLUCION_APORTE'
@@ -237,6 +262,7 @@ export type OrigenPago =
 
 export const ORIGEN_PAGO_LABELS: Record<OrigenPago, string> = {
   FACTURA_COMPRA: 'Factura de compra',
+  LIQUIDACION_COMPRA: 'Liquidación de compra',
   EGRESO_TESORERIA: 'Egreso de tesorería',
   ANTICIPO_PROVEEDOR: 'Anticipo a proveedor',
   CRD_DEVOLUCION_APORTE: 'Devolución de aportes',
@@ -350,11 +376,14 @@ export interface DisponibilidadCuenta {
  * Respuesta de GET /pgtr/facturasComprometidas/{idTitular}. `idsFacturas` son las facturas de
  * ese proveedor cuyo saldo pendiente ya está íntegramente comprometido por pagos vigentes
  * (incluye POR_APROBAR, no solo confirmados) — la regla la aplica el servidor, el frontend solo
- * excluye esos ids de los combos de "facturas pendientes por pagar".
+ * excluye esos ids de los combos de "facturas pendientes por pagar". `idsFacturas` incluye las
+ * notas de venta (son `FacturaCompra`). `idsLiquidaciones` (NUEVO,
+ * docs/pagos/API-PAGO-LIQUIDACION-Y-NOTA-VENTA.md §3) es lo mismo para liquidaciones de compra.
  */
 export interface FacturasComprometidasResponse {
   idTitular: number;
   idsFacturas: number[];
+  idsLiquidaciones?: number[];
 }
 
 /** Query params de GET /pgtr/lotes. Todos opcionales; `limite` es 50 en el backend si se omite. */

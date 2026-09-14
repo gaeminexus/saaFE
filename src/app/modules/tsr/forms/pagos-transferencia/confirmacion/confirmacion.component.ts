@@ -404,7 +404,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
       const etiqueta = etiquetaOrigenPagoExterno(pago.origenExterno);
       return pago.idOrigen != null ? `${etiqueta} #${pago.idOrigen}` : etiqueta;
     }
-    return pago.facturaCompra?.numero || pago.egreso?.descripcion || '—';
+    return pago.facturaCompra?.numero || pago.liquidacionCompra?.numero || pago.egreso?.descripcion || '—';
   }
 
   nombreBeneficiario(pago: PagoProgramado): string {
