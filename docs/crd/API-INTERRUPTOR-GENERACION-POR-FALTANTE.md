@@ -66,9 +66,16 @@ No afecta la **carga** del archivo Petro, que sigue comparando contra HSTR estad
 ```
 
 **`PUT /rest/cnfg/generacionPorFaltanteAh`** con cuerpo `{ "activa": true, "usuario": "…", "motivo": "…" }`
-→ `200 { "activa": true }` · `400` sin cuerpo · `500` con texto si falla. En particular, `500` con
-*«No se encontro el detalle de rubro de generacion por faltante (rubro 242, detalle 1). Falta cargar
-el catalogo…»* si el catálogo no existe en la base.
+→ `200 { "activa": true }` · `400` sin cuerpo · `500` si falla. En particular, `500` con
+*«Error al actualizar la configuracion de generacion por faltante: No se encontro el detalle de rubro
+de generacion por faltante (rubro 242, detalle 1). Falta cargar el catalogo…»* si el catálogo no
+existe en la base.
+
+⚠️ **Forma del error (corregido 2026-09-14):** aunque el endpoint escribe un `String`, **llega como
+`{ "mensaje": "…" }`**: el `@Provider` global `com.saa.ws.rest.MensajeErrorJsonFilter` envuelve toda
+respuesta ≥ 400 con entidad `String` (`REGISTRO-RESERVAS-EQUIPOS.md` §8.3). El cliente lee
+`error.mensaje` primero y el texto crudo como respaldo. La primera versión de este contrato decía
+«con texto»: era incorrecta.
 
 **Misma forma exacta que `/rest/cnfg/contabilidadCrd`**, que ya consume
 `ConfiguracionContabilidadService` del frontend.
