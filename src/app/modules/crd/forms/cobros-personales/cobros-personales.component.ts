@@ -30,7 +30,7 @@ import { DetalleCobroCredito } from '../../model/cobros/cobro-credito';
 import { TipoOperacionCobro } from '../../model/cobros/catalogos-cobro';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
-import { HistoricoDesgloseAporteParticipe } from '../../model/historico-desglose-aporte-participe';
+import { ContratoPorEntidadDTO, ID_TIPO_APORTE } from '../../model/vigencia-contrato';
 import {
   CLASES_ESTADO_CUOTA,
   NOMBRES_ESTADO_CUOTA,
@@ -49,13 +49,22 @@ import { CobroCreditoService } from '../../service/cobro-credito.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
-import { HistoricoDesgloseAporteParticipeService } from '../../service/historico-desglose-aporte-participe.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
 import { ComponentesPagados, SaldoPrestamoService } from '../../service/saldo-prestamo.service';
+import { VigenciaContratoService } from '../../service/vigencia-contrato.service';
 
 type CuentaKey = 'prestamo' | 'cesantia' | 'jubilacion';
 type MetodoPago = 'debito' | 'transferencia' | 'deposito';
+
+/** §4 de `docs/crd/API-VALOR-MENSUAL-APORTE-COBROS-PERSONALES.md`: "no se sabe" no puede verse igual que "0". */
+type EstadoValorAporte = 'ENCONTRADO' | 'SIN_VIGENCIA' | 'SIN_CONTRATO' | 'NO_DISPONIBLE';
+
+interface ValorMensualAporte {
+  estado: EstadoValorAporte;
+  /** Solo tiene sentido cuando `estado === 'ENCONTRADO'`; en el resto queda en 0 y no se muestra. */
+  monto: number;
+}
 
 interface AsignacionCuota {
   cuota: DetallePrestamo;
@@ -142,7 +151,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private prestamoService = inject(PrestamoService);
   private detallePrestamoService = inject(DetallePrestamoService);
   private pagoPrestamoService = inject(PagoPrestamoService);
-  private historicoService = inject(HistoricoDesgloseAporteParticipeService);
+  private vigenciaContratoService = inject(VigenciaContratoService);
   private cuentaBancariaService = inject(CuentaBancariaService);
   private operaciones = inject(OperacionesPagoPrestamoService);
   private cobroCreditoService = inject(CobroCreditoService);
@@ -176,7 +185,10 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * PRST están desactualizados (ver `saldoCapitalPrestamo`).
    */
   cuotasPorPrestamo = signal<Record<number, DetallePrestamo[]>>({});
-  historico = signal<HistoricoDesgloseAporteParticipe | null>(null);
+  /** Contrato ACTIVO de la entidad con su historial de vigencias. Ver `valorMensualPorTipo`. */
+  private contratoEntidad = signal<ContratoPorEntidadDTO | null>(null);
+  /** La consulta de `porEntidad` falló o devolvió un cuerpo vacío por el fallback de `handleError`. */
+  private consultaContratoFallo = signal(false);
   cuentasBancarias = signal<CuentaBancaria[]>([]);
 
   /**
@@ -286,8 +298,60 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   saldoCesantia = computed(() => this.saldoPorNombre('cesant'));
   saldoJubilacion = computed(() => this.saldoPorNombre('jubila'));
-  valorMensualCesantia = computed(() => this.historico()?.aporteCesantia ?? 0);
-  valorMensualJubilacion = computed(() => this.historico()?.aporteJubilacion ?? 0);
+  valorMensualCesantia = computed<ValorMensualAporte>(() => this.valorMensualPorTipo(ID_TIPO_APORTE.CESANTIA));
+  valorMensualJubilacion = computed<ValorMensualAporte>(() => this.valorMensualPorTipo(ID_TIPO_APORTE.JUBILACION));
+
+  /**
+   * §2 del contrato: la vigencia que rige es la de ese tipo de aporte con estado ACTIVO cuyo rango
+   * cubre el último día del mes en curso; si hay más de una, la de `fechaInicio` mayor. NO se usa
+   * `montoCesantia`/`montoJubilacion` del DTO: es el espejo de la vigencia ABIERTA, que puede
+   * arrancar en un mes futuro y todavía no regir (§3 del contrato).
+   */
+  private valorMensualPorTipo(idTipoAporte: number): ValorMensualAporte {
+    if (this.consultaContratoFallo()) return { estado: 'NO_DISPONIBLE', monto: 0 };
+    const contrato = this.contratoEntidad();
+    if (!contrato || contrato.idContrato == null) return { estado: 'SIN_CONTRATO', monto: 0 };
+
+    const fechaRef = this.fechaRefFinDeMes();
+    const vigente = (contrato.vigencias ?? [])
+      .filter((v) => v.idTipoAporte === idTipoAporte && v.estado === 1)
+      .filter((v) => this.aTexto(v.fechaInicio) <= fechaRef && (v.fechaFin === null || this.aTexto(v.fechaFin) >= fechaRef))
+      .sort((a, b) => (this.aTexto(a.fechaInicio) < this.aTexto(b.fechaInicio) ? 1 : -1))[0];
+
+    return vigente ? { estado: 'ENCONTRADO', monto: vigente.monto } : { estado: 'SIN_VIGENCIA', monto: 0 };
+  }
+
+  /** Último día del mes en curso, como texto `yyyy-MM-dd` — misma fechaRef que usa la generación Petro. */
+  private fechaRefFinDeMes(): string {
+    const ultimoDia = new Date(this.hoy.getFullYear(), this.hoy.getMonth() + 1, 0);
+    const y = ultimoDia.getFullYear();
+    const m = String(ultimoDia.getMonth() + 1).padStart(2, '0');
+    const d = String(ultimoDia.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  /** Copiado de `contrato-edit.component.ts` (~255-261): `fechaInicio`/`fechaFin` llegan como texto o `[y,m,d]`. */
+  private aTexto(fecha: string | number[]): string {
+    if (Array.isArray(fecha)) {
+      const [y, m, d] = fecha;
+      return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    return fecha;
+  }
+
+  /** Texto de la columna «Valor mensual»: nunca `0,00` cuando no hay dato real (§4 del contrato). */
+  textoValorMensual(v: ValorMensualAporte): string {
+    switch (v.estado) {
+      case 'ENCONTRADO':
+        return this.formatMoneda(v.monto);
+      case 'SIN_VIGENCIA':
+        return 'Sin vigencia';
+      case 'SIN_CONTRATO':
+        return 'Sin contrato';
+      case 'NO_DISPONIBLE':
+        return 'No disponible';
+    }
+  }
 
   /**
    * Saldo total y saldo de capital VIGENTES del préstamo seleccionado.
@@ -410,12 +474,14 @@ export class CobrosPersonalesComponent implements OnDestroy {
   coberturaCesantia = computed(() => {
     this.cuentaMontoVersion();
     if (!this.cuentaChecked.cesantia) return null;
-    return this.calcularCoberturaAporte(this.parseMoneda(this.cuentaMontoTexto.cesantia), this.valorMensualCesantia());
+    const v = this.valorMensualCesantia();
+    return this.calcularCoberturaAporte(this.parseMoneda(this.cuentaMontoTexto.cesantia), v.estado === 'ENCONTRADO' ? v.monto : 0);
   });
   coberturaJubilacion = computed(() => {
     this.cuentaMontoVersion();
     if (!this.cuentaChecked.jubilacion) return null;
-    return this.calcularCoberturaAporte(this.parseMoneda(this.cuentaMontoTexto.jubilacion), this.valorMensualJubilacion());
+    const v = this.valorMensualJubilacion();
+    return this.calcularCoberturaAporte(this.parseMoneda(this.cuentaMontoTexto.jubilacion), v.estado === 'ENCONTRADO' ? v.monto : 0);
   });
 
   // ---- método de pago ----
@@ -628,7 +694,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.pagosPorCuota.set({});
     this.prestamosConPagos.set([]);
     this.saldosAporte.set([]);
-    this.historico.set(null);
+    this.contratoEntidad.set(null);
+    this.consultaContratoFallo.set(false);
     this.resetAsignacion();
     this.montoTotalTexto.set('$0.00');
     this.numeroReferencia.set('');
@@ -657,25 +724,29 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.pagosPorCuota.set({});
     this.prestamosConPagos.set([]);
     this.saldosAporte.set([]);
-    this.historico.set(null);
+    this.contratoEntidad.set(null);
+    this.consultaContratoFallo.set(false);
 
     this.cargarPrestamos(entidad.codigo);
     this.cargarSaldosAporte(entidad.codigo);
-
-    if (entidad.numeroIdentificacion) {
-      const criterioCedula = new DatosBusqueda();
-      criterioCedula.asignaUnCampoSinTrunc(TipoDatosBusqueda.STRING, 'cedula', entidad.numeroIdentificacion, TipoComandosBusqueda.IGUAL);
-      this.historicoService.selectByCriteria([criterioCedula]).subscribe({
-        next: (registros) => {
-          const masReciente = (registros ?? []).sort((a, b) => (b.idCarga ?? 0) - (a.idCarga ?? 0))[0] ?? null;
-          this.historico.set(masReciente);
-        },
-        // No bloquea la pantalla: si el histórico no responde, el valor mensual simplemente queda en 0.
-        error: () => {},
-      });
-    }
+    this.cargarContratoEntidad(entidad.codigo);
 
     this.cargarCuentasAsoprep();
+  }
+
+  /**
+   * Contrato ACTIVO de la entidad y su historial de vigencias — fuente del valor mensual de
+   * cesantía/jubilación (§2-3 del contrato de API). No bloquea la pantalla: si la consulta falla,
+   * la columna «Valor mensual» pasa a mostrar «No disponible» en vez de quedar en $0,00 (§4).
+   */
+  private cargarContratoEntidad(codigoEntidad: number): void {
+    this.vigenciaContratoService.porEntidad(codigoEntidad).subscribe({
+      next: (dto) => {
+        this.contratoEntidad.set(dto);
+        this.consultaContratoFallo.set(dto === null);
+      },
+      error: () => this.consultaContratoFallo.set(true),
+    });
   }
 
   /**

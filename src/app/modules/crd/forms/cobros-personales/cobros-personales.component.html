@@ -361,7 +361,7 @@
                 <td><mat-checkbox [checked]="cuentaChecked.cesantia" (change)="toggleCuenta('cesantia', $event.checked)"></mat-checkbox></td>
                 <td>Cesantía</td>
                 <td class="num">{{ formatMoneda(saldoCesantia()) }}</td>
-                <td class="num">{{ formatMoneda(valorMensualCesantia()) }}</td>
+                <td class="num" [class.valor-vacio]="valorMensualCesantia().estado !== 'ENCONTRADO'">{{ textoValorMensual(valorMensualCesantia()) }}</td>
                 <td>
                   <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
                     <input matInput [(ngModel)]="cuentaMontoTexto.cesantia" [disabled]="!cuentaChecked.cesantia"
@@ -376,7 +376,7 @@
                 <td><mat-checkbox [checked]="cuentaChecked.jubilacion" (change)="toggleCuenta('jubilacion', $event.checked)"></mat-checkbox></td>
                 <td>Jubilación</td>
                 <td class="num">{{ formatMoneda(saldoJubilacion()) }}</td>
-                <td class="num">{{ formatMoneda(valorMensualJubilacion()) }}</td>
+                <td class="num" [class.valor-vacio]="valorMensualJubilacion().estado !== 'ENCONTRADO'">{{ textoValorMensual(valorMensualJubilacion()) }}</td>
                 <td>
                   <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
                     <input matInput [(ngModel)]="cuentaMontoTexto.jubilacion" [disabled]="!cuentaChecked.jubilacion"

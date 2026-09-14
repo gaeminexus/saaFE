@@ -255,6 +255,9 @@ table.tabla-aportes {
   td { padding: 14px 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
   .num { font-variant-numeric: tabular-nums; }
 
+  // "Sin vigencia"/"Sin contrato"/"No disponible": no puede leerse como un monto (§4 del contrato).
+  .valor-vacio { color: #a0aec0; font-style: italic; font-variant-numeric: normal; }
+
   .fila-cobertura td {
     background: #f7fafc;
     border-left: 3px solid #667eea;
