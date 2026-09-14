@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -117,6 +117,14 @@ export class TitularesV2Component implements OnInit {
   tiposCuenta = signal<DetalleRubro[]>([]);
   tiposPersona = signal<DetalleRubro[]>([]);
   tiposIdentificacion = signal<DetalleRubro[]>([]);
+  /**
+   * Opciones para "Tipo de identificación de la cuenta": mismo rubro 36 que la
+   * ficha del titular, sin el alterno 4 (exterior) — ningún formateador
+   * bancario lo admite (docs/tsr/API-IDENTIFICACION-CUENTA-BANCARIA.md §2.3).
+   */
+  tiposIdentificacionCuenta = computed(() =>
+    this.tiposIdentificacion().filter((d) => Number(d.codigoAlterno) !== 4)
+  );
   paises = signal<Pais[]>([]);
   paisesFiltrados = signal<Pais[]>([]);
   // Cuentas bancarias del titular en edición
@@ -297,7 +305,11 @@ export class TitularesV2Component implements OnInit {
       numeroCuenta: ['', [Validators.required, Validators.maxLength(50)]],
       observaciones: ['', Validators.maxLength(500)],
       estado: [1, Validators.required],
-    });
+      // Identificación con la que se abrió la cuenta (docs/tsr/API-IDENTIFICACION-CUENTA-BANCARIA.md).
+      // Los dos opcionales: null/null = la cuenta usa la identificación del titular.
+      tipoIdentificacion: [null],
+      identificacion: ['', Validators.maxLength(20)],
+    }, { validators: this.validarIdentificacionCuenta });
 
     this.formCuentaBancaria.get('bancoBusqueda')?.valueChanges.subscribe((value) => {
       this.filtrarBancos(value || '');
@@ -1143,6 +1155,8 @@ export class TitularesV2Component implements OnInit {
       numeroCuenta: '',
       observaciones: '',
       estado: 1,
+      tipoIdentificacion: null,
+      identificacion: '',
     });
     this.modoFormCuentaBancaria.set('nuevo');
   }
@@ -1159,6 +1173,8 @@ export class TitularesV2Component implements OnInit {
       numeroCuenta: cuenta.numeroCuenta,
       observaciones: cuenta.observaciones || '',
       estado: cuenta.estado,
+      tipoIdentificacion: cuenta.tipoIdentificacion ?? null,
+      identificacion: cuenta.identificacion || '',
     });
     this.modoFormCuentaBancaria.set('editar');
   }
@@ -1187,6 +1203,79 @@ export class TitularesV2Component implements OnInit {
     this.formCuentaBancaria.get('bancoBusqueda')?.setValue(banco.nombre, { emitEvent: false });
   }
 
+  /**
+   * Validación en pantalla de la identificación de la cuenta, igual que
+   * `CuentaBancariaTitularServiceImpl.saveSingle` (§2.3 del contrato): los dos
+   * o ninguno; cédula 10 dígitos, RUC 13 dígitos, pasaporte 5-15 alfanuméricos.
+   * El backend valida igual — esto es solo para no hacer el viaje. El error se
+   * fija en el control `identificacion` para poder mostrarlo debajo del campo.
+   */
+  private validarIdentificacionCuenta(group: AbstractControl): ValidationErrors | null {
+    const tipoCtrl = group.get('tipoIdentificacion');
+    const idCtrl = group.get('identificacion');
+    if (!tipoCtrl || !idCtrl) return null;
+
+    const tipo = tipoCtrl.value;
+    const identificacion = String(idCtrl.value || '').trim();
+
+    if (!tipo && !identificacion) {
+      idCtrl.setErrors(null);
+      return null;
+    }
+    if (!tipo || !identificacion) {
+      const error = { identificacionCuentaIncompleta: true };
+      idCtrl.setErrors(error);
+      return error;
+    }
+
+    const REGLAS: Record<number, RegExp> = {
+      1: /^\d{10}$/,
+      2: /^\d{13}$/,
+      3: /^[A-Za-z0-9]{5,15}$/,
+    };
+    const regla = REGLAS[Number(tipo)];
+    if (!regla) {
+      const error = { tipoIdentificacionCuentaInvalido: true };
+      idCtrl.setErrors(error);
+      return error;
+    }
+    if (!regla.test(identificacion)) {
+      const error = { longitudIdentificacionCuenta: true };
+      idCtrl.setErrors(error);
+      return error;
+    }
+
+    idCtrl.setErrors(null);
+    return null;
+  }
+
+  /** Mensaje legible del error de `validarIdentificacionCuenta`, para mostrar debajo del campo. */
+  mensajeErrorIdentificacionCuenta(): string {
+    const errores = this.formCuentaBancaria.get('identificacion')?.errors;
+    if (!errores) return '';
+    if (errores['identificacionCuentaIncompleta']) {
+      return 'Debe indicar el tipo de identificación y la identificación de la cuenta, o dejar los dos vacíos.';
+    }
+    if (errores['tipoIdentificacionCuentaInvalido']) {
+      return 'Tipo de identificación de la cuenta no válido.';
+    }
+    if (errores['longitudIdentificacionCuenta']) {
+      const tipo = Number(this.formCuentaBancaria.get('tipoIdentificacion')?.value);
+      if (tipo === 1) return 'La cédula de la cuenta debe tener 10 dígitos.';
+      if (tipo === 2) return 'El RUC de la cuenta debe tener 13 dígitos.';
+      if (tipo === 3) return 'El pasaporte de la cuenta debe tener entre 5 y 15 caracteres alfanuméricos.';
+    }
+    return '';
+  }
+
+  /** "C 1709616302", "R 1709616302001", "P AB123456" o "La del titular" si la cuenta no tiene identificación propia. */
+  etiquetaIdentificacionCuenta(cuenta: CuentaBancariaTitular): string {
+    if (!cuenta.tipoIdentificacion || !cuenta.identificacion) return 'La del titular';
+    const PREFIJOS: Record<number, string> = { 1: 'C', 2: 'R', 3: 'P' };
+    const prefijo = PREFIJOS[Number(cuenta.tipoIdentificacion)] || '';
+    return `${prefijo} ${cuenta.identificacion}`.trim();
+  }
+
   guardarCuentaBancaria(): void {
     if (!this.formCuentaBancaria.valid) {
       this.formCuentaBancaria.markAllAsTouched();
@@ -1202,7 +1291,13 @@ export class TitularesV2Component implements OnInit {
 
     const v = this.formCuentaBancaria.value;
     const usuario = localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema';
+    const esNuevo = !v.codigo || v.codigo === 0;
 
+    // PUT /ctbn hace merge desnudo: todo campo ausente se graba NULL (docs/tsr/
+    // API-IDENTIFICACION-CUENTA-BANCARIA.md §3). Los dos campos nuevos van
+    // SIEMPRE, con su valor actual o null — nunca omitidos, o una edición sin
+    // tocarlos borraría una identificación ya cargada.
+    const identificacion = String(v.identificacion || '').trim();
     const payload: any = {
       codigo: v.codigo || null,
       titular: { codigo: titular.codigo },
@@ -1212,21 +1307,35 @@ export class TitularesV2Component implements OnInit {
       observaciones: v.observaciones || '',
       estado: v.estado,
       usuarioCreacion: usuario,
+      tipoIdentificacion: v.tipoIdentificacion || null,
+      identificacion: identificacion || null,
     };
 
-    const esNuevo = !payload.codigo || payload.codigo === 0;
+    // Mismo motivo del merge desnudo: si se edita sin mandar fechaCreacion, el
+    // PUT también la borra. Se recupera de la cuenta que se está editando.
+    if (!esNuevo) {
+      const editando = this.cuentaBancariaEditando();
+      if (editando?.fechaCreacion) {
+        payload.fechaCreacion = editando.fechaCreacion;
+      }
+    }
+
     const op = esNuevo
       ? this.cuentaBancariaService.add(payload)
       : this.cuentaBancariaService.update(payload);
 
-    op.pipe(catchError(() => of(null))).subscribe(res => {
-      if (res !== undefined) {
+    // Ojo: NO envolver en catchError(() => of(null)) — el backend ahora
+    // rechaza identificaciones mal cargadas con un 500 de texto, y ese
+    // catchError lo convertía en éxito silencioso.
+    op.subscribe({
+      next: () => {
         this.snackBar.open(esNuevo ? 'Cuenta bancaria agregada' : 'Cuenta bancaria actualizada', 'Cerrar', { duration: 3000 });
         this.modoFormCuentaBancaria.set('oculto');
         this.cargarCuentasBancariasDelTitular(titular.codigo!);
-      } else {
-        this.snackBar.open('Error al guardar cuenta bancaria', 'Cerrar', { duration: 3000 });
-      }
+      },
+      error: (err) => {
+        this.snackBar.open(mensajeDeError(err, 'Error al guardar la cuenta bancaria'), 'Cerrar', { duration: 5000 });
+      },
     });
   }
 
