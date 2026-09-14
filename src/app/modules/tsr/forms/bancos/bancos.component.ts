@@ -170,6 +170,21 @@ export class BancosComponent implements OnInit {
     return valor;
   }
 
+  /**
+   * Repone `rubroTipoBancoP` (el rubro padre del tipo elegido) igual que
+   * `ServiceLocatorTsrService.completarRubroTipoBanco` — la migración fuera de
+   * `table-basic-hijos` (`9f36695`, 2026-09-01) llamó a `bancoService` directo
+   * y perdió este paso. Usa `this.tipos`, la misma fuente que el locator
+   * (`getDetallesByParent(RUBRO_TIPO_BANCO)`, ya cargada en `ngOnInit`).
+   */
+  private completarRubroTipoBancoP(cuerpo: any): void {
+    if (!cuerpo.rubroTipoBancoH) return;
+    const detalle = this.tipos.find((r) => r.codigoAlterno === Number(cuerpo.rubroTipoBancoH));
+    if (detalle) {
+      cuerpo.rubroTipoBancoP = detalle.rubro?.codigoAlterno ?? RUBRO_TIPO_BANCO;
+    }
+  }
+
   // ─── Alta ────────────────────────────────────────────────────────────────
 
   abrirCreacion(): void {
@@ -204,17 +219,21 @@ export class BancosComponent implements OnInit {
     }
 
     const v = this.formulario.value;
-    const cuerpo = {
+    const cuerpo: any = {
       nombre: (v.nombre as string).trim().toUpperCase(),
       rubroTipoBancoH: this.extraerCodigo(v.tipo),
       conciliaDescuadre: this.extraerCodigo(v.concilia),
-      estado: this.extraerCodigo(v.estado),
       // POST /bnco deserializa la entidad Banco completa: `empresa` es un objeto Empresa, no
       // un número — mandar el código pelado rompe la deserialización de Jackson (ver el error
       // real: "Cannot construct instance of ... Empresa ... from Number value"). Mismo patrón
       // que cajas-chicas.component.ts.
       empresa: { codigo: empresaCodigo },
+      // Mismo default que ServiceLocatorTsrService.ejecutaServicio (BANCO/ADD): la migración
+      // fuera de table-basic-hijos (9f36695) llamaba a bancoService.add directo y perdió este
+      // default, el de empresa y el de rubroTipoBancoP — todos los reponía el locator viejo.
+      estado: this.extraerCodigo(v.estado) ?? 1,
     };
+    this.completarRubroTipoBancoP(cuerpo);
 
     this.guardando.set(true);
     this.errorCreacion.set(null);
@@ -271,13 +290,16 @@ export class BancosComponent implements OnInit {
     if (!original) return;
 
     const v = this.edicion.value;
-    const cuerpo = {
+    const cuerpo: any = {
       ...original,
       nombre: (v.nombre as string).trim().toUpperCase(),
       rubroTipoBancoH: this.extraerCodigo(v.tipo),
       conciliaDescuadre: this.extraerCodigo(v.concilia),
       estado: this.extraerCodigo(v.estado),
     };
+    // Mismo paso que ServiceLocatorTsrService (BANCO/EDIT): si cambió el tipo, repone el rubro
+    // padre — no es un dato que la pantalla deje elegir aparte, se deriva del hijo elegido.
+    this.completarRubroTipoBancoP(cuerpo);
 
     this.guardandoEdicion.set(true);
     this.errorEdicion.set(null);
