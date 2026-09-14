@@ -209,7 +209,11 @@ export class BancosComponent implements OnInit {
       rubroTipoBancoH: this.extraerCodigo(v.tipo),
       conciliaDescuadre: this.extraerCodigo(v.concilia),
       estado: this.extraerCodigo(v.estado),
-      empresa: empresaCodigo,
+      // POST /bnco deserializa la entidad Banco completa: `empresa` es un objeto Empresa, no
+      // un número — mandar el código pelado rompe la deserialización de Jackson (ver el error
+      // real: "Cannot construct instance of ... Empresa ... from Number value"). Mismo patrón
+      // que cajas-chicas.component.ts.
+      empresa: { codigo: empresaCodigo },
     };
 
     this.guardando.set(true);
