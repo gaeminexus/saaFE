@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -202,6 +203,16 @@ export class CuentasBancariasComponent implements OnInit {
   }
 
   cargarCuentasPorBanco(bancoCodigo: number | undefined): void {
+    // Vaciar la tabla ANTES de pedir el detalle: ni la espera de la respuesta ni un
+    // error de red deben dejar visibles las cuentas del banco anterior. También se
+    // limpia el filtro de cuentas: es de otro banco y ya no aplica.
+    this.cuentas.set([]);
+    this.cuentasFiltradas.set([]);
+    this.cuentasTotal.set(0);
+    this.cuentasPageIndex.set(0);
+    this.filtroCuentas.set('');
+    this.updateCuentaPage();
+
     if (!bancoCodigo) return;
     const criterios: DatosBusqueda[] = [];
     const db = new DatosBusqueda();
@@ -228,8 +239,35 @@ export class CuentasBancariasComponent implements OnInit {
           this.limpiarFormulario();
         }
       },
-      error: () => this.errorMsg.set('Error al cargar cuentas bancarias'),
+      error: (err) => {
+        // La tabla ya quedó vacía arriba. "Sin filas" es una búsqueda vacía legítima,
+        // no un fallo: se limpia el formulario y no se muestra error. Ojo:
+        // limpiarFormulario() también vacía errorMsg, así que en la rama de error
+        // real hay que fijar el mensaje DESPUÉS, nunca antes ni llamarla ahí.
+        if (this.esErrorSinRegistros(err)) {
+          this.limpiarFormulario();
+        } else {
+          this.errorMsg.set('Error al cargar cuentas bancarias');
+        }
+      },
     });
+  }
+
+  /**
+   * `MensajeErrorJsonFilter` (saaBE) envuelve el 400 de "sin filas" de
+   * `selectByCriteria` como `{ mensaje: "...no devolvio ningun registro" }` (medido
+   * leyendo `CuentaBancariaRest.selectByCriteria` + `CuentaBancariaServiceImpl` +
+   * el filtro; `cuenta-bancaria.service.ts` propaga el `HttpErrorResponse` completo
+   * sin transformarlo). Se acepta también `string` plano por si el body no pasó por
+   * el filtro, como hace `esErrorPagosSinRegistros` en
+   * `crd/dialog/afectacion-participe-dialog`.
+   */
+  private esErrorSinRegistros(err: unknown): boolean {
+    const cuerpo = (err as HttpErrorResponse)?.error;
+    const mensaje = typeof cuerpo === 'string' ? cuerpo : cuerpo?.mensaje;
+    if (typeof mensaje !== 'string') return false;
+    const normalizado = mensaje.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    return normalizado.includes('no devolvio ningun registro');
   }
 
   cargarTiposCuenta(): void {

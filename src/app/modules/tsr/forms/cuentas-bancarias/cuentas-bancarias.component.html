@@ -58,7 +58,7 @@
         <h3>Cuentas Bancarias</h3>
         <mat-form-field appearance="outline" class="filter-field">
           <mat-label>Buscar</mat-label>
-          <input matInput (input)="aplicarFiltroCuentas($event.target.value)" />
+          <input matInput [value]="filtroCuentas()" (input)="aplicarFiltroCuentas($event.target.value)" />
         </mat-form-field>
       </header>
 
