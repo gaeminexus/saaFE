@@ -335,7 +335,7 @@ export class ContratoConsultaComponent implements OnInit {
   editar(codigo: number): void {
     this.permisosService.ejecutarSiPermitido(
       Permisos.CRD_INGRESO,
-      () => this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit', codigo]),
+      () => this.router.navigate(['/menucreditos/contrato-edit', codigo]),
       (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
     );
   }
@@ -343,7 +343,7 @@ export class ContratoConsultaComponent implements OnInit {
   nuevo(): void {
     this.permisosService.ejecutarSiPermitido(
       Permisos.CRD_INGRESO,
-      () => this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit']),
+      () => this.router.navigate(['/menucreditos/contrato-edit']),
       (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
     );
   }

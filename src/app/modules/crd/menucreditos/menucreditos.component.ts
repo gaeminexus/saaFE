@@ -376,7 +376,7 @@ export class MenucreditosComponent {
         route: '/menucreditos/cierre-cartera',
       });
       paramNode?.children?.push({
-        displayName: 'Contabilidad de CRD',
+        displayName: 'Parámetros de CRD',
         iconName: 'account_balance',
         idPermiso: Permisos.CRD_CONTABILIDAD_DE_CREDITOS,
         route: '/menucreditos/interruptor-contabilidad',

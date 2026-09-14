@@ -203,7 +203,7 @@ export class AportesDashComponent implements OnInit {
   volver(): void {
     // Vuelta a ContratoDash (la ida ya se verifica en contrato-dash.component.ts:312).
     // Regla del árbitro: en cada par A⇄B se verifica la ida, no la vuelta — no se cablea.
-    this.router.navigate(['/menucontabilidad/menucreditos/contrato-dash']);
+    this.router.navigate(['/menucreditos/contrato-dash']);
   }
 
   // ── Presentación de periodo/estado ──────────────────────────────────

@@ -316,7 +316,7 @@ export class ContratoDashComponent implements OnInit {
   verAportes(codigoEntidad: number): void {
     this.permisosService.ejecutarSiPermitido(
       Permisos.CRD_APORTES_DASH,
-      () => this.router.navigate(['/menucontabilidad/menucreditos/aportes-dash', codigoEntidad]),
+      () => this.router.navigate(['/menucreditos/aportes-dash', codigoEntidad]),
       (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
     );
   }
@@ -324,7 +324,7 @@ export class ContratoDashComponent implements OnInit {
   editarContrato(codigo: number): void {
     this.permisosService.ejecutarSiPermitido(
       Permisos.CRD_INGRESO,
-      () => this.router.navigate(['/menucontabilidad/menucreditos/contrato-edit', codigo]),
+      () => this.router.navigate(['/menucreditos/contrato-edit', codigo]),
       (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
     );
   }
