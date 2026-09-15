@@ -1,0 +1,327 @@
+<div class="pagina-seguimiento">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>timeline</mat-icon>
+      <span>Seguimiento de Pagos</span>
+    </div>
+  </div>
+
+  <!-- ═══ BUSCADOR ═══════════════════════════════════════ -->
+  <mat-card class="panel panel-buscador">
+    <mat-card-content>
+      <div class="fila-buscador">
+        <mat-form-field appearance="outline" class="campo-busqueda">
+          <mat-label>N° de pago o texto</mat-label>
+          <input
+            matInput
+            [(ngModel)]="textoBusqueda"
+            name="textoBusqueda"
+            placeholder="Ej. 123, o parte de la observación / beneficiario"
+            (keyup.enter)="buscar()"
+          />
+          <mat-icon matPrefix>search</mat-icon>
+          @if (textoBusqueda) {
+            <button mat-icon-button matSuffix type="button" matTooltip="Limpiar" (click)="limpiarBusqueda()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+          <mat-hint>Texto: mínimo 3 caracteres — busca en observación, beneficiario, titular y documento</mat-hint>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" [disabled]="!puedeBuscar || buscando()" (click)="buscar()">
+          @if (buscando()) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>search</mat-icon>
+          }
+          Buscar
+        </button>
+      </div>
+
+      @if (errorBusqueda()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorBusqueda() }}</span>
+        </div>
+      }
+
+      @if (resultados(); as filas) {
+        @if (filas.length === 0) {
+          <div class="sin-datos">
+            <mat-icon>search_off</mat-icon>
+            <span>Ningún pago coincide con la búsqueda.</span>
+          </div>
+        } @else {
+          <div class="tabla-scroll">
+            <table mat-table [dataSource]="filas">
+
+              <ng-container matColumnDef="numero">
+                <th mat-header-cell *matHeaderCellDef>N° pago</th>
+                <td mat-cell *matCellDef="let f"><strong>{{ f.idPago }}</strong></td>
+              </ng-container>
+
+              <ng-container matColumnDef="beneficiario">
+                <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
+                <td mat-cell *matCellDef="let f">{{ f.beneficiario }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="origen">
+                <th mat-header-cell *matHeaderCellDef>Origen</th>
+                <td mat-cell *matCellDef="let f">{{ f.origenTexto }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="concepto">
+                <th mat-header-cell *matHeaderCellDef>Concepto</th>
+                <td mat-cell *matCellDef="let f">{{ f.concepto }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="valor">
+                <th mat-header-cell *matHeaderCellDef class="col-monto">Valor</th>
+                <td mat-cell *matCellDef="let f" class="col-monto">{{ formatearMonto(f.valor) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="fechaProgramada">
+                <th mat-header-cell *matHeaderCellDef>Fecha programada</th>
+                <td mat-cell *matCellDef="let f">{{ formatearFecha(f.fechaProgramada) }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="estado">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let f">
+                  @if (etiquetaEstado(f.estado, f.estadoTexto); as e) {
+                    <span class="badge" [ngClass]="e.clase">{{ e.texto }}</span>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="columnasResultados"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnasResultados" class="fila-resultado"
+                  (click)="seleccionar(row)"></tr>
+            </table>
+          </div>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- ═══ DETALLE ════════════════════════════════════════ -->
+  @if (cargandoDetalle()) {
+    <div class="estado-linea">
+      <mat-spinner diameter="26"></mat-spinner>
+      <span>Consultando el pago...</span>
+    </div>
+  }
+
+  @if (errorDetalle()) {
+    <div class="mensaje-error mensaje-error-detalle">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorDetalle() }}</span>
+    </div>
+  }
+
+  @if (detalle(); as d) {
+    <mat-card class="panel panel-detalle">
+      <mat-card-content>
+
+        <div class="cabecera-detalle">
+          <div class="numero-pago">
+            <span class="etiqueta">N° de pago</span>
+            <span class="valor-grande">{{ d.pago.idPago }}</span>
+          </div>
+          @if (etiquetaEstado(d.pago.estado, d.pago.estadoTexto); as e) {
+            <span class="badge badge-grande" [ngClass]="e.clase">{{ e.texto }}</span>
+          }
+          <div class="monto-pago">
+            <span class="etiqueta">Valor</span>
+            <span class="valor-grande">{{ formatearMonto(d.pago.valor) }}</span>
+          </div>
+        </div>
+
+        <div class="grilla-datos">
+          <div class="dato">
+            <span class="etiqueta">Beneficiario</span>
+            <span class="valor">{{ d.pago.beneficiario }}</span>
+          </div>
+          @if (d.pago.identificacionBeneficiario) {
+            <div class="dato">
+              <span class="etiqueta">Identificación</span>
+              <span class="valor">{{ d.pago.identificacionBeneficiario }}</span>
+            </div>
+          }
+          <div class="dato">
+            <span class="etiqueta">Concepto</span>
+            <span class="valor">{{ d.pago.concepto }}</span>
+          </div>
+          <div class="dato">
+            <span class="etiqueta">Fecha programada</span>
+            <span class="valor">{{ formatearFecha(d.pago.fechaProgramada) }}</span>
+          </div>
+          @if (d.pago.formaPagoTexto) {
+            <div class="dato">
+              <span class="etiqueta">Forma de pago</span>
+              <span class="valor">{{ d.pago.formaPagoTexto }}</span>
+            </div>
+          }
+          @if (d.pago.cuentaOrigen) {
+            <div class="dato">
+              <span class="etiqueta">Cuenta origen</span>
+              <span class="valor">{{ d.pago.cuentaOrigen }}</span>
+            </div>
+          }
+          @if (d.pago.cuentaDestino) {
+            <div class="dato">
+              <span class="etiqueta">Cuenta destino</span>
+              <span class="valor">{{ d.pago.cuentaDestino }}</span>
+            </div>
+          }
+          @if (d.pago.referenciaBanco) {
+            <div class="dato">
+              <span class="etiqueta">Referencia del banco</span>
+              <span class="valor">{{ d.pago.referenciaBanco }}</span>
+            </div>
+          }
+          @if (d.pago.fechaRespuesta) {
+            <div class="dato">
+              <span class="etiqueta">Fecha de respuesta</span>
+              <span class="valor">{{ formatearFecha(d.pago.fechaRespuesta) }}</span>
+            </div>
+          }
+          @if (d.pago.observacion) {
+            <div class="dato dato-ancho">
+              <span class="etiqueta">Observación</span>
+              <span class="valor">{{ d.pago.observacion }}</span>
+            </div>
+          }
+          @if (d.pago.motivo) {
+            <div class="dato dato-ancho dato-motivo">
+              <span class="etiqueta">Motivo</span>
+              <span class="valor">{{ d.pago.motivo }}</span>
+            </div>
+          }
+        </div>
+
+        <!-- ═══ ORIGEN ═══════════════════════════════════ -->
+        <div class="bloque">
+          <div class="titulo-bloque">
+            <mat-icon>call_split</mat-icon>
+            <span>Origen — {{ d.origen.texto }}</span>
+          </div>
+
+          @if (!d.origen.resuelto) {
+            <div class="vacio-bloque">
+              <mat-icon>info</mat-icon>
+              <span>Origen sin detalle.</span>
+            </div>
+          } @else if (d.origen.documento; as doc) {
+            <div class="grilla-datos">
+              <div class="dato">
+                <span class="etiqueta">Documento</span>
+                <span class="valor">{{ doc.numero }}</span>
+              </div>
+              <div class="dato">
+                <span class="etiqueta">Estado</span>
+                <span class="valor">{{ doc.estadoTexto }}</span>
+              </div>
+              <div class="dato">
+                <span class="etiqueta">Fecha</span>
+                <span class="valor">{{ formatearFecha(doc.fecha) }}</span>
+              </div>
+              <div class="dato">
+                <span class="etiqueta">Total</span>
+                <span class="valor">{{ formatearMonto(doc.total) }}</span>
+              </div>
+            </div>
+          } @else {
+            <div class="vacio-bloque">
+              <mat-icon>info</mat-icon>
+              <span>Sin documento asociado.</span>
+            </div>
+          }
+        </div>
+
+        <!-- ═══ LÍNEA DE TIEMPO ══════════════════════════ -->
+        <div class="bloque">
+          <div class="titulo-bloque">
+            <mat-icon>route</mat-icon>
+            <span>Etapas del proceso</span>
+          </div>
+
+          <div class="linea-tiempo">
+            @for (etapa of d.etapas; track etapa.clave) {
+              <div class="etapa" [ngClass]="claseEtapa(etapa)">
+                <mat-icon>{{ iconoEtapa(etapa) }}</mat-icon>
+                <span class="etapa-texto">{{ etapa.texto || etapa.clave }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- ═══ LOTE Y ASIENTO ═══════════════════════════ -->
+        @if (d.pago.lote || d.pago.asiento) {
+          <div class="bloque">
+            <div class="titulo-bloque">
+              <mat-icon>folder_zip</mat-icon>
+              <span>Lote y asiento</span>
+            </div>
+            <div class="grilla-datos">
+              @if (d.pago.lote; as lote) {
+                <div class="dato">
+                  <span class="etiqueta">Lote</span>
+                  <span class="valor">N° {{ lote.idLote }} — {{ lote.nombreArchivo }} ({{ lote.estadoTexto }})</span>
+                </div>
+              }
+              @if (d.pago.asiento; as asiento) {
+                <div class="dato">
+                  <span class="etiqueta">Asiento contable</span>
+                  <span class="valor">{{ asiento.numeroAlterno || asiento.codigo }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- ═══ ACCIONES ═════════════════════════════════ -->
+        <div class="acciones-detalle">
+          <button
+            mat-stroked-button
+            [disabled]="!rutaAccionEtapa()"
+            (click)="irAEtapa()">
+            <mat-icon>open_in_new</mat-icon>
+            Ir a la etapa
+          </button>
+
+          <button
+            mat-stroked-button
+            color="warn"
+            [disabled]="!d.acciones.puedeAnular || anulando()"
+            [matTooltip]="d.acciones.motivoNoAnular || ''"
+            (click)="anular()">
+            @if (anulando()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>block</mat-icon>
+            }
+            Anular
+          </button>
+
+          <button
+            mat-stroked-button
+            color="warn"
+            [disabled]="!d.acciones.puedeRevertir || revirtiendo()"
+            [matTooltip]="d.acciones.motivoNoRevertir || ''"
+            (click)="revertir()">
+            @if (revirtiendo()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>undo</mat-icon>
+            }
+            Revertir
+          </button>
+        </div>
+
+      </mat-card-content>
+    </mat-card>
+  }
+
+</div>

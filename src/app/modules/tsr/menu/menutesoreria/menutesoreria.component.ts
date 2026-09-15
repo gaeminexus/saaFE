@@ -351,6 +351,17 @@ export class MenutesoreriaComponent implements OnInit {
               idPermiso: Permisos.TSR_CONSULTA_Y_GESTION,
               route: '/menutesoreria/pagos/consulta',
             },
+            {
+              // Pantalla nueva (pedido 1, docs/tsr/API-SEGUIMIENTO-PAGOS.md). No hay permiso
+              // dedicado para esta pantalla — reutiliza TSR_CONSULTA_Y_GESTION porque las
+              // acciones que ofrece (anular, revertir) son las mismas que ya gatilla ese permiso
+              // en Consulta y gestión, y crear un permiso nuevo requiere alta en la tabla de
+              // permisos del backend, fuera del alcance de este frente.
+              displayName: 'Seguimiento de pagos',
+              iconName: 'timeline',
+              idPermiso: Permisos.TSR_CONSULTA_Y_GESTION,
+              route: '/menutesoreria/pagos/seguimiento',
+            },
           ],
         },
         {

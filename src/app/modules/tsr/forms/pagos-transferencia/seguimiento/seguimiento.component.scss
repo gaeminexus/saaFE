@@ -1,0 +1,198 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-seguimiento {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .fila-buscador {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
+
+    .campo-busqueda {
+      flex: 1 1 380px;
+      min-width: 260px;
+    }
+  }
+
+  .mensaje-error-detalle {
+    margin-top: 1.25rem;
+  }
+
+  .fila-resultado {
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover { background: #f8fafc; }
+  }
+
+  // ── Detalle: cabecera ────────────────────────────────────
+  .panel-detalle {
+    .cabecera-detalle {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 1.5rem;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+
+      .numero-pago,
+      .monto-pago {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+
+      .etiqueta {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+      }
+
+      .valor-grande {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .badge-grande {
+        padding: 0.35rem 1rem;
+        font-size: 0.9rem;
+      }
+
+      .monto-pago {
+        margin-left: auto;
+      }
+    }
+
+    .grilla-datos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.85rem;
+      margin-bottom: 0.5rem;
+
+      .dato {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+
+        .etiqueta {
+          font-size: 0.72rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #64748b;
+        }
+
+        .valor {
+          font-size: 0.92rem;
+          color: #1e293b;
+        }
+
+        &.dato-ancho {
+          grid-column: 1 / -1;
+        }
+
+        &.dato-motivo .valor {
+          color: #b45309;
+        }
+      }
+    }
+
+    .bloque {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+
+      .titulo-bloque {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: #5b6fd8;
+        }
+      }
+    }
+
+    .vacio-bloque {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 0.9rem;
+      background: #f8fafc;
+      border: 1px dashed #e2e8f0;
+      border-radius: 8px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    // ── Línea de tiempo ────────────────────────────────────
+    .linea-tiempo {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+
+      .etapa {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #94a3b8;
+
+        mat-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+
+        &.etapa-hecha {
+          background: #dcfce7;
+          color: #15803d;
+        }
+
+        &.etapa-actual {
+          background: #e0e7ff;
+          color: #4338ca;
+        }
+
+        &.etapa-rechazada {
+          background: #fee2e2;
+          color: #b91c1c;
+        }
+      }
+    }
+
+    .acciones-detalle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+  }
+}

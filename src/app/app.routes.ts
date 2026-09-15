@@ -315,6 +315,20 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Consulta y gestión' },
       },
+      // Seguimiento de un pago (pedido 1, docs/tsr/API-SEGUIMIENTO-PAGOS.md): una sola pantalla
+      // con buscador + detalle. Con :id abre directo el detalle; sin id, arranca en el buscador.
+      {
+        path: 'pagos/seguimiento',
+        loadComponent: () => import('./modules/tsr/forms/pagos-transferencia/seguimiento/seguimiento.component').then((m) => m.SeguimientoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Seguimiento de pagos' },
+      },
+      {
+        path: 'pagos/seguimiento/:id',
+        loadComponent: () => import('./modules/tsr/forms/pagos-transferencia/seguimiento/seguimiento.component').then((m) => m.SeguimientoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Seguimiento de pagos' },
+      },
 
       // Procesos - Cobros
       {
