@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
@@ -64,6 +65,7 @@ export class ConsultaCobrosComponent implements OnInit {
   private permisosService = inject(PermisosService);
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private router = inject(Router);
 
   readonly EstadoAplicacion = EstadoAplicacion;
   readonly formaPagoLabels = FORMA_PAGO_COBRO_LABELS;
@@ -152,6 +154,15 @@ export class ConsultaCobrosComponent implements OnInit {
         this.mostrarError(mensajeDeError(err, 'No se pudieron cargar los cobros'));
       },
     });
+  }
+
+  /** Ítem 9 — botón "Nuevo cobro": lleva a Registrar Cobro sin factura precargada. */
+  irARegistrarCobro(): void {
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXC_REGISTRAR_COBRO,
+      () => this.router.navigate(['/menucuentasxcobrar/cobros/registrar']),
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
   }
 
   limpiarFiltros(): void {

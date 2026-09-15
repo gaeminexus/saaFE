@@ -47,6 +47,10 @@
       </div>
 
       <div class="actions">
+        <button mat-raised-button color="primary" (click)="irARegistrarCobro()">
+          <mat-icon>add</mat-icon>
+          Nuevo cobro
+        </button>
         <button mat-raised-button color="primary" (click)="buscar()" [disabled]="loading()">
           <mat-icon>search</mat-icon>
           Buscar

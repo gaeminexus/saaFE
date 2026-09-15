@@ -216,6 +216,24 @@ export class RegistrarCobroComponent implements OnInit {
     });
   }
 
+  /**
+   * Deja la pantalla como recién abierta desde el menú, lista para cobrar a otro cliente. NO
+   * recarga las cuentas bancarias: ya están cargadas y no cambian entre un cobro y el siguiente.
+   */
+  nuevoCobro(): void {
+    this.cliente.set(null);
+    this.limpiarFactura();
+    this.formValor = '';
+    this.formFecha = new Date();
+    this.formNumeroTransferencia = '';
+    this.formCuentaBancaria = null;
+    this.formObservacion = '';
+    this.error.set('');
+    // Sin esto, un refresco de la página vuelve a cargar la factura anterior (ngOnInit lee
+    // idFactura de la query string).
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
+  }
+
   // Vuelta a AbonosFactura (la ida ya se verifica en abonos-factura.component.ts:157,
   // irARegistrarCobro) — no se verifica, regla "ida sí, vuelta no" (ÍTEM 7 de seguridades).
   volverAAbonos(): void {

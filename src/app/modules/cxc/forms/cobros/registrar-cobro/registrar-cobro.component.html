@@ -5,10 +5,18 @@
       <mat-icon>payments</mat-icon>
       <span>Registrar Cobro por Transferencia</span>
     </div>
-    <button mat-stroked-button (click)="volverAAbonos()">
-      <mat-icon>arrow_back</mat-icon>
-      Volver a abonos
-    </button>
+    <div style="display: flex; gap: 0.5rem;">
+      <button mat-stroked-button [disabled]="procesando()" (click)="nuevoCobro()">
+        <mat-icon>add</mat-icon>
+        Nuevo cobro
+      </button>
+      @if (idFactura != null) {
+        <button mat-stroked-button (click)="volverAAbonos()">
+          <mat-icon>arrow_back</mat-icon>
+          Volver a abonos
+        </button>
+      }
+    </div>
   </div>
 
   <mat-card class="panel">
