@@ -36,7 +36,10 @@ export type CodigoErrorDevolucion =
   | 'TIPO_DUPLICADO'
   | 'SIN_CUENTA_BANCARIA'
   | 'ERROR_ORDEN_PAGO'
-  | 'ERROR_INTERNO';
+  | 'ERROR_INTERNO'
+  // ── Nuevos de POST /dvap/{id}/reemitirPago (docs/crd/API-REEMITIR-PAGO-DEVOLUCION.md §3.2) ──
+  | 'PAGO_CONFIRMADO'
+  | 'CONFIRMAR_RECHAZO_BANCO';
 
 /**
  * Texto de respaldo por código. El `mensaje` del backend es más específico (trae el nombre del
@@ -64,6 +67,9 @@ export const MENSAJE_ERROR_DEVOLUCION: Record<string, string> = {
   ERROR_ORDEN_PAGO:
     'No se pudo generar la orden de pago en Cuentas por Pagar; no se registró nada. Intente nuevamente.',
   ERROR_INTERNO: 'Ocurrió un error inesperado en el servidor. Intente nuevamente.',
+  PAGO_CONFIRMADO:
+    'La orden de pago ya fue confirmada por el banco; debe reversarla desde Cuentas por Pagar antes de poder reemitir.',
+  CONFIRMAR_RECHAZO_BANCO: 'Confirme que el banco rechazó la transferencia antes de reemitir el pago.',
 };
 
 /** Mensaje a mostrar: el del backend si vino, si no el genérico del código. */

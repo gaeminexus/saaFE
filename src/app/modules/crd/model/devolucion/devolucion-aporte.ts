@@ -1,9 +1,12 @@
 /**
  * Tipos de request y de resultado de la devolución de aportes
- * (§6 de `docs/crd/PLAN-DEVOLUCION-APORTES.md`).
+ * (§6 de `docs/crd/PLAN-DEVOLUCION-APORTES.md`; la reemisión de pago en
+ * `docs/crd/API-REEMITIR-PAGO-DEVOLUCION.md`).
  *
  * Reflejan 1:1 el contrato REST: no se agregan campos que el backend no declare.
  */
+
+import { RespuestaDevolucion } from './respuesta-devolucion';
 
 // ══════════════ POST /dvap/registrar ══════════════
 
@@ -86,6 +89,12 @@ export interface DevolucionListado {
   estado: number;
   estadoTexto: string;
   idPagoProgramado: number | null;
+  /**
+   * `PGTRESTD` de la orden de pago enlazada (`EstadoPagoOrden`); `null` si no hay orden o no
+   * existe (§6 del contrato de reemisión). No confundir con `estado`, que es el de la devolución.
+   */
+  estadoPago: number | null;
+  estadoPagoTexto: string | null;
   numeroAsiento: number | null;
   /** `yyyy-MM-dd`; solo cuando el pago quedó confirmado. */
   fechaPago: string | null;
@@ -132,6 +141,28 @@ export interface AnulacionDevolucionRequest {
   motivo: string;
   usuario: string;
   idUsuario: number;
+}
+
+// ══════════════ POST /dvap/{idDevolucion}/reemitirPago ══════════════
+
+export interface ReemisionPagoDevolucionRequest {
+  idCuentaBancariaParticipe: number;
+  motivo: string;
+  /** Obligatorio (`true`) solo cuando la orden actual está `EN_ARCHIVO(2)` (§3.1 del contrato). */
+  confirmaRechazoBanco?: boolean;
+  idEmpresa: number;
+  idUsuario: number;
+  usuario: string;
+}
+
+/**
+ * Respuesta de `/reemitirPago` (§3.4 del contrato): el mismo sobre de `RespuestaDevolucion` más
+ * `idPagoAnterior`/`idPagoNuevo` como hermanos de `resultado`, así que no alcanza con reusar el
+ * tipo genérico tal cual.
+ */
+export interface RespuestaReemisionPago extends RespuestaDevolucion<ResultadoDevolucion> {
+  idPagoAnterior?: number | null;
+  idPagoNuevo?: number | null;
 }
 
 // ══════════════ POST /dvap/sincronizar ══════════════

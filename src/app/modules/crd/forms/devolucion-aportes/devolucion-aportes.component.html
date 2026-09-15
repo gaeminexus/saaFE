@@ -299,9 +299,21 @@
                       <ng-container><mat-icon>picture_as_pdf</mat-icon> Imprimir informe</ng-container>
                     }
                   </button>
+                  @if (puedeReemitir(d)) {
+                    <button mat-stroked-button color="accent" class="btn-reemitir"
+                            (click)="reemitirPago(d)"
+                            [disabled]="reemitiendoId() === d.idDevolucion || anulandoId() === d.idDevolucion">
+                      @if (reemitiendoId() === d.idDevolucion) {
+                        <mat-spinner diameter="18"></mat-spinner>
+                      } @else {
+                        <ng-container><mat-icon>sync</mat-icon> Reemitir pago</ng-container>
+                      }
+                    </button>
+                  }
                   @if (puedeAnular(d)) {
                     <button mat-stroked-button color="warn" class="btn-anular"
-                            (click)="anular(d)" [disabled]="anulandoId() === d.idDevolucion">
+                            (click)="anular(d)"
+                            [disabled]="anulandoId() === d.idDevolucion || reemitiendoId() === d.idDevolucion">
                       @if (anulandoId() === d.idDevolucion) {
                         <mat-spinner diameter="18"></mat-spinner>
                       } @else {
@@ -315,7 +327,10 @@
               <div class="dev-datos">
                 <div class="dd-item">
                   <span class="l">Orden de pago (CXP)</span>
-                  <span class="v">{{ d.idPagoProgramado ? '#' + d.idPagoProgramado : '—' }}</span>
+                  <span class="v">
+                    {{ d.idPagoProgramado ? '#' + d.idPagoProgramado : '—' }}
+                    @if (d.estadoPagoTexto) { &middot; {{ d.estadoPagoTexto }} }
+                  </span>
                 </div>
                 <div class="dd-item">
                   <span class="l">Asiento contable</span>
@@ -332,6 +347,13 @@
                   </div>
                 }
               </div>
+
+              @if (mostrarAvisoOrdenRechazada(d)) {
+                <div class="aviso error orden-rechazada">
+                  <mat-icon>error_outline</mat-icon>
+                  {{ textoAvisoOrdenRechazada(d) }}
+                </div>
+              }
 
               <!-- El desglose es obligatorio en el contrato, pero se comprueba igual: una
                    respuesta sin él no debe dejar la pantalla en blanco. -->

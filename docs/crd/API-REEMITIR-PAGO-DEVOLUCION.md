@@ -165,7 +165,10 @@ contador nuevo `pendientesReemision` de `ResultadoSincronizacion`, con un log qu
    orden a reversar, y ese mensaje es justamente lo que el operador necesita ver.
 4. **Diálogo:**
    - selector de cuenta del partícipe (el mismo origen de datos que usa el registro de la devolución),
-     por defecto la cuenta actual;
+     **sin preselección**: el operador elige siempre. *(Corregido 2026-09-15 al revisar el FE: la
+     primera redacción decía «por defecto la cuenta actual», y en un rebote la cuenta actual es
+     justamente la errada. Si créditos agregó una cuenta nueva en vez de editar la vieja, el diálogo
+     abría con la cuenta mala elegida y bastaba un clic para reemitir al mismo destino.)*;
    - motivo, obligatorio;
    - si `estadoPago === 2`, casilla obligatoria «Confirmo que el banco rechazó esta transferencia», que
      viaja como `confirmaRechazoBanco`;

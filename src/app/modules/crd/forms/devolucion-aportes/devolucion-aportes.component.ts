@@ -15,6 +15,7 @@ import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-
 import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
@@ -22,6 +23,8 @@ import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { CuentaBancariaParticipe } from '../../model/cuenta-bancaria-participe';
 import {
   CLASE_ESTADO_DEVOLUCION,
+  EstadoDevolucion,
+  EstadoPagoOrden,
   ICONO_ESTADO_DEVOLUCION,
   TOLERANCIA_DEVOLUCION,
   nombreEstadoDevolucion,
@@ -49,6 +52,12 @@ import {
   InformeNecesidadPagoDialogComponent,
   InformeNecesidadPagoDialogResultado,
 } from './informe-necesidad-pago-dialog.component';
+import {
+  OpcionCuentaReemision,
+  ReemitirPagoDialogComponent,
+  ReemitirPagoDialogData,
+  ReemitirPagoDialogResultado,
+} from './reemitir-pago-dialog.component';
 
 /** Nombre del reporte Jasper y módulo, fijos por contrato (`API-INFORME-NECESIDAD-PAGO.md`). */
 const REPORTE_INFORME_NECESIDAD_PAGO = 'RPRT_INFR_DVAP';
@@ -160,6 +169,8 @@ export class DevolucionAportesComponent {
   cargandoHistorial = signal(false);
   historial = signal<DevolucionListado[]>([]);
   anulandoId = signal<number | null>(null);
+  /** Fila con el diálogo de reemisión abierto o su envío en curso (docs/crd/API-REEMITIR-PAGO-DEVOLUCION.md). */
+  reemitiendoId = signal<number | null>(null);
 
   /** Id de la devolución para la que se está generando el informe de necesidad de pago. */
   generandoInformeId = signal<number | null>(null);
@@ -634,7 +645,7 @@ export class DevolucionAportesComponent {
   // ================= anular =================
 
   puedeAnular(devolucion: DevolucionListado): boolean {
-    return puedeAnularse(devolucion.estado);
+    return puedeAnularse(devolucion.estado, devolucion.estadoPago);
   }
 
   anular(devolucion: DevolucionListado): void {
@@ -675,6 +686,85 @@ export class DevolucionAportesComponent {
             this.cargarSaldos(entidad.codigo);
             this.cargarHistorial(entidad.codigo);
           });
+      });
+  }
+
+  // ================= reemitir pago =================
+
+  /**
+   * `EN_PAGO(2)` o `PAGADA(3)`, con orden enlazada. No se oculta con la orden CONFIRMADA: el
+   * backend responde con el número de la orden a reversar, y ese mensaje es justamente lo que el
+   * operador necesita ver (§7.3 del contrato).
+   */
+  puedeReemitir(devolucion: DevolucionListado): boolean {
+    const enPagoOPagada =
+      devolucion.estado === EstadoDevolucion.EN_PAGO || devolucion.estado === EstadoDevolucion.PAGADA;
+    // `estadoPago` exige además != null: con un WAR de backend viejo (sin este campo) llega
+    // `undefined` y el botón no debe aparecer, porque el endpoint /reemitirPago todavía no existe.
+    return enPagoOPagada && !!devolucion.idPagoProgramado && devolucion.estadoPago != null;
+  }
+
+  /** Aviso de la tarjeta cuando la orden enlazada ya quedó rechazada o anulada en tesorería (§7.2). */
+  mostrarAvisoOrdenRechazada(devolucion: DevolucionListado): boolean {
+    const enPagoOPagada =
+      devolucion.estado === EstadoDevolucion.EN_PAGO || devolucion.estado === EstadoDevolucion.PAGADA;
+    return (
+      enPagoOPagada &&
+      (devolucion.estadoPago === EstadoPagoOrden.RECHAZADO || devolucion.estadoPago === EstadoPagoOrden.ANULADO)
+    );
+  }
+
+  textoAvisoOrdenRechazada(devolucion: DevolucionListado): string {
+    const accion = devolucion.estadoPago === EstadoPagoOrden.RECHAZADO ? 'rechazada' : 'anulada';
+    return `La orden de pago N° ${devolucion.idPagoProgramado} fue ${accion} en tesorería. Reemita el pago o anule la devolución.`;
+  }
+
+  reemitirPago(devolucion: DevolucionListado): void {
+    const entidad = this.entidadSeleccionada();
+    if (!entidad || !this.puedeReemitir(devolucion) || !devolucion.idPagoProgramado) return;
+
+    const idEmpresa = empresaSesionCodigo();
+    if (!idEmpresa) {
+      this.snackBar.open(
+        'No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión antes de reemitir el pago.',
+        'Cerrar',
+        { duration: 6000 }
+      );
+      return;
+    }
+    const idUsuario = this.idUsuarioSesion();
+    if (!idUsuario) {
+      this.snackBar.open('No se pudo determinar el usuario de la sesión. Vuelva a iniciar sesión.', 'Cerrar', { duration: 6000 });
+      return;
+    }
+
+    const opciones: OpcionCuentaReemision[] = this.cuentasParticipe().map((c) => ({
+      cuenta: c,
+      etiqueta: this.etiquetaCuentaParticipe(c),
+    }));
+
+    const datos: ReemitirPagoDialogData = {
+      idDevolucion: devolucion.idDevolucion,
+      idPagoActual: devolucion.idPagoProgramado,
+      estadoPago: devolucion.estadoPago,
+      estadoPagoTexto: devolucion.estadoPagoTexto,
+      idEmpresa,
+      idUsuario,
+      opciones,
+    };
+
+    this.reemitiendoId.set(devolucion.idDevolucion);
+    this.dialog
+      .open(ReemitirPagoDialogComponent, { data: datos, width: '560px', maxWidth: '96vw', autoFocus: false })
+      .afterClosed()
+      .subscribe((resultado?: ReemitirPagoDialogResultado) => {
+        this.reemitiendoId.set(null);
+        if (!resultado) return;
+        this.snackBar.open(resultado.mensaje, 'Cerrar', { duration: 8000 });
+        // Igual que tras registrar/anular: el saldo y el estado se vuelven a pedir al backend, no
+        // se recalculan en memoria.
+        this.cargarSaldos(entidad.codigo);
+        this.cargarHistorial(entidad.codigo);
       });
   }
 

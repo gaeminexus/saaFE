@@ -45,16 +45,47 @@ export const ICONO_ESTADO_DEVOLUCION: Record<number, string> = {
 
 /**
  * Estados en los que la devolución todavía se puede anular: el dinero no salió del banco.
- * A partir de PAGADA (3) el reverso se hace desde Cuentas por Pagar, no desde acá.
+ * A partir de PAGADA (3) el reverso normalmente se hace desde Cuentas por Pagar, no desde acá —
+ * salvo la excepción de `puedeAnularse` cuando la orden enlazada ya quedó rechazada/anulada.
  */
 export const ESTADOS_DEVOLUCION_ANULABLES: readonly number[] = [
   EstadoDevolucion.REGISTRADA,
   EstadoDevolucion.EN_PAGO,
 ];
 
-/** ¿La devolución admite anulación desde esta pantalla? */
-export function puedeAnularse(estado: number | null | undefined): boolean {
-  return estado != null && ESTADOS_DEVOLUCION_ANULABLES.includes(Number(estado));
+/**
+ * Estado de la orden de pago enlazada (CXP, `PGS.PGTR.PGTRESTD`) — espejo de
+ * `EstadoPagoProgramado` del backend. Solo importan acá los valores que esta pantalla distingue;
+ * el resto del ciclo (POR_APROBAR, REGISTRADO, CONFIRMADO) no cambia nada en la UI de devolución
+ * salvo habilitar «Reemitir pago».
+ */
+export enum EstadoPagoOrden {
+  POR_APROBAR = 0,
+  REGISTRADO = 1,
+  EN_ARCHIVO = 2,
+  CONFIRMADO = 3,
+  RECHAZADO = 4,
+  ANULADO = 5,
+}
+
+/**
+ * ¿La devolución admite anulación desde esta pantalla?
+ *
+ * Además de REGISTRADA/EN_PAGO (el dinero no salió del banco), acepta PAGADA cuando la orden de
+ * pago enlazada quedó RECHAZADA o ANULADA en tesorería (§5.2 de
+ * `docs/crd/API-REEMITIR-PAGO-DEVOLUCION.md`): es la reversión completa explícita. Con la orden
+ * todavía CONFIRMADA sigue sin poder anularse — ahí corresponde reversar desde Cuentas por Pagar.
+ */
+export function puedeAnularse(
+  estado: number | null | undefined,
+  estadoPago?: number | null
+): boolean {
+  if (estado == null) return false;
+  const e = Number(estado);
+  if (ESTADOS_DEVOLUCION_ANULABLES.includes(e)) return true;
+  if (e !== EstadoDevolucion.PAGADA || estadoPago == null) return false;
+  const ep = Number(estadoPago);
+  return ep === EstadoPagoOrden.RECHAZADO || ep === EstadoPagoOrden.ANULADO;
 }
 
 export function nombreEstadoDevolucion(estado: number | null | undefined): string {

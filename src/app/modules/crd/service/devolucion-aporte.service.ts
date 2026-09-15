@@ -6,8 +6,10 @@ import {
   AnulacionDevolucionRequest,
   DeudaVigenteParticipe,
   DevolucionListado,
+  ReemisionPagoDevolucionRequest,
   ResultadoDevolucion,
   ResultadoSincronizacionDevolucion,
+  RespuestaReemisionPago,
   SolicitudDevolucion,
 } from '../model/devolucion/devolucion-aporte';
 import { RespuestaDevolucion } from '../model/devolucion/respuesta-devolucion';
@@ -99,6 +101,28 @@ export class DevolucionAporteService {
     const url = `${ServiciosCrd.RS_DVAP}/anular/${idDevolucion}`;
     return this.http
       .post<RespuestaDevolucion<ResultadoDevolucion>>(url, this.limpiar(datos), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Reemitir pago (docs/crd/API-REEMITIR-PAGO-DEVOLUCION.md) =====================
+
+  /**
+   * Reemite el pago de una devolución `EN_PAGO(2)` o `PAGADA(3)`: anula la orden anterior (si
+   * todavía no estaba confirmada) y genera una nueva con la cuenta corregida.
+   *
+   * Si la orden actual está `CONFIRMADO(3)` el backend NO la toca: responde 409
+   * `PAGO_CONFIRMADO` con el número de la orden para que Tesorería la reverse primero (§3.2.5
+   * del contrato). Igual que `anular`, ese cuerpo de error 409 se deja pasar TAL CUAL — nunca se
+   * convierte en null ni en "sin datos": el mensaje trae el número de orden que el operador
+   * necesita leer.
+   */
+  reemitirPago(
+    idDevolucion: number,
+    solicitud: ReemisionPagoDevolucionRequest
+  ): Observable<RespuestaReemisionPago> {
+    const url = `${ServiciosCrd.RS_DVAP}/${idDevolucion}/reemitirPago`;
+    return this.http
+      .post<RespuestaReemisionPago>(url, this.limpiar(solicitud), this.httpOptions)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 
