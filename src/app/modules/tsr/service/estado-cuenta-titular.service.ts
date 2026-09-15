@@ -121,7 +121,20 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Anticipos de cliente', url: ServiciosTsr.RS_ANTC, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.ANTICIPO, origen: 'RECIBIDO',
           campoFecha: 'fechaAnticipo', campoNumero: 'numeroDoc', campoTotal: 'valor',
-          estadosAnulados: [3], familiaEstado: 'ANTICIPO', consultaSaldo: false,
+          // Estado 4 = MIGRADO (docs/logica-negocio/pagos/MIGRACION-CRUCES-ANTICIPO.md): valor
+          // negativo histórico, saldo forzado a 0 — el cruce real ya vive en CBR.APLC. Sin esto
+          // sale como anticipo fantasma con saldo disponible.
+          estadosAnulados: [3, 4], familiaEstado: 'ANTICIPO', consultaSaldo: false,
+        },
+        {
+          // PGS.RTCM — retenciones anteriores a RetencionCompraV2 (RCV2). Mismo campo de
+          // titular y mismo ciclo de estados que RCV2: el backend no distingue "vieja" de
+          // "nueva" salvo la tabla de origen. Sin esta fuente, una factura de venta aparecía
+          // abonada por algo que el estado de cuenta nunca listaba.
+          etiqueta: 'Retenciones recibidas (anteriores)', url: ServiciosCxp.RS_RTCM, campoTitular: 'proveedor',
+          tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'RECIBIDO',
+          campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
+          estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
         },
       ];
     }
@@ -226,7 +239,16 @@ export class EstadoCuentaTitularService {
   }
 
   private esRespuestaVacia(error: any): boolean {
-    return mensajeDeError(error, '').toLowerCase().includes('no devolvio ningun registro');
+    const mensaje = this.sinTildes(mensajeDeError(error, '').toLowerCase());
+    // El DAO genérico dice "no devolvio ningun registro"; algunos servicios (p. ej.
+    // AnticipoClienteServiceImpl:139) arman el suyo propio y dicen "no devolvió registros".
+    // Las dos son la misma respuesta vacía disfrazada de error 500.
+    return mensaje.includes('no devolvio ningun registro') || mensaje.includes('no devolvio registros');
+  }
+
+  /** minúsculas sin tildes, para comparar mensajes del backend sin depender de su acentuación. */
+  private sinTildes(texto: string): string {
+    return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
 
   private normalizar(fila: any, fuente: FuenteDocumento): DocumentoEstadoCuenta {

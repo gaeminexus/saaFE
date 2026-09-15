@@ -140,6 +140,12 @@ export interface FilaAbono {
   retencionV2?: DocumentoRelacionado | null;
   notaDebito?: DocumentoRelacionado | null;
   anticipo?: DocumentoRelacionado | null;
+  /**
+   * El cruce contra un anticipo llena ESTE campo (`APLCANTO`/`APLPANTO`), no `anticipo` —
+   * `anticipo` es el histórico de movimiento negativo. Ver AplicacionPagoCxc/Cxp.java
+   * (`anticipoOrigen`, FK a AnticipoCliente/AnticipoProveedor).
+   */
+  anticipoOrigen?: DocumentoRelacionado | null;
   /** Ver FormaPagoAplicacion; solo viene en filas de tipoDocPago = 1. */
   formaPago?: number | null;
   referencia?: string | null;

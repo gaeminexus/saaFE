@@ -115,15 +115,18 @@ export class EstadoCuentaTitularComponent implements OnInit {
     for (const d of filas) {
       switch (d.tipo) {
         case TipoDocumentoEstadoCuenta.FACTURA:
+          if (!this.documentoAutorizado(d)) break;
           resumen.totalFacturado += d.total;
           resumen.totalAbonado += Number(d.totalAplicado ?? 0);
           resumen.saldoPendiente += Number(d.saldoPendiente ?? 0);
           if (Number(d.saldoPendiente ?? 0) > 0) resumen.documentosPendientes++;
           break;
         case TipoDocumentoEstadoCuenta.NOTA_CREDITO:
+          if (!this.documentoAutorizado(d)) break;
           resumen.totalNotasCredito += d.total;
           break;
         case TipoDocumentoEstadoCuenta.NOTA_DEBITO:
+          if (!this.documentoAutorizado(d)) break;
           resumen.totalNotasDebito += d.total;
           break;
         case TipoDocumentoEstadoCuenta.RETENCION:
@@ -293,6 +296,21 @@ export class EstadoCuentaTitularComponent implements OnInit {
     return d.anulado === true;
   }
 
+  /**
+   * Solo como CLIENTE: una factura/NC/ND de venta (familia de estados CXC: 1 ingresada, 3
+   * firmada, 4 enviada, 5 autorizada — los anulados 0/6 ya se filtraron con `anulado`) cuenta
+   * como autorizada recién en estado 5. Mientras no lo esté se lista igual, pero no suma en el
+   * resumen de la cabecera. El rol PROVEEDOR usa la familia CXP (0/1, sin este ciclo) y no se
+   * toca.
+   */
+  documentoAutorizado(d: DocumentoEstadoCuenta): boolean {
+    if (this.rol() !== RolTitular.CLIENTE) return true;
+    const esFacturaLike = d.tipo === TipoDocumentoEstadoCuenta.FACTURA
+      || d.tipo === TipoDocumentoEstadoCuenta.NOTA_CREDITO
+      || d.tipo === TipoDocumentoEstadoCuenta.NOTA_DEBITO;
+    return !esFacturaLike || d.estado === 5;
+  }
+
   tipoActivo(tipo: TipoDocumentoEstadoCuenta): boolean {
     return this.fTipos().includes(tipo);
   }
@@ -397,7 +415,10 @@ export class EstadoCuentaTitularComponent implements OnInit {
   }
 
   documentoDeAbono(abono: FilaAbono): string {
-    const doc = abono.notaCredito ?? abono.retencionV2 ?? abono.retencion ?? abono.notaDebito ?? abono.anticipo;
+    // El cruce estándar contra un anticipo llena `anticipoOrigen`, no `anticipo` (ese es el
+    // histórico de movimiento negativo) — sin leer los dos, el abono salía sin número.
+    const doc = abono.notaCredito ?? abono.retencionV2 ?? abono.retencion ?? abono.notaDebito
+      ?? abono.anticipo ?? abono.anticipoOrigen;
     if (doc) return doc.numero ?? doc.numeroDoc ?? `N° ${doc.id ?? doc.codigo ?? ''}`;
     const partes = [abono.referencia, abono.banco].filter((p) => !!p);
     return partes.length ? partes.join(' — ') : '—';

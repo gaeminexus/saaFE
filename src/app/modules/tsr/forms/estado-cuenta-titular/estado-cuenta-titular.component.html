@@ -309,6 +309,11 @@
                   <span class="chip-estado-doc" [matTooltip]="'Estado propio del documento (código ' + (d.estado ?? '—') + ')'">
                     {{ d.etiquetaEstado }}
                   </span>
+                  @if (!documentoAutorizado(d)) {
+                    <span class="badge badge-rechazado" matTooltip="No autorizada todavía: no suma en los totales del estado de cuenta">
+                      Sin autorizar
+                    </span>
+                  }
                 </td>
               </ng-container>
 
