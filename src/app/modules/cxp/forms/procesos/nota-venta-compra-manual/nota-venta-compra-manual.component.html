@@ -58,15 +58,25 @@
       <div class="nvcm-doc-numero">
         <mat-form-field appearance="outline" class="doc-est">
           <mat-label>Establec. *</mat-label>
-          <input matInput [(ngModel)]="form.numEstablecimiento" maxlength="3" placeholder="001" />
+          <input matInput [ngModel]="form.numEstablecimiento"
+                 (ngModelChange)="onCambioSegmentoDoc('numEstablecimiento', $event)"
+                 (blur)="onBlurSegmentoDoc('numEstablecimiento')"
+                 maxlength="3" placeholder="001" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="doc-pto">
           <mat-label>Pto. emisión *</mat-label>
-          <input matInput [(ngModel)]="form.numPtoEmision" maxlength="3" placeholder="001" />
+          <input matInput [ngModel]="form.numPtoEmision"
+                 (ngModelChange)="onCambioSegmentoDoc('numPtoEmision', $event)"
+                 (blur)="onBlurSegmentoDoc('numPtoEmision')"
+                 maxlength="3" placeholder="001" />
         </mat-form-field>
         <mat-form-field appearance="outline" class="doc-sec">
           <mat-label>Secuencial *</mat-label>
-          <input matInput [(ngModel)]="form.secuencial" maxlength="9" placeholder="000000123" />
+          <input matInput [ngModel]="form.secuencial"
+                 (ngModelChange)="onCambioSegmentoDoc('secuencial', $event)"
+                 (blur)="onBlurSegmentoDoc('secuencial')"
+                 maxlength="9" placeholder="000000123" />
+          <mat-hint>9 dígitos, se completa con ceros</mat-hint>
         </mat-form-field>
       </div>
 

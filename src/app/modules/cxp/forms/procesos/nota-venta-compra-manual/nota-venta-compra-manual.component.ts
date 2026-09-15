@@ -97,6 +97,12 @@ export class NotaVentaCompraManualComponent implements OnInit {
   private productos: ProductoPago[] = [];
   private cargandoProductos = false;
 
+  private readonly LARGO_SEGMENTO_DOC: Record<'numEstablecimiento' | 'numPtoEmision' | 'secuencial', number> = {
+    numEstablecimiento: 3,
+    numPtoEmision: 3,
+    secuencial: 9,
+  };
+
   ngOnInit(): void {
     this.agregarFila();
     this.cargarProductos();
@@ -104,6 +110,31 @@ export class NotaVentaCompraManualComponent implements OnInit {
 
   private get idEmpresa(): number { return this.appState.getEmpresa()?.codigo || 0; }
   private get idUsuario(): number { return this.appState.getIdUsuario(); }
+
+  // ─── NÚMERO DEL DOCUMENTO (establecimiento/pto. emisión/secuencial) ──────
+  // Incidente 2026-09-15 (saaBE/docs/logica-negocio/cxc/PLAN-RETENCION-SOBRE-NOTA-DE-VENTA.md §6):
+  // una nota de venta grabada con un segmento corto (p. ej. secuencial "610" en vez de
+  // "000000610") arma un numDocSustento de menos de 15 dígitos en la retención y el SRI la
+  // devuelve. Se filtra a solo dígitos mientras se escribe y se completa con ceros al salir del
+  // campo; la misma función se vuelve a aplicar al armar el payload por si el usuario graba sin
+  // pasar por el blur.
+
+  /** Solo dígitos, recortado al largo máximo del segmento — mientras el usuario escribe. */
+  onCambioSegmentoDoc(campo: 'numEstablecimiento' | 'numPtoEmision' | 'secuencial', valor: string): void {
+    const maxLen = this.LARGO_SEGMENTO_DOC[campo];
+    this.form[campo] = (valor || '').replace(/\D/g, '').slice(0, maxLen);
+  }
+
+  /** Completa con ceros a la izquierda al salir del campo. */
+  onBlurSegmentoDoc(campo: 'numEstablecimiento' | 'numPtoEmision' | 'secuencial'): void {
+    this.form[campo] = this.completarCeros(this.form[campo], this.LARGO_SEGMENTO_DOC[campo]);
+  }
+
+  /** Completa con ceros a la izquierda hasta maxLen. Vacío se mantiene vacío: no se inventa un número. */
+  private completarCeros(valor: string, maxLen: number): string {
+    const v = (valor || '').trim();
+    return v ? v.padStart(maxLen, '0') : '';
+  }
 
   // ─── PROVEEDOR ───────────────────────────────────────────
 
@@ -285,9 +316,9 @@ export class NotaVentaCompraManualComponent implements OnInit {
       idEmpresa: this.idEmpresa,
       idUsuario: this.idUsuario,
       idTitular: this.titular()!.codigo,
-      numEstablecimiento: this.form.numEstablecimiento.trim(),
-      numPtoEmision: this.form.numPtoEmision.trim(),
-      secuencial: this.form.secuencial.trim(),
+      numEstablecimiento: this.completarCeros(this.form.numEstablecimiento, this.LARGO_SEGMENTO_DOC.numEstablecimiento),
+      numPtoEmision: this.completarCeros(this.form.numPtoEmision, this.LARGO_SEGMENTO_DOC.numPtoEmision),
+      secuencial: this.completarCeros(this.form.secuencial, this.LARGO_SEGMENTO_DOC.secuencial),
       autorizacion: this.form.autorizacion.trim() || undefined,
       // ISO local sin zona (yyyy-MM-ddT00:00:00) — nunca un Date crudo ni nada terminado en "Z".
       fecha: this.funcionesDatos.formatearFechaParaBackend(this.fechaControl.value, TipoFormatoFechaBackend.FECHA_HORA_ISO)!,
