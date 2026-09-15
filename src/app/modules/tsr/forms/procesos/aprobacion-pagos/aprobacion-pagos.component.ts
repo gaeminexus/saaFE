@@ -14,6 +14,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
@@ -78,6 +79,7 @@ export class AprobacionPagosComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   readonly FormaPagoAplicacion = FormaPagoAplicacion;
   readonly origenOptions = (Object.entries(ORIGEN_PAGO_LABELS) as [OrigenPago, string][]).map(
@@ -89,13 +91,21 @@ export class AprobacionPagosComponent implements OnInit {
   filtroOrigenes = signal<OrigenPago[]>([]);
   filtroDesde = signal<string>('');
   filtroHasta = signal<string>('');
+  /** N° de pago exacto — filtro en cliente, ya está todo cargado. */
+  filtroNumero = signal<number | null>(null);
 
   pagos = signal<PagoPorAprobar[]>([]);
+  /** Lo que de verdad pinta la tabla — con el filtro de N° de pago aplicado. */
+  pagosFiltrados = computed<PagoPorAprobar[]>(() => {
+    const numero = this.filtroNumero();
+    const base = this.pagos();
+    return numero != null ? base.filter((p) => p.id === numero) : base;
+  });
   seleccionados = signal<Set<number>>(new Set());
   cargando = signal(false);
   errorCarga = signal('');
 
-  columnas = ['sel', 'origen', 'beneficiario', 'concepto', 'valor', 'fechaSolicitada', 'acciones'];
+  columnas = ['sel', 'numero', 'origen', 'beneficiario', 'concepto', 'valor', 'fechaSolicitada', 'acciones'];
 
   /** Id del pago cuya anulación está en curso — deshabilita solo el botón de esa fila. */
   anulando = signal<number | null>(null);
@@ -218,6 +228,7 @@ export class AprobacionPagosComponent implements OnInit {
     this.filtroOrigenes.set([]);
     this.filtroDesde.set('');
     this.filtroHasta.set('');
+    this.filtroNumero.set(null);
     this.buscar();
   }
 
@@ -236,12 +247,18 @@ export class AprobacionPagosComponent implements OnInit {
   }
 
   get todosSeleccionados(): boolean {
-    return this.pagos().length > 0 && this.pagos().every((p) => this.seleccionados().has(p.id));
+    const filas = this.pagosFiltrados();
+    return filas.length > 0 && filas.every((p) => this.seleccionados().has(p.id));
   }
 
   toggleTodos(marcado: boolean): void {
-    this.seleccionados.set(marcado ? new Set(this.pagos().map((p) => p.id)) : new Set());
+    this.seleccionados.set(marcado ? new Set(this.pagosFiltrados().map((p) => p.id)) : new Set());
     this.sincronizarAgrupacion();
+  }
+
+  /** Enlaza al detalle de seguimiento del pago (ítem 8, pantalla nueva en /menutesoreria/pagos/seguimiento). */
+  irASeguimiento(pago: PagoPorAprobar): void {
+    this.router.navigate(['/menutesoreria/pagos/seguimiento', pago.id]);
   }
 
   onCambioFormaPago(valor: number): void {

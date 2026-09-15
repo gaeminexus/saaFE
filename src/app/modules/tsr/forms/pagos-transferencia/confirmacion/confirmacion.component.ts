@@ -6,7 +6,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSort } from '@angular/material/sort';
 import { MatTableDataSource } from '@angular/material/table';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -14,7 +14,6 @@ import {
 import { ESTADO_PAGO_PROGRAMADO_LABELS, EstadoPagoProgramado } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { etiquetaOrigenPagoExterno } from '../../../../cxp/model/origen-pago-externo';
 import {
   ConfirmarManualResponse,
   ORIGEN_PAGO_LABELS,
@@ -53,6 +52,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   // ─── Filtros (docs/pagos/API-BANDEJA-CONFIRMACION-FILTROS.md §3.1) — todos al servidor ───
   readonly origenOptions = (Object.entries(ORIGEN_PAGO_LABELS) as [OrigenPago, string][]).map(
@@ -65,8 +65,12 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
   filtroDesde = signal<string>('');
   filtroHasta = signal<string>('');
   filtroTexto = signal<string>('');
+  /** N° de pago exacto — filtro en cliente sobre lo ya cargado, el backend no lo ofrece en /listar. */
+  filtroNumero = signal<number | null>(null);
 
   // ─── Confirmación manual (camino principal) ────────────
+  /** Última respuesta del servidor, sin el filtro de número aplicado. */
+  private pagosCargados: PagoProgramado[] = [];
   pagosPorConfirmar = signal<PagoProgramado[]>([]);
   confSeleccionados = new Set<number>();
   /** Referencia bancaria por pago — cada pago confirmado puede traer una distinta. */
@@ -77,7 +81,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
   confirmandoManual = signal(false);
   confError = signal('');
   confResultado = signal<ConfirmarManualResponse | null>(null);
-  readonly columnasConfirmacion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'estado', 'referencia'];
+  readonly columnasConfirmacion = ['check', 'numero', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'estado', 'referencia', 'acciones'];
 
   readonly dataSourceConf = new MatTableDataSource<PagoProgramado>([]);
   @ViewChild(MatSort) sort?: MatSort;
@@ -147,7 +151,16 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
     this.filtroDesde.set('');
     this.filtroHasta.set('');
     this.filtroTexto.set('');
+    this.filtroNumero.set(null);
     this.cargarPagosPorConfirmar();
+  }
+
+  /** N° de pago exacto — se aplica en cliente sobre lo último cargado, sin volver a pedir al servidor. */
+  aplicarFiltroNumero(): void {
+    const numero = this.filtroNumero();
+    const filas = numero != null ? this.pagosCargados.filter((p) => p.id === numero) : this.pagosCargados;
+    this.pagosPorConfirmar.set(filas);
+    this.dataSourceConf.data = filas;
   }
 
   ngAfterViewChecked(): void {
@@ -232,14 +245,15 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
       texto: this.filtroTexto().trim() || undefined,
     }).subscribe({
       next: (data) => {
-        const filas = data ?? [];
-        this.pagosPorConfirmar.set(filas);
-        this.dataSourceConf.data = filas;
+        this.pagosCargados = data ?? [];
+        this.aplicarFiltroNumero();
         this.referenciasPorPago.set({});
         this.cargandoPorConfirmar.set(false);
       },
       error: (err: Error) => {
+        this.pagosCargados = [];
         this.pagosPorConfirmar.set([]);
+        this.dataSourceConf.data = [];
         this.cargandoPorConfirmar.set(false);
         this.confError.set(err.message);
       },
@@ -401,10 +415,15 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
 
   conceptoPago(pago: PagoProgramado): string {
     if (pago.origenExterno) {
-      const etiqueta = etiquetaOrigenPagoExterno(pago.origenExterno);
+      const etiqueta = ORIGEN_PAGO_LABELS[pago.origenExterno as OrigenPago] ?? pago.origenExterno;
       return pago.idOrigen != null ? `${etiqueta} #${pago.idOrigen}` : etiqueta;
     }
     return pago.facturaCompra?.numero || pago.liquidacionCompra?.numero || pago.egreso?.descripcion || '—';
+  }
+
+  /** Enlaza al detalle de seguimiento del pago (ítem 8, pantalla nueva en /menutesoreria/pagos/seguimiento). */
+  irASeguimiento(pago: PagoProgramado): void {
+    this.router.navigate(['/menutesoreria/pagos/seguimiento', pago.id]);
   }
 
   nombreBeneficiario(pago: PagoProgramado): string {

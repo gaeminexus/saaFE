@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 import {
   MotivoDialogComponent,
   MotivoDialogData,
@@ -18,8 +19,7 @@ import { MaterialFormModule } from '../../../../../shared/modules/material-form.
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { Titular } from '../../../model/titular';
-import { etiquetaOrigenPagoExterno } from '../../../../cxp/model/origen-pago-externo';
-import { AsientoDePago, PagoProgramado } from '../../../../cxp/model/pago-programado';
+import { AsientoDePago, ORIGEN_PAGO_LABELS, OrigenPago, PagoProgramado } from '../../../../cxp/model/pago-programado';
 import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
 
 /**
@@ -47,6 +47,7 @@ export class ConsultaComponent implements OnInit {
   private jasperS = inject(JasperReportesService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
 
   private readonly ROL_PROVEEDOR = 2;
 
@@ -56,10 +57,17 @@ export class ConsultaComponent implements OnInit {
   segError = signal('');
   /** Pago cuyo PDF de asiento se está generando; null si no hay ninguno. */
   imprimiendoAsiento = signal<number | null>(null);
-  readonly columnasSeguimiento = ['proveedor', 'factura', 'tipo', 'valor', 'fechaProgramada', 'estado', 'acciones'];
+  readonly columnasSeguimiento = ['numero', 'proveedor', 'factura', 'tipo', 'valor', 'fechaProgramada', 'estado', 'acciones'];
 
-  // ─── Filtros (panel superior, búsqueda en cliente) ─────
+  // ─── Filtros (panel superior) ───────────────────────────
+  /** N° de pago exacto — filtro en cliente, ya está todo cargado. */
+  segNumero = signal<number | null>(null);
   segProveedorFiltro = signal<Titular | null>(null);
+  /**
+   * Concepto/texto libre: viaja al servidor (`?texto=`, busca en observación, beneficiario y
+   * titular — PagoProgramadoDaoServiceImpl:141-145). Antes solo miraba `conceptoPago()` en el
+   * cliente, así que no encontraba nada por observación o nombre del titular.
+   */
   segConcepto = signal('');
   /** Tipos de pago marcados en el combo multiselección (0 = transferencia, 1 = débito). */
   segTiposPago = signal<number[]>([]);
@@ -72,6 +80,7 @@ export class ConsultaComponent implements OnInit {
   ];
 
   readonly estadosFiltro = [
+    { valor: EstadoPagoProgramado.POR_APROBAR, texto: 'Por aprobar' },
     { valor: EstadoPagoProgramado.REGISTRADO, texto: 'Registrado' },
     { valor: EstadoPagoProgramado.EN_ARCHIVO, texto: 'En archivo' },
     { valor: EstadoPagoProgramado.CONFIRMADO, texto: 'Confirmado' },
@@ -90,6 +99,7 @@ export class ConsultaComponent implements OnInit {
     this.pagoS.listar({
       idEmpresa: this.idEmpresaSesion(),
       estados: this.segEstado != null ? [this.segEstado] : undefined,
+      texto: this.segConcepto().trim() || undefined,
     }).subscribe({
       next: (data) => {
         this.pagosSeguimiento.set(data ?? []);
@@ -145,15 +155,15 @@ export class ConsultaComponent implements OnInit {
    * hace en cliente sobre lo ya cargado.
    */
   pagosSeguimientoFiltrados = computed<PagoProgramado[]>(() => {
+    const numero = this.segNumero();
     const proveedor = this.segProveedorFiltro();
-    const concepto = this.segConcepto().trim().toLowerCase();
     const tipos = this.segTiposPago();
     const desde = this.aInicioDia(this.segFechaDesde());
     const hasta = this.aFinDia(this.segFechaHasta());
 
     return this.pagosSeguimiento().filter((p) => {
+      if (numero != null && p.id !== numero) return false;
       if (proveedor && p.titular?.codigo !== proveedor.codigo) return false;
-      if (concepto && !this.conceptoPago(p).toLowerCase().includes(concepto)) return false;
       if (tipos.length && !tipos.includes(this.codigoTipoPago(p))) return false;
       if (desde || hasta) {
         const f = this.funcionesDatos.convertirFechaDesdeBackend(p.fechaProgramada);
@@ -181,17 +191,20 @@ export class ConsultaComponent implements OnInit {
 
   hayFiltrosSeguimiento(): boolean {
     return !!(
-      this.segProveedorFiltro() || this.segConcepto().trim() || this.segTiposPago().length
-      || this.segFechaDesde() || this.segFechaHasta()
+      this.segNumero() != null || this.segProveedorFiltro() || this.segConcepto().trim()
+      || this.segTiposPago().length || this.segFechaDesde() || this.segFechaHasta()
     );
   }
 
+  /** Concepto viaja al servidor: limpiar el filtro implica volver a consultar. */
   limpiarFiltrosSeguimiento(): void {
+    this.segNumero.set(null);
     this.segProveedorFiltro.set(null);
     this.segConcepto.set('');
     this.segTiposPago.set([]);
     this.segFechaDesde.set(null);
     this.segFechaHasta.set(null);
+    this.cargarSeguimiento();
   }
 
   etiquetaEstado(estado: number): { texto: string; clase: string } {
@@ -242,12 +255,13 @@ export class ConsultaComponent implements OnInit {
   }
 
   /**
-   * El asiento no cuelga del pago: lo tiene lo que se contabilizó al
-   * confirmarlo — la aplicación (pago de factura), el egreso de tesorería o el
-   * anticipo. Null mientras el pago no haya generado contabilidad.
+   * El asiento no cuelga del pago: lo tiene lo que se contabilizó al confirmarlo — la aplicación
+   * (pago de factura), el egreso de tesorería o el anticipo. Un origen externo es la excepción:
+   * cuelga el suyo directo en `pago.asiento` (ver el comentario del campo en el modelo). Null
+   * mientras el pago no haya generado contabilidad.
    */
   asientoDePago(pago: PagoProgramado): AsientoDePago | null {
-    const asiento = pago.aplicacion?.asiento ?? pago.egreso?.asiento ?? pago.anticipo?.asiento;
+    const asiento = pago.aplicacion?.asiento ?? pago.egreso?.asiento ?? pago.anticipo?.asiento ?? pago.asiento;
     return asiento?.codigo ? asiento : null;
   }
 
@@ -327,10 +341,15 @@ export class ConsultaComponent implements OnInit {
    */
   conceptoPago(pago: PagoProgramado): string {
     if (pago.origenExterno) {
-      const etiqueta = etiquetaOrigenPagoExterno(pago.origenExterno);
+      const etiqueta = ORIGEN_PAGO_LABELS[pago.origenExterno as OrigenPago] ?? pago.origenExterno;
       return pago.idOrigen != null ? `${etiqueta} #${pago.idOrigen}` : etiqueta;
     }
     return pago.facturaCompra?.numero || pago.liquidacionCompra?.numero || pago.egreso?.descripcion || '—';
+  }
+
+  /** Enlaza al detalle de seguimiento del pago (ítem 8, pantalla nueva en /menutesoreria/pagos/seguimiento). */
+  irASeguimiento(pago: PagoProgramado): void {
+    this.router.navigate(['/menutesoreria/pagos/seguimiento', pago.id]);
   }
 
   /**

@@ -6,8 +6,7 @@ import { Router } from '@angular/router';
 import { FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { etiquetaOrigenPagoExterno } from '../../../../cxp/model/origen-pago-externo';
-import { LoteGeneradoResponse, LotePagoResumen, PagoProgramado } from '../../../../cxp/model/pago-programado';
+import { LoteGeneradoResponse, LotePagoResumen, ORIGEN_PAGO_LABELS, OrigenPago, PagoProgramado } from '../../../../cxp/model/pago-programado';
 import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
 import { EstadoPagoProgramado } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
@@ -49,7 +48,9 @@ export class ArchivoBancoComponent implements OnInit {
   generando = signal(false);
   selError = signal('');
   loteGenerado = signal<LoteGeneradoResponse | null>(null);
-  readonly columnasSeleccion = ['check', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'cuentaOrigen'];
+  /** N° de pago exacto — filtro en cliente, ya está todo cargado. */
+  filtroNumero = signal<number | null>(null);
+  readonly columnasSeleccion = ['check', 'numero', 'proveedor', 'factura', 'valor', 'fechaProgramada', 'cuentaOrigen', 'acciones'];
 
   /** Descarga manual por número de lote — sirve para lotes que no son de la sesión en curso. */
   loteManualId: number | null = null;
@@ -109,11 +110,13 @@ export class ArchivoBancoComponent implements OnInit {
   get pagosFiltrados(): PagoProgramado[] {
     const cuenta = this.selCuentaOrigen;
     if (!cuenta) return [];
+    const numero = this.filtroNumero();
     // Un pago con cheque no va en un archivo bancario: el cheque ya se giró
     // al registrarlo, igual que el débito automático nunca pasa por lote.
     return this.pagosRegistrados().filter(
       (p) => p.cuentaBancaria?.codigo === cuenta.codigo
         && p.formaPago !== FormaPagoAplicacion.CHEQUE
+        && (numero == null || p.id === numero)
     );
   }
 
@@ -306,7 +309,7 @@ export class ArchivoBancoComponent implements OnInit {
 
   conceptoPago(pago: PagoProgramado): string {
     if (pago.origenExterno) {
-      const etiqueta = etiquetaOrigenPagoExterno(pago.origenExterno);
+      const etiqueta = ORIGEN_PAGO_LABELS[pago.origenExterno as OrigenPago] ?? pago.origenExterno;
       return pago.idOrigen != null ? `${etiqueta} #${pago.idOrigen}` : etiqueta;
     }
     return pago.facturaCompra?.numero || pago.liquidacionCompra?.numero || pago.egreso?.descripcion || '—';
@@ -314,6 +317,11 @@ export class ArchivoBancoComponent implements OnInit {
 
   nombreBeneficiario(pago: PagoProgramado): string {
     return pago.titular?.nombre || pago.beneficiarioNombre || '—';
+  }
+
+  /** Enlaza al detalle de seguimiento del pago (ítem 8, pantalla nueva en /menutesoreria/pagos/seguimiento). */
+  irASeguimiento(pago: PagoProgramado): void {
+    this.router.navigate(['/menutesoreria/pagos/seguimiento', pago.id]);
   }
 
   private idEmpresaSesion(): number {

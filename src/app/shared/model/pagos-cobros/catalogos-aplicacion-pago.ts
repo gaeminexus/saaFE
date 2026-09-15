@@ -74,8 +74,13 @@ export const ESTADO_PAGO_LABELS: Record<number, EtiquetaEstado> = {
   [EstadoPagoFactura.PAGADA]: { texto: 'Pagada', clase: 'badge-pagada' },
 };
 
-/** Estado de un PagoProgramado (solo CXP — ciclo del pago por transferencia). */
+/**
+ * Estado de un PagoProgramado (solo CXP — ciclo del pago por transferencia). `POR_APROBAR` es el
+ * nacimiento del pago desde que se rediseñó la aprobación (PLAN-REDISENO-APROBACION-PAGOS.md en
+ * saaBE): sin cuenta ni forma de pago hasta que tesorería lo aprueba en `pagos/aprobacion`.
+ */
 export enum EstadoPagoProgramado {
+  POR_APROBAR = 0,
   REGISTRADO = 1,
   EN_ARCHIVO = 2,
   CONFIRMADO = 3,
@@ -84,6 +89,7 @@ export enum EstadoPagoProgramado {
 }
 
 export const ESTADO_PAGO_PROGRAMADO_LABELS: Record<number, EtiquetaEstado> = {
+  [EstadoPagoProgramado.POR_APROBAR]: { texto: 'Por aprobar', clase: 'badge-debito' },
   [EstadoPagoProgramado.REGISTRADO]: { texto: 'Registrado', clase: 'badge-neutro' },
   [EstadoPagoProgramado.EN_ARCHIVO]: { texto: 'En archivo', clase: 'badge-parcial' },
   [EstadoPagoProgramado.CONFIRMADO]: { texto: 'Confirmado', clase: 'badge-pagada' },

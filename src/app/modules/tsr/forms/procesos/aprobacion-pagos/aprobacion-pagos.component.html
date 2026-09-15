@@ -3,6 +3,19 @@
     <mat-card-title>Aprobación de pagos</mat-card-title>
     <mat-card-content>
       <div class="filters">
+        <mat-form-field appearance="outline">
+          <mat-label>N° de pago</mat-label>
+          <input matInput type="number" [ngModel]="filtroNumero()"
+                 (ngModelChange)="filtroNumero.set($event === '' || $event === null ? null : +$event)"
+                 placeholder="Ej. 123" />
+          @if (filtroNumero() != null) {
+            <button mat-icon-button matSuffix type="button" matTooltip="Limpiar"
+                    (click)="filtroNumero.set(null)">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
         <mat-form-field appearance="outline" class="campo-origen">
           <mat-label>{{ filtroOrigenes().length === 0 ? 'Origen (todos)' : 'Origen' }}</mat-label>
           <mat-select
@@ -48,9 +61,11 @@
         </div>
       } @else if (pagos().length === 0) {
         <div class="empty-state">No hay pagos por aprobar con estos filtros.</div>
+      } @else if (pagosFiltrados().length === 0) {
+        <div class="empty-state">Ningún pago coincide con el N° de pago buscado.</div>
       } @else {
         <div class="table-wrapper">
-          <table mat-table [dataSource]="pagos()" class="mat-elevation-z1 full-width">
+          <table mat-table [dataSource]="pagosFiltrados()" class="mat-elevation-z1 full-width">
             <ng-container matColumnDef="sel">
               <th mat-header-cell *matHeaderCellDef>
                 <mat-checkbox [ngModel]="todosSeleccionados" (ngModelChange)="toggleTodos($event)"></mat-checkbox>
@@ -58,6 +73,11 @@
               <td mat-cell *matCellDef="let p">
                 <mat-checkbox [ngModel]="estaSeleccionado(p.id)" (ngModelChange)="toggleSeleccion(p.id, $event)"></mat-checkbox>
               </td>
+            </ng-container>
+
+            <ng-container matColumnDef="numero">
+              <th mat-header-cell *matHeaderCellDef>N° pago</th>
+              <td mat-cell *matCellDef="let p"><strong>{{ p.id }}</strong></td>
             </ng-container>
 
             <ng-container matColumnDef="origen">
@@ -88,6 +108,9 @@
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let p">
+                <button mat-icon-button matTooltip="Ver seguimiento del pago" (click)="irASeguimiento(p)">
+                  <mat-icon>timeline</mat-icon>
+                </button>
                 <button
                   mat-icon-button
                   color="warn"
