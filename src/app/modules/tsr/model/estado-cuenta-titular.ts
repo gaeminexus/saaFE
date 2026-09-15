@@ -96,12 +96,14 @@ export interface DocumentoEstadoCuenta {
    */
   saldoDesconocido?: boolean;
   /**
-   * Si la fuente de este documento tiene saldo consultable en /aplp o /aplc.
-   * `false` en documentos "factura-like" sin flujo de aplicación de pagos
-   * detrás (p. ej. liquidación de compra: PGS.APLP no tiene FK a LQCC) — su
-   * saldo pendiente es su total, no se consulta ni se marca `saldoDesconocido`.
+   * Cómo se consulta el saldo (y los abonos) de este documento, según la fuente que lo trajo —
+   * ver `FuenteDocumento.saldo` en el servicio. `null` en documentos sin flujo de aplicación de
+   * pagos detrás (NC, ND, retención, anticipo): su saldo pendiente es su total, no se consulta
+   * ni se marca `saldoDesconocido`. Deducirlo del dato (p. ej. por `tipoComprobante`) en vez de
+   * leerlo de la fuente fue el error que dejó ciega a la liquidación de compra (P1,
+   * AUDITORIA-ESTADO-CUENTA-TITULAR.md): la LQCC SÍ trae `tipoComprobante` ('03').
    */
-  consultaSaldo: boolean;
+  saldo: 'FACTURA' | 'LIQUIDACION' | null;
   observacion?: string | null;
   asiento?: AsientoRelacionado | null;
   /** Abonos del documento; se cargan al expandir la fila. */

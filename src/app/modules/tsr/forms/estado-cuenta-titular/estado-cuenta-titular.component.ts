@@ -369,7 +369,11 @@ export class EstadoCuentaTitularComponent implements OnInit {
     }
 
     doc.cargandoAbonos = true;
-    this.estadoCuentaS.abonosDeFactura(doc.id, this.rol()).subscribe((abonos) => {
+    // El endpoint sale de la FUENTE que trajo la fila (doc.saldo), no de adivinar por el dato:
+    // la LQCC sí trae tipoComprobante ('03'), así que discriminar por su presencia/ausencia
+    // confundía liquidaciones con facturas en los dos sentidos (P1, AUDITORIA-ESTADO-CUENTA-TITULAR.md).
+    const tipoDocumento = doc.saldo === 'LIQUIDACION' ? 'LIQUIDACION' : 'FACTURA';
+    this.estadoCuentaS.abonosDeFactura(doc.id, this.rol(), tipoDocumento).subscribe((abonos) => {
       doc.abonos = abonos;
       doc.abonosCargados = true;
       doc.cargandoAbonos = false;
@@ -434,10 +438,14 @@ export class EstadoCuentaTitularComponent implements OnInit {
    * "Facturas de compra" es una sola fuente (PGS.FCTC) que mezcla facturas cargadas por XML y
    * notas de venta ingresadas a mano (tipoComprobante '01'/'02') — la etiqueta de la fila sale
    * de ese campo, no del tipo de documento agrupado (§4.2 de
-   * docs/cxp/API-NOTA-VENTA-COMPRA-MANUAL.md). Liquidaciones de compra comparten el mismo
-   * `tipo: FACTURA` pero no tienen `tipoComprobante`, así que no las toca este caso.
+   * docs/cxp/API-NOTA-VENTA-COMPRA-MANUAL.md). Liquidaciones de compra comparte el mismo
+   * `tipo: FACTURA` y SÍ trae su propio `tipoComprobante` ('03'), así que se distingue por
+   * `doc.saldo` (la fuente), no por ese campo — de ahí el orden de los `if`.
    */
   etiquetaTipo(doc: DocumentoEstadoCuenta): string {
+    if (doc.saldo === 'LIQUIDACION') {
+      return 'Liquidación de compra';
+    }
     if (doc.tipo === TipoDocumentoEstadoCuenta.FACTURA && doc.original?.tipoComprobante) {
       return etiquetaTipoComprobanteFactura(doc.original.tipoComprobante);
     }

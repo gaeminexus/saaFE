@@ -42,16 +42,17 @@ interface FuenteDocumento {
   /** Familia de catálogo de `estado`, para elegir el mapa de etiquetas. */
   familiaEstado: 'CXC' | 'CXP' | 'ANTICIPO';
   /**
-   * Si esta fuente tiene saldo consultable en /aplp o /aplc. Obligatorio y
-   * sin default a propósito: un default habría dejado que la próxima fuente
-   * lo omita y herede el comportamiento equivocado en silencio — que es
-   * justo cómo nació el defecto de Liquidaciones de compra (su id de LQCC
-   * se mandaba como si fuera un id de FCTC, con `em.find` devolviendo el
-   * saldo de una factura ajena o tirando, según coincidiera el número).
-   * `false` solo cuando la entidad no tiene aplicaciones que rastrear
-   * (verificado contra `PGS.APLP` en saaBE: no tiene FK a LQCC).
+   * Cómo se consulta el saldo (y los abonos) de esta fuente. `null` cuando la entidad no tiene
+   * aplicaciones que rastrear (retenciones, NC/ND, anticipos: se aplican completos, no arrastran
+   * saldo propio). Obligatorio y sin default a propósito: un default habría dejado que la
+   * próxima fuente lo omita y herede el comportamiento equivocado en silencio — que es justo
+   * cómo nació el defecto de Liquidaciones de compra (P1,
+   * docs/logica-negocio/tsr/AUDITORIA-ESTADO-CUENTA-TITULAR.md en saaBE): se las marcaba sin
+   * saldo consultable dando por hecho que `PGS.APLP` no tiene FK a `LQCC` — sí la tiene
+   * (`APLPLQCC`), y `/aplp/saldoLiquidacion/{id}` + `/aplp/liquidacion/{id}` existen desde
+   * siempre. El error era no usarlos, no que no existieran.
    */
-  consultaSaldo: boolean;
+  saldo: 'FACTURA' | 'LIQUIDACION' | null;
 }
 
 const ETIQUETAS_ESTADO: Record<FuenteDocumento['familiaEstado'], Record<number, string>> = {
@@ -94,19 +95,19 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Facturas de venta', url: ServiciosCxc.RS_FCTR, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: true,
+          estadosAnulados: [0, 6], familiaEstado: 'CXC', saldo: 'FACTURA',
         },
         {
           etiqueta: 'Notas de crédito', url: ServiciosCxc.RS_NTCR, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.NOTA_CREDITO, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: false,
+          estadosAnulados: [0, 6], familiaEstado: 'CXC', saldo: null,
         },
         {
           etiqueta: 'Notas de débito', url: ServiciosCxc.RS_NTDB, campoTitular: 'titular',
           tipo: TipoDocumentoEstadoCuenta.NOTA_DEBITO, origen: 'EMITIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: false,
+          estadosAnulados: [0, 6], familiaEstado: 'CXC', saldo: null,
         },
         {
           // CBR.RCV2: la retención que el cliente le hace a la empresa sobre su
@@ -115,7 +116,7 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Retenciones recibidas', url: ServiciosCxp.RS_RCV2, campoTitular: 'proveedor',
           tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'RECIBIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
+          estadosAnulados: [0], familiaEstado: 'CXP', saldo: null,
         },
         {
           etiqueta: 'Anticipos de cliente', url: ServiciosTsr.RS_ANTC, campoTitular: 'titular',
@@ -124,7 +125,7 @@ export class EstadoCuentaTitularService {
           // Estado 4 = MIGRADO (docs/logica-negocio/pagos/MIGRACION-CRUCES-ANTICIPO.md): valor
           // negativo histórico, saldo forzado a 0 — el cruce real ya vive en CBR.APLC. Sin esto
           // sale como anticipo fantasma con saldo disponible.
-          estadosAnulados: [3, 4], familiaEstado: 'ANTICIPO', consultaSaldo: false,
+          estadosAnulados: [3, 4], familiaEstado: 'ANTICIPO', saldo: null,
         },
         {
           // PGS.RTCM — retenciones anteriores a RetencionCompraV2 (RCV2). Mismo campo de
@@ -134,7 +135,7 @@ export class EstadoCuentaTitularService {
           etiqueta: 'Retenciones recibidas (anteriores)', url: ServiciosCxp.RS_RTCM, campoTitular: 'proveedor',
           tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'RECIBIDO',
           campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-          estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
+          estadosAnulados: [0], familiaEstado: 'CXP', saldo: null,
         },
       ];
     }
@@ -144,32 +145,31 @@ export class EstadoCuentaTitularService {
         etiqueta: 'Facturas de compra', url: ServiciosCxp.RS_FCTC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: true,
+        estadosAnulados: [0], familiaEstado: 'CXP', saldo: 'FACTURA',
       },
       {
-        // PGS.LQCC. `fecha` es LocalDateTime (a diferencia de FCTC, que es
-        // LocalDate) — puede traer hora al ordenar/formatear, no es un bug.
-        // consultaSaldo: false — PGS.APLP no tiene FK a LQCC, la liquidación
-        // de compra no tiene aplicaciones que rastrear; su saldo pendiente es
-        // su total. Mandarla por /aplp/saldo (como una FCTC) le pisaba el
-        // total/saldo con los de una factura ajena que coincidiera en id, o
-        // tiraba 500 — los dos ids son IDENTITY de tabla, independientes.
+        // PGS.LQCC. `fecha` es LocalDateTime (a diferencia de FCTC, que es LocalDate) — puede
+        // traer hora al ordenar/formatear, no es un bug. `PGS.APLP` sí tiene FK a LQCC
+        // (`APLPLQCC`): su saldo se consulta por `/aplp/saldoLiquidacion/{id}`, no por
+        // `/aplp/saldo/{id}` (ese es de FCTC — mandarle un id de LQCC le pisaba el total/saldo
+        // con los de una factura ajena que coincidiera en id, o tiraba 500: los dos ids son
+        // IDENTITY de tabla, independientes). Ver P1 en AUDITORIA-ESTADO-CUENTA-TITULAR.md.
         etiqueta: 'Liquidaciones de compra', url: ServiciosCxp.RS_LQCC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.FACTURA, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
+        estadosAnulados: [0], familiaEstado: 'CXP', saldo: 'LIQUIDACION',
       },
       {
         etiqueta: 'Notas de crédito de compra', url: ServiciosCxp.RS_NTCC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.NOTA_CREDITO, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
+        estadosAnulados: [0], familiaEstado: 'CXP', saldo: null,
       },
       {
         etiqueta: 'Notas de débito de compra', url: ServiciosCxp.RS_NTDC, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.NOTA_DEBITO, origen: 'RECIBIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0], familiaEstado: 'CXP', consultaSaldo: false,
+        estadosAnulados: [0], familiaEstado: 'CXP', saldo: null,
       },
       {
         // CBR.RTV2: la retención que la empresa le emite al proveedor y que se
@@ -178,13 +178,16 @@ export class EstadoCuentaTitularService {
         etiqueta: 'Retenciones emitidas', url: ServiciosCxc.RS_RTV2, campoTitular: 'proveedor',
         tipo: TipoDocumentoEstadoCuenta.RETENCION, origen: 'EMITIDO',
         campoFecha: 'fecha', campoNumero: 'numero', campoTotal: 'total',
-        estadosAnulados: [0, 6], familiaEstado: 'CXC', consultaSaldo: false,
+        estadosAnulados: [0, 6], familiaEstado: 'CXC', saldo: null,
       },
       {
         etiqueta: 'Anticipos a proveedor', url: ServiciosTsr.RS_ANTP, campoTitular: 'titular',
         tipo: TipoDocumentoEstadoCuenta.ANTICIPO, origen: 'EMITIDO',
         campoFecha: 'fechaAnticipo', campoNumero: 'numeroDoc', campoTotal: 'valor',
-        estadosAnulados: [3], familiaEstado: 'ANTICIPO', consultaSaldo: false,
+        // Estado 4 = MIGRADO, mismo defecto y mismo arreglo que 'Anticipos de cliente' (C5):
+        // MIGRACION-CRUCES-ANTICIPO.md migra PGS.ANTP con el mismo patrón (valor negativo,
+        // ANTPESTD=4, ANTPSALD=0) — confirmado por el árbitro (P7/ítem 6).
+        estadosAnulados: [3, 4], familiaEstado: 'ANTICIPO', saldo: null,
       },
     ];
   }
@@ -198,12 +201,11 @@ export class EstadoCuentaTitularService {
     const advertencias: string[] = [];
 
     const consultas = this.fuentes(rol).map((fuente) =>
-      this.consultarFuente(fuente, codigoTitular, advertencias)
+      this.consultarFuente(fuente, codigoTitular, rol, advertencias)
     );
 
     return forkJoin(consultas).pipe(
       map((grupos) => grupos.flat()),
-      mergeMap((documentos) => this.completarSaldos(documentos, rol)),
       map((documentos) => ({
         documentos: documentos.sort((a, b) => this.aTiempo(b.fecha) - this.aTiempo(a.fecha)),
         advertencias,
@@ -214,6 +216,7 @@ export class EstadoCuentaTitularService {
   private consultarFuente(
     fuente: FuenteDocumento,
     codigoTitular: number,
+    rol: RolTitular,
     advertencias: string[]
   ): Observable<DocumentoEstadoCuenta[]> {
     const criterio = new DatosBusqueda();
@@ -227,6 +230,7 @@ export class EstadoCuentaTitularService {
 
     return this.http.post<any[]>(`${fuente.url}/selectByCriteria/`, [criterio], this.httpOptions).pipe(
       map((filas) => (Array.isArray(filas) ? filas : []).map((fila) => this.normalizar(fila, fuente))),
+      mergeMap((documentos) => this.completarSaldosDeFuente(documentos, fuente, rol)),
       catchError((error) => {
         // 500 con "no devolvio ningun registro" es la forma que tiene el DAO
         // genérico de decir "vacío": no es un problema que haya que mostrar.
@@ -293,7 +297,7 @@ export class EstadoCuentaTitularService {
       asiento: this.asientoDe(fila?.asiento, 'Documento'),
       abonosCargados: false,
       cargandoAbonos: false,
-      consultaSaldo: fuente.consultaSaldo,
+      saldo: fuente.saldo,
       original: fila,
     };
   }
@@ -310,53 +314,59 @@ export class EstadoCuentaTitularService {
   }
 
   /**
-   * Solo las facturas tienen saldo calculado por el flujo de abonos; el resto
-   * de documentos se aplica entero y no arrastra saldo propio.
-   *
-   * Dentro de "factura" hay una excepción: `consultaSaldo: false` marca las
-   * fuentes tipo FACTURA sin flujo de aplicación de pagos detrás (hoy,
-   * liquidación de compra). Para esas no se consulta /aplp|/aplc — su saldo
-   * pendiente es directamente su total, sin aplicado y sin marcar
-   * `saldoDesconocido` (no es que falló la consulta: no hay consulta).
+   * Solo las facturas tienen saldo calculado por el flujo de abonos; el resto de documentos se
+   * aplica entero y no arrastra saldo propio. El discriminador de CÓMO se consulta ese saldo es
+   * `fuente.saldo`, no un booleano — así una fuente tipo FACTURA sin flujo de aplicación detrás
+   * (`saldo: null`) no se confunde con una que sí lo tiene por un endpoint distinto
+   * (`'LIQUIDACION'`, hoy solo Liquidaciones de compra). Ver el comentario de `saldo` en
+   * `FuenteDocumento` — de esa confusión nació el defecto P1.
    */
-  private completarSaldos(
+  private completarSaldosDeFuente(
     documentos: DocumentoEstadoCuenta[],
+    fuente: FuenteDocumento,
     rol: RolTitular
   ): Observable<DocumentoEstadoCuenta[]> {
-    documentos
-      .filter((d) => d.tipo === TipoDocumentoEstadoCuenta.FACTURA && !d.consultaSaldo)
-      .forEach((d) => {
-        d.totalAplicado = 0;
-        d.saldoPendiente = d.total;
-      });
-
-    const facturas = documentos.filter(
-      (d) => d.tipo === TipoDocumentoEstadoCuenta.FACTURA && d.consultaSaldo && d.id > 0
-    );
-    if (!facturas.length) {
+    if (fuente.tipo !== TipoDocumentoEstadoCuenta.FACTURA) {
       return of(documentos);
     }
 
-    return from(facturas).pipe(
-      mergeMap((factura) => this.saldoDeFactura(factura.id, rol).pipe(
-        map((resultado) => ({ factura, ...resultado }))
+    if (fuente.saldo === null) {
+      // Sin flujo de aplicación de pagos detrás: su saldo pendiente es directamente su total,
+      // sin aplicado y sin marcar `saldoDesconocido` (no es que falló la consulta: no hay
+      // consulta).
+      documentos.forEach((d) => {
+        d.totalAplicado = 0;
+        d.saldoPendiente = d.total;
+      });
+      return of(documentos);
+    }
+
+    const conId = documentos.filter((d) => d.id > 0);
+    if (!conId.length) {
+      return of(documentos);
+    }
+
+    const tipoSaldo = fuente.saldo;
+    return from(conId).pipe(
+      mergeMap((doc) => this.saldoDeDocumento(doc.id, tipoSaldo, rol).pipe(
+        map((resultado) => ({ doc, ...resultado }))
       ), this.CONCURRENCIA_SALDOS),
       toArray(),
       map((resultados) => {
-        resultados.forEach(({ factura, saldo, fallo }) => {
+        resultados.forEach(({ doc, saldo, fallo }) => {
           if (fallo) {
             // La consulta de saldo falló: no se sabe el estado de pago, pero
             // el documento sigue siendo parte del estado de cuenta.
-            factura.saldoDesconocido = true;
+            doc.saldoDesconocido = true;
             return;
           }
           if (!saldo) return;
-          factura.totalAplicado = Number(saldo.totalAplicado ?? 0);
-          factura.saldoPendiente = Number(saldo.saldoPendiente ?? 0);
-          factura.estadoPago = saldo.estadoPago ?? factura.estadoPago;
+          doc.totalAplicado = Number(saldo.totalAplicado ?? 0);
+          doc.saldoPendiente = Number(saldo.saldoPendiente ?? 0);
+          doc.estadoPago = saldo.estadoPago ?? doc.estadoPago;
           if (saldo.total) {
-            factura.total = Number(saldo.total);
-            factura.totalConSigno = Number(saldo.total);
+            doc.total = Number(saldo.total);
+            doc.totalConSigno = Number(saldo.total);
           }
         });
         return documentos;
@@ -364,25 +374,45 @@ export class EstadoCuentaTitularService {
     );
   }
 
-  private saldoDeFactura(
-    idFactura: number,
+  /**
+   * Saldo de una FACTURA (`/aplp|aplc/saldo/{id}`) o de una LIQUIDACIÓN de compra
+   * (`/aplp/saldoLiquidacion/{id}`, solo existe del lado proveedor). Misma forma de respuesta en
+   * los dos — `total`, `totalAplicado`, `saldoPendiente`, `estadoPago`
+   * (AplicacionPagoCxpServiceImpl `saldoFactura():1077-1082` y
+   * `saldoLiquidacion():1128-1134` arman el mismo `Map`; solo cambia la clave del id/número, que
+   * este servicio no usa).
+   */
+  private saldoDeDocumento(
+    id: number,
+    tipoSaldo: 'FACTURA' | 'LIQUIDACION',
     rol: RolTitular
   ): Observable<{ saldo: SaldoDocumento | null; fallo: boolean }> {
-    const base = rol === RolTitular.CLIENTE ? ServiciosCxc.RS_APLC : ServiciosCxp.RS_APLP;
-    return this.http.get<SaldoDocumento>(`${base}/saldo/${idFactura}`).pipe(
+    const url = tipoSaldo === 'LIQUIDACION'
+      ? `${ServiciosCxp.RS_APLP}/saldoLiquidacion/${id}`
+      : `${rol === RolTitular.CLIENTE ? ServiciosCxc.RS_APLC : ServiciosCxp.RS_APLP}/saldo/${id}`;
+    return this.http.get<SaldoDocumento>(url).pipe(
       map((saldo) => ({ saldo, fallo: false })),
       catchError(() => of({ saldo: null, fallo: true }))
     );
   }
 
   /**
-   * Abonos de una factura, con los asientos que generó cada uno. Se piden al
-   * expandir la fila para no lanzar una consulta por documento al abrir.
+   * Abonos de una factura o liquidación, con los asientos que generó cada uno. Se piden al
+   * expandir la fila para no lanzar una consulta por documento al abrir. `tipoDocumento` lo
+   * decide el componente a partir de `doc.saldo` (la fuente que trajo la fila, no un dato
+   * adivinado): mismo endpoint por FK distinta (`/aplp/factura` vs `/aplp/liquidacion`), misma
+   * forma de respuesta — `AplicacionPagoCxpRest:103-142` devuelve `List<AplicacionPagoCxp>` en
+   * los dos casos.
    */
-  abonosDeFactura(idFactura: number, rol: RolTitular): Observable<FilaAbono[]> {
+  abonosDeFactura(
+    idFactura: number,
+    rol: RolTitular,
+    tipoDocumento: 'FACTURA' | 'LIQUIDACION' = 'FACTURA'
+  ): Observable<FilaAbono[]> {
     const base = rol === RolTitular.CLIENTE ? ServiciosCxc.RS_APLC : ServiciosCxp.RS_APLP;
+    const segmento = tipoDocumento === 'LIQUIDACION' ? 'liquidacion' : 'factura';
     return this.http
-      .get<FilaAbono[]>(`${base}/factura/${idFactura}`, { params: { soloActivas: false } })
+      .get<FilaAbono[]>(`${base}/${segmento}/${idFactura}`, { params: { soloActivas: false } })
       .pipe(
         map((filas) => (Array.isArray(filas) ? filas : [])),
         catchError(() => of([] as FilaAbono[]))
