@@ -28,7 +28,7 @@ import { LiquidacionEmitirService } from '../../../cxc/service/emitir/liquidacio
 import { LiquidacionEmitir } from '../../../cxc/model/liquidacion-emitir';
 
 /** Documentos de compra que se pueden elegir desde este selector. */
-export type TipoDocumentoCompra = 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'LIQUIDACION';
+export type TipoDocumentoCompra = 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'LIQUIDACION' | 'NOTA_VENTA';
 
 /** Cualquiera de los documentos de compra que devuelve el selector. */
 export type DocumentoCompraSeleccionable =
@@ -48,6 +48,7 @@ const ETIQUETAS: Record<TipoDocumentoCompra, { titulo: string; singular: string;
   NOTA_CREDITO: { titulo: 'Seleccionar Nota de Crédito de Compra', singular: 'nota de crédito', plural: 'notas de crédito' },
   NOTA_DEBITO: { titulo: 'Seleccionar Nota de Débito de Compra', singular: 'nota de débito', plural: 'notas de débito' },
   LIQUIDACION: { titulo: 'Seleccionar Liquidación de Compra', singular: 'liquidación de compra', plural: 'liquidaciones de compra' },
+  NOTA_VENTA: { titulo: 'Seleccionar Nota de Venta de Compra', singular: 'nota de venta', plural: 'notas de venta' },
 };
 
 /**
@@ -138,7 +139,7 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
     // esta pantalla también se usa para elegir notas/liquidación (soloPendientes true igual) por
     // otras rutas donde este chequeo no corresponde. Si el GET falla se sigue mostrando la fila
     // — el backend ya rechaza el pago duplicado si se fuerza, esto es solo para no ofrecerlo.
-    const idsComprometidas$ = (this.tipo === 'FACTURA' && this.data.soloPendientes)
+    const idsComprometidas$ = ((this.tipo === 'FACTURA' || this.tipo === 'NOTA_VENTA') && this.data.soloPendientes)
       ? this.pagoProgramadoService.facturasComprometidas(this.data.codigoTitular).pipe(
           map((r) => new Set(r?.idsFacturas || [])),
           catchError(() => of(new Set<number>())),
@@ -156,6 +157,16 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
           // Si el backend no informa estadoPago se conserva la fila: no se puede
           // afirmar que esté pagada.
           lista = lista.filter((f) => (f as FacturaCompra).estadoPago !== EstadoPagoFactura.PAGADA);
+        }
+        if (this.data.tipoDocumento === 'NOTA_VENTA') {
+          lista = lista.filter((f) => (f as FacturaCompra).tipoComprobante === '02');
+        } else if (this.data.tipoDocumento === 'FACTURA') {
+          // Solo se excluyen las notas de venta cuando el llamador pide 'FACTURA' de forma
+          // explícita. El legado que abre este diálogo sin tipoDocumento (pagos-transferencia)
+          // sigue viendo la lista mezclada, exactamente como antes — ver
+          // saaBE/docs/logica-negocio/cxc/PLAN-RETENCION-SOBRE-NOTA-DE-VENTA.md §3. Un
+          // tipoComprobante nulo (fila vieja) cuenta como factura y no se excluye.
+          lista = lista.filter((f) => (f as FacturaCompra).tipoComprobante !== '02');
         }
         if (comprometidas.size > 0) {
           lista = lista.filter((f) => !comprometidas.has(f.id));
@@ -184,6 +195,10 @@ export class FacturaCompraSelectorDialogComponent implements OnInit {
       // PGS.LQCC es la liquidación que ASOPREP recibe de un tercero, y está vacía en producción.
       case 'LIQUIDACION':
         return this.liquidacionService.selectByCriteria(criterios);
+      case 'NOTA_VENTA':
+        // Misma tabla y mismo endpoint que FACTURA (PGS.FCTC): la nota de venta es una
+        // FacturaCompra con tipoComprobante === '02'. El filtro por tipo va en cargarFacturas().
+        return this.facturaService.selectByCriteria(criterios);
       default:
         return this.facturaService.selectByCriteria(criterios);
     }

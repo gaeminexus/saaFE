@@ -229,15 +229,20 @@ export class Retencionesv2Component implements OnInit {
    * Solo estos tipos del SRI tienen su tabla equivalente en el sistema; para el
    * resto el usuario captura el documento a mano.
    *
-   * El `03` (liquidación de compra) se agregó el 2026-08-31. A diferencia de los otros tres, su
+   * El `03` (liquidación de compra) se agregó el 2026-08-31. A diferencia de los otros, su
    * tabla **no** está en CXP sino en CXC (`CBR.LQCS`): es el documento que **ASOPREP emite** al
    * proveedor que no puede facturar, y sobre esa liquidación es sobre la que se retiene. La
    * liquidación *recibida* de un tercero (`PGS.LQCC`, cxp) es otra cosa y está vacía en
    * producción — ver el comentario en `factura-compra-selector-dialog.consultaPorTipo()`.
+   *
+   * El `02` (nota de venta manual) se agregó el 2026-09-15. Es una `FacturaCompra` (`PGS.FCTC`)
+   * con `tipoComprobante = '02'`; el selector filtra por ese campo, no hay tabla propia — ver
+   * saaFE/docs/cxc/API-RETENCION-SOBRE-NOTA-DE-VENTA.md.
    */
   private tipoCompraDelDocumento(): TipoDocumentoCompra | null {
     switch (this.idDocumento?.codigo) {
       case '01': return 'FACTURA';
+      case '02': return 'NOTA_VENTA';
       case '03': return 'LIQUIDACION';
       case '04': return 'NOTA_CREDITO';
       case '05': return 'NOTA_DEBITO';
@@ -269,7 +274,7 @@ export class Retencionesv2Component implements OnInit {
 
     const tipo = this.tipoCompraDelDocumento();
     if (!tipo) {
-      this.mostrarError('Seleccione un tipo de documento que exista en el sistema (factura, liquidación de compra, nota de crédito o nota de débito)');
+      this.mostrarError('Seleccione un tipo de documento que exista en el sistema (factura, nota de venta, liquidación de compra, nota de crédito o nota de débito)');
       return;
     }
 
