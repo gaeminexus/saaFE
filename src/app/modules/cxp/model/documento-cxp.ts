@@ -24,7 +24,10 @@ export interface DocumentoCxp {
   idDocumentoBD: number;
   tipoTablaDestino: string;          // FACTURA_COMPRA / NOTA_CREDITO_COMPRA / etc.
   novedad: string;                   // Descripción de diferencias detectadas
-  observacion?: string;              // Observación adicional del documento
+  observacion?: string;              // DCXPOBSR — la escribe el SISTEMA (motivos de anulación, productos
+                                      // pendientes...); cambia sola. Nunca mandar aquí lo que tipea el usuario.
+  observacionAdicional?: string | null; // DCXPOBAD — la del USUARIO, capturada al registrar (docs/cxp/
+                                      // API-OBSERVACION-ADICIONAL-REGISTRO-CXP.md). Se agrega al asiento.
   // Estado novedad: 1=PENDIENTE 2=REEMPLAZADO 3=MANTENIDO
   estadoNovedad: number;
   fechaRegistroBD: string;

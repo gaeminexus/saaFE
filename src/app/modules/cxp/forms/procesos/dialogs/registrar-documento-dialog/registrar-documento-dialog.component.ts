@@ -14,6 +14,7 @@ export interface RegistrarDocumentoDialogData {
 export interface RegistrarDocumentoDialogResult {
   esIntermediario: boolean;
   idProductoIntermediario: number | null;
+  observacionAdicional: string | null;
 }
 
 /**
@@ -33,6 +34,12 @@ export interface RegistrarDocumentoDialogResult {
 export class RegistrarDocumentoDialogComponent {
   esIntermediario = false;
   idProducto: number | null = null;
+
+  // Observación adicional (docs/cxp/API-OBSERVACION-ADICIONAL-REGISTRO-CXP.md): bajo demanda,
+  // igual que "Factura de intermediario". Al desmarcar la casilla el texto no se borra, por si
+  // el usuario la vuelve a marcar — pero confirmar() no lo manda mientras esté desmarcada.
+  incluirObservacion = false;
+  observacionAdicional = '';
 
   // Producto (combo con búsqueda por nombre + código — regla de la casa para combos)
   productos: ProductoPago[] = [];
@@ -55,7 +62,9 @@ export class RegistrarDocumentoDialogComponent {
   }
 
   get puedeConfirmar(): boolean {
-    return !this.esIntermediario || this.idProducto != null;
+    if (this.esIntermediario && this.idProducto == null) return false;
+    if (this.incluirObservacion && !this.observacionAdicional.trim()) return false;
+    return true;
   }
 
   /** Se carga recién al marcar la casilla: la mayoría de los registros no la usan. */
@@ -69,6 +78,10 @@ export class RegistrarDocumentoDialogComponent {
     if (this.productos.length === 0 && !this.cargandoProductos) {
       this.cargarProductos();
     }
+  }
+
+  onToggleObservacion(marcado: boolean): void {
+    this.incluirObservacion = marcado;
   }
 
   private cargarProductos(): void {
@@ -107,6 +120,7 @@ export class RegistrarDocumentoDialogComponent {
     this.ref.close({
       esIntermediario: this.esIntermediario,
       idProductoIntermediario: this.esIntermediario ? this.idProducto : null,
+      observacionAdicional: this.incluirObservacion ? this.observacionAdicional.trim() : null,
     });
   }
 }

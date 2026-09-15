@@ -102,6 +102,7 @@ export class CargaDocumentosService {
     idUsuario: number;
     esIntermediario?: boolean;
     idProductoIntermediario?: number;
+    observacionAdicional?: string;
   }): Observable<any> {
     return this.http.post<any>(`${PROCESS_URL}/registrarBD/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }

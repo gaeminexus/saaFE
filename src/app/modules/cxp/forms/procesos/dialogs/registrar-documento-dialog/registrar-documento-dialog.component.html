@@ -46,6 +46,23 @@
       </mat-form-field>
     }
   </div>
+
+  <div class="observacion-row">
+    <mat-checkbox [ngModel]="incluirObservacion" (ngModelChange)="onToggleObservacion($event)">
+      Incluir observación adicional
+    </mat-checkbox>
+
+    @if (incluirObservacion) {
+      <mat-form-field appearance="outline" class="full-w">
+        <mat-label>Observación adicional</mat-label>
+        <textarea matInput [(ngModel)]="observacionAdicional" rows="3" maxlength="500"></textarea>
+        @if (!observacionAdicional.trim()) {
+          <mat-hint align="start" class="observacion-error">Escriba la observación o desmarque la casilla</mat-hint>
+        }
+        <mat-hint align="end">{{ observacionAdicional.length }}/500</mat-hint>
+      </mat-form-field>
+    }
+  </div>
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">

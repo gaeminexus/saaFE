@@ -1043,6 +1043,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
       idUsuario: this.idUsuario,
       esIntermediario: opciones.esIntermediario || undefined,
       idProductoIntermediario: opciones.esIntermediario ? (opciones.idProductoIntermediario ?? undefined) : undefined,
+      observacionAdicional: opciones.observacionAdicional || undefined,
     }).subscribe({
       next: (resp) => {
         this.procesando.set(false);
