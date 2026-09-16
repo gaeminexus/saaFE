@@ -28,7 +28,31 @@ lo devuelto vuelve a estar disponible y el jubilado deja de estar en «saldo ago
 | 3 | **Sólo a jubilados.** El tipo 23 se ofrece y se acepta únicamente para partícipes en estado `JUBILADO_COMPLEMENTARIO` (alterno **3**) |
 | 4 | **La columna «Valor mensual» va vacía** para este tipo: no sale del contrato ni del valor de pensión |
 
-## 3. ⛔ Gate: la línea contable tiene que existir ANTES del WAR
+## 3. ✅ Gate CERRADO — 2026-09-16: la línea ya existe, no hay nada que correr
+
+**Salida del `crd/sql/199` traída por el usuario.** La plantilla **21** de la empresa **1236** ya
+tiene la línea:
+
+```
+aux1 53 · aux2 0 · movimiento 2 (HABER) · cuenta 10358 = 2.1.02.25.01
+CTA INDIVIDUAL DE PENSIONES COMPLEMENTARIAS · «Aportes personales PENSION COMPLEMENTARIA» · estado 1
+```
+
+Es el **mismo movimiento (HABER)** que las otras tres líneas de aporte de esa plantilla — 50 cesantía
+(`2.1.01.05.01`), 51 jubilación (`2.1.02.05.01`), 52 adicional (`2.1.02.15`) —, así que el asiento del
+cobro sale con la misma forma que los que ya funcionan.
+
+⛔ **El `INSERT` comentado del `199` NO se corre:** la línea ya está. Y ojo: `2.3.01.10.03`
+(PENSIONES COMPLEMENTARIAS POR PAGAR) existe en el plan de cuentas pero **no** es la de esta línea;
+son las dos cuentas distintas que explica el JavaDoc de `CrdLineaAsiento.APORTES_PENSION_COMPLEMENTARIA`
+— no «corregir» ninguna de las dos.
+
+⚠️ Verificado **para la empresa 1236**. Si alguna vez se cobra desde otra empresa contable, hay que
+revisar que su plantilla 21 tenga su propia línea 53.
+
+**Lo que decía este documento antes de tener ese dato, y se conserva porque explica el modo de falla:**
+
+## 3bis. El gate: por qué la línea contable tiene que existir ANTES del WAR
 
 `ContabilizacionIndividualCreditoServiceImpl.aux1ParaTipoAporte` ya mapea el tipo 23 → aux1 53 (está
 desde el 2026-09-05), **pero la línea `DTPLAXL1 = 53` de la plantilla alterno 21 puede no existir en
