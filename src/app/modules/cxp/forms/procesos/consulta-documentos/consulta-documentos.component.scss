@@ -68,6 +68,27 @@
   white-space: nowrap;
 }
 
+// Ítem 12: `tipoTablaColor()` (component.ts) ya devolvía estos nombres de clase, pero ninguno
+// tenía color definido acá — la columna "Registrado en" salía sin estilo. Misma paleta que
+// tsr/estado-cuenta-titular.component.scss (.chip-doc) para no inventar colores nuevos.
+.chip-tabla {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: #e2e8f0;
+  color: #475569;
+
+  &.chip-factura { background: #e0e7ff; color: #4338ca; }
+  &.chip-nc      { background: #dcfce7; color: #15803d; }
+  &.chip-nd      { background: #fee2e2; color: #b91c1c; }
+  &.chip-liq     { background: #cffafe; color: #0e7490; }
+  &.chip-ret     { background: #fef3c7; color: #b45309; }
+}
+
 .badge {
   padding: 2px 8px;
   border-radius: 10px;
@@ -80,6 +101,49 @@
 
 .empty-row { text-align: center !important; padding: 40px !important; color: #9e9e9e; }
 .loading-container { display: flex; justify-content: center; padding: 60px 0; }
+
+// Ítem 12: densidad compacta (más filas visibles) + hover/selección de fila, mismo criterio que
+// tsr/forms/pagos-transferencia/consulta (.fila-documento:hover / .expandida).
+.tabla-docs {
+  th.mat-header-cell, td.mat-cell {
+    padding: 6px 10px;
+  }
+}
+
+.fila-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover { background: #f8fafc; }
+
+  &.fila-seleccionada {
+    background: #eef2ff;
+    border-left: 3px solid #5b6fd8;
+  }
+}
+
+// Resumen de filtros activos en la cabecera del panel (plegado o desplegado) — ítem 12.
+.resumen-filtros {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  flex: 1;
+
+  .resumen-filtros-texto {
+    font-size: 0.8rem;
+    color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &.sin-filtros { color: #94a3b8; font-style: italic; }
+  }
+
+  button {
+    flex-shrink: 0;
+  }
+}
 
 // ===== VISTA DETALLE =====
 .detalle-container {

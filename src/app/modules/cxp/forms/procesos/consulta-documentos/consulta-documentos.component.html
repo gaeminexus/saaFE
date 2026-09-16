@@ -10,10 +10,22 @@
     </mat-card-header>
 
     <mat-card-content>
-      <!-- Filtros -->
-      <mat-expansion-panel class="filtros-panel" [expanded]="true">
+      <!-- Filtros — plegable; recuerda el estado por usuario (ítem 12) -->
+      <mat-expansion-panel class="filtros-panel" [expanded]="panelFiltrosExpanded()"
+                            (opened)="onPanelFiltrosToggle(true)" (closed)="onPanelFiltrosToggle(false)">
         <mat-expansion-panel-header>
           <mat-panel-title><mat-icon>filter_list</mat-icon> Filtros de búsqueda</mat-panel-title>
+          <mat-panel-description class="resumen-filtros">
+            @if (resumenFiltros(); as resumen) {
+              <span class="resumen-filtros-texto">{{ resumen }}</span>
+              <button mat-icon-button type="button" matTooltip="Limpiar filtros"
+                      (click)="limpiarFiltros(); $event.stopPropagation()">
+                <mat-icon>filter_alt_off</mat-icon>
+              </button>
+            } @else {
+              <span class="resumen-filtros-texto sin-filtros">Sin filtros activos</span>
+            }
+          </mat-panel-description>
         </mat-expansion-panel-header>
         <div class="filtros-grid">
           <mat-form-field appearance="outline">
@@ -75,6 +87,9 @@
           </button>
           <button mat-stroked-button (click)="limpiarFiltros()">
             <mat-icon>clear</mat-icon> Limpiar
+          </button>
+          <button mat-stroked-button (click)="exportarCSV()" matTooltip="Exporta lo que está filtrado en pantalla">
+            <mat-icon>download</mat-icon> Exportar CSV
           </button>
           <button mat-icon-button color="primary" (click)="cargar()" [disabled]="cargando()" matTooltip="Actualizar">
             <mat-icon>refresh</mat-icon>
@@ -165,7 +180,9 @@
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="columnas; sticky: true"></tr>
-            <tr mat-row *matRowDef="let row; columns: columnas;" class="fila-clickable" (click)="verDetalle(row)"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnas;" class="fila-clickable"
+                [class.fila-seleccionada]="docSeleccionado?.id === row.id"
+                (click)="verDetalle(row)"></tr>
 
             <tr class="mat-row" *matNoDataRow>
               <td class="mat-cell empty-row" [attr.colspan]="columnas.length">
@@ -174,6 +191,7 @@
             </tr>
           </table>
         </div>
+        <mat-paginator [pageSizeOptions]="[25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
       }
     </mat-card-content>
   </mat-card>

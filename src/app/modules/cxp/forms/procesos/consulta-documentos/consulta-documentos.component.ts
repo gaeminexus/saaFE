@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
+import { AfterViewChecked, AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule, ReactiveFormsModule, UntypedFormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { Observable, forkJoin, of } from 'rxjs';
@@ -13,6 +14,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { DocumentoCxp } from '../../../model/documento-cxp';
@@ -73,15 +75,17 @@ const COLUMNAS_RETENCION = ['codRetencion', 'codImpuesto', 'numDocReten', 'baseI
   templateUrl: './consulta-documentos.component.html',
   styleUrl: './consulta-documentos.component.scss',
 })
-export class ConsultaDocumentosComponent implements OnInit {
+export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, AfterViewChecked {
   @ViewChild('filtroFechaDesdeInput', { read: ElementRef }) filtroFechaDesdeInputRef!: ElementRef<HTMLInputElement>;
   @ViewChild('filtroFechaHastaInput', { read: ElementRef }) filtroFechaHastaInputRef!: ElementRef<HTMLInputElement>;
+  @ViewChild(MatPaginator) paginator?: MatPaginator;
 
   private snackBar = inject(MatSnackBar);
   private funcionesDatosS = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private permisosService = inject(PermisosService);
   private appState = inject(AppStateService);
+  private exportService = inject(ExportService);
 
   private _rawFiltroFechaDesde = '';
   private _rawFiltroFechaHasta = '';
@@ -120,6 +124,15 @@ export class ConsultaDocumentosComponent implements OnInit {
   filtroFechaDesdeControl = new UntypedFormControl(null);
   filtroFechaHastaControl = new UntypedFormControl(null);
 
+  /**
+   * Ítem 12 — plegado/desplegado del panel de filtros. Arranca desplegado; se pliega solo la
+   * primera vez que llegan resultados, salvo que el usuario ya haya elegido un estado antes (ese
+   * se respeta siempre, esté cargando lo que esté cargando). Se recuerda en localStorage por
+   * usuario, con try/catch: si el storage falla, arranca desplegado.
+   */
+  panelFiltrosExpanded = signal(true);
+  private preferenciaFiltrosGuardada = false;
+
   // Detalle — datos reales de la tabla destino
   docSeleccionado: DocumentoCxp | null = null;
   docReal: any = null;
@@ -136,12 +149,80 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
 
-  ngOnInit(): void { this.cargar(); }
+  ngOnInit(): void {
+    this.cargarPreferenciaPanelFiltros();
+    this.cargar();
+  }
+
+  ngAfterViewInit(): void {
+    this.conectarPaginador();
+  }
+
+  /**
+   * Idempotente (docs/logica-negocio/REGISTRO-RESERVAS-EQUIPOS.md §9): el paginador vive detrás
+   * de un `@if (cargando()) {...} @else {...}` que arranca en `cargando()=true`, así que
+   * `@ViewChild` resuelve `undefined` en `ngAfterViewInit`. Se reintenta acá, y solo se reasigna
+   * cuando la referencia realmente cambió — si no, el enganche real nunca llega a pasar.
+   */
+  ngAfterViewChecked(): void {
+    this.conectarPaginador();
+  }
+
+  private conectarPaginador(): void {
+    if (this.paginator && this.dsDocumentos.paginator !== this.paginator) {
+      this.dsDocumentos.paginator = this.paginator;
+    }
+  }
+
+  // ─── FILTROS PLEGABLES (ítem 12) ────────────────────────
+
+  private storageKeyPanelFiltros(): string {
+    return `cxp.consultaDocumentos.filtrosExpandido.${this.usuarioSesion()}`;
+  }
+
+  private cargarPreferenciaPanelFiltros(): void {
+    try {
+      const guardado = localStorage.getItem(this.storageKeyPanelFiltros());
+      if (guardado != null) {
+        this.panelFiltrosExpanded.set(guardado === '1');
+        this.preferenciaFiltrosGuardada = true;
+      }
+    } catch {
+      // localStorage no disponible: arranca desplegado (valor por defecto del signal).
+    }
+  }
+
+  onPanelFiltrosToggle(expandido: boolean): void {
+    this.panelFiltrosExpanded.set(expandido);
+    this.preferenciaFiltrosGuardada = true;
+    try {
+      localStorage.setItem(this.storageKeyPanelFiltros(), expandido ? '1' : '0');
+    } catch {
+      // Sin persistencia disponible: el plegado de esta sesión igual funciona en memoria.
+    }
+  }
+
+  /** Texto de una línea para la cabecera del panel plegado — vacío = "Sin filtros activos". */
+  resumenFiltros(): string {
+    const partes: string[] = [];
+    if (this.filtroRuc.trim()) partes.push(`RUC ${this.filtroRuc.trim()}`);
+    if (this.filtroProveedor.trim()) partes.push(`Proveedor: ${this.filtroProveedor.trim()}`);
+    if (this.filtroTipo.trim()) partes.push(`Tipo: ${this.filtroTipo.trim()}`);
+    const desde = this.filtroFechaDesdeControl.value as Date | null;
+    const hasta = this.filtroFechaHastaControl.value as Date | null;
+    if (desde || hasta) {
+      const fmt = (d: Date | null) => d ? (this.funcionesDatosS.formatoFecha(d, FuncionesDatosService.SOLO_FECHA) || '') : '…';
+      partes.push(`${fmt(desde)}–${fmt(hasta)}`);
+    }
+    return partes.join(' · ');
+  }
 
   // ─── LISTA ─────────────────────────────────────────────
 
   cargar(): void {
     this.cargando.set(true);
+    // Búsqueda nueva: se descarta el resaltado de "última fila vista" (ver volverLista()).
+    this.docSeleccionado = null;
     forkJoin({
       documentos: this.docService.getByEmpresaEstado(this.idEmpresa, 3),
       // Las notas de venta no están en DocumentoCxp (ver TABLA_NOTA_VENTA arriba): se traen
@@ -153,6 +234,11 @@ export class ConsultaDocumentosComponent implements OnInit {
         const sinteticos = (notasVenta || []).map((f) => this.notaVentaComoDocumentoCxp(f));
         this.todosDocumentos = [...(documentos || []), ...sinteticos];
         this.aplicarFiltros();
+        // Arranca plegado cuando ya hay resultados, salvo que el usuario ya haya elegido un
+        // estado antes (ese se respeta siempre — ver cargarPreferenciaPanelFiltros()).
+        if (!this.preferenciaFiltrosGuardada && this.todosDocumentos.length > 0) {
+          this.panelFiltrosExpanded.set(false);
+        }
         this.cargando.set(false);
       },
       error: () => { this.snackBar.open('No se pudo cargar los documentos', 'Cerrar', { duration: 4000 }); this.cargando.set(false); },
@@ -231,6 +317,40 @@ export class ConsultaDocumentosComponent implements OnInit {
     if (desde) r = r.filter(d => this.strFecha(d.fechaEmision) >= desde);
     if (hasta) r = r.filter(d => this.strFecha(d.fechaEmision) <= hasta);
     this.dsDocumentos.data = r;
+  }
+
+  /** Exporta lo que está filtrado en pantalla — mismas columnas visibles, montos con punto decimal (ExportService.formatCSVValue ya usa toFixed). */
+  exportarCSV(): void {
+    const filas = this.dsDocumentos.data;
+    if (!filas.length) {
+      this.snackBar.open('No hay documentos para exportar', 'Cerrar', { duration: 3500 });
+      return;
+    }
+
+    const plano = filas.map((d) => ({
+      tipo: d.tipoComprobante,
+      registradoEn: this.tipoTablaLabel(d.tipoTablaDestino),
+      ruc: d.rucEmisor,
+      proveedor: d.razonSocialEmisor,
+      numero: d.serieComprobante,
+      fecha: this.strFecha(d.fechaEmision),
+      subtotal: Number(d.valorSinImpuestos || 0),
+      iva: Number(d.iva || 0),
+      total: Number(d.importeTotal || 0),
+    }));
+
+    const headers = ['Tipo', 'Registrado en', 'RUC', 'Proveedor', 'N° Documento', 'Fecha Emisión', 'Subtotal', 'IVA', 'Total'];
+    const keys = ['tipo', 'registradoEn', 'ruc', 'proveedor', 'numero', 'fecha', 'subtotal', 'iva', 'total'];
+    this.exportService.exportToCSV(plano, `consulta_documentos_cxp_${this.fechaArchivo()}`, headers, keys);
+    this.snackBar.open('Exportación CSV iniciada', 'Cerrar', { duration: 2500 });
+  }
+
+  private fechaArchivo(): string {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}${mm}${dd}`;
   }
 
   private toISODate(date: Date | null): string {
@@ -365,7 +485,9 @@ export class ConsultaDocumentosComponent implements OnInit {
     });
   }
 
-  volverLista(): void { this.vista = 'lista'; this.docSeleccionado = null; this.docReal = null; }
+  /** `docSeleccionado` se conserva para resaltar la fila de la que se volvió (ítem 12c) — se
+   * limpia recién en la próxima búsqueda (`cargar()`), no acá. */
+  volverLista(): void { this.vista = 'lista'; this.docReal = null; }
 
   // ─── ANULACIÓN (ítem 12/13, 2026-08-28) ────────────────
 
