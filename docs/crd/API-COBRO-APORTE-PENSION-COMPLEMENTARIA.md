@@ -34,8 +34,18 @@ lo devuelto vuelve a estar disponible y el jubilado deja de estar en «saldo ago
 desde el 2026-09-05), **pero la línea `DTPLAXL1 = 53` de la plantilla alterno 21 puede no existir en
 producción.** El script que lo verifica y la crea es `crd/sql/199`, con su `INSERT` comentado.
 
-**Si no existe:** el cobro se registra, se aprueba, y revienta al contabilizar — con el dinero ya
-adentro. Por eso el cambio de backend de §4.1 **no se despliega sin el `199` corrido**.
+**Si no existe:** el registro y la aprobación pasan igual (el asiento transitorio usa la cuenta fija de
+la plantilla 19, no resuelve por tipo de aporte), y **revienta al procesar**, en
+`lineaAporteRegistrado` → `selectByPlantillaYAuxiliar(21, 53)` → `IncomeException` nombrando el aux1
+que falta. Por eso el cambio de backend de §4.1 **no se despliega sin el `199` corrido**.
+
+✅ **Matiz medido por el ejecutor de backend, y corrige lo que decía este contrato:** NO queda «el
+dinero adentro sin asiento». `procesarCobro` no declara `@TransactionAttribute` (`@Stateless` →
+`REQUIRED`) y `AporteServiceImpl.registrarAporte` es `REQUIRED`, así que corren en la MISMA
+transacción; `IncomeException` es `@ApplicationException(rollback = true)`. El `APRT` positivo, su
+`PagoAporte` y el enlace del detalle **se revierten con el fallo**, y el cobro se queda en `APROBADO`,
+reintentable sin limpiar nada. Es un fallo limpio, no un descuadre. El gate del `199` sigue en pie:
+lo que se evita es que el operador no pueda procesar lo que ya cobró.
 
 ## 4. Backend (`crd`)
 
@@ -75,6 +85,10 @@ Hoy los dos tipos están escritos a mano como claves `'cesantia' | 'jubilacion'`
    (`saldosAporte()`, resuelto por nombre — el fragmento a buscar es `'pension'`, con la misma
    normalización sin tildes que usa `saldoPorNombre`). El `idTipoAporte` se resuelve igual que hoy,
    desde ese listado, **no con un literal 23 en el frontend**.
+   ⚠️ **Y si ese listado no trae la fila, se cae al catálogo `/rest/tpap/getAll`**, resolviendo por
+   nombre con la misma normalización (corregido 2026-09-16 — ver §5.6). Si tampoco así se resuelve, o
+   si hubiera más de una coincidencia, **se bloquea SÓLO la línea de pensión**, con un mensaje que
+   nombre el problema: el resto del cobro (préstamo, cesantía, jubilación) tiene que poder entrar.
 3. **Columna «Valor mensual»: vacía** (`—`). No se consulta el contrato para este tipo y **no** se
    muestra el mensaje de cobertura («este pago cubre N meses»).
 4. **Línea del cobro:** se suma a las que ya arma la pantalla para `REGISTRO_APORTE`/`COBRO_MIXTO`, con
@@ -83,6 +97,17 @@ Hoy los dos tipos están escritos a mano como claves `'cesantia' | 'jubilacion'`
    jubilación. Decisión 1 del §2.
 6. Si el listado de saldos no trae ninguna fila de pensión complementaria para ese jubilado, la fila
    se muestra con saldo 0 y se puede cobrar igual: es un aporte nuevo, no un consumo.
+
+   ⛔ **Corrección del árbitro, 2026-09-16.** Este punto y el §5.2 se contradecían, y lo encontró el
+   ejecutor de frontend antes de programarlo: el listado de saldos sale de un `GROUP BY` sobre
+   `CRD.APRT` (`AporteDaoServiceImpl.sumValorPorTipoAporteByEntidad`), o sea que **sólo trae tipos con
+   movimientos**. Resolviendo el `idTipoAporte` únicamente desde ahí, un jubilado sin ningún aporte de
+   tipo 23 no se podía cobrar — y peor, la pantalla bloqueaba el cobro **entero**, no sólo esa línea.
+   **Medido para dimensionarlo:** `AporteServiceImpl.procesarJubilacion` crea el movimiento POSITIVO
+   de tipo 23 al jubilar (el traslado de cesantía + jubilación), así que todo jubilado procesado por
+   el sistema sí aparece en el listado; el hueco queda para los jubilados cargados por migración o por
+   SQL — justo la clase de dato que este cambio viene a corregir. De ahí el fallback al catálogo
+   del §5.2.
 
 ## 6. Trampas
 
