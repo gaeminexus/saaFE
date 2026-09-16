@@ -363,7 +363,10 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
     const numeroCuotas = numeroCuotasRaw === null || numeroCuotasRaw === '' ? null : Number(numeroCuotasRaw);
     const tienePrestamo = this.asignacionForm.get('tienePrestamo')?.value ? 1 : 0;
     const valorSeguroRaw = this.asignacionForm.get('valorSeguro')?.value;
-    const valorSeguro = valorSeguroRaw === null || valorSeguroRaw === '' ? null : Number(valorSeguroRaw);
+    // Vacío = "no paga seguro médico" = 0, nunca null: la columna es NOT NULL en Oracle y un null
+    // revienta con ORA-01400 sin dejar nada registrado (docs/logica-negocio/crd/
+    // CORRECCION-VPPC-SEGURO-NULO.md, saaBE 854e0f05, incidente de producción 2026-09-16).
+    const valorSeguro = valorSeguroRaw === null || valorSeguroRaw === '' ? 0 : Number(valorSeguroRaw);
 
     if (!Number.isFinite(valorPagar) || valorPagar <= 0) {
       this.snackBar.open('Ingrese un valor de pago mensual válido', 'Cerrar', { duration: 3000 });
@@ -411,6 +414,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
             this.isSaving.set(false);
             this.snackBar.open('Asignación actualizada correctamente', 'Cerrar', { duration: 3000 });
             this.cargarAsignaciones();
+            this.cerrarPanelAsignacion();
           },
           error: () => {
             this.isSaving.set(false);
@@ -430,12 +434,28 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
           this.isSaving.set(false);
           this.snackBar.open('Asignación registrada correctamente', 'Cerrar', { duration: 3000 });
           this.cargarAsignaciones();
+          this.cerrarPanelAsignacion();
         },
         error: () => {
           this.isSaving.set(false);
           this.snackBar.open('No se pudo registrar la asignación', 'Cerrar', { duration: 3000 });
         },
       });
+  }
+
+  /**
+   * Solo tras un guardado exitoso (pedido del usuario, 2026-09-16): la tarjeta 2 vuelve a su
+   * estado vacío en vez de quedarse abierta con los datos ya guardados. En la rama `error` NO se
+   * llama a esto — el operador tiene que poder corregir y reintentar sin volver a escribir todo.
+   */
+  private cerrarPanelAsignacion(): void {
+    this.entidadSeleccionada.set(null);
+    this.asignacionForm.reset({
+      valorPagar: null,
+      numeroCuotas: null,
+      tienePrestamo: false,
+      valorSeguro: null,
+    });
   }
 
   private cargarAsignaciones(): void {

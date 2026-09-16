@@ -302,7 +302,9 @@ export class JubilarParticipeComponent {
   valorPagarPensionTexto = '$0.00';
   numeroCuotasPensionTexto = '';
   tienePrestamoPension = false;
-  valorSeguroPensionTexto = '';
+  // '$0.00' y no '' (arranca igual que valorPagarPensionTexto): el valor por defecto del seguro
+  // es cero, no "sin dato" — que se vea desde el primer render, no solo cuando se envía.
+  valorSeguroPensionTexto = '$0.00';
   guardandoConfiguracionPension = signal(false);
   configuracionPensionGuardada = signal(false);
 
@@ -649,7 +651,7 @@ export class JubilarParticipeComponent {
     this.valorPagarPensionTexto = '$0.00';
     this.numeroCuotasPensionTexto = '';
     this.tienePrestamoPension = false;
-    this.valorSeguroPensionTexto = '';
+    this.valorSeguroPensionTexto = '$0.00';
     this.guardandoConfiguracionPension.set(false);
     this.configuracionPensionGuardada.set(false);
   }
@@ -905,7 +907,10 @@ export class JubilarParticipeComponent {
     }
 
     const valorSeguroTexto = this.valorSeguroPensionTexto.trim();
-    const valorSeguro = valorSeguroTexto ? this.parseMoneda(valorSeguroTexto) : null;
+    // Campo vacío = "no paga seguro médico" = 0, NUNCA null: la columna es NOT NULL en Oracle y
+    // un null revienta con ORA-01400 sin dejar la jubilación registrada (docs/logica-negocio/crd/
+    // CORRECCION-VPPC-SEGURO-NULO.md, saaBE 854e0f05, incidente de producción 2026-09-16).
+    const valorSeguro = valorSeguroTexto ? this.parseMoneda(valorSeguroTexto) : 0;
 
     this.guardandoConfiguracionPension.set(true);
     // ⛔ Sin `fechaIngreso`: es `LocalDateTime` en el backend y `formatearFechaParaBackend` por
