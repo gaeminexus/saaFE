@@ -31,22 +31,11 @@
             <mat-select [(ngModel)]="filtroTipo">
               <mat-option value="">Todos</mat-option>
               <mat-option value="Factura">Factura</mat-option>
+              <mat-option value="Nota de Venta">Nota de Venta</mat-option>
               <mat-option value="Nota de Crédito">Nota de Crédito</mat-option>
               <mat-option value="Nota de Débito">Nota de Débito</mat-option>
               <mat-option value="Liquidación">Liquidación de Compra</mat-option>
               <mat-option value="Retención">Comprobante de Retención</mat-option>
-            </mat-select>
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Tabla de Destino</mat-label>
-            <mat-select [(ngModel)]="filtroTabla">
-              <mat-option value="">Todas</mat-option>
-              <mat-option value="FACTURA_COMPRA">Factura Compra</mat-option>
-              <mat-option value="NOTA_VENTA_COMPRA">Nota de Venta</mat-option>
-              <mat-option value="NOTA_CREDITO_COMPRA">Nota Crédito Compra</mat-option>
-              <mat-option value="NOTA_DEBITO_COMPRA">Nota Débito Compra</mat-option>
-              <mat-option value="LIQUIDACION_COMPRA">Liquidación Compra</mat-option>
-              <mat-option value="RETENCION_COMPRA">Retención Compra</mat-option>
             </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
@@ -108,7 +97,10 @@
             </ng-container>
 
             <ng-container matColumnDef="tipoTablaDestino">
-              <th mat-header-cell *matHeaderCellDef>Tabla</th>
+              <th mat-header-cell *matHeaderCellDef
+                  matTooltip="Tabla CXP donde quedó registrado el documento — sirve para distinguir, p. ej., un comprobante de retención clásico (v1) de uno v2">
+                Registrado en
+              </th>
               <td mat-cell *matCellDef="let d">
                 <span class="chip-tabla" [ngClass]="tipoTablaColor(d.tipoTablaDestino)">{{ tipoTablaLabel(d.tipoTablaDestino) }}</span>
               </td>
@@ -155,6 +147,20 @@
                 <button mat-stroked-button color="primary" (click)="verDetalle(d)" matTooltip="Ver documento completo">
                   <mat-icon>open_in_new</mat-icon> Ver
                 </button>
+                @if (tieneXml(d)) {
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    [disabled]="descargandoXml() === d.id"
+                    matTooltip="Descargar XML"
+                    (click)="descargarXml(d); $event.stopPropagation()">
+                    @if (descargandoXml() === d.id) {
+                      <mat-spinner diameter="18"></mat-spinner>
+                    } @else {
+                      <mat-icon>download</mat-icon>
+                    }
+                  </button>
+                }
               </td>
             </ng-container>
 
@@ -185,6 +191,17 @@
         <span class="chip-tabla" [ngClass]="tipoTablaColor(docSeleccionado.tipoTablaDestino)">{{ tipoTablaLabel(docSeleccionado.tipoTablaDestino) }}</span>
         {{ docSeleccionado.serieComprobante }}
       </span>
+      @if (tieneXml(docSeleccionado)) {
+        <button mat-stroked-button color="primary" [disabled]="descargandoXml() === docSeleccionado.id"
+                (click)="descargarXml(docSeleccionado)" matTooltip="Descargar el XML del documento">
+          @if (descargandoXml() === docSeleccionado.id) {
+            <mat-spinner diameter="18"></mat-spinner>
+          } @else {
+            <mat-icon>download</mat-icon>
+          }
+          Descargar XML
+        </button>
+      }
       @if (esDocumentoAnulable() && docReal) {
         <button mat-stroked-button color="warn" class="btn-anular"
                 [disabled]="!puedeAnularDocumento" (click)="anularDocumento()"
@@ -282,9 +299,41 @@
                 <span class="total-label">Subtotal (0%)</span>
                 <span class="total-valor">{{ (docReal.subcero ?? 0) | number:'1.2-2' }}</span>
               </div>
+              @if (docReal.subtotal5 != null && docReal.subtotal5 !== 0) {
+                <div class="total-item">
+                  <span class="total-label">Base 5%</span>
+                  <span class="total-valor">{{ docReal.subtotal5 | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (docReal.vIVA5 != null && docReal.vIVA5 !== 0) {
+                <div class="total-item">
+                  <span class="total-label">IVA 5%</span>
+                  <span class="total-valor">{{ docReal.vIVA5 | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (docReal.subtotal8 != null && docReal.subtotal8 !== 0) {
+                <div class="total-item">
+                  <span class="total-label">Base 8%</span>
+                  <span class="total-valor">{{ docReal.subtotal8 | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (docReal.vIVA8 != null && docReal.vIVA8 !== 0) {
+                <div class="total-item">
+                  <span class="total-label">IVA 8%</span>
+                  <span class="total-valor">{{ docReal.vIVA8 | number:'1.2-2' }}</span>
+                </div>
+              }
+              @if (docReal.vICE != null && docReal.vICE !== 0) {
+                <div class="total-item">
+                  <span class="total-label">ICE</span>
+                  <span class="total-valor">{{ docReal.vICE | number:'1.2-2' }}</span>
+                </div>
+              }
               <div class="total-item">
-                <span class="total-label">% IVA</span>
-                <span class="total-valor">{{ docReal.pIVA ?? 12 }}%</span>
+                <!-- ⛔ El 12 de antes era un default viejo que mentía cuando pIVA no venía: la
+                     etiqueta cambia a "IVA" a secas en vez de inventar un porcentaje. -->
+                <span class="total-label">{{ docReal.pIVA != null ? '% IVA' : 'IVA' }}</span>
+                <span class="total-valor">{{ docReal.pIVA != null ? (docReal.pIVA + '%') : '—' }}</span>
               </div>
               <div class="total-item">
                 <span class="total-label">Valor IVA</span>

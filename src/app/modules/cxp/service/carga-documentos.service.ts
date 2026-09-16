@@ -18,6 +18,19 @@ export interface ResumenCarga {
 }
 
 /**
+ * Respuesta de GET /carga-documentos/xml/{idDocumentoCxp} (docs/cxp/API-DESCARGA-XML-Y-DESGLOSE-IVA.md
+ * §2). Base64 y no un flujo binario, mismo motivo que el archivo del banco: el frontend decodifica
+ * y arma la descarga. 404 con `{mensaje}` si el documento no existe, no tiene XML (nota de venta
+ * manual) o la ruta está grabada pero el archivo no está en disco — nunca un archivo vacío.
+ */
+export interface DescargaXmlResponse {
+  nombreArchivo: string;
+  contenidoBase64: string;
+  mimeType: string;
+  tamanoBytes: number;
+}
+
+/**
  * Lo que devuelve /gruposProducto: la entidad completa, con el identificador en `codigo`
  * (NO `id`) — verificado contra el endpoint real. Ojo al consumirla:
  *  · trae los grupos de TODAS las empresas y sin filtrar estado → filtrar por
@@ -74,6 +87,15 @@ export class CargaDocumentosService {
   /** Consulta novedades pendientes de una empresa — retorna DocumentoCxp[] con estadoDocumento=5 */
   getNovedades(idEmpresa: number): Observable<DocumentoCxp[] | null> {
     return this.http.get<DocumentoCxp[]>(`${PROCESS_URL}/novedades/${idEmpresa}`).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Descarga el XML de un documento. Solo lectura: no re-descarga del SRI, no regenera nada.
+   * `idDocumentoCxp` es el id de `DocumentoCxp` (PGS.DCXP), no el id del documento destino
+   * (FacturaCompra/NotaCreditoCompra/etc.).
+   */
+  descargarXml(idDocumentoCxp: number): Observable<DescargaXmlResponse | null> {
+    return this.http.get<DescargaXmlResponse>(`${PROCESS_URL}/xml/${idDocumentoCxp}`).pipe(catchError(this.handleError));
   }
 
   /** Consulta grupos de productos disponibles */

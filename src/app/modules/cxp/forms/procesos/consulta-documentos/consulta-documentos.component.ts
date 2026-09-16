@@ -24,6 +24,7 @@ import {
   AnularDocumentoCompraDialogComponent,
   AnularDocumentoCompraDialogResult,
 } from '../dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
+import { CargaDocumentosService } from '../../../service/carga-documentos.service';
 import { DetalleFacturaCompraService } from '../../../service/detalle-factura-compra.service';
 import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-liquidacion-compra-compra.service';
 import { DetalleNotaCreditoCompraService } from '../../../service/detalle-nota-credito-compra.service';
@@ -85,6 +86,7 @@ export class ConsultaDocumentosComponent implements OnInit {
   private _rawFiltroFechaDesde = '';
   private _rawFiltroFechaHasta = '';
   private docService = inject(DocumentoCxpService);
+  private cargaDocumentosService = inject(CargaDocumentosService);
   private facturaService = inject(FacturaCompraService);
   private detalleFacturaService = inject(DetalleFacturaCompraService);
   private formaPagoFacturaService = inject(FormaPagoFacturaCompraService);
@@ -115,7 +117,6 @@ export class ConsultaDocumentosComponent implements OnInit {
   filtroRuc = '';
   filtroProveedor = '';
   filtroTipo = '';
-  filtroTabla = '';
   filtroFechaDesdeControl = new UntypedFormControl(null);
   filtroFechaHastaControl = new UntypedFormControl(null);
 
@@ -129,6 +130,9 @@ export class ConsultaDocumentosComponent implements OnInit {
   // Anulación (ítem 12/13, 2026-08-28)
   consultandoMovimientos = signal(false);
   anulando = signal(false);
+
+  /** Id del DocumentoCxp cuyo XML se está bajando; null si ninguno (ítem 11). */
+  descargandoXml = signal<number | null>(null);
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
 
@@ -208,7 +212,6 @@ export class ConsultaDocumentosComponent implements OnInit {
 
   limpiarFiltros(): void {
     this.filtroRuc = ''; this.filtroProveedor = ''; this.filtroTipo = '';
-    this.filtroTabla = '';
     this.filtroFechaDesdeControl.setValue(null, { emitEvent: false });
     this.filtroFechaHastaControl.setValue(null, { emitEvent: false });
     setTimeout(() => {
@@ -223,7 +226,6 @@ export class ConsultaDocumentosComponent implements OnInit {
     if (this.filtroRuc.trim()) r = r.filter(d => d.rucEmisor?.toLowerCase().includes(this.filtroRuc.trim().toLowerCase()));
     if (this.filtroProveedor.trim()) r = r.filter(d => d.razonSocialEmisor?.toLowerCase().includes(this.filtroProveedor.trim().toLowerCase()));
     if (this.filtroTipo.trim()) r = r.filter(d => d.tipoComprobante?.toLowerCase().includes(this.filtroTipo.trim().toLowerCase()));
-    if (this.filtroTabla.trim()) r = r.filter(d => d.tipoTablaDestino?.toLowerCase().includes(this.filtroTabla.trim().toLowerCase()));
     const desde = this.toISODate(this.filtroFechaDesdeControl.value);
     const hasta = this.toISODate(this.filtroFechaHastaControl.value);
     if (desde) r = r.filter(d => this.strFecha(d.fechaEmision) >= desde);
@@ -603,6 +605,52 @@ export class ConsultaDocumentosComponent implements OnInit {
     setTimeout(() => {
       if (this.filtroFechaHastaInputRef?.nativeElement) this.filtroFechaHastaInputRef.nativeElement.value = formatted;
     });
+  }
+
+  // ─── ÍTEM 11: DESCARGA DE XML ───────────────────────────
+  // El desglose por tarifa (5%/8%/ICE) vive en la ficha del documento (bloque de totales), que
+  // es donde el dato existe de verdad. La tabla de documentos NO lo repite: "Base 0%" saldría
+  // vacía en casi todas las filas (DocumentoCxp/DCXP nunca guardó ese dato — solo
+  // valorSinImpuestos/iva/importeTotal) y "Base gravada" hubiera sido la misma cifra que la
+  // columna Subtotal que ya está. Una columna casi siempre vacía enseña a desconfiar de la tabla.
+
+  /** Solo la nota de venta manual no tiene XML detrás: nunca pasó por la carga de DCXP. */
+  tieneXml(doc: DocumentoCxp | null): boolean {
+    return !!doc && doc.tipoTablaDestino !== TABLA_NOTA_VENTA;
+  }
+
+  descargarXml(doc: DocumentoCxp): void {
+    if (!this.tieneXml(doc) || this.descargandoXml() != null) return;
+    this.descargandoXml.set(doc.id);
+    this.cargaDocumentosService.descargarXml(doc.id).subscribe({
+      next: (resp) => {
+        this.descargandoXml.set(null);
+        if (resp) this.descargarBlobXml(resp);
+      },
+      error: (err: any) => {
+        this.descargandoXml.set(null);
+        this.snackBar.open(mensajeDeError(err, 'No se pudo descargar el XML'), 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  /**
+   * Mismo patrón que tsr/forms/pagos-transferencia/archivo-banco/archivo-banco.component.ts
+   * (atob + Uint8Array + Blob): nunca como texto plano, el XML puede venir en una codificación
+   * que `atob` a secas reinterpretaría mal.
+   */
+  private descargarBlobXml(resp: { nombreArchivo: string; contenidoBase64: string; mimeType: string }): void {
+    const binario = atob(resp.contenidoBase64);
+    const bytes = new Uint8Array(binario.length);
+    for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+    const blob = new Blob([bytes], { type: resp.mimeType || 'application/xml' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = resp.nombreArchivo || `documento-${Date.now()}.xml`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
   private strFecha(val: any): string {
