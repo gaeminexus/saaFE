@@ -30,6 +30,7 @@ import { DetalleCobroCredito } from '../../model/cobros/cobro-credito';
 import { TipoOperacionCobro } from '../../model/cobros/catalogos-cobro';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
+import { CodigoEstadoParticipe } from '../../model/estado-participe';
 import { ContratoPorEntidadDTO, ID_TIPO_APORTE } from '../../model/vigencia-contrato';
 import {
   CLASES_ESTADO_CUOTA,
@@ -44,6 +45,7 @@ import {
 } from '../../model/pagos/operaciones-pago';
 import { MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { Prestamo } from '../../model/prestamo';
+import { TipoAporte } from '../../model/tipo-aporte';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { CobroCreditoService } from '../../service/cobro-credito.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
@@ -52,9 +54,16 @@ import { ComprobanteCobroService } from '../../service/comprobante-cobro.service
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
 import { ComponentesPagados, SaldoPrestamoService } from '../../service/saldo-prestamo.service';
+import { TipoAporteService } from '../../service/tipo-aporte.service';
 import { VigenciaContratoService } from '../../service/vigencia-contrato.service';
 
-type CuentaKey = 'prestamo' | 'cesantia' | 'jubilacion';
+type CuentaKey = 'prestamo' | 'cesantia' | 'jubilacion' | 'pension';
+/**
+ * Los tres tipos de aporte del socio que esta pantalla puede cobrar (docs/crd/
+ * API-COBRO-APORTE-PENSION-COMPLEMENTARIA.md §5). NO incluye `'prestamo'`: eso es `CuentaKey`,
+ * que además cubre la fila de préstamo de la tabla de cuentas.
+ */
+type ClaveAporteSocio = 'cesantia' | 'jubilacion' | 'pension';
 type MetodoPago = 'debito' | 'transferencia' | 'deposito';
 
 /** §4 de `docs/crd/API-VALOR-MENSUAL-APORTE-COBROS-PERSONALES.md`: "no se sabe" no puede verse igual que "0". */
@@ -158,6 +167,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private saldoPrestamo = inject(SaldoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private comprobantes = inject(ComprobanteCobroService);
+  private tipoAporteService = inject(TipoAporteService);
   private snackBar = inject(MatSnackBar);
   private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
@@ -298,8 +308,24 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   saldoCesantia = computed(() => this.saldoPorNombre('cesant'));
   saldoJubilacion = computed(() => this.saldoPorNombre('jubila'));
+  /**
+   * `'pension'` no matchea ningún otro nombre del catálogo de 25 tipos de aporte (verificado
+   * contra `docs/crd/MAPEO-CUENTAS-TIPO-APORTE.md` §3: el único con "pensión" en el nombre es el
+   * 23 PENSION COMPLEMENTARIA) — sin ambigüedad, no hace falta un fragmento más específico.
+   */
+  saldoPension = computed(() => this.saldoPorNombre('pension'));
   valorMensualCesantia = computed<ValorMensualAporte>(() => this.valorMensualPorTipo(ID_TIPO_APORTE.CESANTIA));
   valorMensualJubilacion = computed<ValorMensualAporte>(() => this.valorMensualPorTipo(ID_TIPO_APORTE.JUBILACION));
+
+  /**
+   * Fila de "Pensión complementaria" en la tabla de cuentas: solo existe para partícipes
+   * JUBILADO_COMPLEMENTARIO (alterno 3), decisión 3 del §2 del contrato — no deshabilitada,
+   * ausente. `idEstado` ya viene poblado en `entidadSeleccionada()` por `EntidadService`, igual
+   * que lo usa `jubilar-participe.component.ts`: no hace falta una consulta nueva.
+   */
+  puedeCobrarPension = computed(
+    () => this.entidadSeleccionada()?.idEstado === CodigoEstadoParticipe.JUBILADO_COMPLEMENTARIO
+  );
 
   /**
    * §2 del contrato: la vigencia que rige es la de ese tipo de aporte con estado ACTIVO cuyo rango
@@ -419,8 +445,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
   montoTotalTexto = signal('$0.00');
   montoTotal = computed(() => this.parseMoneda(this.montoTotalTexto()));
 
-  cuentaChecked: Record<CuentaKey, boolean> = { prestamo: false, cesantia: false, jubilacion: false };
-  cuentaMontoTexto: Record<CuentaKey, string> = { prestamo: '', cesantia: '', jubilacion: '' };
+  cuentaChecked: Record<CuentaKey, boolean> = { prestamo: false, cesantia: false, jubilacion: false, pension: false };
+  cuentaMontoTexto: Record<CuentaKey, string> = { prestamo: '', cesantia: '', jubilacion: '', pension: '' };
   cuentaMontoVersion = signal(0); // se incrementa para forzar recomputo de los `computed` de abajo
 
   detallePrestamoAbierto = signal(false);
@@ -441,7 +467,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
    */
   montoAportesSocio = computed(() => {
     this.cuentaMontoVersion();
-    return +(['cesantia', 'jubilacion'] as CuentaKey[])
+    return +(['cesantia', 'jubilacion', 'pension'] as CuentaKey[])
       .filter((k) => this.cuentaChecked[k])
       .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0)
       .toFixed(2);
@@ -1106,9 +1132,12 @@ export class CobrosPersonalesComponent implements OnDestroy {
     return Math.max(encontrado?.saldo ?? 0, 0);
   }
 
-  /** idTipoAporte del tipo que corresponde a la cuenta de origen elegida para el débito. */
-  private idTipoAportePara(clave: 'cesantia' | 'jubilacion'): number | null {
-    const fragmento = clave === 'cesantia' ? 'cesant' : 'jubila';
+  /**
+   * `idTipoAporte` del tipo correspondiente, resuelto por nombre — nunca un literal 23 en el
+   * frontend (§5.2 del contrato de pensión complementaria).
+   */
+  private idTipoAportePara(clave: ClaveAporteSocio): number | null {
+    const fragmento = clave === 'cesantia' ? 'cesant' : clave === 'jubilacion' ? 'jubila' : 'pension';
     const encontrado = this.saldosAporte().find((a) =>
       (a.nombre ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(fragmento)
     );
@@ -1120,7 +1149,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   toggleCuenta(key: CuentaKey, checked: boolean): void {
     this.cuentaChecked[key] = checked;
     if (checked) {
-      const otras = (['prestamo', 'cesantia', 'jubilacion'] as CuentaKey[])
+      const otras = (['prestamo', 'cesantia', 'jubilacion', 'pension'] as CuentaKey[])
         .filter((k) => k !== key && this.cuentaChecked[k])
         .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0);
       const restante = Math.max(this.montoTotal() - otras, 0);
@@ -1167,7 +1196,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * usuario y no hay forma de adivinarlo.
    */
   private sincronizarCuentaUnica(): void {
-    const marcadas = (['prestamo', 'cesantia', 'jubilacion'] as CuentaKey[]).filter((k) => this.cuentaChecked[k]);
+    const marcadas = (['prestamo', 'cesantia', 'jubilacion', 'pension'] as CuentaKey[]).filter((k) => this.cuentaChecked[k]);
     if (marcadas.length !== 1) return;
     this.cuentaMontoTexto[marcadas[0]] = this.formatMoneda(Math.max(this.montoTotal(), 0));
   }
@@ -1177,8 +1206,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   private resetAsignacion(): void {
-    this.cuentaChecked = { prestamo: false, cesantia: false, jubilacion: false };
-    this.cuentaMontoTexto = { prestamo: '', cesantia: '', jubilacion: '' };
+    this.cuentaChecked = { prestamo: false, cesantia: false, jubilacion: false, pension: false };
+    this.cuentaMontoTexto = { prestamo: '', cesantia: '', jubilacion: '', pension: '' };
     this.prestamoAsignacionGuardada = {};
     this.detallePrestamoAbierto.set(false);
     this.metodoPago.set('transferencia');
@@ -1303,24 +1332,34 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.errorOperacion.set(null);
     this.errorCodigo.set(null);
 
-    const aportes = this.aportesARegistrar();
-    if (aportes === null) {
-      this.errorOperacion.set(
-        'No se encontró el tipo de aporte de cesantía o jubilación entre los tipos vigentes del partícipe. Actualice los saldos e intente nuevamente.'
-      );
-      return;
-    }
-
-    // Uno, varios o ninguno: el mismo botón cubre los tres casos (ver `registrarCobro`).
-    const prestamos = this.cobraPrestamo() ? this.prestamosIncluidos() : [];
-
-    this.registrando.set(true);
-    this.subirComprobante(prestamos, entidad.codigo, (ruta, exito) => {
-      if (!exito) {
-        this.registrando.set(false);
+    // La resolución de pensión puede necesitar el catálogo completo (docs/crd/
+    // API-COBRO-APORTE-PENSION-COMPLEMENTARIA.md §5.2, corregido 2026-09-16) — de ahí el callback
+    // en vez de un valor sincrónico como antes.
+    this.resolverAportes((aportes, avisoPension) => {
+      if (aportes === null) {
+        this.errorOperacion.set(
+          'No se encontró el tipo de aporte de cesantía o jubilación entre los tipos vigentes del partícipe. Actualice los saldos e intente nuevamente.'
+        );
         return;
       }
-      this.registrarCobro(entidad, prestamos, aportes, ruta);
+      // Uno, varios o ninguno: el mismo botón cubre los tres casos (ver `registrarCobro`).
+      const prestamos = this.cobraPrestamo() ? this.prestamosIncluidos() : [];
+
+      // Si pensión era la ÚNICA línea marcada y quedó excluida (avisoPension), no queda nada que
+      // registrar: se avisa y se corta acá, en vez de mandar un cobro vacío a CRD.CBCR.
+      if (avisoPension) {
+        this.snackBar.open(avisoPension, 'Cerrar', { duration: 8000 });
+        if (!aportes.length && !prestamos.length) return;
+      }
+
+      this.registrando.set(true);
+      this.subirComprobante(prestamos, entidad.codigo, (ruta, exito) => {
+        if (!exito) {
+          this.registrando.set(false);
+          return;
+        }
+        this.registrarCobro(entidad, prestamos, aportes, ruta);
+      });
     });
   }
 
@@ -1340,7 +1379,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private registrarCobro(
     entidad: Entidad,
     prestamos: { prestamo: Prestamo; monto: number }[],
-    aportes: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
+    aportes: { clave: ClaveAporteSocio; idTipoAporte: number; valor: number }[],
     rutaDocumentoRespaldo: string | null
   ): void {
     const usuario = usuarioSesion();
@@ -1412,7 +1451,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private registrarCobroCreditoUnificado(
     entidad: Entidad,
     prestamos: { prestamo: Prestamo; monto: number }[],
-    aportes: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
+    aportes: { clave: ClaveAporteSocio; idTipoAporte: number; valor: number }[],
     usuario: string,
     observacion: string | null,
     fecha: string | null,
@@ -1517,11 +1556,20 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   /** Nombre del tipo de aporte, para el detalle del diálogo de resultado. */
-  private nombreAporte(idTipoAporte: number, clave: 'cesantia' | 'jubilacion'): string {
+  private nombreAporte(idTipoAporte: number, clave: ClaveAporteSocio): string {
     return (
       this.saldosAporte().find((a) => a.idTipoAporte === idTipoAporte)?.nombre ??
-      (clave === 'cesantia' ? 'Cesantía' : 'Jubilación')
+      this.etiquetaClaveAporte(clave)
     );
+  }
+
+  /** Etiqueta de respaldo cuando el tipo no aparece en `saldosAporte()` (p. ej. recién creado). */
+  private etiquetaClaveAporte(clave: ClaveAporteSocio): string {
+    switch (clave) {
+      case 'cesantia': return 'Cesantía';
+      case 'jubilacion': return 'Jubilación';
+      case 'pension': return 'Pensión complementaria';
+    }
   }
 
   /**
@@ -1578,23 +1626,119 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   /**
+   * Catálogo completo de tipos de aporte (los 25 de `CRD.TPAP`, sin filtrar por entidad),
+   * cargado bajo demanda y cacheado — NO se pide en cada selección de partícipe, solo la primera
+   * vez que hace falta resolver pensión y `saldosAporte()` no trajo la fila.
+   *
+   * Un fallo NO se cachea: el próximo cobro reintenta el `GET` en vez de quedar bloqueado hasta
+   * refrescar la pantalla.
+   */
+  private catalogoTipoAporte: TipoAporte[] | null = null;
+  private cargandoCatalogoTipoAporte = false;
+  private esperandoCatalogoTipoAporte: ((catalogo: TipoAporte[] | null) => void)[] = [];
+
+  private obtenerCatalogoTipoAporte(callback: (catalogo: TipoAporte[] | null) => void): void {
+    if (this.catalogoTipoAporte) {
+      callback(this.catalogoTipoAporte);
+      return;
+    }
+    this.esperandoCatalogoTipoAporte.push(callback);
+    if (this.cargandoCatalogoTipoAporte) return;
+
+    this.cargandoCatalogoTipoAporte = true;
+    this.tipoAporteService.getAll().subscribe({
+      next: (tipos) => {
+        this.cargandoCatalogoTipoAporte = false;
+        this.catalogoTipoAporte = tipos ?? [];
+        this.esperandoCatalogoTipoAporte.splice(0).forEach((cb) => cb(this.catalogoTipoAporte));
+      },
+      error: () => {
+        this.cargandoCatalogoTipoAporte = false;
+        this.esperandoCatalogoTipoAporte.splice(0).forEach((cb) => cb(null));
+      },
+    });
+  }
+
+  /**
+   * Resuelve un `idTipoAporte` por nombre contra el catálogo completo — mismo fragmento y misma
+   * normalización sin tildes que `saldoPorNombre`/`idTipoAportePara`. `null` si el catálogo no se
+   * pudo cargar, si ninguna fila matchea, o si matchea más de una: no se adivina (§5.2/§5.6 del
+   * contrato de pensión complementaria, corregido 2026-09-16).
+   */
+  private resolverIdTipoAportePorCatalogo(fragmento: string, callback: (idTipoAporte: number | null) => void): void {
+    this.obtenerCatalogoTipoAporte((catalogo) => {
+      if (!catalogo) {
+        callback(null);
+        return;
+      }
+      const coincidencias = catalogo.filter((t) =>
+        (t.nombre ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(fragmento)
+      );
+      callback(coincidencias.length === 1 ? coincidencias[0].codigo : null);
+    });
+  }
+
+  /**
    * Renglones de aporte del socio a registrar, ya resueltos a su `idTipoAporte`.
    *
-   * Devuelve `null` —y no una lista vacía— si alguno de los tipos marcados no se puede resolver
-   * contra los tipos vigentes del partícipe: en ese caso no hay que llamar al backend con un id
-   * inventado, hay que avisar y que el usuario recargue los saldos.
+   * Cesantía y jubilación NO cambiaron: si alguna de las dos está marcada y no se puede resolver
+   * contra `saldosAporte()`, `callback(null, ...)` — se bloquea el cobro ENTERO, igual que antes.
+   *
+   * Pensión es distinta a propósito (§5.6 del contrato, corregido 2026-09-16): un jubilado sin
+   * movimientos de tipo 23 todavía (dato migrado, nunca procesado por `procesarJubilacion`) no
+   * tiene fila en `saldosAporte()` — ahí se cae al catálogo completo. Si tampoco así se resuelve
+   * (catálogo inalcanzable o, algo que hoy no debería pasar, más de una coincidencia), NO se
+   * bloquea el cobro completo: se excluye solo la línea de pensión y se avisa por qué, dejando
+   * que préstamo/cesantía/jubilación se cobren igual.
    */
-  private aportesARegistrar(): { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[] | null {
-    const renglones: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[] = [];
+  private resolverAportes(
+    callback: (
+      aportes: { clave: ClaveAporteSocio; idTipoAporte: number; valor: number }[] | null,
+      avisoPension: string | null
+    ) => void
+  ): void {
+    const renglones: { clave: ClaveAporteSocio; idTipoAporte: number; valor: number }[] = [];
+
     for (const clave of ['cesantia', 'jubilacion'] as const) {
       if (!this.cuentaChecked[clave]) continue;
       const valor = +this.parseMoneda(this.cuentaMontoTexto[clave]).toFixed(2);
       if (valor <= 0.004) continue;
       const idTipoAporte = this.idTipoAportePara(clave);
-      if (idTipoAporte == null) return null;
+      if (idTipoAporte == null) {
+        callback(null, null);
+        return;
+      }
       renglones.push({ clave, idTipoAporte, valor });
     }
-    return renglones;
+
+    if (!this.cuentaChecked.pension) {
+      callback(renglones, null);
+      return;
+    }
+    const valorPension = +this.parseMoneda(this.cuentaMontoTexto.pension).toFixed(2);
+    if (valorPension <= 0.004) {
+      callback(renglones, null);
+      return;
+    }
+
+    const idDesdeSaldos = this.idTipoAportePara('pension');
+    if (idDesdeSaldos != null) {
+      renglones.push({ clave: 'pension', idTipoAporte: idDesdeSaldos, valor: valorPension });
+      callback(renglones, null);
+      return;
+    }
+
+    this.resolverIdTipoAportePorCatalogo('pension', (idTipoAporte) => {
+      if (idTipoAporte != null) {
+        renglones.push({ clave: 'pension', idTipoAporte, valor: valorPension });
+        callback(renglones, null);
+        return;
+      }
+      callback(
+        renglones,
+        'No se pudo determinar el tipo de aporte de pensión complementaria: esa línea no se va a incluir en este cobro. El resto continúa igual.'
+      );
+    });
   }
 
   /**
@@ -1607,7 +1751,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   private registrarAportesDelSocio(
     idEmpresa: number,
     idEntidad: number,
-    renglones: { clave: 'cesantia' | 'jubilacion'; idTipoAporte: number; valor: number }[],
+    renglones: { clave: ClaveAporteSocio; idTipoAporte: number; valor: number }[],
     usuario: string,
     observacion: string | null,
     fecha: string | null,
@@ -1640,7 +1784,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
         if (resp.exito && resp.resultado) {
           registrados.push(resp.resultado);
         } else {
-          fallidos.push(`${renglones[i].clave === 'cesantia' ? 'Cesantía' : 'Jubilación'} (${this.formatMoneda(renglones[i].valor)}): ${mensajeDeRespuesta(resp)}`);
+          fallidos.push(`${this.etiquetaClaveAporte(renglones[i].clave)} (${this.formatMoneda(renglones[i].valor)}): ${mensajeDeRespuesta(resp)}`);
         }
       });
 

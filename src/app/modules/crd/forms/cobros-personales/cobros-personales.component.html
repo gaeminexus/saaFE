@@ -387,6 +387,20 @@
               @if (cuentaChecked.jubilacion && coberturaJubilacion(); as cobertura) {
                 <tr class="fila-cobertura"><td></td><td colspan="4" [innerHTML]="cobertura.mensajeHtml"></td></tr>
               }
+              @if (puedeCobrarPension()) {
+                <tr>
+                  <td><mat-checkbox [checked]="cuentaChecked.pension" (change)="toggleCuenta('pension', $event.checked)"></mat-checkbox></td>
+                  <td>Pensión complementaria</td>
+                  <td class="num">{{ formatMoneda(saldoPension()) }}</td>
+                  <td class="num valor-vacio">—</td>
+                  <td>
+                    <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                      <input matInput [(ngModel)]="cuentaMontoTexto.pension" [disabled]="!cuentaChecked.pension"
+                             (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoCuentaBlur('pension')" />
+                    </mat-form-field>
+                  </td>
+                </tr>
+              }
             </tbody>
           </table>
         </mat-card-content>
@@ -396,7 +410,7 @@
           <mat-card-header><mat-card-title>Confirmar Pago</mat-card-title></mat-card-header>
 
           <mat-card-content>
-            @if (!cobraPrestamo() && !cuentaChecked.cesantia && !cuentaChecked.jubilacion) {
+            @if (!cobraPrestamo() && !cuentaChecked.cesantia && !cuentaChecked.jubilacion && !cuentaChecked.pension) {
               <p class="texto-vacio">Selecciona al menos un préstamo o una cuenta de aportes para continuar.</p>
             }
 
