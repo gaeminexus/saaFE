@@ -3,6 +3,7 @@ import { Component, ElementRef, HostListener, OnInit, ViewChild, inject, signal 
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
@@ -24,7 +25,6 @@ import { DetalleCargaTxtService } from '../../../service/detalle-carga-txt.servi
   styleUrl: './bandeja-electronica.component.scss',
 })
 export class BandejaElectronicaComponent implements OnInit {
-  @ViewChild('inputTxt') inputTxt!: ElementRef<HTMLInputElement>;
   @ViewChild('inputXml') inputXml!: ElementRef<HTMLInputElement>;
 
   private snackBar = inject(MatSnackBar);
@@ -32,6 +32,8 @@ export class BandejaElectronicaComponent implements OnInit {
   private detalleService = inject(DetalleCargaTxtService);
   private processService = inject(CargaDocumentosService);
   private periodoService = inject(PeriodoService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   // Periodos contables
   periodos = signal<Periodo[]>([]);
@@ -68,6 +70,51 @@ export class BandejaElectronicaComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarPeriodos();
+    this.preseleccionarDesdeQueryParams();
+  }
+
+  /**
+   * Ítem 13: "Ver documentos" (carga-txt / consulta-cargas) navega para acá con `idCargaTxt` +
+   * `idPeriodo` en la query string, mismo patrón que `confirmacion.component.ts` (`idLote`). No
+   * existía antes un mecanismo para preseleccionar una carga desde afuera de esta pantalla — hoy
+   * se elige a mano (combo de período + clic en la fila). Se agrega este método aparte, sin
+   * tocar `cargarHistorial()`/`verDetalle()`, que siguen funcionando igual para quien entra sin
+   * query params.
+   */
+  private preseleccionarDesdeQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const idCargaTxtStr = params.get('idCargaTxt');
+    const idPeriodoStr = params.get('idPeriodo');
+    if (!idCargaTxtStr || !idPeriodoStr) return;
+
+    const idPeriodo = Number(idPeriodoStr);
+    const idCargaTxt = Number(idCargaTxtStr);
+    this.periodoSeleccionado.set(idPeriodo);
+    this.cargando.set(true);
+
+    const criterios: DatosBusqueda[] = [];
+    const dbEmpresa = new DatosBusqueda();
+    dbEmpresa.asignaValorConCampoPadre(TipoDatos.LONG, 'empresa', 'codigo', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbEmpresa);
+    const dbPeriodo = new DatosBusqueda();
+    dbPeriodo.asignaValorConCampoPadre(TipoDatos.LONG, 'periodoContable', 'codigo', String(idPeriodo), TipoComandosBusqueda.IGUAL);
+    criterios.push(dbPeriodo);
+
+    this.cargaService.selectByCriteria(criterios).subscribe({
+      next: (data) => {
+        this.cargas = (data || []);
+        this.dsCargas.data = this.cargas;
+        this.cargando.set(false);
+        const carga = this.cargas.find((c) => c.id === idCargaTxt);
+        if (carga) this.verDetalle(carga);
+      },
+      error: () => { this.cargas = []; this.dsCargas.data = []; this.cargando.set(false); },
+    });
+  }
+
+  /** Ítem 13: la carga del TXT vive en su propia pantalla — esta queda solo para trabajar los documentos. */
+  irACargaTxt(): void {
+    this.router.navigate(['/menucuentaxpagar/procesos/carga-txt']);
   }
 
   @HostListener('window:resize')
@@ -109,48 +156,6 @@ export class BandejaElectronicaComponent implements OnInit {
       },
       error: () => { this.cargas = []; this.dsCargas.data = []; this.cargando.set(false); },
     });
-  }
-
-  // ─── NUEVA CARGA TXT ────────────────────────────────────
-
-  abrirSelectorTxt(): void {
-    this.inputTxt.nativeElement.value = '';
-    this.inputTxt.nativeElement.click();
-  }
-
-  onArchivoTxtSeleccionado(event: Event): void {
-    const file = (event.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const idPeriodo = this.periodoSeleccionado();
-    if (!idPeriodo) { this.mostrarError('Seleccione un período contable antes de cargar.'); return; }
-    if (!file.name.endsWith('.txt') && !file.name.endsWith('.TXT')) {
-      this.mostrarError('Solo se aceptan archivos .TXT del SRI'); return;
-    }
-
-    this.procesando.set(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const contenidoTxt = (e.target?.result as string) || '';
-      this.processService.cargarTxt({
-        contenidoTxt,
-        nombreArchivo: file.name,
-        idEmpresa: this.idEmpresa,
-        idUsuario: this.idUsuario,
-        idPeriodo: idPeriodo,
-      }).subscribe({
-        next: (resp) => {
-          this.procesando.set(false);
-          const msg = `Carga exitosa: ${resp?.nuevos ?? 0} nuevos, ${resp?.duplicados ?? 0} duplicados, ${resp?.novedades ?? 0} novedades`;
-          this.mostrarExito(msg);
-          this.cargarHistorial();
-        },
-        error: (err) => {
-          this.procesando.set(false);
-          this.mostrarError('Error al procesar el TXT: ' + this.extraerMensajeError(err));
-        },
-      });
-    };
-    reader.readAsText(file, 'ISO-8859-1');
   }
 
   // ─── VER DETALLE DE UNA CARGA ───────────────────────────

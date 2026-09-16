@@ -50,6 +50,20 @@ export class MenucuentaxpagarComponent {
       route: '/menucuentaxpagar/procesos',
       children: [
         {
+          // Ítem 13: la carga se separó de la bandeja. Mismo permiso que ya gobierna la
+          // bandeja — no se inventa uno nuevo (darlo de alta es del usuario).
+          displayName: 'Carga de TXT',
+          iconName: 'upload_file',
+          idPermiso: Permisos.CXP_BANDEJA_ELECTRONICA,
+          route: '/menucuentaxpagar/procesos/carga-txt',
+        },
+        {
+          displayName: 'Consulta de Cargas',
+          iconName: 'history',
+          idPermiso: Permisos.CXP_BANDEJA_ELECTRONICA,
+          route: '/menucuentaxpagar/procesos/consulta-cargas',
+        },
+        {
           displayName: 'Bandeja Electrónica',
           iconName: 'inbox',
           idPermiso: Permisos.CXP_BANDEJA_ELECTRONICA,

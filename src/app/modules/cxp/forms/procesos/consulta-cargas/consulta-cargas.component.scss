@@ -1,0 +1,27 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-consulta-cargas {
+  padding: 1.5rem 2rem;
+
+  @include pc.pagos-cobros-layout;
+
+  .font-mono {
+    font-family: 'Roboto Mono', 'Courier New', monospace;
+    font-size: 0.85rem;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #dcfce7;
+    color: #15803d;
+
+    &.badge-error {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+  }
+}

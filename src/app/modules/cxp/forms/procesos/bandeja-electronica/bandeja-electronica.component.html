@@ -1,5 +1,4 @@
-<!-- Inputs ocultos para carga de archivos -->
-<input #inputTxt type="file" accept=".txt,.TXT" style="display:none" (change)="onArchivoTxtSeleccionado($event)" />
+<!-- Input oculto para carga de archivos -->
 <input #inputXml type="file" accept=".xml,.XML" style="display:none" (change)="onXmlFileChange($event)" />
 
 <!-- ─── HISTORIAL DE CARGAS ─── -->
@@ -33,9 +32,9 @@
 
       <!-- Barra de acciones -->
       <div class="toolbar">
-        <button mat-raised-button color="primary" (click)="abrirSelectorTxt()" [disabled]="procesando() || !periodoSeleccionado()">
+        <button mat-stroked-button color="primary" (click)="irACargaTxt()" matTooltip="La carga de TXT ahora tiene su propia pantalla">
           <mat-icon>upload_file</mat-icon>
-          Nueva Carga TXT
+          Cargar TXT
         </button>
         <button mat-icon-button color="primary" (click)="cargarHistorial()" [disabled]="cargando()" matTooltip="Actualizar">
           <mat-icon>refresh</mat-icon>

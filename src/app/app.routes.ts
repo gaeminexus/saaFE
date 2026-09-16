@@ -1012,6 +1012,18 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // Ítem 13 (docs/cxp/API-CARGAS-TXT-BANDEJA-ELECTRONICA.md): la carga del TXT se separó
+        // de la bandeja electrónica, que queda solo para trabajar los documentos ya cargados.
+        path: 'procesos/carga-txt',
+        loadComponent: () => import('./modules/cxp/forms/procesos/carga-txt/carga-txt.component').then((m) => m.CargaTxtComponent),
+        canActivate: [authGuard],
+      },
+      {
+        path: 'procesos/consulta-cargas',
+        loadComponent: () => import('./modules/cxp/forms/procesos/consulta-cargas/consulta-cargas.component').then((m) => m.ConsultaCargasComponent),
+        canActivate: [authGuard],
+      },
+      {
         path: 'procesos/bandeja-electronica',
         loadComponent: () => import('./modules/cxp/forms/procesos/bandeja-electronica/bandeja-electronica.component').then((m) => m.BandejaElectronicaComponent),
         canActivate: [authGuard],

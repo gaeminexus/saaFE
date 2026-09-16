@@ -1,0 +1,75 @@
+@use '../../../../../../styles/components/pagos-cobros' as pc;
+
+.pagina-carga-txt {
+  padding: 1.5rem 2rem;
+  max-width: 720px;
+  margin: 0 auto;
+
+  @include pc.pagos-cobros-layout;
+
+  .campo-periodo {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  .zona-arrastrar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 3rem 1.5rem;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    text-align: center;
+
+    &:hover {
+      border-color: #94a3b8;
+    }
+
+    &.arrastrando {
+      border-color: #5b6fd8;
+      background: #eef2ff;
+    }
+
+    &.con-archivo {
+      border-style: solid;
+      border-color: #5b6fd8;
+      background: #eef2ff;
+      cursor: default;
+    }
+
+    .icono-zona {
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: #94a3b8;
+    }
+
+    .texto-zona {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .texto-zona-sub {
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    .nombre-archivo {
+      font-weight: 600;
+      color: #1e293b;
+      word-break: break-all;
+    }
+
+    .tamano-archivo {
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+  }
+}

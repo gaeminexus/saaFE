@@ -1,0 +1,92 @@
+<div class="pagina-carga-txt">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>upload_file</mat-icon>
+      <span>Carga de TXT</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <mat-form-field appearance="outline" class="campo-periodo">
+        <mat-label>Período contable</mat-label>
+        <mat-select [(ngModel)]="periodoSeleccionado" [disabled]="cargando()">
+          @for (p of periodos(); track p.codigo) {
+            <mat-option [value]="p.codigo">{{ p.nombre }}</mat-option>
+          }
+        </mat-select>
+        <mat-hint>Obligatorio antes de cargar el archivo</mat-hint>
+      </mat-form-field>
+
+      @if (!resultado()) {
+        <div
+          class="zona-arrastrar"
+          [class.arrastrando]="arrastrando()"
+          [class.con-archivo]="archivoSeleccionado()"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)"
+          (click)="abrirSelectorArchivo()">
+
+          <input #inputArchivo type="file" accept=".txt" hidden (change)="onArchivoInputChange($event)" />
+
+          @if (archivoSeleccionado(); as f) {
+            <mat-icon class="icono-zona">description</mat-icon>
+            <div class="nombre-archivo">{{ f.name }}</div>
+            <div class="tamano-archivo">{{ formatearTamano(f.size) }}</div>
+            <button mat-stroked-button type="button" (click)="quitarArchivo(); $event.stopPropagation()">
+              <mat-icon>close</mat-icon> Quitar
+            </button>
+          } @else {
+            <mat-icon class="icono-zona">cloud_upload</mat-icon>
+            <div class="texto-zona">Arrastre el archivo .TXT aquí</div>
+            <div class="texto-zona-sub">o haga clic para elegirlo</div>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="mensaje-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ error() }}</span>
+          </div>
+        }
+
+        <div class="acciones">
+          <button mat-raised-button class="btn-confirmar" [disabled]="!puedeCargar" (click)="cargar()">
+            @if (cargando()) {
+              <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+              <mat-icon>upload</mat-icon>
+            }
+            Cargar archivo
+          </button>
+        </div>
+      } @else {
+        <div class="mensaje-exito">
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <div>Carga procesada: {{ resultado()!.nombreArchivo }}</div>
+            <div class="detalle-exito">
+              <span>Leídos: {{ resultado()!.totalRegistros }}</span>
+              <span>Nuevos: {{ resultado()!.nuevos }}</span>
+              <span>Duplicados: {{ resultado()!.duplicados }}</span>
+              <span>Novedades: {{ resultado()!.novedades }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="acciones">
+          <button mat-stroked-button (click)="cargarOtro()">
+            <mat-icon>add</mat-icon> Cargar otro archivo
+          </button>
+          <button mat-raised-button class="btn-confirmar" (click)="irABandeja()">
+            <mat-icon>inbox</mat-icon> Ir a la bandeja de esta carga
+          </button>
+        </div>
+      }
+
+    </mat-card-content>
+  </mat-card>
+</div>
