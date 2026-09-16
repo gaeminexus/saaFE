@@ -114,3 +114,62 @@ viejo, **guardar cualquier cuenta bancaria fallaría**. Se afirmó sin medirlo.
 El bloque 4 del `e2-42` lista las cuentas activas cuyo titular está con RUC y la cuenta sin
 identificación propia. **No se completan solas**: que la cédula sean los 10 primeros dígitos del RUC
 es lo habitual, pero no prueba con qué se abrió la cuenta. Se cargan en la ficha.
+
+---
+
+# 6. AMPLIACIÓN 2026-09-16 — el NOMBRE del titular de la cuenta
+
+> *«En las cuentas bancarias de titular incluir también un campo de nombre de titular de cuenta, ya que se puede
+> pagar dinero a los titulares a cuentas que no son de ellos sino de otras personas, por lo que se requiere el
+> nombre del titular de la cuenta.»* — usuario, 2026-09-16
+
+Es el mismo caso del §1 con el otro dato que el banco valida contra el número de cuenta: **el nombre**. Hoy el
+archivo del banco escribe siempre el nombre del **titular del pago** (`InternacionalArchivoPagoFormateador:206-211`
+en el campo 11, `PacificoArchivoPagoFormateador:112` en la columna I). Si la cuenta es de otra persona, el banco
+rechaza la transferencia por «nombre no coincide».
+
+## 6.1 Base — `TSR.CTBN`
+
+| Columna | Tipo | Regla |
+|---|---|---|
+| `CTBNNMBR` | `VARCHAR2(200 CHAR)`, nullable | Nombre de la persona a cuyo nombre está la cuenta. **Vacío = la cuenta es del propio titular** |
+
+DDL: `tsr/sql/e2-50-nombre-titular-cuenta-bancaria.sql`. **Va antes del WAR** (ORA-00904 en toda lectura de `CTBN`).
+
+## 6.2 La regla del archivo del banco — un resolver, como los otros dos
+
+`NombreBeneficiarioResolver.nombreBeneficiario(pago)`, en `com.saa.ejb.tsr.formateador`, mismo patrón que
+`IdentificacionBeneficiarioResolver`:
+
+1. `pago.getCuentaDestino().getNombreTitularCuenta()` si no está vacío → **ese**.
+2. Si no, `pago.getTitular().getNombre()` — lo de hoy.
+3. Sin titular (beneficiario ocasional) → `pago.getBeneficiarioNombre()` — lo de hoy.
+
+Los **dos** formateadores lo usan para el campo del nombre. **El truncado a 41 del Internacional no se mueve**:
+sigue donde está (§2.2 del mismo documento explica por qué una validación que hoy tiene un solo formateador no se
+comparte «de paso»).
+
+⚠️ **Los mensajes de error** de los formateadores siguen nombrando al titular del pago, no al de la cuenta: quien
+lee el error busca el pago por su proveedor. No se unifican.
+
+## 6.3 Contrato — `POST /rest/ctbn` y `PUT /rest/ctbn`
+
+| Campo | Tipo | Regla |
+|---|---|---|
+| `nombreTitularCuenta` | `string`, opcional, ≤ 200 | `trim`; vacío → `null`. Más de 200 → el `400` de siempre de esa validación |
+
+- El `PUT` **manda siempre el campo** con su valor actual o `null`: `saveSingle` es un `merge` y lo que no viaja se
+  graba nulo (§8.2 del registro de reservas).
+- Las lecturas (`getAll`, `getId`, `selectByCriteria`, y anidado en `pago.cuentaDestino`) lo devuelven.
+
+## 6.4 Pantalla — ficha del titular, sección de cuentas bancarias
+
+- Campo **«Nombre del titular de la cuenta»**, debajo de la identificación, con ayuda: *«Solo si la cuenta está a
+  nombre de otra persona. Vacío = es del propio titular.»*
+- Si se llena la identificación propia y el nombre queda vacío (o al revés), **no se bloquea**: se avisa en pantalla,
+  porque el banco valida los dos.
+
+## 6.5 Orden de despliegue
+
+`e2-50` (SQL) → WAR → FE, estricto, por la misma razón del §4: `POST/PUT /ctbn` deserializan la entidad y Jackson
+rechaza propiedades desconocidas.
