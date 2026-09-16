@@ -37,4 +37,9 @@ export interface CuentaBancariaTitular {
   tipoIdentificacion?: number | null;
   /** Identificación con la que se abrió la cuenta (máx. 20). `null` = usa la del titular. */
   identificacion?: string | null;
+  /**
+   * Nombre de la persona a cuyo nombre está la cuenta (CTBNNMBR, máx. 200).
+   * `null`/vacío = la cuenta es del propio titular (docs/tsr/API-IDENTIFICACION-CUENTA-BANCARIA.md §6).
+   */
+  nombreTitularCuenta?: string | null;
 }

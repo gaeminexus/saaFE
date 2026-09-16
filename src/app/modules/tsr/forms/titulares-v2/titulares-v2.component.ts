@@ -309,6 +309,10 @@ export class TitularesV2Component implements OnInit {
       // Los dos opcionales: null/null = la cuenta usa la identificación del titular.
       tipoIdentificacion: [null],
       identificacion: ['', Validators.maxLength(20)],
+      // Nombre de la persona a cuyo nombre está la cuenta (§6 del mismo contrato). Opcional:
+      // vacío = la cuenta es del propio titular. No se cruza con validarIdentificacionCuenta —
+      // el descalce entre los dos es solo un aviso, nunca bloquea guardar (§6.4).
+      nombreTitularCuenta: ['', Validators.maxLength(200)],
     }, { validators: this.validarIdentificacionCuenta });
 
     this.formCuentaBancaria.get('bancoBusqueda')?.valueChanges.subscribe((value) => {
@@ -1157,6 +1161,7 @@ export class TitularesV2Component implements OnInit {
       estado: 1,
       tipoIdentificacion: null,
       identificacion: '',
+      nombreTitularCuenta: '',
     });
     this.modoFormCuentaBancaria.set('nuevo');
   }
@@ -1175,6 +1180,7 @@ export class TitularesV2Component implements OnInit {
       estado: cuenta.estado,
       tipoIdentificacion: cuenta.tipoIdentificacion ?? null,
       identificacion: cuenta.identificacion || '',
+      nombreTitularCuenta: cuenta.nombreTitularCuenta || '',
     });
     this.modoFormCuentaBancaria.set('editar');
   }
@@ -1268,6 +1274,22 @@ export class TitularesV2Component implements OnInit {
     return '';
   }
 
+  /**
+   * Aviso NO bloqueante (§6.4 del contrato): el banco valida identificación y nombre de la
+   * cuenta juntos. Si se carga uno sin el otro, se avisa en pantalla pero no impide guardar.
+   */
+  avisoNombreIdentificacionCuenta(): string {
+    const identificacion = String(this.formCuentaBancaria.get('identificacion')?.value || '').trim();
+    const nombre = String(this.formCuentaBancaria.get('nombreTitularCuenta')?.value || '').trim();
+    if (identificacion && !nombre) {
+      return 'Cargó la identificación de la cuenta pero no el nombre del titular de la cuenta — el banco valida los dos.';
+    }
+    if (nombre && !identificacion) {
+      return 'Cargó el nombre del titular de la cuenta pero no su identificación — el banco valida los dos.';
+    }
+    return '';
+  }
+
   /** "C 1709616302", "R 1709616302001", "P AB123456" o "La del titular" si la cuenta no tiene identificación propia. */
   etiquetaIdentificacionCuenta(cuenta: CuentaBancariaTitular): string {
     if (!cuenta.tipoIdentificacion || !cuenta.identificacion) return 'La del titular';
@@ -1294,10 +1316,11 @@ export class TitularesV2Component implements OnInit {
     const esNuevo = !v.codigo || v.codigo === 0;
 
     // PUT /ctbn hace merge desnudo: todo campo ausente se graba NULL (docs/tsr/
-    // API-IDENTIFICACION-CUENTA-BANCARIA.md §3). Los dos campos nuevos van
-    // SIEMPRE, con su valor actual o null — nunca omitidos, o una edición sin
-    // tocarlos borraría una identificación ya cargada.
+    // API-IDENTIFICACION-CUENTA-BANCARIA.md §3 y §6.3). Los tres campos (tipo/identificación de
+    // la cuenta y nombre del titular de la cuenta) van SIEMPRE, con su valor actual o null —
+    // nunca omitidos, o una edición sin tocarlos borraría un dato ya cargado.
     const identificacion = String(v.identificacion || '').trim();
+    const nombreTitularCuenta = String(v.nombreTitularCuenta || '').trim();
     const payload: any = {
       codigo: v.codigo || null,
       titular: { codigo: titular.codigo },
@@ -1309,6 +1332,7 @@ export class TitularesV2Component implements OnInit {
       usuarioCreacion: usuario,
       tipoIdentificacion: v.tipoIdentificacion || null,
       identificacion: identificacion || null,
+      nombreTitularCuenta: nombreTitularCuenta || null,
     };
 
     // Mismo motivo del merge desnudo: si se edita sin mandar fechaCreacion, el

@@ -439,6 +439,19 @@
                 }
               </mat-form-field>
 
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre del titular de la cuenta</mat-label>
+                <input matInput formControlName="nombreTitularCuenta" maxlength="200" />
+                <mat-hint>Solo si la cuenta está a nombre de otra persona. Vacío = es del propio titular.</mat-hint>
+              </mat-form-field>
+
+              @if (avisoNombreIdentificacionCuenta(); as aviso) {
+                <div class="aviso-cuenta-bancaria full-width">
+                  <mat-icon>warning</mat-icon>
+                  <span>{{ aviso }}</span>
+                </div>
+              }
+
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Observaciones</mat-label>
                 <textarea matInput formControlName="observaciones" rows="2" maxlength="500"></textarea>
@@ -480,6 +493,11 @@
               <td mat-cell *matCellDef="let c">{{ etiquetaIdentificacionCuenta(c) }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="nombreCuenta">
+              <th mat-header-cell *matHeaderCellDef>Nombre del titular de la cuenta</th>
+              <td mat-cell *matCellDef="let c">{{ c.nombreTitularCuenta || 'El propio titular' }}</td>
+            </ng-container>
+
             <ng-container matColumnDef="estado">
               <th mat-header-cell *matHeaderCellDef>Estado</th>
               <td mat-cell *matCellDef="let c">
@@ -501,8 +519,8 @@
               </td>
             </ng-container>
 
-            <tr mat-header-row *matHeaderRowDef="['banco','tipoCuenta','numeroCuenta','identificacionCuenta','estado','acciones']"></tr>
-            <tr mat-row *matRowDef="let row; columns: ['banco','tipoCuenta','numeroCuenta','identificacionCuenta','estado','acciones'];"></tr>
+            <tr mat-header-row *matHeaderRowDef="['banco','tipoCuenta','numeroCuenta','identificacionCuenta','nombreCuenta','estado','acciones']"></tr>
+            <tr mat-row *matRowDef="let row; columns: ['banco','tipoCuenta','numeroCuenta','identificacionCuenta','nombreCuenta','estado','acciones'];"></tr>
           </table>
         } @else if (modoFormCuentaBancaria() === 'oculto') {
           <p class="empty-cuentas-msg">
