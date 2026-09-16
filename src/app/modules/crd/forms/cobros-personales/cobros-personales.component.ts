@@ -1736,7 +1736,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
       }
       callback(
         renglones,
-        'No se pudo determinar el tipo de aporte de pensión complementaria: esa línea no se va a incluir en este cobro. El resto continúa igual.'
+        'No se pudo determinar el tipo de aporte de pensión complementaria: esa línea NO se va a incluir en el cobro; el resto se registra igual.'
       );
     });
   }
