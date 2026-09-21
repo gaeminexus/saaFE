@@ -44,6 +44,8 @@ export interface DocumentoElectronico {
   autorizacion: string;
   subtotal: number;
   subcero: number;
+  /** Solo la Factura de venta guarda base 5% (NC, ND y liquidación no tienen esa columna en el backend) — null = no aplica. */
+  subtotal5: number | null;
   vIVA: number;
   total: number;
   estadoEmision: number | string | null;
@@ -131,6 +133,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
     'autorizacion',
     'subtotal',
     'subcero',
+    'subtotal5',
     'vIVA',
     'total',
     'estadoEmision',
@@ -707,8 +710,8 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   exportarCSV(): void {
     if (!this.registros.length) { this.mostrarInfo('No hay datos para exportar'); return; }
 
-    const headers = ['Tipo', 'Número', 'CI/RUC', 'Nombre', 'Fecha', 'Autorización', 'Subtotal', 'Sub.Cero', 'IVA', 'Total', 'Estado'];
-    const keys:    (keyof DocumentoElectronico)[] = ['tipoLabel', 'numero', 'clienteIdentificacion', 'clienteNombre', 'fecha', 'autorizacion', 'subtotal', 'subcero', 'vIVA', 'total', 'estadoEmision'];
+    const headers = ['Tipo', 'Número', 'CI/RUC', 'Nombre', 'Fecha', 'Autorización', 'Subtotal', 'Sub.Cero', 'Sub.5%', 'IVA', 'Total', 'Estado'];
+    const keys:    (keyof DocumentoElectronico)[] = ['tipoLabel', 'numero', 'clienteIdentificacion', 'clienteNombre', 'fecha', 'autorizacion', 'subtotal', 'subcero', 'subtotal5', 'vIVA', 'total', 'estadoEmision'];
 
     const fecha = new Date().toISOString().slice(0, 10);
     this.exportService.exportToCSV(this.registros, `documentos_electronicos_${fecha}`, headers, keys);
@@ -738,6 +741,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       autorizacion:          f.autorizacion || f.clave || '',
       subtotal:              this.toNum(f.subtotal),
       subcero:               this.toNum(f.subcero),
+      subtotal5:             this.toNum(f.subtotal5),
       vIVA:                  this.toNum(f.vIVA),
       total:                 this.toNum(f.total),
       estadoEmision:         f.estadoEmision,
@@ -758,6 +762,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       autorizacion:          n.autorizacion || n.clave || '',
       subtotal:              this.toNum(n.subtotal),
       subcero:               this.toNum(n.subcero),
+      subtotal5:             null,
       vIVA:                  this.toNum(n.vIVA),
       total:                 this.toNum(n.total),
       estadoEmision:         n.estadoEmision,
@@ -778,6 +783,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       autorizacion:          n.autorizacion || n.clave || '',
       subtotal:              this.toNum(n.subtotal),
       subcero:               this.toNum(n.subcero),
+      subtotal5:             null,
       vIVA:                  this.toNum(n.vIVA),
       total:                 this.toNum(n.total),
       estadoEmision:         n.estadoEmision,
@@ -798,6 +804,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       autorizacion:          r.autorizacion || r.clave || '',
       subtotal:              0,
       subcero:               0,
+      subtotal5:             0,
       vIVA:                  0,
       total:                 this.toNum(r.total || r.totalRetenido),
       estadoEmision:         r.estadoEmision,
@@ -818,6 +825,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
       autorizacion:          l.autorizacion || l.clave || '',
       subtotal:              this.toNum(l.subtotal),
       subcero:               this.toNum(l.subcero),
+      subtotal5:             null,
       vIVA:                  this.toNum(l.vIVA),
       total:                 this.toNum(l.total),
       estadoEmision:         l.estadoEmision,

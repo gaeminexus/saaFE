@@ -141,6 +141,11 @@
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.subcero | number:'1.2-2' }}</td>
           </ng-container>
 
+          <ng-container matColumnDef="subtotal5">
+            <th mat-header-cell *matHeaderCellDef class="text-right">Sub. 5%</th>
+            <td mat-cell *matCellDef="let row" class="text-right">{{ row.subtotal5 == null ? '—' : (row.subtotal5 | number:'1.2-2') }}</td>
+          </ng-container>
+
           <ng-container matColumnDef="vIVA">
             <th mat-header-cell *matHeaderCellDef class="text-right">IVA</th>
             <td mat-cell *matCellDef="let row" class="text-right">{{ row.vIVA | number:'1.2-2' }}</td>
