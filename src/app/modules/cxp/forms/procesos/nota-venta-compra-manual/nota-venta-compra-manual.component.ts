@@ -233,6 +233,9 @@ export class NotaVentaCompraManualComponent implements OnInit {
   get diferenciaTotal(): number { return round2((Number(this.form.total) || 0) - this.sumaDetalleTotal); }
   get totalCuadra(): boolean { return Math.abs(this.diferenciaTotal) < 0.01; }
 
+  get diferenciaSubcero(): number { return round2((Number(this.form.subcero) || 0) - this.sumaDetalleBaseCero); }
+  get subceroCuadra(): boolean { return Math.abs(this.diferenciaSubcero) < 0.01; }
+
   /** Atajo: copia la suma del detalle a los totales de cabecera, sin obligar a retipear. */
   igualarTotalesConDetalle(): void {
     this.form.subtotal = this.sumaDetalleBase;

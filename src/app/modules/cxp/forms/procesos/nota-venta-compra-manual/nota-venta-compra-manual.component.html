@@ -231,6 +231,16 @@
         <button mat-button type="button" (click)="igualarTotalesConDetalle()">Usar suma del detalle</button>
       }
     </div>
+
+    <div class="nvcm-cuadre" [class.nvcm-cuadre-ok]="subceroCuadra" [class.nvcm-cuadre-mal]="!subceroCuadra">
+      <mat-icon>{{ subceroCuadra ? 'check_circle' : 'warning' }}</mat-icon>
+      <div class="nvcm-cuadre-texto">
+        <div>Base 0% del detalle: <strong>{{ sumaDetalleBaseCero | number:'1.2-2' }}</strong> — Subtotal (0%) tipeado: <strong>{{ (form.subcero || 0) | number:'1.2-2' }}</strong></div>
+        @if (!subceroCuadra) {
+          <div class="nvcm-cuadre-diff">Diferencia: {{ diferenciaSubcero | number:'1.2-2' }} — revise antes de grabar.</div>
+        }
+      </div>
+    </div>
   </mat-card>
 
   <mat-card class="nvcm-card">
