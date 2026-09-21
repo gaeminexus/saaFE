@@ -375,7 +375,7 @@ export class MenucreditosComponent {
         route: '/menucreditos/bandas-cartera',
       });
       paramNode?.children?.push({
-        displayName: 'Escala de Calificación de Riesgo',
+        displayName: 'Calificación de Riesgo',
         iconName: 'rule',
         idPermiso: Permisos.CRD_ESCALA_DE_CALIFICACION_DE_RIESGO,
         route: '/menucreditos/escala-calificacion-riesgo',
@@ -393,7 +393,7 @@ export class MenucreditosComponent {
         route: '/menucreditos/interruptor-contabilidad',
       });
       paramNode?.children?.push({
-        displayName: 'Cuentas por Tipo de Aporte',
+        displayName: 'Cuentas por Aporte',
         iconName: 'account_balance_wallet',
         idPermiso: Permisos.CRD_CUENTAS_POR_TIPO_DE_APORTE,
         route: '/menucreditos/cuentas-tipo-aporte',

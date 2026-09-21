@@ -93,6 +93,7 @@ Angular 20, standalone components en todo el proyecto (solo quedan 2 archivos le
 ### Lecturas adicionales ya presentes en este repositorio
 - `.github/copilot-instructions.md` — patrones de código específicos de Angular (signals, guards, trackBy, boilerplate de testing) con más detalle que aquí.
 - `docs/patrones/DEVELOPMENT_STANDARDS.md` — checklist de componentes/servicios y convenciones de layout de UI (paneles maestro-detalle, patrones de badge/status).
+- `docs/patrones/NOMBRES-DE-MENU-LATERAL.md` — **al agregar una entrada al menú de cualquier módulo: máximo 24 caracteres**, y apuntá a 22. Un `displayName` más largo no se recorta a la mitad, **desaparece entero y queda un `...`** sin una sola letra. Medido contra producción el 2026-09-21. El truncado lo hace Angular Material en `.mdc-list-item__primary-text`, y ⛔ **no se arregla editando el SCSS de `shared/basics/menu/`**: lo usan los siete módulos.
 - `docs/transversal/ALCANCE-SISTEMA.md` — fotografía anterior (jul. 2025) de la arquitectura del frontend; **su afirmación de que el backend es "Spring Boot" es incorrecta** (es Jakarta EE/WildFly/EJB) — no repitas eso.
 - `docs/crd/CRD-CODE-REVIEW-2026-07-24.md` — análisis detallado de los bugs conocidos de fallo silencioso del módulo CRD.
 - `docs/historico/PLAN-DESARROLLO-TSR-CXP-CXC.md` y otros archivos `docs/PLAN-*`/`docs/RESUMEN-*` con fecha — historial de planificación de funcionalidades de tesorería/CXC/CXP; revisa las fechas, varios están reemplazados por otros posteriores sobre el mismo tema.
