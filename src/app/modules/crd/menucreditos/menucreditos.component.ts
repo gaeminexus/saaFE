@@ -279,6 +279,13 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_DEVOLUCION_DE_APORTES,
           route: '/menucreditos/devolucion-aportes',
         },
+        // Sin `idPermiso`: el nodo todavía no existe en el árbol de permisos de SAA (lo asigna el
+        // frente de seguridad). Un `idPermiso` ausente no bloquea.
+        {
+          displayName: 'Recepción de Valores de Seguro',
+          iconName: 'volunteer_activism',
+          route: '/menucreditos/recepcion-valores-seguro',
+        },
         {
           displayName: 'Cobros Personales',
           iconName: 'point_of_sale',

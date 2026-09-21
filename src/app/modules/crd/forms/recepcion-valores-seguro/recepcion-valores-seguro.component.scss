@@ -1,0 +1,97 @@
+/*
+ * Recepción de valores de seguro. Mismo lenguaje visual que Devolución de Aportes.
+ * Regla táctil: 44px de alto mínimo en todo control interactivo.
+ */
+
+.rvs-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100%;
+}
+
+.search-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #fff;
+  margin-bottom: 1.5rem;
+
+  .header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+
+    h1 { font-size: 1.8rem; font-weight: 600; margin: 0; }
+    .header-icon { font-size: 30px; width: 30px; height: 30px; }
+  }
+
+  .search-box {
+    display: flex;
+    gap: 0.85rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+
+    .search-field {
+      flex: 1;
+      min-width: 220px;
+      ::ng-deep .mat-mdc-text-field-wrapper { background: #fff; border-radius: 0.5rem; }
+    }
+
+    .search-button { height: 56px; margin-top: 4px; }
+  }
+}
+
+mat-card { border-radius: 12px !important; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important; margin-bottom: 1.5rem !important; }
+
+.resultados-card, .entidad-card, .form-card {
+  mat-card-header {
+    border-bottom: 3px solid #667eea;
+    background: linear-gradient(90deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 18px 22px;
+    margin: -16px -16px 16px -16px;
+  }
+}
+
+.texto-vacio { color: #718096; font-style: italic; font-size: 0.86rem; }
+
+.tabla-resultados { width: 100%; }
+.fila-clicable { cursor: pointer; min-height: 44px; &:hover { background: #edf2f7; } }
+
+.rvs-aviso {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+
+  mat-icon { flex: none; }
+
+  &.info { background: #ebf4ff; color: #2a4365; }
+  &.ok { background: #e6f6ee; color: #0d5c3b; }
+  &.error { background: #fdecea; color: #8a1c14; }
+}
+
+.rvs-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+
+  .rvs-ancho-total { grid-column: 1 / -1; }
+}
+
+.rvs-acciones {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+
+  button { min-height: 44px; }
+  .rvs-faltantes { color: #718096; font-size: 0.84rem; }
+}

@@ -3,11 +3,14 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { forkJoin } from 'rxjs';
 
 import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { RecepcionValorSeguro } from '../../../model/recepcion-valor-seguro';
+import { RecepcionValorSeguroService } from '../../../service/recepcion-valor-seguro.service';
 import { nombreTipoOperacionCobro } from '../../../model/cobros/catalogos-cobro';
 import { FilaBandejaAprobacion, RespuestaCobroCreditoDetalle } from '../../../model/cobros/cobro-credito';
 import { CobroCreditoService } from '../../../service/cobro-credito.service';
@@ -35,6 +38,7 @@ import { CobroPetroPaso1Component } from '../../archivos-petro/carga/detalle-con
 })
 export class BandejaContabilidadComponent {
   private cobros = inject(CobroCreditoService);
+  private recepcionesSeguro = inject(RecepcionValorSeguroService);
   private funcionesDatos = inject(FuncionesDatosService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
@@ -49,6 +53,10 @@ export class BandejaContabilidadComponent {
 
   procesando = signal(false);
 
+  /** Recepciones de valores de seguro pendientes, por código: el detalle sale de la propia lista. */
+  recepcionesPorId = signal<Map<number, RecepcionValorSeguro>>(new Map());
+  errorRecepciones = signal(false);
+
   readonly nombreTipoOperacionCobro = nombreTipoOperacionCobro;
 
   totalPendientes = computed(() => this.filas().length);
@@ -61,16 +69,43 @@ export class BandejaContabilidadComponent {
     this.cargando.set(true);
     this.filaSeleccionada.set(null);
     this.detalle.set(null);
-    this.cobros.bandejaAprobacion().subscribe((filas) => {
+    forkJoin({
+      filas: this.cobros.bandejaAprobacion(),
+      recepciones: this.recepcionesSeguro.pendientes(),
+    }).subscribe(({ filas, recepciones }) => {
       this.cargando.set(false);
-      this.filas.set(filas);
+      // `null` = la consulta falló: se avisa, no se hace pasar por «no hay pendientes».
+      this.errorRecepciones.set(recepciones === null);
+      this.recepcionesPorId.set(new Map((recepciones ?? []).map((r) => [r.codigo, r])));
+      const filasRecepcion: FilaBandejaAprobacion[] = (recepciones ?? []).map((r) => ({
+        tipo: 'RECEPCION_SEGURO',
+        id: r.codigo,
+        descripcion: r.entidad?.razonSocial ?? '—',
+        valor: r.valor,
+        usuarioRegistro: r.usuarioRegistro ?? '',
+        fechaRegistro: r.fechaRegistro ?? r.fecha,
+      }));
+      this.filas.set([...filas, ...filasRecepcion]);
     });
+  }
+
+  /** Recepción de seguro de la fila seleccionada, o `null` si la fila es de otro tipo. */
+  recepcionSeleccionada(): RecepcionValorSeguro | null {
+    const fila = this.filaSeleccionada();
+    return fila?.tipo === 'RECEPCION_SEGURO' ? this.recepcionesPorId().get(fila.id) ?? null : null;
+  }
+
+  etiquetaTipo(tipo: FilaBandejaAprobacion['tipo']): string {
+    return tipo === 'CARGA_PETRO' ? 'Carga Petro' : tipo === 'RECEPCION_SEGURO' ? 'Seguro' : 'Cobro';
   }
 
   seleccionar(fila: FilaBandejaAprobacion): void {
     this.filaSeleccionada.set(fila);
     this.detalle.set(null);
     this.errorDetalle.set(null);
+
+    // El detalle de una recepción de seguro ya viene completo en la lista de pendientes.
+    if (fila.tipo === 'RECEPCION_SEGURO') return;
 
     if (fila.tipo === 'CARGA_PETRO') {
       // Detalle y acciones (transferencias, confirmar recepción, reversar) los resuelve el propio
@@ -97,6 +132,51 @@ export class BandejaContabilidadComponent {
     if (linea.prestamo) return `Préstamo #${linea.prestamo.idAsoprep ?? linea.prestamo.codigo}`;
     if (linea.tipoAporte) return linea.tipoAporte.nombre;
     return '—';
+  }
+
+  aprobarRecepcion(): void {
+    const fila = this.filaSeleccionada();
+    if (!fila || fila.tipo !== 'RECEPCION_SEGURO' || this.procesando()) return;
+
+    this.procesando.set(true);
+    this.recepcionesSeguro.aprobar(fila.id, { usuario: usuarioSesion() }).subscribe((resp) => {
+      this.procesando.set(false);
+      if (!resp.exito) {
+        // Mensaje del servidor tal cual: incluye el 409 de contabilidad de CRD desactivada.
+        this.snackBar.open(resp.mensaje ?? 'No se pudo aprobar la recepción.', 'Cerrar', { duration: 12000 });
+        return;
+      }
+      this.snackBar.open('Recepción aprobada: el valor ya está en la cuenta del partícipe.', 'Cerrar', { duration: 5000 });
+      this.cargar();
+    });
+  }
+
+  rechazarRecepcion(): void {
+    const fila = this.filaSeleccionada();
+    if (!fila || fila.tipo !== 'RECEPCION_SEGURO' || this.procesando()) return;
+
+    const data: MotivoDialogData = {
+      titulo: 'Rechazar recepción de seguro',
+      advertencia: 'La recepción queda rechazada y no genera asiento. Indique por qué se rechaza.',
+      textoConfirmar: 'Rechazar',
+    };
+
+    this.dialog
+      .open(MotivoDialogComponent, { width: '480px', data })
+      .afterClosed()
+      .subscribe((motivo?: string | null) => {
+        if (!motivo) return;
+        this.procesando.set(true);
+        this.recepcionesSeguro.rechazar(fila.id, { usuario: usuarioSesion(), motivo }).subscribe((resp) => {
+          this.procesando.set(false);
+          if (!resp.exito) {
+            this.snackBar.open(resp.mensaje ?? 'No se pudo rechazar la recepción.', 'Cerrar', { duration: 8000 });
+            return;
+          }
+          this.snackBar.open('Recepción rechazada.', 'Cerrar', { duration: 4000 });
+          this.cargar();
+        });
+      });
   }
 
   aprobar(): void {

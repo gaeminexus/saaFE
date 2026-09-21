@@ -101,4 +101,4 @@ export const MODALIDAD_REDUCIR_PLAZO = 1;
 export const MODALIDAD_REDUCIR_CUOTA = 2;
 
 /** Tipo de fila de la bandeja combinada de contabilidad (§5.1 del contrato). */
-export type TipoFilaBandejaAprobacion = 'COBRO_CREDITO' | 'CARGA_PETRO';
+export type TipoFilaBandejaAprobacion = 'COBRO_CREDITO' | 'CARGA_PETRO' | 'RECEPCION_SEGURO';

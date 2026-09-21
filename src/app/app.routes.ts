@@ -1126,6 +1126,7 @@ export const routes: Routes = [
       { path: 'simulador-prestamo', loadComponent: () => import('./modules/crd/forms/simulador-prestamo/simulador-prestamo.component').then((m) => m.SimuladorPrestamoComponent) },
       // Ruta 'pago-cuotas' retirada (lote U3): la pantalla simulaba el pago. Componente conservado en forms/pago-cuotas/.
       // { path: 'pago-cuotas', loadComponent: () => import('./modules/crd/forms/pago-cuotas/pago-cuotas.component').then((m) => m.PagoCuotasComponent) },
+      { path: 'recepcion-valores-seguro', loadComponent: () => import('./modules/crd/forms/recepcion-valores-seguro/recepcion-valores-seguro.component').then((m) => m.RecepcionValoresSeguroComponent), canActivate: [authGuard] },
       { path: 'cobros-personales', loadComponent: () => import('./modules/crd/forms/cobros-personales/cobros-personales.component').then((m) => m.CobrosPersonalesComponent) },
       { path: 'bandeja-contabilidad', loadComponent: () => import('./modules/crd/forms/cobros/bandeja-contabilidad/bandeja-contabilidad.component').then((m) => m.BandejaContabilidadComponent) },
       { path: 'proceso-credito', loadComponent: () => import('./modules/crd/forms/cobros/proceso-credito/proceso-credito.component').then((m) => m.ProcesoCreditoComponent) },

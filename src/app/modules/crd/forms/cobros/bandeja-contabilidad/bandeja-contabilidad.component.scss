@@ -88,6 +88,7 @@
       align-self: center;
 
       &.petro { color: #b45309; background: rgba(217, 119, 6, 0.12); }
+      &.seguro { color: #0d7a4f; background: rgba(13, 122, 79, 0.12); }
     }
 
     .fi-desc { grid-area: desc; font-weight: 600; font-size: 0.86rem; align-self: center; }
@@ -162,4 +163,13 @@
   gap: 0.5rem;
   color: #c62828;
   padding: 1rem 0;
+}
+
+.pg-aviso-bandeja {
+  background: #e6f6ee;
+  color: #0d5c3b;
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.86rem;
 }

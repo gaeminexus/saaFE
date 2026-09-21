@@ -10,13 +10,20 @@
     </button>
   </div>
 
+  @if (errorRecepciones() && !cargando()) {
+    <div class="error-text">
+      <mat-icon>error_outline</mat-icon>
+      <span>No se pudieron consultar las recepciones de valores de seguro: puede haber pendientes que no se ven aquí. Actualice para reintentar.</span>
+    </div>
+  }
+
   @if (cargando()) {
     <div class="loading-spinner-container"><mat-spinner diameter="40"></mat-spinner></div>
   } @else if (!filas().length) {
     <mat-card class="vacio-card">
       <mat-card-content class="vacio-body">
         <mat-icon>task_alt</mat-icon>
-        <p>No hay cobros ni cargas pendientes de aprobación.</p>
+        <p>No hay cobros ni cargas pendientes de aprobación{{ errorRecepciones() ? ' (sin contar las recepciones de seguro, que no se pudieron consultar)' : '' }}.</p>
       </mat-card-content>
     </mat-card>
   } @else {
@@ -31,8 +38,8 @@
               <button type="button" class="fila-item"
                       [class.activa]="filaSeleccionada() === fila"
                       (click)="seleccionar(fila)">
-                <span class="fi-tipo" [class.petro]="fila.tipo === 'CARGA_PETRO'">
-                  {{ fila.tipo === 'CARGA_PETRO' ? 'Carga Petro' : 'Cobro' }}
+                <span class="fi-tipo" [class.petro]="fila.tipo === 'CARGA_PETRO'" [class.seguro]="fila.tipo === 'RECEPCION_SEGURO'">
+                  {{ etiquetaTipo(fila.tipo) }}
                 </span>
                 <span class="fi-desc">{{ fila.descripcion }}</span>
                 <span class="fi-valor">{{ formatMoneda(fila.valor) }}</span>
@@ -59,6 +66,63 @@
               `idCarga`; no hay botones Aprobar/Rechazar propios de esta pantalla para este tipo.
             -->
             <app-cobro-petro-paso1 [idCarga]="filaSeleccionada()!.id"></app-cobro-petro-paso1>
+          } @else if (filaSeleccionada()!.tipo === 'RECEPCION_SEGURO') {
+            @if (recepcionSeleccionada(); as rec) {
+              <div class="pg-aviso-bandeja">
+                <b>Valor de seguro (sepelio) recibido.</b> Al aprobar se genera el asiento (Banco / cuenta por
+                entregar a beneficiarios) y el valor entra a la cuenta del partícipe. No se paga a nadie todavía.
+              </div>
+              <div class="dc-datos">
+                <div class="dc-item">
+                  <span class="l">Partícipe</span>
+                  <span class="v">{{ rec.entidad?.razonSocial }}</span>
+                </div>
+                <div class="dc-item">
+                  <span class="l">Tipo de aporte</span>
+                  <span class="v">{{ rec.tipoAporte?.nombre || '—' }}</span>
+                </div>
+                <div class="dc-item">
+                  <span class="l">Valor</span>
+                  <span class="v">{{ formatMoneda(rec.valor) }}</span>
+                </div>
+                <div class="dc-item">
+                  <span class="l">Fecha de recepción</span>
+                  <span class="v">{{ formatFecha(rec.fecha) }}</span>
+                </div>
+                <div class="dc-item">
+                  <span class="l">Referencia</span>
+                  <span class="v">{{ rec.referencia || 'No registrada' }}</span>
+                </div>
+                <div class="dc-item">
+                  <span class="l">Cuenta donde entró el dinero</span>
+                  <span class="v">{{ rec.cuentaBancaria?.banco?.nombre }} &middot; {{ rec.cuentaBancaria?.numeroCuenta }}</span>
+                </div>
+                @if (rec.observacion) {
+                  <div class="dc-item ancho-total">
+                    <span class="l">Observación</span>
+                    <span class="v">{{ rec.observacion }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="section-label">Comprobante</div>
+              <app-comprobante-viewer [ruta]="rec.rutaRespaldo ?? null"></app-comprobante-viewer>
+
+              <div class="dc-acciones">
+                <button mat-stroked-button color="warn" [disabled]="procesando()" (click)="rechazarRecepcion()">
+                  <mat-icon>block</mat-icon> Rechazar
+                </button>
+                <button mat-raised-button color="primary" [disabled]="procesando()" (click)="aprobarRecepcion()">
+                  @if (procesando()) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    <ng-container><mat-icon>check_circle</mat-icon> Aprobar</ng-container>
+                  }
+                </button>
+              </div>
+            } @else {
+              <div class="error-text"><mat-icon>error_outline</mat-icon><span>No se encontró el detalle de esta recepción. Actualice la bandeja.</span></div>
+            }
           } @else if (cargandoDetalle()) {
             <div class="loading-spinner-container"><mat-spinner diameter="36"></mat-spinner></div>
           } @else if (errorDetalle(); as error) {

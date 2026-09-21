@@ -25,9 +25,14 @@ el dinero queda en el saldo del partícipe mientras tanto, que es exactamente do
 
 ## 1. Tabla nueva `CRD.RVSG` — Recepción de Valores de Seguro
 
-⛔ **DDL sobre `CRD`: necesita el OK del usuario**, igual que `CBBP`. Nombre verificado libre contra
-los `@Table` de `src/main/java/com/saa/model/` (cero ocurrencias, igual que `RCSG`, `VSGR`, `RSGR`).
-El control contra `ALL_TABLES` va como bloque 0 del propio DDL.
+✅ **AUTORIZADA POR EL USUARIO el 2026-09-21** («está bien la tabla RVSG»). Nombre verificado libre
+contra los `@Table` de `src/main/java/com/saa/model/` (cero ocurrencias, igual que `RCSG`, `VSGR`,
+`RSGR`); el control contra `ALL_TABLES` va igual como bloque 0.1 del propio DDL, porque el `grep`
+sobre el modelo Java **no ve** una tabla que exista en la base sin estar mapeada.
+
+**Script:** `crd/sql/230_DDL_RECEPCION_VALORES_SEGURO.sql`, y después
+`crd/sql/231_TIPO_APORTE_Y_CUENTA_VALORES_SEGURO.sql`. En ese orden: el 231 inserta una FK al tipo
+de aporte que el 230 no necesita, pero el 231 sí depende de que `CTAP` resuelva.
 
 **Se calca de `CRD.CBCR` (`CobroCredito`)**, que ya tiene el ciclo registro → aprobación → asiento
 probado en producción. Mismos nombres de campo, mismo estilo:
