@@ -90,7 +90,8 @@ tributario y asiento contable. **Todo o nada.**
 | `autorizacion` | string | no | Número de autorización de la preimpresa |
 | `fecha` | ISO local | **sí** | Fecha de emisión. **Sin zona** (trampa 3) |
 | `observacion` | string(2000) | no | |
-| `subtotal`, `subcero`, `descuento`, `pIVA`, `vIVA`, `total` | number | ver nota | Totales de cabecera. **Los de IVA son opcionales y por defecto 0**: una nota de venta RISE no desglosa IVA. Ver §3.1 del plan — pendiente de confirmar con contabilidad |
+| `subtotal`, `descuento`, `pIVA`, `vIVA`, `total` | number | ver nota | Totales de cabecera. **Los de IVA son opcionales y por defecto 0**: una nota de venta RISE no desglosa IVA. Ver §3.1 del plan — pendiente de confirmar con contabilidad |
+| `subcero` | number | no | ⚠️ **Desde el 2026-09-21 el servidor lo RECALCULA** — ver §1.1 |
 | `detalles[]` | array | **sí, ≥1** | |
 | `detalles[].idProducto` | number | **sí** | `ProductoPago`. **De acá sale la cuenta del DEBE**, por el grupo del producto |
 | `detalles[].descripcion` | string(500) | **sí** | |
@@ -147,6 +148,31 @@ HTTP.
 | **500** | Error inesperado. Cuerpo: `"Error al registrar la nota de venta: <mensaje>"` |
 
 ---
+
+### 1.1 ⚠️ `subcero` y `codigoIVASRI` — el servidor los completa (cambio del 2026-09-21)
+
+**Hasta el 2026-09-20** el servidor grababa `subcero` tal como llegaba y dejaba
+`detalles[].codigoIVASRI` en `NULL` cuando el cliente no lo mandaba — el §1 de este contrato dice
+*«NO se recalculan los totales de cabecera desde el detalle: manda el documento físico»*, y esto es
+una **excepción deliberada a esa regla**, no un olvido.
+
+**Por qué se cambió:** la pantalla inicializa `subcero: 0` y `codigoIVASRI: ''`, así que la nota de
+venta quedaba en la base con base 0% en cero, y el ATS declaraba **toda** su base como **gravada**
+(`baseImpGrav = SUBTOTAL − SUBCERO`). Una nota de venta es de régimen simplificado y no traslada
+IVA. Medición completa en `docs/logica-negocio/sri/PLAN-SRI-URGENTE-2026-09-21.md` §1.1.
+
+**Regla nueva, y es aritmética, no tributaria:**
+
+| Lo que manda el cliente | Lo que graba el servidor |
+|---|---|
+| `vIVA = 0` (o ausente) y ninguna línea con código de IVA gravado | `codigoIVASRI = 0` en las líneas que vengan vacías, y `subcero` = suma de las bases de las líneas con código `0`, `6` o `7` — **ignora el `subcero` del payload** |
+| `vIVA > 0`, **o** alguna línea con código distinto de `0`/`6`/`7` | Se graba lo que llega, como siempre. El servidor no sobreescribe a un operador que está afirmando que hubo IVA |
+
+**Para el cliente:** mandar `codigoIVASRI: "0"` por línea y el `subcero` ya calculado sigue siendo
+lo correcto y da el mismo resultado. El recálculo es una red, no un reemplazo del dato bien enviado.
+
+**Las notas de venta registradas ANTES** de este cambio se corrigieron con
+`docs/logica-negocio/sri/sql/e2-53-nota-de-venta-base-cero.sql`, con el mismo criterio.
 
 ## 2. Tipos de bloqueante
 
