@@ -4,6 +4,7 @@ import { Observable, catchError, map, of } from 'rxjs';
 
 import {
   RecepcionValorSeguro,
+  SolicitudAnulacionRecepcion,
   SolicitudAprobacionRecepcion,
   SolicitudRechazoRecepcion,
   SolicitudRegistroRecepcion,
@@ -41,6 +42,19 @@ export class RecepcionValorSeguroService {
       map((cuerpo) => this.comoLista(cuerpo)),
       catchError(() => of(null))
     );
+  }
+
+  /** Todas las recepciones de un partícipe. `null` = la consulta falló (no es «no tiene»). */
+  porEntidad(idEntidad: number): Observable<RecepcionValorSeguro[] | null> {
+    return this.http.get<unknown>(`${ServiciosCrd.RS_RVSG}/porEntidad/${idEntidad}`).pipe(
+      map((cuerpo) => this.comoLista(cuerpo)),
+      catchError(() => of(null))
+    );
+  }
+
+  /** Solo desde APROBADO: reversa el asiento y el aporte. 409 si el partícipe ya usó el dinero. */
+  anular(id: number, solicitud: SolicitudAnulacionRecepcion): Observable<ResultadoRecepcion> {
+    return this.escribir(`${ServiciosCrd.RS_RVSG}/${id}/anular`, solicitud);
   }
 
   registrar(solicitud: SolicitudRegistroRecepcion): Observable<ResultadoRecepcion> {

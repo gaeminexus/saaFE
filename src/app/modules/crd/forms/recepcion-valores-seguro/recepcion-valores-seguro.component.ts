@@ -1,20 +1,27 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import { MotivoDialogComponent, MotivoDialogData } from '../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { RespaldoCobroComponent } from '../../dialog/pagos/respaldo-cobro.component';
 import { Entidad } from '../../model/entidad';
+import { RVSG_APROBADO, RecepcionValorSeguro, nombreEstadoRecepcion } from '../../model/recepcion-valor-seguro';
 import { TipoAporte } from '../../model/tipo-aporte';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { EntidadService } from '../../service/entidad.service';
 import { RecepcionValorSeguroService } from '../../service/recepcion-valor-seguro.service';
 import { TipoAporteService } from '../../service/tipo-aporte.service';
+
+/** Nombre exacto del tipo de aporte que crea crd/sql/231. Se resuelve por nombre, no por código. */
+const NOMBRE_TIPO_VALORES_SEGURO = 'VALOR DE SEGURO POR ENTREGAR A BENEFICIARIOS';
 
 /**
  * Registro de una recepción de valores de seguro (sepelio): el dinero ya entró a una cuenta de
@@ -38,6 +45,8 @@ export class RecepcionValoresSeguroComponent {
   private recepciones = inject(RecepcionValorSeguroService);
   private comprobantes = inject(ComprobanteCobroService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private funcionesDatos = inject(FuncionesDatosService);
 
   /** Bloque de respaldo: cuenta ASOPREP donde entró el dinero, referencia y comprobante. */
   respaldo = viewChild(RespaldoCobroComponent);
@@ -58,12 +67,15 @@ export class RecepcionValoresSeguroComponent {
   cargandoTipos = signal(false);
   tipoSeleccionado = signal<TipoAporte | null>(null);
   filtroTipo = signal('');
+  /** `true` si el tipo «valores de seguro» no está en TPAP (el script 231 todavía no corrió). */
+  tipoSeguroNoConfigurado = signal(false);
 
   /** Combo alimentado desde una tabla: se busca por nombre y por código (CLAUDE.md). */
   tiposFiltrados = computed(() => {
     const texto = this.filtroTipo().trim().toLowerCase();
     const lista = this.tiposAporte();
-    if (!texto) return lista;
+    // Con un tipo ya elegido el campo muestra su texto: se ofrecen todos para poder cambiarlo.
+    if (!texto || texto === this.textoTipo(this.tipoSeleccionado()).toLowerCase()) return lista;
     return lista.filter(
       (t) => (t.nombre ?? '').toLowerCase().includes(texto) || String(t.codigo).includes(texto)
     );
@@ -73,6 +85,13 @@ export class RecepcionValoresSeguroComponent {
   valorTexto = signal('');
   fecha = signal<Date>(new Date());
   observacion = '';
+
+  // ---------- recepciones ya registradas del partícipe ----------
+  historial = signal<RecepcionValorSeguro[]>([]);
+  cargandoHistorial = signal(false);
+  historialFallido = signal(false);
+  anulando = signal(false);
+  errorHistorial = signal<string | null>(null);
 
   registrando = signal(false);
   errorMensaje = signal<string | null>(null);
@@ -115,12 +134,26 @@ export class RecepcionValoresSeguroComponent {
       next: (tipos) => {
         this.cargandoTipos.set(false);
         this.tiposAporte.set([...(tipos ?? [])].sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? '')));
+        this.preseleccionarTipoSeguro();
       },
       error: () => {
         this.cargandoTipos.set(false);
         this.snackBar.open('No se pudieron cargar los tipos de aporte.', 'Cerrar', { duration: 4000 });
       },
     });
+  }
+
+  /**
+   * Preselecciona el tipo de valores de seguro por su NOMBRE (lo fija crd/sql/231), nunca por un
+   * código numérico. Sigue editable: el mismo circuito sirve para otros valores de seguro.
+   * Si no existe todavía, no se preselecciona nada y se avisa sin bloquear.
+   */
+  private preseleccionarTipoSeguro(): void {
+    if (!this.tiposAporte().length) return;
+    const buscado = NOMBRE_TIPO_VALORES_SEGURO.trim().toLowerCase();
+    const tipo = this.tiposAporte().find((t) => (t.nombre ?? '').trim().toLowerCase() === buscado);
+    this.tipoSeguroNoConfigurado.set(!tipo);
+    if (tipo) this.onTipoElegido(tipo);
   }
 
   textoTipo(tipo: TipoAporte | null): string {
@@ -183,6 +216,68 @@ export class RecepcionValoresSeguroComponent {
     this.entidadSeleccionada.set(entidad);
     this.mostrandoResultados.set(false);
     this.errorMensaje.set(null);
+    this.errorHistorial.set(null);
+    this.cargarHistorial(entidad.codigo);
+  }
+
+  // ================= recepciones del partícipe y anulación =================
+
+  private cargarHistorial(idEntidad: number): void {
+    this.historial.set([]);
+    this.historialFallido.set(false);
+    this.cargandoHistorial.set(true);
+    this.recepciones.porEntidad(idEntidad).subscribe((lista) => {
+      // Se descarta la respuesta si el operador ya cambió de partícipe.
+      if (this.entidadSeleccionada()?.codigo !== idEntidad) return;
+      this.cargandoHistorial.set(false);
+      this.historialFallido.set(lista === null);
+      this.historial.set(
+        [...(lista ?? [])].sort((a, b) => b.codigo - a.codigo)
+      );
+    });
+  }
+
+  /**
+   * Anular no es cosmético: reversa el aporte del partícipe y anula el asiento. Pide confirmación con
+   * motivo obligatorio. Si el partícipe ya usó ese dinero el servidor responde 409 y ese mensaje se
+   * muestra tal cual: es la respuesta correcta, no un error del sistema.
+   */
+  anular(recepcion: RecepcionValorSeguro): void {
+    if (this.anulando() || recepcion.estado !== RVSG_APROBADO) return;
+
+    const data: MotivoDialogData = {
+      titulo: 'Anular recepción de seguro',
+      advertencia:
+        `Se reversa el aporte de ${this.formatMoneda(recepcion.valor)} del partícipe y se anula el asiento contable. ` +
+        'Si el partícipe ya usó ese dinero (por ejemplo, si se le devolvió), el sistema no permitirá anularla. Indique el motivo.',
+      textoConfirmar: 'Anular',
+    };
+
+    this.dialog
+      .open(MotivoDialogComponent, { width: '520px', data })
+      .afterClosed()
+      .subscribe((motivo?: string | null) => {
+        if (!motivo) return;
+        this.anulando.set(true);
+        this.errorHistorial.set(null);
+        this.recepciones.anular(recepcion.codigo, { usuario: usuarioSesion(), motivo }).subscribe((resp) => {
+          this.anulando.set(false);
+          if (!resp.exito) {
+            this.errorHistorial.set(`NO se anuló la recepción. ${resp.mensaje ?? ''}`.trim());
+            return;
+          }
+          this.snackBar.open('Recepción anulada: se reversó el aporte y el asiento.', 'Cerrar', { duration: 5000 });
+          const entidad = this.entidadSeleccionada();
+          if (entidad) this.cargarHistorial(entidad.codigo);
+        });
+      });
+  }
+
+  nombreEstado = nombreEstadoRecepcion;
+  readonly RVSG_APROBADO = RVSG_APROBADO;
+
+  formatFecha(fecha: unknown): string {
+    return this.funcionesDatos.formatoFecha(fecha, 2) || '—';
   }
 
   volverABuscar(): void {
@@ -269,6 +364,7 @@ export class RecepcionValoresSeguroComponent {
     this.criterioNombre = '';
     this.tipoSeleccionado.set(null);
     this.filtroTipo.set('');
+    this.preseleccionarTipoSeguro();
     this.valorTexto.set('');
     this.fecha.set(new Date());
     this.observacion = '';

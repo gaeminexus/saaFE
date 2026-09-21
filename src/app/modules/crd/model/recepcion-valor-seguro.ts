@@ -57,3 +57,16 @@ export interface RecepcionValorSeguro {
   usuarioRegistro?: string | null;
   fechaRegistro?: string | number[] | Date | null;
 }
+
+/** Cuerpo de `POST /rvsg/{id}/anular` (solo desde APROBADO). `motivo` obligatorio. */
+export type SolicitudAnulacionRecepcion = SolicitudRechazoRecepcion;
+
+export function nombreEstadoRecepcion(estado: number): string {
+  switch (estado) {
+    case RVSG_REGISTRADO: return 'Pendiente de aprobación';
+    case RVSG_APROBADO: return 'Aprobada';
+    case RVSG_RECHAZADO: return 'Rechazada';
+    case RVSG_ANULADO: return 'Anulada';
+    default: return `Estado ${estado}`;
+  }
+}
