@@ -261,3 +261,92 @@
   color: #c62828;
   font-size: 0.85rem;
 }
+
+// ─── Ficha del documento: clasificación, contabilidad, trazabilidad y XML ───
+.ficha-subtitulo { font-size: 0.85rem; font-weight: 400; color: #757575; }
+
+.ficha-vacio {
+  font-size: 0.9rem;
+  font-style: italic;
+  color: #9e9e9e;
+}
+
+.ficha-nota {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: #616161;
+}
+
+.ficha-alerta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8a5300;
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.ficha-alerta-fuerte {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #611a15;
+}
+
+.ficha-inconsistente .total-valor,
+.ficha-inconsistente .total-label { color: #c62828; font-weight: 700; }
+
+.ficha-sin-contabilizar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #fff4e5;
+  color: #8a5300;
+}
+
+.ficha-bloque-sup { margin-top: 14px; }
+
+.ficha-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ficha-xml {
+  max-height: 420px;
+  margin: 8px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fafafa;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ficha-xml-aviso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #e8f1fb;
+  color: #0b3d6b;
+  font-size: 0.85rem;
+}
+
+.ficha-xml-aviso-error { background: #ffebee; color: #c62828; }

@@ -26,7 +26,9 @@ import {
   AnularDocumentoCompraDialogComponent,
   AnularDocumentoCompraDialogResult,
 } from '../dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
-import { CargaDocumentosService } from '../../../service/carga-documentos.service';
+import { CargaDocumentosService, DescargaXmlResponse } from '../../../service/carga-documentos.service';
+import { SustentoTributarioService } from '../../../service/sustento-tributario.service';
+import { CatalogoSustento } from '../../../model/sustento-tributario';
 import { DetalleFacturaCompraService } from '../../../service/detalle-factura-compra.service';
 import { DetalleLiquidacionCompraCompraService } from '../../../service/detalle-liquidacion-compra-compra.service';
 import { DetalleNotaCreditoCompraService } from '../../../service/detalle-nota-credito-compra.service';
@@ -91,6 +93,7 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
   private _rawFiltroFechaHasta = '';
   private docService = inject(DocumentoCxpService);
   private cargaDocumentosService = inject(CargaDocumentosService);
+  private sustentoService = inject(SustentoTributarioService);
   private facturaService = inject(FacturaCompraService);
   private detalleFacturaService = inject(DetalleFacturaCompraService);
   private formaPagoFacturaService = inject(FormaPagoFacturaCompraService);
@@ -146,6 +149,18 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
 
   /** Id del DocumentoCxp cuyo XML se está bajando; null si ninguno (ítem 11). */
   descargandoXml = signal<number | null>(null);
+
+  // Visor de XML (ficha del documento): el contenido se muestra tal como está guardado.
+  xmlVisible = signal(false);
+  xmlCargando = signal(false);
+  xmlContenido = signal('');
+  xmlInfo = signal('');
+  /** Mensaje cuando no hay XML que mostrar: los 404 del endpoint son casos normales, no fallos. */
+  xmlAviso = signal('');
+  xmlAvisoEsError = signal(false);
+
+  /** Tabla 5 del ATS (código → descripción). Se pide una vez; si falla, la ficha muestra solo el código. */
+  private catalogoSustento: CatalogoSustento | null = null;
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
 
@@ -391,6 +406,8 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
     this.detallesDoc.data = [];
     this.formasPagoDoc = [];
     this.errorDetalle.set('');
+    this.cerrarXml();
+    this.cargarCatalogoSustento();
     this.vista = 'detalle';
     this.cargandoDetalle.set(true);
     const id = doc.idDocumentoBD;
@@ -778,6 +795,145 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
     a.download = resp.nombreArchivo || `documento-${Date.now()}.xml`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // ─── FICHA DEL DOCUMENTO (docs/cxp/API-FICHA-DOCUMENTO-CXP.md) ───────────────
+  // Todo sale de `docReal` (el documento real que ya trae verDetalle) y de la fila DocumentoCxp:
+  // no hay llamadas nuevas salvo el XML y el catálogo de sustentos (ya existentes).
+
+  esNotaVenta(): boolean { return this.docSeleccionado?.tipoTablaDestino === TABLA_NOTA_VENTA; }
+
+  /** Trazabilidad y XML salen de DocumentoCxp: la nota de venta (fila sintética) no los tiene. */
+  tieneTrazabilidad(): boolean { return !!this.docSeleccionado && !this.esNotaVenta(); }
+
+  /** `esIntermediario` solo existe en FacturaCompra (la nota de venta es una FacturaCompra). */
+  aplicaIntermediario(): boolean { return this.esFacturaCompra(); }
+
+  /** Anulación (motivo/fecha/usuario) existe en factura, NC, ND y liquidación; no en retenciones. */
+  aplicaAnulacion(): boolean { return this.esDocumentoAnulable() || this.esNotaVenta(); }
+
+  get esIntermediarioSi(): boolean { return Number(this.docReal?.esIntermediario) === 1; }
+
+  /** `baseImpGrav` del ATS: no es una columna, es una resta. El 5% y el 8% quedan dentro. */
+  get baseGravadaCalculada(): number {
+    const d = this.docReal ?? {};
+    const resta = (Number(d.subtotal) || 0) - (Number(d.subcero) || 0) - (Number(d.subnoobj) || 0) - (Number(d.subexent) || 0);
+    return Math.round(resta * 100) / 100;
+  }
+
+  get gravadaInconsistente(): boolean { return this.baseGravadaCalculada < -0.005; }
+
+  get hayDatosAnulacion(): boolean {
+    const d = this.docReal ?? {};
+    return !!(d.motivoAnulacion || d.fechaAnulacion || d.usuarioAnulacion);
+  }
+
+  private cargarCatalogoSustento(): void {
+    if (this.catalogoSustento) return;
+    this.sustentoService.catalogo().subscribe({
+      next: (c) => { this.catalogoSustento = c || {}; },
+      error: () => { /* sin catálogo se muestra solo el código */ },
+    });
+  }
+
+  /** «01 — Crédito tributario…» si el catálogo llegó; el código solo si no. */
+  sustentoTexto(codigo: string | null | undefined): string {
+    const cod = String(codigo ?? '').trim();
+    if (!cod) return '';
+    const desc = this.catalogoSustento?.[cod];
+    return desc ? `${cod} — ${desc}` : cod;
+  }
+
+  estadoAsientoLabel(estado: number | null | undefined): string {
+    const map: Record<number, string> = { 1: 'Activo', 2: 'Anulado', 3: 'Reversado', 4: 'Incompleto' };
+    return map[Number(estado)] || (estado != null ? `Estado ${estado}` : '');
+  }
+
+  estadoDocumentoLabel(estado: number | null | undefined): string {
+    const map: Record<number, string> = { 1: 'Leído', 2: 'XML cargado', 3: 'Registrado', 4: 'Error', 5: 'Con novedad', 6: 'Revertido' };
+    return map[Number(estado)] || (estado != null ? `Estado ${estado}` : '');
+  }
+
+  estadoNovedadLabel(estado: number | null | undefined): string {
+    const map: Record<number, string> = { 1: 'Pendiente', 2: 'Reemplazado', 3: 'Mantenido' };
+    return map[Number(estado)] || '';
+  }
+
+  ambienteLabel(ambiente: number | null | undefined): string {
+    const map: Record<number, string> = { 1: 'Pruebas', 2: 'Producción' };
+    return map[Number(ambiente)] || (ambiente != null ? String(ambiente) : '');
+  }
+
+  /**
+   * El backend serializa el usuario como objeto `Usuario` ({codigo, nombre, …}) aunque el modelo
+   * TS de DocumentoCxp lo declare `number`: se acepta cualquiera de las dos formas.
+   */
+  usuarioTexto(u: unknown): string {
+    if (u == null || u === 0) return '';
+    if (typeof u === 'object') {
+      const o = u as { nombre?: string; codigo?: number };
+      return o.nombre ? String(o.nombre) : (o.codigo != null ? `Usuario #${o.codigo}` : '');
+    }
+    return `Usuario #${u}`;
+  }
+
+  /** «dd/MM/yyyy HH:mm:ss · usuario»; vacío si no hay ni fecha ni usuario. */
+  cuando(fecha: unknown, usuario: unknown): string {
+    return [this.fechaHoraTexto(fecha), this.usuarioTexto(usuario)].filter(Boolean).join(' · ');
+  }
+
+  fechaHoraTexto(v: unknown): string { return this.funcionesDatosS.formatoFecha(v, FuncionesDatosService.FECHA_HORA) || ''; }
+  fechaTexto(v: unknown): string { return this.funcionesDatosS.formatoFecha(v, FuncionesDatosService.SOLO_FECHA) || ''; }
+
+  // ─── Visor de XML ───────────────────────────────────────
+
+  cerrarXml(): void {
+    this.xmlVisible.set(false);
+    this.xmlCargando.set(false);
+    this.xmlContenido.set('');
+    this.xmlInfo.set('');
+    this.xmlAviso.set('');
+    this.xmlAvisoEsError.set(false);
+  }
+
+  verXml(doc: DocumentoCxp): void {
+    if (!this.tieneXml(doc) || this.xmlCargando()) return;
+    if (this.xmlVisible()) { this.cerrarXml(); return; }
+    this.cerrarXml();
+    this.xmlVisible.set(true);
+    this.xmlCargando.set(true);
+    this.cargaDocumentosService.descargarXml(doc.id).subscribe({
+      next: (resp) => {
+        this.xmlCargando.set(false);
+        if (!resp) { this.xmlAviso.set('El servidor no devolvió contenido para este documento.'); return; }
+        try {
+          const texto = this.decodificarXml(resp);
+          if (!texto.trim()) { this.xmlAviso.set('El archivo del comprobante está vacío.'); return; }
+          this.xmlContenido.set(texto);
+          const kb = resp.tamanoBytes != null ? ` · ${(Number(resp.tamanoBytes) / 1024).toFixed(1)} KB` : '';
+          this.xmlInfo.set(`${resp.nombreArchivo || 'comprobante.xml'}${kb}`);
+        } catch {
+          this.xmlAviso.set('No se pudo leer el contenido del archivo.');
+          this.xmlAvisoEsError.set(true);
+        }
+      },
+      error: (err: any) => {
+        this.xmlCargando.set(false);
+        const mensaje = mensajeDeError(err, 'No se pudo obtener el XML');
+        this.xmlAviso.set(mensaje);
+        // Los 404 (registrado a mano, o archivo ausente) son casos normales. El único fallo real
+        // documentado es el 500, cuyo mensaje empieza así; el servicio no conserva el status.
+        this.xmlAvisoEsError.set(/^Error al obtener el XML/i.test(mensaje));
+      },
+    });
+  }
+
+  /** `atob` + `TextDecoder('utf-8')`: sin el decoder, las tildes ("Eléctrica") salen rotas. */
+  private decodificarXml(resp: DescargaXmlResponse): string {
+    const binario = atob(resp.contenidoBase64 || '');
+    const bytes = new Uint8Array(binario.length);
+    for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
   }
 
   private strFecha(val: any): string {

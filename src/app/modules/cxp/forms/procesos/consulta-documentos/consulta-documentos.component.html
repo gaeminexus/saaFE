@@ -286,18 +286,28 @@
               <span class="info-label">Fecha Emisión</span>
               <span class="info-valor">{{ toDate(docReal.fecha) | date:'dd/MM/yyyy HH:mm' }}</span>
             </div>
-            <div class="info-item">
-              <span class="info-label">Clave Acceso</span>
-              <span class="info-valor font-mono small-text">{{ docReal.clave }}</span>
-            </div>
+            @if (!esNotaVenta()) {
+              <div class="info-item">
+                <span class="info-label">Clave Acceso</span>
+                <span class="info-valor font-mono small-text">{{ docReal.clave }}</span>
+              </div>
+            }
             <div class="info-item">
               <span class="info-label">Autorización SRI</span>
               <span class="info-valor font-mono small-text">{{ docReal.autorizacion }}</span>
             </div>
-            <div class="info-item">
-              <span class="info-label">Fecha Autorización</span>
-              <span class="info-valor">{{ toDate(docReal.fechaAutorizacion) | date:'dd/MM/yyyy HH:mm' }}</span>
-            </div>
+            @if (!esNotaVenta()) {
+              <div class="info-item">
+                <span class="info-label">Fecha Autorización</span>
+                <span class="info-valor">{{ toDate(docReal.fechaAutorizacion) | date:'dd/MM/yyyy HH:mm' }}</span>
+              </div>
+              @if (docReal.ambiente != null) {
+                <div class="info-item">
+                  <span class="info-label">Ambiente</span>
+                  <span class="info-valor">{{ ambienteLabel(docReal.ambiente) }}</span>
+                </div>
+              }
+            }
             @if (docReal.observacion) {
               <div class="info-item full-width">
                 <span class="info-label">Observación</span>
@@ -310,7 +320,7 @@
           <div class="totales-grid">
             @if (!esRetencion()) {
               <div class="total-item">
-                <span class="total-label">Subtotal (grav.)</span>
+                <span class="total-label">Subtotal</span>
                 <span class="total-valor">{{ (docReal.subtotal ?? docReal.subtotal0 ?? 0) | number:'1.2-2' }}</span>
               </div>
               <div class="total-item">
@@ -376,6 +386,218 @@
           </div>
         </mat-card-content>
       </mat-card>
+
+      <!-- Clasificación tributaria — lo que el ATS declara (docs/cxp/API-FICHA-DOCUMENTO-CXP.md §2, §5).
+           Las retenciones no llevan bases ni sustento propios: la sección no les aplica. -->
+      @if (!esRetencion()) {
+        <mat-card class="detalle-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>rule</mat-icon> Clasificación tributaria
+              <span class="ficha-subtitulo">— lo que declara el ATS</span>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Sustento tributario (codSustento)</span>
+                @if (docReal.sustentoTributario) {
+                  <span class="info-valor">{{ sustentoTexto(docReal.sustentoTributario) }}</span>
+                } @else {
+                  <span class="ficha-vacio">Sin capturar</span>
+                }
+              </div>
+              <div class="info-item">
+                <span class="info-label">Fecha de registro contable</span>
+                @if (docReal.fechaRegistroContable) {
+                  <span class="info-valor">{{ fechaTexto(docReal.fechaRegistroContable) }}</span>
+                } @else {
+                  <span class="ficha-vacio">Sin capturar — el ATS usa la fecha de emisión</span>
+                }
+              </div>
+              @if (aplicaIntermediario()) {
+                <div class="info-item">
+                  <span class="info-label">Es intermediario</span>
+                  <span class="info-valor">{{ esIntermediarioSi ? 'Sí' : 'No' }}</span>
+                  @if (esIntermediarioSi) {
+                    <span class="ficha-alerta"><mat-icon>info</mat-icon> No se declara en el ATS ni en el cuadre 104</span>
+                    @if (docReal.idProductoIntermediario != null) {
+                      <span class="ficha-nota">Producto intermediario: código {{ docReal.idProductoIntermediario }}</span>
+                    }
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="totales-grid">
+              <div class="total-item">
+                <span class="total-label">Base 0% (baseImponible)</span>
+                <span class="total-valor">{{ docReal.subcero == null ? '—' : (docReal.subcero | number:'1.2-2') }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">No objeto de IVA</span>
+                <span class="total-valor">{{ docReal.subnoobj == null ? '—' : (docReal.subnoobj | number:'1.2-2') }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">Exento de IVA</span>
+                <span class="total-valor">{{ docReal.subexent == null ? '—' : (docReal.subexent | number:'1.2-2') }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">Base 5%</span>
+                <span class="total-valor">{{ docReal.subtotal5 == null ? '—' : (docReal.subtotal5 | number:'1.2-2') }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">Base 8%</span>
+                <span class="total-valor">{{ docReal.subtotal8 == null ? '—' : (docReal.subtotal8 | number:'1.2-2') }}</span>
+              </div>
+              <div class="total-item" [class.ficha-inconsistente]="gravadaInconsistente">
+                <span class="total-label">Base gravada (baseImpGrav)</span>
+                <span class="total-valor">{{ baseGravadaCalculada | number:'1.2-2' }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">IVA</span>
+                <span class="total-valor">{{ docReal.vIVA == null ? '—' : (docReal.vIVA | number:'1.2-2') }}</span>
+              </div>
+              <div class="total-item">
+                <span class="total-label">ICE</span>
+                <span class="total-valor">{{ docReal.vICE == null ? '—' : (docReal.vICE | number:'1.2-2') }}</span>
+              </div>
+            </div>
+            <p class="ficha-nota">
+              La base gravada es una resta: subtotal − base 0% − no objeto − exento. Es la que sale como
+              <code>baseImpGrav</code> en el ATS; el 5% y el 8% quedan dentro de ella.
+            </p>
+            @if (gravadaInconsistente) {
+              <div class="ficha-alerta ficha-alerta-fuerte">
+                <mat-icon>warning</mat-icon>
+                La base gravada da negativa ({{ baseGravadaCalculada | number:'1.2-2' }}): las bases no cuadran con el
+                subtotal. Documento inconsistente, revíselo antes de declarar.
+              </div>
+            }
+          </mat-card-content>
+        </mat-card>
+      }
+
+      <!-- Contabilidad -->
+      <mat-card class="detalle-card">
+        <mat-card-header>
+          <mat-card-title><mat-icon>account_balance</mat-icon> Contabilidad</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (docReal.asiento) {
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Asiento Nº</span>
+                <span class="info-valor font-mono">{{ docReal.asiento.numero }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Fecha del asiento</span>
+                <span class="info-valor">{{ fechaTexto(docReal.asiento.fechaAsiento) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Estado del asiento</span>
+                <span class="info-valor">{{ estadoAsientoLabel(docReal.asiento.estado) }}</span>
+              </div>
+              @if (docReal.asiento.numeroAlterno) {
+                <div class="info-item">
+                  <span class="info-label">Nº alterno</span>
+                  <span class="info-valor font-mono">{{ docReal.asiento.numeroAlterno }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="ficha-sin-contabilizar">
+              <mat-icon>report</mat-icon>
+              <div><strong>SIN CONTABILIZAR</strong> — este documento no tiene asiento contable.</div>
+            </div>
+          }
+          @if (aplicaAnulacion()) {
+            <div class="info-grid ficha-bloque-sup">
+              <div class="info-item">
+                <span class="info-label">Anulación</span>
+                @if (hayDatosAnulacion) {
+                  <span class="info-valor">
+                    {{ docReal.fechaAnulacion ? fechaHoraTexto(docReal.fechaAnulacion) : '' }}
+                    @if (docReal.usuarioAnulacion) { · {{ docReal.usuarioAnulacion }} }
+                  </span>
+                  @if (docReal.motivoAnulacion) { <span class="ficha-nota">{{ docReal.motivoAnulacion }}</span> }
+                } @else {
+                  <span class="ficha-vacio">No anulado</span>
+                }
+              </div>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Trazabilidad — sale de DocumentoCxp: la nota de venta manual no pasó por la carga, no la tiene -->
+      @if (tieneTrazabilidad() && docSeleccionado) {
+        <mat-card class="detalle-card">
+          <mat-card-header>
+            <mat-card-title><mat-icon>history</mat-icon> Trazabilidad</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Cargado</span>
+                <span class="info-valor">{{ cuando(docSeleccionado.fechaCargaXml, docSeleccionado.usuarioCargaXml) || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Registrado</span>
+                <span class="info-valor">{{ cuando(docSeleccionado.fechaRegistroBD, docSeleccionado.usuarioRegistroBD) || '—' }}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Reversado</span>
+                @if (cuando(docSeleccionado.fechaReversion, docSeleccionado.usuarioReversion); as rev) {
+                  <span class="info-valor">{{ rev }}</span>
+                } @else {
+                  <span class="ficha-vacio">No reversado</span>
+                }
+              </div>
+              <div class="info-item">
+                <span class="info-label">Estado del documento</span>
+                <span class="info-valor">{{ estadoDocumentoLabel(docSeleccionado.estadoDocumento) || '—' }}</span>
+              </div>
+              @if (docSeleccionado.novedad) {
+                <div class="info-item full-width">
+                  <span class="info-label">Novedad @if (estadoNovedadLabel(docSeleccionado.estadoNovedad)) { ({{ estadoNovedadLabel(docSeleccionado.estadoNovedad) }}) }</span>
+                  <span class="info-valor">{{ docSeleccionado.novedad }}</span>
+                </div>
+              }
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- XML — se muestra tal como está guardado (comprobante crudo o sobre de autorización del SRI: sin verificar) -->
+        <mat-card class="detalle-card">
+          <mat-card-header>
+            <mat-card-title><mat-icon>code</mat-icon> XML del comprobante</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="ficha-acciones">
+              <button mat-stroked-button color="primary" type="button" [disabled]="xmlCargando()" (click)="verXml(docSeleccionado)">
+                <mat-icon>{{ xmlVisible() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                {{ xmlVisible() ? 'Ocultar XML' : 'Ver XML' }}
+              </button>
+              <button mat-stroked-button type="button" [disabled]="descargandoXml() === docSeleccionado.id" (click)="descargarXml(docSeleccionado)">
+                <mat-icon>download</mat-icon> Descargar XML
+              </button>
+            </div>
+            @if (xmlVisible()) {
+              @if (xmlCargando()) {
+                <div class="loading-container"><mat-spinner diameter="28"></mat-spinner></div>
+              } @else if (xmlAviso()) {
+                <div class="ficha-xml-aviso" [class.ficha-xml-aviso-error]="xmlAvisoEsError()">
+                  <mat-icon>{{ xmlAvisoEsError() ? 'error' : 'info' }}</mat-icon> {{ xmlAviso() }}
+                </div>
+              } @else {
+                <div class="ficha-nota">{{ xmlInfo() }} — contenido tal como está guardado en el servidor.</div>
+                <pre class="ficha-xml">{{ xmlContenido() }}</pre>
+              }
+            }
+          </mat-card-content>
+        </mat-card>
+      }
 
       <!-- Líneas de detalle -->
       <mat-card class="detalle-card">
