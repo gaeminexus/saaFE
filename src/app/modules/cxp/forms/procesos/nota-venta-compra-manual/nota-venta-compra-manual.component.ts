@@ -188,7 +188,7 @@ export class NotaVentaCompraManualComponent implements OnInit {
   private filaVacia(): FilaDetalle {
     return {
       idProducto: null, descripcion: '', cantidad: null, valor: null, descuento: 0,
-      baseImponible: 0, porcentajeIVA: 0, valorIVA: 0, codigoIVASRI: '', total: 0,
+      baseImponible: 0, porcentajeIVA: 0, valorIVA: 0, codigoIVASRI: '0', total: 0,
       _busqueda: '', _filtrados: this.productos.slice(0, 50),
     };
   }
@@ -223,6 +223,12 @@ export class NotaVentaCompraManualComponent implements OnInit {
   get sumaDetalleBase(): number { return round2(this.detalles.reduce((a, f) => a + (Number(f.baseImponible) || 0), 0)); }
   get sumaDetalleIva(): number { return round2(this.detalles.reduce((a, f) => a + (Number(f.valorIVA) || 0), 0)); }
   get sumaDetalleTotal(): number { return round2(this.detalles.reduce((a, f) => a + (Number(f.total) || 0), 0)); }
+  /** Base de las líneas con código de IVA 0 (0%), 6 (no objeto) o 7 (exento). */
+  get sumaDetalleBaseCero(): number {
+    return round2(this.detalles
+      .filter(f => ['0', '6', '7'].includes(String(f.codigoIVASRI ?? '').trim()))
+      .reduce((a, f) => a + (Number(f.baseImponible) || 0), 0));
+  }
 
   get diferenciaTotal(): number { return round2((Number(this.form.total) || 0) - this.sumaDetalleTotal); }
   get totalCuadra(): boolean { return Math.abs(this.diferenciaTotal) < 0.01; }
@@ -231,6 +237,7 @@ export class NotaVentaCompraManualComponent implements OnInit {
   igualarTotalesConDetalle(): void {
     this.form.subtotal = this.sumaDetalleBase;
     this.form.vIVA = this.sumaDetalleIva;
+    this.form.subcero = this.sumaDetalleBaseCero;
     this.form.total = this.sumaDetalleTotal;
   }
 
