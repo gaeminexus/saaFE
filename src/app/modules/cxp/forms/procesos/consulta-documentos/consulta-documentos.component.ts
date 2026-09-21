@@ -227,8 +227,14 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
       documentos: this.docService.getByEmpresaEstado(this.idEmpresa, 3),
       // Las notas de venta no están en DocumentoCxp (ver TABLA_NOTA_VENTA arriba): se traen
       // aparte, directo de FacturaCompra, y se agregan a la misma lista. Si este fetch falla no
-      // se pierde el resto de la pantalla — es un agregado, no la fuente principal.
-      notasVenta: this.facturaService.selectByCriteria(this.criteriosNotaVentaManual()).pipe(catchError(() => of(null))),
+      // se pierde el resto de la pantalla — es un agregado, no la fuente principal. Pero el fallo
+      // se avisa: "sin filas" llega como 200/lista vacía (no entra acá), un error de verdad sí.
+      notasVenta: this.facturaService.selectByCriteria(this.criteriosNotaVentaManual()).pipe(
+        catchError((err) => {
+          this.snackBar.open(mensajeDeError(err, 'No se pudieron cargar las notas de venta'), 'Cerrar', { duration: 6000 });
+          return of(null);
+        }),
+      ),
     }).subscribe({
       next: ({ documentos, notasVenta }) => {
         const sinteticos = (notasVenta || []).map((f) => this.notaVentaComoDocumentoCxp(f));
@@ -245,11 +251,10 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
     });
   }
 
-  /** `empresa` + `tipoComprobante = '02'` (plano, no por campo padre) sobre FacturaCompra. */
+  /** `empresa.codigo` (campo padre: `empresa` es un @ManyToOne) + `tipoComprobante = '02'` (plano) sobre FacturaCompra. */
   private criteriosNotaVentaManual(): DatosBusqueda[] {
     const dbEmpresa = new DatosBusqueda();
-    dbEmpresa.asignaUnCampoSinTrunc(TipoDatos.LONG, 'empresa', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
-    dbEmpresa.setNumeroCampoRepetido(0);
+    dbEmpresa.asignaValorConCampoPadre(TipoDatos.LONG, 'empresa', 'codigo', String(this.idEmpresa), TipoComandosBusqueda.IGUAL);
 
     const dbTipo = new DatosBusqueda();
     dbTipo.asignaUnCampoSinTrunc(TipoDatos.STRING, 'tipoComprobante', TIPO_COMPROBANTE_NOTA_VENTA, TipoComandosBusqueda.IGUAL);
