@@ -27,9 +27,24 @@
 
   <div class="pg-grid">
     <div class="pg-dato">
-      <div class="pg-dato-label">Saldo total del préstamo</div>
+      <div class="pg-dato-label">Total pendiente</div>
       <div class="pg-dato-valor">{{ formatMoneda(data.saldoTotal) }}</div>
+      <div class="pg-dato-nota">Si paga cuota a cuota hasta el final</div>
     </div>
+    @if (simulacionCancelacion(); as sim) {
+      <div class="pg-dato beneficio">
+        <div class="pg-dato-label">Cancelarlo hoy cuesta</div>
+        <div class="pg-dato-valor">{{ formatMoneda(sim.valorTotalPrecancelacion) }}</div>
+        @if (sim.interesCondonado > 0.004) {
+          <div class="pg-dato-nota">
+            {{ formatMoneda(sim.interesCondonado) }} menos: no se cobran los intereses futuros
+          </div>
+        }
+        <button mat-stroked-button color="primary" type="button" (click)="irAPrecancelar()">
+          <mat-icon>task_alt</mat-icon> Cancelar el crédito
+        </button>
+      </div>
+    }
     <div class="pg-dato">
       <div class="pg-dato-label">Valor de cuota</div>
       <div class="pg-dato-valor">{{ formatMoneda(data.valorCuota) }}</div>
@@ -73,7 +88,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Fecha del pago</mat-label>
         <input matInput [matDatepicker]="pickerPago" [max]="hoy"
-               [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
+               [ngModel]="fechaPago()" (ngModelChange)="cambiarFechaPago($event)" />
         <mat-datepicker-toggle matSuffix [for]="pickerPago"></mat-datepicker-toggle>
         <mat-datepicker #pickerPago></mat-datepicker>
         <mat-hint>No puede ser posterior a hoy</mat-hint>
@@ -145,7 +160,7 @@
         <mat-form-field appearance="outline">
           <mat-label>Fecha del pago</mat-label>
           <input matInput [matDatepicker]="pickerAportes" [max]="hoy"
-                 [ngModel]="fechaPago()" (ngModelChange)="fechaPago.set($event)" />
+                 [ngModel]="fechaPago()" (ngModelChange)="cambiarFechaPago($event)" />
           <mat-datepicker-toggle matSuffix [for]="pickerAportes"></mat-datepicker-toggle>
           <mat-datepicker #pickerAportes></mat-datepicker>
         </mat-form-field>

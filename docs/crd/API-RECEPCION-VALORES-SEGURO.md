@@ -44,7 +44,8 @@ probado en producción. Mismos nombres de campo, mismo estilo:
 | `valor` | `RVSGVLRR` | `CBCRVLRR` | |
 | `fecha` | `RVSGFCHA` | `CBCRFCHA` | Fecha de recepción |
 | `observacion` | `RVSGOBSR` | `CBCROBSR` | `VARCHAR2(2000)` |
-| `asiento` | `ASNTCDGO` | — | El asiento generado al aprobar |
+| `asiento` | `ASNTCDGO` | — | El asiento generado al aprobar. NULL en estado 1 |
+| `aporte` | `APRTCDGO` | — | ⭐ El aporte positivo generado al aprobar. NULL en estado 1. **Sin esta columna `anular` no tiene a qué aporte reversar**: `CRD.APRT` es append-only y buscarlo por glosa/fecha/valor sería adivinar. Lo levantó el ejecutor BE el 2026-09-21; el contrato original pedía reversar un aporte que no guardaba en ningún lado |
 | `usuarioRegistro` / `fechaRegistro` | `RVSGUSRG` / `RVSGFCRG` | igual | |
 | `usuarioAprobacion` / `fechaAprobacion` | `RVSGUSAP` / `RVSGFCAP` | igual | |
 | `usuarioRechazo` / `fechaRechazo` / `motivoRechazo` | `RVSGUSRC` / `RVSGFCRC` / `RVSGMTRC` | igual | |
@@ -70,11 +71,17 @@ Todas las respuestas siguen el estilo de `PrestamoRest`:
 ### `POST /rest/rvsg/registrar`
 
 ```json
-{ "idEntidad": 1234, "idTipoAporte": 26, "idEmpresa": 1, "valor": 1000.00,
+{ "idEntidad": 1234, "idTipoAporte": 26, "valor": 1000.00,
   "fecha": "2026-09-21", "idCuentaBancaria": 5, "referencia": "004512873",
   "rutaRespaldo": "/uploads/...", "observacion": "Sepelio — póliza 998",
   "usuario": "LCALDERON" }
 ```
+
+⛔ **`idEmpresa` NO va en el cuerpo, ni acá ni en `aprobar`** (corregido el 2026-09-21). La
+empresa contable **se deriva de la cuenta bancaria** — `cuentaBancaria.getPlanCuenta().getEmpresa()`,
+igual que `CobroCreditoServiceImpl.derivarEmpresaCobro:1626` y lo que manda
+`API-EMPRESA-CONTABLE-CRD.md §2`: *«NUNCA la que vino del cliente»*. Si el servidor no la usa, el
+cliente no la manda: un campo que se ignora en silencio es un campo que miente.
 
 - **201/200** → la recepción queda en estado **1 REGISTRADO**. ⛔ **No genera asiento y no toca el
   saldo del partícipe todavía.**
@@ -84,7 +91,7 @@ Todas las respuestas siguen el estilo de `PrestamoRest`:
 ### `POST /rest/rvsg/{id}/aprobar`
 
 ```json
-{ "usuario": "CONTABILIDAD", "idEmpresa": 1 }
+{ "usuario": "CONTABILIDAD" }
 ```
 
 Acá pasa **todo** lo que importa, y en una sola transacción:
@@ -97,6 +104,15 @@ Acá pasa **todo** lo que importa, y en una sola transacción:
 
 - **409** si no está en estado 1, o si `CTAP` no tiene cuenta configurada para ese tipo y empresa
   (mensaje que **nombre el tipo y la empresa**, como hace `generarAsientoReclasificacion:1305`).
+- ⛔ **409 si `configuracionContabilidadService.contabilidadActiva()` es `false`**, sin tocar nada,
+  con un mensaje que diga que hay que activar la contabilidad de CRD.
+  **No copiar acá lo que hace `CobroCreditoServiceImpl:274`**, que con el flag apagado registra
+  igual y se saltea el asiento: eso, en esta pantalla, metería el valor en el saldo del partícipe
+  **sin asiento** — el descuadre silencioso que este equipo viene persiguiendo. Y esta pantalla
+  existe precisamente **para que contabilidad confirme el dinero**: sin contabilidad activa, la
+  aprobación no significa nada.
+  `registrar` (estado 1) **sí** se permite con el flag apagado, porque no genera asiento.
+  *(Lo levantó el ejecutor BE el 2026-09-21; el contrato original no decía nada del flag.)*
 - ⛔ **Un solo asiento.** Nada de transitorio + definitivo: el usuario pidió dos asientos en todo el
   ciclo y el segundo es el del pago (fase 2).
 

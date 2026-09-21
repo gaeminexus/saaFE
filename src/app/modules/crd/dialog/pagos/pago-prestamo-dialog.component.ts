@@ -7,7 +7,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
-import { ResultadoPagoCuota, SaldoAporte } from '../../model/pagos/operaciones-pago';
+import { ResultadoPagoCuota, SaldoAporte, SimulacionPrecancelacion } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { CobroCreditoService } from '../../service/cobro-credito.service';
@@ -122,7 +122,17 @@ export class PagoPrestamoDialogComponent {
   );
 
   /**
-   * Sugerencias táctiles: las próximas cuotas y el saldo total.
+   * Cuánto cuesta cancelar el crédito con la fecha de pago elegida (`simularPrecancelacion`, no
+   * escribe nada). `null` = sin dato (cargando, fecha inválida o el servicio falló): en ese caso no
+   * se muestra el bloque y NUNCA se estima a mano restando el interés a `saldoTotal`.
+   */
+  simulacionCancelacion = signal<SimulacionPrecancelacion | null>(null);
+  private versionSimulacion = 0;
+
+  /**
+   * Sugerencias táctiles: las próximas cuotas. No incluye «Saldo total»: `saldoTotal` suma también
+   * el interés futuro, que la precancelación condona, así que ofrecerlo como atajo cobraba de más
+   * (H70). Para cancelar el crédito se usa «Cancelar el crédito».
    *
    * Si la pantalla mandó `pendientesAcumulados` se usan esos montos, que son el pendiente real de
    * cada cuota sumado en orden de cobro. El múltiplo de `valorCuota` es solo el respaldo: da un
@@ -140,7 +150,6 @@ export class PagoPrestamoDialogComponent {
       if (valor > 0) opciones.push({ etiqueta, valor: +valor.toFixed(2) });
     }
 
-    if (saldo > 0) opciones.push({ etiqueta: 'Saldo total', valor: +saldo.toFixed(2) });
     return opciones.filter((o) => o.valor > 0 && (saldo <= 0 || o.valor <= saldo + TOLERANCIA_MONTO));
   });
 
@@ -150,6 +159,30 @@ export class PagoPrestamoDialogComponent {
   ) {
     this.modo.set(data.modoInicial ?? 'efectivo');
     if (this.modo() === 'aportes') this.cargarSaldos();
+    this.simularCancelacion();
+  }
+
+  /** La fecha de corte cambia la mora: al cambiar la fecha del pago se vuelve a simular. */
+  cambiarFechaPago(fecha: Date): void {
+    this.fechaPago.set(fecha);
+    this.simularCancelacion();
+  }
+
+  /**
+   * Dato complementario: si falla no se dice nada y el diálogo sigue sirviendo para pagar cuotas.
+   * Se descarta la respuesta de una consulta anterior si el operador ya cambió la fecha.
+   */
+  private simularCancelacion(): void {
+    const version = ++this.versionSimulacion;
+    this.simulacionCancelacion.set(null);
+
+    const fecha = this.fechaValida() ? this.servicio.formatearFecha(this.fechaPago()) : null;
+    if (!this.data.idPrestamo || !fecha) return;
+
+    this.servicio.simularPrecancelacion(this.data.idPrestamo, fecha).subscribe((resp) => {
+      if (version !== this.versionSimulacion) return;
+      this.simulacionCancelacion.set(resp.exito && resp.resultado ? resp.resultado : null);
+    });
   }
 
   cambiarModo(modo: ModoPago): void {
