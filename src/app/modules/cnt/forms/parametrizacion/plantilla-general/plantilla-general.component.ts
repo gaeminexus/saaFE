@@ -60,7 +60,6 @@ export class PlantillaGeneralComponent implements OnInit {
   isEditing = false;
   isNewRecord = false;
   loading = false;
-  mostrarBannerDemo = false;
   idSucursal = parseInt(localStorage.getItem('idSucursal') || '280', 10);
 
   // Tipo de plantilla: 0 = General, 1 = Sistema
@@ -202,19 +201,11 @@ export class PlantillaGeneralComponent implements OnInit {
       error: (error: any) => {
         console.error('Error al cargar plantillas:', error);
 
-        // Mostrar mensaje más específico basado en el tipo de error
-        if (error.status === 0 || error.message?.includes('ERR_CONNECTION_REFUSED')) {
-          this.mostrarBannerDemo = true;
-          this.showMessage(
-            'Backend no disponible. Usando datos de ejemplo para demostración.',
-            'info'
-          );
-        } else {
-          this.showMessage(
-            'Error al cargar plantillas. Verifique la conexión con el servidor.',
-            'error'
-          );
-        }
+        this.plantillas = [];
+        this.showMessage(
+          `❌ NO se pudieron cargar las plantillas. ${this.mensajeRealDelError(error) || 'Verifique la conexión con el servidor.'}`,
+          'error'
+        );
         this.loading = false;
       },
     });
@@ -264,17 +255,10 @@ export class PlantillaGeneralComponent implements OnInit {
       error: (error: any) => {
         console.error('Error al cargar plantilla completa:', error);
 
-        if (error.status === 0 || error.message?.includes('ERR_CONNECTION_REFUSED')) {
-          this.showMessage(
-            'Backend no disponible. Los detalles mostrados son datos de ejemplo.',
-            'info'
-          );
-        } else {
-          this.showMessage(
-            'Error al cargar plantilla. Verifique la conexión con el servidor.',
-            'error'
-          );
-        }
+        this.showMessage(
+          `❌ NO se pudo cargar la plantilla. ${this.mensajeRealDelError(error) || 'Verifique la conexión con el servidor.'}`,
+          'error'
+        );
         this.loading = false;
       },
     });
@@ -711,10 +695,9 @@ export class PlantillaGeneralComponent implements OnInit {
     // Validaciones adicionales antes del envío
     if (!this.validarDetalleParaServidor(detalleOriginal)) {
       this.showMessage(
-        '❌ Error de validación: Plan de cuenta no válido para el servidor',
+        '❌ NO se guardó el detalle: el plan de cuenta, el movimiento o la plantilla no son válidos',
         'error'
       );
-      this.agregarDetalleLocal(resultadoDialog);
       return;
     }
 
@@ -724,46 +707,45 @@ export class PlantillaGeneralComponent implements OnInit {
           this.cargarDetalles(this.plantillaSeleccionada!.codigo);
           this.showMessage('✅ Detalle guardado correctamente en el servidor', 'success');
         } else {
-          this.showMessage('⚠️ Respuesta vacía del servidor', 'warn');
-          this.agregarDetalleLocal(resultadoDialog);
+          this.showMessage(
+            '⚠️ NO se pudo confirmar el guardado: el servidor respondió vacío. Recargue la plantilla y verifique antes de repetir.',
+            'warn'
+          );
         }
       },
       error: (error) => {
-        // Análisis específico del tipo de error
-        const tipoError = this.analizarTipoError(error);
+        const real = this.mensajeRealDelError(error);
+        let causa: string;
 
-        switch (tipoError) {
+        switch (this.analizarTipoError(error)) {
           case 'INTEGRIDAD_FK':
-            this.showMessage(
-              `Error FK_DTPL_PLNN: El plan de cuenta [${detalleOriginal.planCuenta?.codigo}] "${resultadoDialog.planCuenta?.cuentaContable}" no existe en el servidor. Guardado localmente.`,
-              'warn'
-            );
+            causa = `El plan de cuenta [${detalleOriginal.planCuenta?.codigo}] "${resultadoDialog.planCuenta?.cuentaContable}" no existe en el servidor.`;
             break;
-
           case 'SERVIDOR_NO_DISPONIBLE':
-            this.showMessage(
-              `Servidor no disponible. Detalle guardado localmente para demostración.`,
-              'info'
-            );
+            causa = 'El servidor no está disponible.';
             break;
-
           case 'ERROR_TRANSACCION':
-            this.showMessage(
-              `Error de transacción en el servidor. Guardado localmente para demostración.`,
-              'warn'
-            );
+            causa = 'Falló la transacción en el servidor.';
             break;
-
           default:
-            this.showMessage(
-              `Error del servidor. Detalle guardado localmente para demostración.`,
-              'info'
-            );
+            causa = 'El servidor rechazó la operación.';
         }
 
-        this.agregarDetalleLocal(resultadoDialog);
+        this.showMessage(`❌ NO se guardó el detalle. ${causa} ${real}`.trim(), 'error');
       },
     });
+  }
+
+  /**
+   * Texto real del error del servidor: `{"mensaje": "..."}`, texto plano o el mensaje HTTP.
+   */
+  private mensajeRealDelError(error: any): string {
+    const cuerpo = error?.error;
+    if (cuerpo && typeof cuerpo === 'object' && typeof cuerpo.mensaje === 'string') {
+      return cuerpo.mensaje;
+    }
+    if (typeof cuerpo === 'string' && cuerpo.trim()) return cuerpo;
+    return typeof error?.message === 'string' ? error.message : '';
   }
 
   /**
@@ -792,7 +774,7 @@ export class PlantillaGeneralComponent implements OnInit {
    * Detecta si el error es de integridad referencial específicamente FK_DTPL_PLNN
    */
   private esErrorIntegridad(error: any): boolean {
-    const errorMsg = error?.error || error?.message || '';
+    const errorMsg = this.mensajeRealDelError(error);
     return (
       errorMsg.includes('FK_DTPL_PLNN') ||
       errorMsg.includes('ORA-02291') ||
@@ -810,7 +792,7 @@ export class PlantillaGeneralComponent implements OnInit {
     if (!error) return 'OTRO';
 
     const status = error.status;
-    const errorMsg = (error?.error || error?.message || '').toLowerCase();
+    const errorMsg = this.mensajeRealDelError(error).toLowerCase();
 
     // Error de integridad FK_DTPL_PLNN (plan de cuenta no existe)
     if (this.esErrorIntegridad(error)) {
@@ -889,35 +871,6 @@ export class PlantillaGeneralComponent implements OnInit {
     return detalle;
   }
 
-  private agregarDetalleLocal(resultadoDialog: any): void {
-    const detalleLocal: DetallePlantilla = {
-      codigo: Date.now(), // ID temporal
-      plantilla: this.plantillaSeleccionada!,
-      planCuenta: resultadoDialog.planCuenta,
-      descripcion: resultadoDialog.descripcion,
-      movimiento: resultadoDialog.movimiento,
-      fechaDesde: resultadoDialog.fechaDesde,
-      fechaHasta: resultadoDialog.fechaHasta,
-      auxiliar1: Number(resultadoDialog.auxiliar1) || 0,
-      auxiliar2: 0,
-      auxiliar3: 0,
-      auxiliar4: 0,
-      auxiliar5: 0,
-      estado: resultadoDialog.estado || 1,
-      fechaInactivo: resultadoDialog.estado === 2 ? new Date() : undefined!,
-    };
-
-    const data = [...this.dataSourceDetalles.data, detalleLocal];
-    this.dataSourceDetalles.data = data;
-
-    // Mostrar mensaje de confirmación específico
-    const movimientoTexto = resultadoDialog.movimiento === 1 ? 'DEBE' : 'HABER';
-    this.showMessage(
-      `✅ Detalle agregado (${movimientoTexto}): ${resultadoDialog.planCuenta.nombre}`,
-      'success'
-    );
-  }
-
   editarDetalle(detalle: DetallePlantilla): void {
     // Cargar planes de cuenta reales del servidor y abrir diálogo para editar
     this.cargarPlanesCuentaParaDialog(detalle);
@@ -952,61 +905,6 @@ export class PlantillaGeneralComponent implements OnInit {
         },
       });
     });
-  }
-
-  duplicarDetalle(detalle: DetallePlantilla): void {
-    const nuevoDetalle: DetallePlantilla = {
-      ...detalle,
-      codigo: Date.now(), // Código temporal
-      descripcion: `${detalle.descripcion} (Copia)`,
-    };
-
-    const detalles = [...this.dataSourceDetalles.data, nuevoDetalle];
-    this.dataSourceDetalles.data = detalles;
-    this.showMessage('Detalle duplicado', 'info');
-  }
-
-  /**
-   * Crear asiento contable basado en la plantilla seleccionada
-   */
-  crearAsientoDesdeTemplate(): void {
-    if (!this.plantillaSeleccionada) {
-      this.showMessage('No hay plantilla seleccionada', 'warn');
-      return;
-    }
-
-    const detalles = this.dataSourceDetalles.data;
-    if (detalles.length === 0) {
-      this.showMessage('La plantilla no tiene detalles para crear el asiento', 'warn');
-      return;
-    }
-
-    // Preparar datos de la plantilla para el asiento
-    const plantillaData = {
-      plantillaCodigo: this.plantillaSeleccionada.codigo,
-      plantillaNombre: this.plantillaSeleccionada.nombre,
-      detalles: detalles,
-    };
-
-    // Guardar en localStorage para usar en el componente de asientos
-    localStorage.setItem('plantillaParaAsiento', JSON.stringify(plantillaData));
-
-    this.showMessage('Navegando a crear asiento desde plantilla...', 'info');
-
-    // No se verifica: la ruta '/menucontabilidad/asientos' no existe (bug reportado,
-    // ver docs/seguridad/ITEM7-MAPEO-BOTONES-PERMISOS.md) — no hay pantalla destino
-    // que proteger hasta que se arregle.
-    // Navegar al componente de asientos con parámetro
-    this.router.navigate(['/menucontabilidad/asientos'], {
-      queryParams: { plantilla: this.plantillaSeleccionada.codigo },
-    });
-  }
-
-  /**
-   * Cierra el banner de demostración
-   */
-  cerrarBanner(): void {
-    this.mostrarBannerDemo = false;
   }
 
   /**
@@ -1257,16 +1155,10 @@ export class PlantillaGeneralComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al actualizar detalle:', error);
-        // Fallback: actualizar solo en memoria para demo
-        const actualizado: DetallePlantilla = {
-          ...detalle,
-          ...result,
-          fechaInactivo: result.estado === 2 ? detalle.fechaInactivo || new Date() : undefined,
-        };
-        this.dataSourceDetalles.data = this.dataSourceDetalles.data.map((d) =>
-          d.codigo === detalle.codigo ? actualizado : d
+        this.showMessage(
+          `❌ NO se actualizó el detalle en el servidor. ${this.mensajeRealDelError(error)}`,
+          'error'
         );
-        this.showMessage('Detalle actualizado (modo demo)', 'success');
       },
     });
   }

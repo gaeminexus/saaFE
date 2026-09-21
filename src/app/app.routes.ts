@@ -1124,7 +1124,8 @@ export const routes: Routes = [
       { path: 'devolucion-aportes', loadComponent: () => import('./modules/crd/forms/devolucion-aportes/devolucion-aportes.component').then((m) => m.DevolucionAportesComponent) },
       { path: 'simulador-credito', loadComponent: () => import('./modules/crd/forms/simulador-credito/simulador-credito.component').then((m) => m.SimuladorCreditoComponent) },
       { path: 'simulador-prestamo', loadComponent: () => import('./modules/crd/forms/simulador-prestamo/simulador-prestamo.component').then((m) => m.SimuladorPrestamoComponent) },
-      { path: 'pago-cuotas', loadComponent: () => import('./modules/crd/forms/pago-cuotas/pago-cuotas.component').then((m) => m.PagoCuotasComponent) },
+      // Ruta 'pago-cuotas' retirada (lote U3): la pantalla simulaba el pago. Componente conservado en forms/pago-cuotas/.
+      // { path: 'pago-cuotas', loadComponent: () => import('./modules/crd/forms/pago-cuotas/pago-cuotas.component').then((m) => m.PagoCuotasComponent) },
       { path: 'cobros-personales', loadComponent: () => import('./modules/crd/forms/cobros-personales/cobros-personales.component').then((m) => m.CobrosPersonalesComponent) },
       { path: 'bandeja-contabilidad', loadComponent: () => import('./modules/crd/forms/cobros/bandeja-contabilidad/bandeja-contabilidad.component').then((m) => m.BandejaContabilidadComponent) },
       { path: 'proceso-credito', loadComponent: () => import('./modules/crd/forms/cobros/proceso-credito/proceso-credito.component').then((m) => m.ProcesoCreditoComponent) },
@@ -1303,11 +1304,13 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/crd/forms/prestamo/prestamo-dash/prestamo-dash.component').then((m) => m.PrestamoDashComponent),
         canActivate: [authGuard],
       },
-      {
-        path: 'asignacion-seguros',
-        loadComponent: () => import('./modules/crd/forms/asignacion-seguros/asignacion-seguros.component').then((m) => m.AsignacionSegurosComponent),
-        canActivate: [authGuard],
-      },
+      // Ruta 'asignacion-seguros' retirada (lote U4): simulaba la asignación, no hay backend de pólizas.
+      // Componente conservado en forms/asignacion-seguros/.
+      // {
+      //   path: 'asignacion-seguros',
+      //   loadComponent: () => import('./modules/crd/forms/asignacion-seguros/asignacion-seguros.component').then((m) => m.AsignacionSegurosComponent),
+      //   canActivate: [authGuard],
+      // },
       {
         path: 'repote-valores-insolutos',
         loadComponent: () => import('./modules/crd/forms/prestamo/repote-valores-insolutos/repote-valores-insolutos.component').then((m) => m.RepoteValoresInsolutosComponent),

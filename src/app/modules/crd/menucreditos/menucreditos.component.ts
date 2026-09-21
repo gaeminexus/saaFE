@@ -187,12 +187,14 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_REPORTE_VALORES_INSOLUTOS,
           route: '/menucreditos/repote-valores-insolutos',
         },
-        {
-          displayName: 'Asignación de Seguros',
-          iconName: 'verified_user',
-          idPermiso: Permisos.CRD_ASIGNACION_DE_SEGUROS,
-          route: '/menucreditos/asignacion-seguros',
-        },
+        // "Asignación de Seguros" retirado (lote U4): simulaba la asignación, no existe backend de pólizas.
+        // No borrar: el componente y el permiso se conservan.
+        // {
+        //   displayName: 'Asignación de Seguros',
+        //   iconName: 'verified_user',
+        //   idPermiso: Permisos.CRD_ASIGNACION_DE_SEGUROS,
+        //   route: '/menucreditos/asignacion-seguros',
+        // },
       ],
     },
     {
@@ -257,12 +259,14 @@ export class MenucreditosComponent {
             },
           ],
         },
-        {
-          displayName: 'Pago Cuota',
-          iconName: 'payment',
-          idPermiso: Permisos.CRD_PAGO_CUOTA,
-          route: '/menucreditos/pago-cuotas',
-        },
+        // "Pago Cuota" retirado (lote U3): la pantalla simulaba el pago sin llamar al backend.
+        // El cobro real es Cobros Personales. No borrar: el componente y el permiso se conservan.
+        // {
+        //   displayName: 'Pago Cuota',
+        //   iconName: 'payment',
+        //   idPermiso: Permisos.CRD_PAGO_CUOTA,
+        //   route: '/menucreditos/pago-cuotas',
+        // },
         {
           displayName: 'Cruce de Valores',
           iconName: 'sync_alt',

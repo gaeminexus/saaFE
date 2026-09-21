@@ -21,30 +21,6 @@
     </div>
   </div>
 
-  <!-- Banner de información sobre conexión -->
-  <div class="info-banner" *ngIf="mostrarBannerDemo">
-    <mat-card class="demo-banner">
-      <mat-card-content>
-        <div class="banner-content">
-          <mat-icon class="banner-icon">info</mat-icon>
-          <div class="banner-text">
-            <strong>Modo Demostración:</strong>
-            Backend no disponible. Se están mostrando datos de ejemplo para demostrar la
-            funcionalidad.
-            <br />
-            <small
-              >Para conectar con el backend real, asegúrese de que esté ejecutándose en
-              http://127.0.0.1:8080</small
-            >
-          </div>
-          <button mat-icon-button (click)="cerrarBanner()" class="banner-close">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
   <div class="content-layout">
     <!-- Panel Maestro - Lista de Plantillas -->
     <div class="maestro-panel">
@@ -211,18 +187,6 @@
               {{ isNewRecord ? 'Crear' : 'Guardar' }}
             </button>
 
-            <button
-              mat-raised-button
-              color="accent"
-              (click)="crearAsientoDesdeTemplate()"
-              *ngIf="!isNewRecord && plantillaSeleccionada"
-              [disabled]="loading || dataSourceDetalles.data.length === 0"
-              matTooltip="Crear asiento contable usando esta plantilla"
-            >
-              <mat-icon>receipt_long</mat-icon>
-              Crear Asiento
-            </button>
-
             <button mat-button (click)="cancelarEdicion()" [disabled]="loading">
               <mat-icon>cancel</mat-icon>
               Cancelar
@@ -363,15 +327,6 @@
                       matTooltip="Editar detalle"
                     >
                       <mat-icon>edit</mat-icon>
-                    </button>
-
-                    <button
-                      mat-icon-button
-                      class="action-btn copy-btn"
-                      (click)="duplicarDetalle(detalle)"
-                      matTooltip="Duplicar detalle"
-                    >
-                      <mat-icon>content_copy</mat-icon>
                     </button>
 
                     <button
