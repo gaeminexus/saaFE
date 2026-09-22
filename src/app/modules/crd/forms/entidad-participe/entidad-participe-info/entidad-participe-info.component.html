@@ -1114,7 +1114,7 @@
                 <p class="empty-msg">No hay beneficiarios registrados.</p>
               } @else {
                 <table class="sub-table">
-                  <thead><tr><th>Nombre</th><th>Identificación</th><th>Banco</th><th>Cuenta</th><th>Porcentaje</th><th>Estado</th><th>Acciones</th></tr></thead>
+                  <thead><tr><th>Nombre</th><th>Identificación</th><th>Banco</th><th>Cuenta</th><th>Porcentaje</th><th>Estado</th><th>Certificado</th><th>Acciones</th></tr></thead>
                   <tbody>
                     @for (b of beneficiariosParticipe(); track b.codigo) {
                       <tr [class.fila-inactiva]="b.estado !== 1">
@@ -1125,10 +1125,27 @@
                         <td>{{ b.porcentaje | number:'1.0-2' }}%</td>
                         <td>{{ b.estado === 1 ? 'Activo' : 'Inactivo' }}</td>
                         <td>
+                          @if (certificadosPorBeneficiario()[b.codigo]) {
+                            <button mat-button color="primary"
+                                    [disabled]="descargandoCertificadoBeneficiario() === b.codigo"
+                                    (click)="descargarCertificadoBeneficiario(b)">
+                              @if (descargandoCertificadoBeneficiario() === b.codigo) {
+                                <mat-spinner diameter="16"></mat-spinner>
+                              } @else {
+                                <mat-icon>picture_as_pdf</mat-icon>
+                              }
+                              Ver certificado
+                            </button>
+                          } @else {
+                            <span class="sin-certificado">Sin certificado</span>
+                          }
+                        </td>
+                        <td>
                           <button mat-icon-button color="primary" (click)="editarBeneficiario(b)"><mat-icon>edit</mat-icon></button>
                           @if (b.estado === 1) {
                             <button mat-icon-button color="warn" (click)="desactivarBeneficiario(b)"><mat-icon>block</mat-icon></button>
                           }
+                          <button mat-icon-button color="warn" (click)="eliminarBeneficiario(b)"><mat-icon>delete</mat-icon></button>
                         </td>
                       </tr>
                     }

@@ -26,7 +26,7 @@ import { Conyuge } from '../../../model/conyuge';
 import { ReferenciaFamiliar } from '../../../model/referencia-familiar';
 import { ReferenciaPersonal } from '../../../model/referencia-personal';
 import { AdjuntoCertificadoCnbp, CuentaBancariaParticipe } from '../../../model/cuenta-bancaria-participe';
-import { CuentaBancariaBeneficiario } from '../../../model/cuenta-bancaria-beneficiario';
+import { AdjuntoCertificadoCbbp, CuentaBancariaBeneficiario } from '../../../model/cuenta-bancaria-beneficiario';
 import { BancoExterno } from '../../../../tsr/model/banco-externo.model';
 
 import { EntidadService } from '../../../service/entidad.service';
@@ -190,6 +190,14 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
   /** Certificado bancario (PDF) del beneficiario que se está registrando. Obligatorio, solo en alta. */
   certificadoBeneficiario = signal<File | null>(null);
+  /** Código del beneficiario cuyo certificado se está descargando, o `null` si ninguno. */
+  descargandoCertificadoBeneficiario = signal<number | null>(null);
+  /**
+   * Metadatos del certificado de cada beneficiario, por código (`GET /cbbp/{id}/certificado`).
+   * `null` significa "sin certificado" (404, respuesta esperada) o "todavía no se consultó" — en
+   * ambos casos la pantalla no muestra el enlace "Ver certificado".
+   */
+  certificadosPorBeneficiario = signal<Record<number, AdjuntoCertificadoCbbp | null>>({});
 
   /**
    * Acumulado de porcentaje de los beneficiarios ACTIVOS (§4 del contrato). **Informativo, no
@@ -359,8 +367,9 @@ export class EntidadParticipeInfoComponent implements OnInit {
       estado: [1]
     });
 
-    // Formulario de Beneficiario (sepelio fase 2a) — numeroIdentificacion se deshabilita al
-    // editar: el PUT no la cambia (§3.4 del contrato), otro número es otro beneficiario.
+    // Formulario de Beneficiario (sepelio fase 2a) — todos los campos son editables, incluida
+    // numeroIdentificacion (decisión del usuario). Lo único que no cambia nunca es a qué
+    // partícipe pertenece (entidad), que ni siquiera está en este form.
     this.beneficiarioForm = this.fb.group({
       codigo: [null],
       nombre: ['', [Validators.required, Validators.maxLength(200)]],
@@ -505,6 +514,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.cuentasBancariasParticipe.set(data.cuentasBancarias || []);
         this.cargarCertificadosCuentasBancarias(data.cuentasBancarias || []);
         this.beneficiariosParticipe.set(data.beneficiarios || []);
+        this.cargarCertificadosBeneficiarios(data.beneficiarios || []);
 
         this.loading.set(false);
       },
@@ -1001,15 +1011,14 @@ export class EntidadParticipeInfoComponent implements OnInit {
   // ─── BENEFICIARIOS (sepelio fase 2a) ────────────────────────
   nuevoBeneficiario(): void {
     this.beneficiarioForm.reset({ estado: 1 });
-    this.beneficiarioForm.get('numeroIdentificacion')?.enable();
     this.certificadoBeneficiario.set(null);
     this.modoBeneficiarioForm.set('nuevo');
   }
 
   editarBeneficiario(b: CuentaBancariaBeneficiario): void {
     this.beneficiarioForm.patchValue({ ...b });
-    // El PUT no cambia la identificación (§3.4): otro número es otro beneficiario, no una edición.
-    this.beneficiarioForm.get('numeroIdentificacion')?.disable();
+    // Todos los campos son editables por PUT, incluida numeroIdentificacion (decisión del
+    // usuario) — entidad ni siquiera está en el form, así que no hay riesgo de reasignarla.
     this.certificadoBeneficiario.set(null);
     this.modoBeneficiarioForm.set('editar');
   }
@@ -1074,6 +1083,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       next: () => {
         this.cuentaBancariaBeneficiarioService.porEntidad(entidad.codigo).subscribe(list => {
           this.beneficiariosParticipe.set(list || []);
+          this.cargarCertificadosBeneficiarios(list || []);
         });
         this.refrescarUltimaActualizacion();
         this.modoBeneficiarioForm.set(null);
@@ -1082,16 +1092,17 @@ export class EntidadParticipeInfoComponent implements OnInit {
       },
       error: (err) => {
         this.savingSubEntidad.set(false);
-        // 409 = ya existe un beneficiario con esa identificación para este partícipe (§3.3).
+        // 409 = ya existe otro beneficiario con esa identificación para este partícipe (§3.3, y
+        // ahora también aplica al PUT porque numeroIdentificacion pasó a ser editable).
         this.snackBar.open(err?.mensaje || 'No se pudo guardar el beneficiario.', 'Cerrar', { duration: 6000 });
       }
     });
   }
 
   /**
-   * «Desactivar», nunca «Eliminar»: el backend no expone `DELETE` a propósito (§3.5 del
-   * contrato) — esta tabla es la prueba de a quién se le pagó o se le iba a pagar la plata de un
-   * fallecido, y borrar una fila destruye esa prueba.
+   * Inactiva al beneficiario (`estado = 2` vía `PUT`), sin borrar el registro. Queda junto a
+   * «Eliminar» — las dos acciones conviven: desactivar preserva el historial, eliminar lo borra
+   * de verdad (decisión del usuario, ver `eliminarBeneficiario()`).
    */
   desactivarBeneficiario(b: CuentaBancariaBeneficiario): void {
     if (!confirm(`¿Desactivar al beneficiario ${b.nombre}?`)) return;
@@ -1106,6 +1117,65 @@ export class EntidadParticipeInfoComponent implements OnInit {
       error: (err) => {
         this.snackBar.open(err?.mensaje || 'No se pudo desactivar el beneficiario.', 'Cerrar', { duration: 5000 });
       }
+    });
+  }
+
+  /**
+   * Elimina de verdad al beneficiario (`DELETE /cbbp/{id}`), certificado adjunto incluido —
+   * decisión del usuario, distinta de «Desactivar» (que preserva el registro). El backend puede
+   * responder 409 (p. ej. un beneficiario que ya cobró): se muestra el mensaje del cuerpo tal cual.
+   */
+  eliminarBeneficiario(b: CuentaBancariaBeneficiario): void {
+    if (!confirm(`¿Eliminar al beneficiario ${b.nombre}? Esto borra también su certificado bancario adjunto. Esta acción no se puede deshacer.`)) return;
+    this.cuentaBancariaBeneficiarioService.delete(b.codigo).subscribe({
+      next: () => {
+        this.beneficiariosParticipe.update(list => list.filter(x => x.codigo !== b.codigo));
+        this.certificadosPorBeneficiario.update(mapa => {
+          const { [b.codigo]: _omitido, ...resto } = mapa;
+          return resto;
+        });
+        this.refrescarUltimaActualizacion();
+      },
+      error: (err) => {
+        this.snackBar.open(err?.mensaje || 'No se pudo eliminar el beneficiario.', 'Cerrar', { duration: 5000 });
+      }
+    });
+  }
+
+  /**
+   * Consulta los metadatos del certificado de cada beneficiario en paralelo (`GET
+   * /cbbp/{id}/certificado`), para decidir por fila si se muestra "Ver certificado". El propio
+   * servicio ya traduce el 404 esperado ("sin certificado") a `null` — acá no hay nada que
+   * ramificar por error.
+   */
+  private cargarCertificadosBeneficiarios(beneficiarios: CuentaBancariaBeneficiario[]): void {
+    if (!beneficiarios.length) {
+      this.certificadosPorBeneficiario.set({});
+      return;
+    }
+    forkJoin(
+      beneficiarios.map(b => this.cuentaBancariaBeneficiarioService.obtenerCertificado(b.codigo))
+    ).subscribe(resultados => {
+      const mapa: Record<number, AdjuntoCertificadoCbbp | null> = {};
+      beneficiarios.forEach((b, i) => { mapa[b.codigo] = resultados[i]; });
+      this.certificadosPorBeneficiario.set(mapa);
+    });
+  }
+
+  /** Ver/descargar el certificado bancario de un beneficiario ya registrado. */
+  descargarCertificadoBeneficiario(b: CuentaBancariaBeneficiario): void {
+    const certificado = this.certificadosPorBeneficiario()[b.codigo];
+    if (!certificado || this.descargandoCertificadoBeneficiario() != null) return;
+    this.descargandoCertificadoBeneficiario.set(b.codigo);
+    this.cuentaBancariaBeneficiarioService.descargarCertificado(b.codigo).subscribe({
+      next: (blob) => {
+        this.descargandoCertificadoBeneficiario.set(null);
+        guardarArchivo(blob, certificado.nombreArchivo || `certificado-beneficiario-${b.codigo}.pdf`);
+      },
+      error: () => {
+        this.descargandoCertificadoBeneficiario.set(null);
+        this.snackBar.open('No se pudo descargar el certificado bancario.', 'Cerrar', { duration: 5000 });
+      },
     });
   }
 

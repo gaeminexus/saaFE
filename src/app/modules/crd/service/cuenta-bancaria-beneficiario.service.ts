@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 import { BancoExterno } from '../../tsr/model/banco-externo.model';
-import { CuentaBancariaBeneficiario } from '../model/cuenta-bancaria-beneficiario';
+import { AdjuntoCertificadoCbbp, CuentaBancariaBeneficiario } from '../model/cuenta-bancaria-beneficiario';
 import { Entidad } from '../model/entidad';
 import { ServiciosCrd } from './ws-crd';
 
@@ -95,12 +95,57 @@ export class CuentaBancariaBeneficiarioService {
 
   /**
    * §3.4 — `PUT /cbbp`. Cambia `porcentaje`, `estado`, `tipoCuenta`, `numeroCuenta`,
-   * `bancoExterno` y `nombre`. **No cambia `entidad` ni `numeroIdentificacion`** — eso es otro
-   * beneficiario (se inactiva éste y se crea el otro). También el único camino para
-   * "desactivar" (`estado = 2`): §3.5 dice explícito que no hay `DELETE`.
+   * `bancoExterno`, `nombre` y `numeroIdentificacion`. **No cambia `entidad`** — a qué partícipe
+   * pertenece no se puede reasignar. También el camino para "desactivar" (`estado = 2`).
+   *
+   * ⚠️ Si el `numeroIdentificacion` editado ya existe para OTRO beneficiario del mismo partícipe,
+   * responde **409** — mostrar el `mensaje` del cuerpo, no deducirlo del código HTTP.
    */
   update(datos: any): Observable<CuentaBancariaBeneficiario> {
     return this.http.put<CuentaBancariaBeneficiario>(ServiciosCrd.RS_CBBP, datos).pipe(catchError(this.handleError));
+  }
+
+  /**
+   * Metadatos del certificado bancario de un beneficiario (`GET /cbbp/{id}/certificado`), mismo
+   * contrato que `CuentaBancariaParticipeService.obtenerCertificado()`.
+   *
+   * **404 significa "este beneficiario no tiene certificado" y se traduce a `null` acá — no es
+   * un error.** Solo se loguea (sin mostrarlo al usuario) cuando el fallo es otra cosa, para no
+   * dejar una falla real de red disfrazada de "sin certificado".
+   */
+  obtenerCertificado(idBeneficiario: number): Observable<AdjuntoCertificadoCbbp | null> {
+    return this.http
+      .get<AdjuntoCertificadoCbbp>(`${ServiciosCrd.RS_CBBP}/${idBeneficiario}/certificado`)
+      .pipe(
+        catchError((e: HttpErrorResponse) => {
+          if (e.status !== 404) {
+            console.error('Error al consultar el certificado del beneficiario:', e);
+          }
+          return of(null);
+        })
+      );
+  }
+
+  /**
+   * Descarga el PDF del certificado bancario (`GET /cbbp/{id}/certificado/descargar`). Llamar
+   * solo cuando `obtenerCertificado()` ya confirmó que el beneficiario tiene certificado.
+   */
+  descargarCertificado(idBeneficiario: number): Observable<Blob> {
+    return this.http.get(`${ServiciosCrd.RS_CBBP}/${idBeneficiario}/certificado/descargar`, {
+      responseType: 'blob',
+    });
+  }
+
+  /**
+   * `DELETE /cbbp/{id}` — elimina de verdad el beneficiario, además de poder desactivarlo
+   * (decisión del usuario, actualiza al §3.5 original del contrato). El backend borra también el
+   * certificado adjunto.
+   *
+   * ⚠️ Puede responder **409** (p. ej. un beneficiario que ya cobró) — mostrar el `mensaje` del
+   * cuerpo, no deducirlo del código HTTP.
+   */
+  delete(idBeneficiario: number): Observable<void> {
+    return this.http.delete<void>(`${ServiciosCrd.RS_CBBP}/${idBeneficiario}`).pipe(catchError(this.handleError));
   }
 
   /** Propaga `error.error` (el `{ mensaje }` del backend) tal cual, sin envolverlo. */
