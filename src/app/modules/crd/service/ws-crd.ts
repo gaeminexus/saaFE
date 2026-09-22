@@ -103,6 +103,7 @@ export class ServiciosCrd {
   public static RS_ACCN = `${API_URL}/accn`; // AcuerdoCondonacion — acuerdos de pago con condonación (docs/crd/API-ACUERDOS-CONDONACION.md)
   public static RS_RVSG = `${API_URL}/rvsg`; // RecepcionValorSeguro — valores de seguro (sepelio) recibidos (docs/crd/API-RECEPCION-VALORES-SEGURO.md)
   public static RS_CTAP =`${API_URL}/ctap`; // CuentaTipoAporte — cuentas contables por tipo de aporte y empresa (docs/crd/API-CUENTAS-TIPO-APORTE.md)
+  public static RS_CBBP = `${API_URL}/cbbp`; // CuentaBancariaBeneficiario — beneficiarios del partícipe, sepelio fase 2a (docs/crd/API-BENEFICIARIOS-PARTICIPE.md)
 }
 /*
 export class ServiciosCrd {

@@ -724,6 +724,57 @@
     font-style: italic;
   }
 
+  // ========================================
+  // Beneficiarios (sepelio fase 2a)
+  // ========================================
+  // Aviso informativo (nunca bloquea): partícipe fallecido sin beneficiarios cargados.
+  // Ámbar, a propósito distinto del rojo de `.certificado-aviso`, que sí es un bloqueo real.
+  .aviso-informativo {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #92400e;
+    font-size: 0.85rem;
+    line-height: 1.4;
+
+    mat-icon { color: #d97706; flex-shrink: 0; }
+  }
+
+  // Acumulado de porcentaje de beneficiarios activos — ámbar mientras no llega a 100, verde al llegar.
+  .acumulado-beneficiarios {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    margin-bottom: 12px;
+    border-radius: 20px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+    font-size: 0.85rem;
+    font-weight: 600;
+
+    mat-icon { font-size: 18px; width: 18px; height: 18px; color: #d97706; }
+
+    &.completo {
+      background: rgba(34, 197, 94, 0.1);
+      color: #15803d;
+
+      mat-icon { color: #16a34a; }
+    }
+  }
+
+  // Fila de un beneficiario inactivo — se muestra, no se oculta (§3.1 del contrato: es prueba de
+  // a quién se le pagó o se le iba a pagar la plata de un fallecido).
+  .fila-inactiva {
+    color: #a0aec0;
+    font-style: italic;
+  }
+
   .sub-table {
     width: 100%;
     border-collapse: collapse;

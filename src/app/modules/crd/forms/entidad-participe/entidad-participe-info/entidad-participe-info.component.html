@@ -964,6 +964,182 @@
         </div>
       </mat-tab>
 
+      <!-- TAB: BENEFICIARIOS (sepelio fase 2a) -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="tab-label">
+            <mat-icon class="tab-icon">groups</mat-icon>
+            <span class="tab-text">Beneficiarios</span>
+          </div>
+        </ng-template>
+        <div class="tab-content">
+          @if (avisoFallecidoSinBeneficiarios()) {
+            <div class="aviso-informativo">
+              <mat-icon>info</mat-icon>
+              <span>Este partícipe está registrado como fallecido y todavía no tiene beneficiarios cargados. El valor de sepelio ya está en el banco: registrar a quién se le paga no puede esperar a que se cargue un beneficiario.</span>
+            </div>
+          }
+          @if (modoBeneficiarioForm()) {
+            <mat-card class="form-section">
+              <mat-card-header>
+                <mat-icon mat-card-avatar>person_add</mat-icon>
+                <mat-card-title>{{ modoBeneficiarioForm() === 'nuevo' ? 'Nuevo Beneficiario' : 'Editar Beneficiario' }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <form [formGroup]="beneficiarioForm">
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Nombre *</mat-label>
+                      <input matInput formControlName="nombre" maxlength="200">
+                      <mat-icon matSuffix>badge</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Identificación *</mat-label>
+                      <input matInput formControlName="numeroIdentificacion" maxlength="20">
+                      <mat-icon matSuffix>fingerprint</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Banco *</mat-label>
+                      <mat-select formControlName="bancoExterno" [compareWith]="compararPorCodigo"
+                                  panelClass="select-con-buscador"
+                                  (openedChange)="!$event && filtroBancoExterno.set('')">
+                        <mat-option class="select-search-option"
+                                    (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                                    (click)="$event.stopPropagation()">
+                          <input class="select-search-input" placeholder="Buscar por nombre o código..."
+                                 [value]="filtroBancoExterno()"
+                                 (mousedown)="$event.stopPropagation()"
+                                 (click)="$event.stopPropagation()"
+                                 (keydown)="$event.stopPropagation()"
+                                 (input)="filtroBancoExterno.set($any($event.target).value)" />
+                        </mat-option>
+                        <mat-option [value]="null">-- Seleccionar --</mat-option>
+                        @for (b of bancoExternosFiltrados(); track b.codigo) {
+                          <mat-option [value]="b">{{ b.nombre }}</mat-option>
+                        }
+                        @if (bancoExternosFiltrados().length === 0) {
+                          <mat-option disabled>Sin coincidencias</mat-option>
+                        }
+                      </mat-select>
+                      <mat-icon matSuffix>account_balance</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Número de Cuenta *</mat-label>
+                      <input matInput formControlName="numeroCuenta" maxlength="100">
+                      <mat-icon matSuffix>pin</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  <div class="form-row">
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Tipo de Cuenta *</mat-label>
+                      <mat-select formControlName="tipoCuenta">
+                        <mat-option [value]="null">-- Seleccionar --</mat-option>
+                        @for (tc of tiposCuentaBancaria(); track tc.codigoAlterno) {
+                          <mat-option [value]="tc.codigoAlterno">{{ tc.descripcion }}</mat-option>
+                        }
+                      </mat-select>
+                      <mat-icon matSuffix>credit_card</mat-icon>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" class="half-width">
+                      <mat-label>Porcentaje (%) *</mat-label>
+                      <input matInput type="number" formControlName="porcentaje" min="0.01" max="100" step="0.01">
+                      <mat-icon matSuffix>percent</mat-icon>
+                    </mat-form-field>
+                  </div>
+                  @if (modoBeneficiarioForm() === 'nuevo') {
+                    <div class="form-row">
+                      <div class="certificado-field full-width">
+                        <label class="certificado-label">Certificado bancario (PDF) *</label>
+                        <div class="certificado-dropzone" [class.cargado]="!!certificadoBeneficiario()"
+                             (click)="certificadoBeneficiarioInput.click()">
+                          <mat-icon>{{ certificadoBeneficiario() ? 'task' : 'upload_file' }}</mat-icon>
+                          <span class="certificado-nombre">
+                            {{ certificadoBeneficiario()?.name || 'Adjuntar certificado bancario (PDF, máx. 10 MB)' }}
+                          </span>
+                        </div>
+                        @if (certificadoBeneficiario()) {
+                          <button mat-button type="button" (click)="quitarCertificadoBeneficiario()">
+                            <mat-icon>close</mat-icon> Quitar
+                          </button>
+                        }
+                        <input #certificadoBeneficiarioInput type="file" accept=".pdf" hidden
+                               (change)="onCertificadoBeneficiarioSeleccionado($event)" />
+                        @if (faltaCertificadoBeneficiario) {
+                          <div class="certificado-aviso">
+                            <mat-icon>info</mat-icon>
+                            <span>No se puede registrar un beneficiario sin adjuntar el certificado bancario en PDF.</span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                  <div class="form-actions-inline">
+                    <button mat-raised-button color="accent" (click)="guardarBeneficiario()"
+                            [disabled]="beneficiarioForm.invalid || savingSubEntidad() || faltaCertificadoBeneficiario">
+                      <mat-icon>save</mat-icon> Guardar
+                    </button>
+                    <button mat-button (click)="cancelarBeneficiario()">Cancelar</button>
+                  </div>
+                </form>
+              </mat-card-content>
+            </mat-card>
+          }
+          <mat-card class="form-section">
+            <mat-card-header>
+              <mat-icon mat-card-avatar>groups</mat-icon>
+              <mat-card-title>Beneficiarios</mat-card-title>
+              <div class="header-actions">
+                @if (modoEdicion()) {
+                  <button mat-mini-fab color="primary" (click)="nuevoBeneficiario()" [disabled]="!!modoBeneficiarioForm()">
+                    <mat-icon>add</mat-icon>
+                  </button>
+                }
+              </div>
+            </mat-card-header>
+            <mat-card-content>
+              @if (modoEdicion()) {
+                <div class="acumulado-beneficiarios" [class.completo]="porcentajeAsignadoBeneficiarios() >= 100">
+                  <mat-icon>{{ porcentajeAsignadoBeneficiarios() >= 100 ? 'check_circle' : 'pie_chart' }}</mat-icon>
+                  <span>
+                    Asignado: {{ porcentajeAsignadoBeneficiarios() | number:'1.0-2' }}%
+                    @if (porcentajeAsignadoBeneficiarios() < 100) {
+                      · falta {{ (100 - porcentajeAsignadoBeneficiarios()) | number:'1.0-2' }}%
+                    }
+                  </span>
+                </div>
+              }
+              @if (beneficiariosParticipe().length === 0) {
+                <p class="empty-msg">No hay beneficiarios registrados.</p>
+              } @else {
+                <table class="sub-table">
+                  <thead><tr><th>Nombre</th><th>Identificación</th><th>Banco</th><th>Cuenta</th><th>Porcentaje</th><th>Estado</th><th>Acciones</th></tr></thead>
+                  <tbody>
+                    @for (b of beneficiariosParticipe(); track b.codigo) {
+                      <tr [class.fila-inactiva]="b.estado !== 1">
+                        <td>{{ b.nombre }}</td>
+                        <td>{{ b.numeroIdentificacion }}</td>
+                        <td>{{ b.bancoExterno.nombre }}</td>
+                        <td>{{ b.numeroCuenta }}</td>
+                        <td>{{ b.porcentaje | number:'1.0-2' }}%</td>
+                        <td>{{ b.estado === 1 ? 'Activo' : 'Inactivo' }}</td>
+                        <td>
+                          <button mat-icon-button color="primary" (click)="editarBeneficiario(b)"><mat-icon>edit</mat-icon></button>
+                          @if (b.estado === 1) {
+                            <button mat-icon-button color="warn" (click)="desactivarBeneficiario(b)"><mat-icon>block</mat-icon></button>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
     </mat-tab-group>
   }
 </div>

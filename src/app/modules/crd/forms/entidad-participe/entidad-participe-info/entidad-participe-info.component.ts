@@ -26,6 +26,7 @@ import { Conyuge } from '../../../model/conyuge';
 import { ReferenciaFamiliar } from '../../../model/referencia-familiar';
 import { ReferenciaPersonal } from '../../../model/referencia-personal';
 import { AdjuntoCertificadoCnbp, CuentaBancariaParticipe } from '../../../model/cuenta-bancaria-participe';
+import { CuentaBancariaBeneficiario } from '../../../model/cuenta-bancaria-beneficiario';
 import { BancoExterno } from '../../../../tsr/model/banco-externo.model';
 
 import { EntidadService } from '../../../service/entidad.service';
@@ -41,6 +42,7 @@ import { ConyugeService } from '../../../service/conyuge.service';
 import { ReferenciaFamiliarService } from '../../../service/referencia-familiar.service';
 import { ReferenciaPersonalService } from '../../../service/referencia-personal.service';
 import { CuentaBancariaParticipeService } from '../../../service/cuenta-bancaria-participe.service';
+import { CuentaBancariaBeneficiarioService } from '../../../service/cuenta-bancaria-beneficiario.service';
 import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { DetalleRubro } from '../../../../../shared/model/detalle-rubro';
@@ -90,6 +92,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private referenciaFamiliarService = inject(ReferenciaFamiliarService);
   private referenciaPersonalService = inject(ReferenciaPersonalService);
   private cuentaBancariaParticipeService = inject(CuentaBancariaParticipeService);
+  private cuentaBancariaBeneficiarioService = inject(CuentaBancariaBeneficiarioService);
   private bancoExternoService = inject(BancoExternoService);
   private fileService = inject(FileService);
   private detalleRubroService = inject(DetalleRubroService);
@@ -150,12 +153,15 @@ export class EntidadParticipeInfoComponent implements OnInit {
   referenciasFamiliares = signal<ReferenciaFamiliar[]>([]);
   referenciasPersonales = signal<ReferenciaPersonal[]>([]);
   cuentasBancariasParticipe = signal<CuentaBancariaParticipe[]>([]);
+  /** Beneficiarios de sepelio del partícipe (sepelio fase 2a) — activos e inactivos, ver §3.1 del contrato. */
+  beneficiariosParticipe = signal<CuentaBancariaBeneficiario[]>([]);
 
   // Formularios sub-entidades
   conyugeForm!: FormGroup;
   referenciaFamiliarForm!: FormGroup;
   referenciaPersonalForm!: FormGroup;
   cuentaBancariaParticipeForm!: FormGroup;
+  beneficiarioForm!: FormGroup;
   direccionForm!: FormGroup;
 
   // Estado de formularios inline
@@ -163,6 +169,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   modoRefFamiliarForm = signal<'nuevo' | 'editar' | null>(null);
   modoRefPersonalForm = signal<'nuevo' | 'editar' | null>(null);
   modoCuentaBancariaForm = signal<'nuevo' | 'editar' | null>(null);
+  modoBeneficiarioForm = signal<'nuevo' | 'editar' | null>(null);
 
   savingSubEntidad = signal<boolean>(false);
 
@@ -180,6 +187,33 @@ export class EntidadParticipeInfoComponent implements OnInit {
    * consultó" — en ambos casos la pantalla no muestra el enlace "Ver certificado".
    */
   certificadosPorCuenta = signal<Record<number, AdjuntoCertificadoCnbp | null>>({});
+
+  /** Certificado bancario (PDF) del beneficiario que se está registrando. Obligatorio, solo en alta. */
+  certificadoBeneficiario = signal<File | null>(null);
+
+  /**
+   * Acumulado de porcentaje de los beneficiarios ACTIVOS (§4 del contrato). **Informativo, no
+   * bloquea nada**: la guarda dura de que sume 100 vive en el pago (fase 2b, todavía bloqueada).
+   * Solo los activos entran en la suma — un beneficiario inactivo no entra en el reparto.
+   */
+  porcentajeAsignadoBeneficiarios = computed<number>(() =>
+    this.beneficiariosParticipe()
+      .filter(b => b.estado === 1)
+      .reduce((suma, b) => suma + (Number(b.porcentaje) || 0), 0)
+  );
+
+  /**
+   * Aviso del partícipe fallecido sin beneficiarios cargados (§6.5 del contrato). Informativo,
+   * NO bloquea nada — decisión del usuario del 2026-09-21: la plata del sepelio ya está en el
+   * banco y negarse a registrar beneficiarios no la hace desaparecer. Dispara con cero ACTIVOS,
+   * no con lista vacía: con todos los beneficiarios inactivos no se puede repartir nada, es
+   * funcionalmente lo mismo que no tener ninguno cargado — y sin este criterio, un operador que
+   * desactivó a todos vería una tabla con filas grises y ningún aviso, creyendo que está cargado.
+   */
+  avisoFallecidoSinBeneficiarios = computed<boolean>(() =>
+    !!this.participeActual()?.fechaFallecimiento &&
+    this.beneficiariosParticipe().filter(b => b.estado === 1).length === 0
+  );
 
   // Formularios
   entidadForm!: FormGroup;
@@ -324,6 +358,19 @@ export class EntidadParticipeInfoComponent implements OnInit {
       numeroCuenta: ['', [Validators.required, Validators.maxLength(30)]],
       estado: [1]
     });
+
+    // Formulario de Beneficiario (sepelio fase 2a) — numeroIdentificacion se deshabilita al
+    // editar: el PUT no la cambia (§3.4 del contrato), otro número es otro beneficiario.
+    this.beneficiarioForm = this.fb.group({
+      codigo: [null],
+      nombre: ['', [Validators.required, Validators.maxLength(200)]],
+      numeroIdentificacion: ['', [Validators.required, Validators.maxLength(20)]],
+      bancoExterno: [null as BancoExterno | null, Validators.required],
+      tipoCuenta: [null, Validators.required],
+      numeroCuenta: ['', [Validators.required, Validators.maxLength(100)]],
+      porcentaje: [null, [Validators.required, Validators.min(0.01), Validators.max(100)]],
+      estado: [1]
+    });
   }
 
   private cargarDatosIniciales(): void {
@@ -432,7 +479,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
       conyuges: this.conyugeService.getByParent(codigoEnt),
       referenciasFamiliares: this.referenciaFamiliarService.getByParent(codigoEnt),
       referenciasPersonales: this.referenciaPersonalService.getByParent(codigoEnt),
-      cuentasBancarias: this.cuentaBancariaParticipeService.getByParent(codigoEnt)
+      cuentasBancarias: this.cuentaBancariaParticipeService.getByParent(codigoEnt),
+      beneficiarios: this.cuentaBancariaBeneficiarioService.porEntidad(codigoEnt)
     }).subscribe({
       next: (data) => {
         if (data.entidad) {
@@ -456,6 +504,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.referenciasPersonales.set(data.referenciasPersonales || []);
         this.cuentasBancariasParticipe.set(data.cuentasBancarias || []);
         this.cargarCertificadosCuentasBancarias(data.cuentasBancarias || []);
+        this.beneficiariosParticipe.set(data.beneficiarios || []);
 
         this.loading.set(false);
       },
@@ -947,6 +996,122 @@ export class EntidadParticipeInfoComponent implements OnInit {
         this.snackBar.open('No se pudo descargar el certificado bancario.', 'Cerrar', { duration: 5000 });
       },
     });
+  }
+
+  // ─── BENEFICIARIOS (sepelio fase 2a) ────────────────────────
+  nuevoBeneficiario(): void {
+    this.beneficiarioForm.reset({ estado: 1 });
+    this.beneficiarioForm.get('numeroIdentificacion')?.enable();
+    this.certificadoBeneficiario.set(null);
+    this.modoBeneficiarioForm.set('nuevo');
+  }
+
+  editarBeneficiario(b: CuentaBancariaBeneficiario): void {
+    this.beneficiarioForm.patchValue({ ...b });
+    // El PUT no cambia la identificación (§3.4): otro número es otro beneficiario, no una edición.
+    this.beneficiarioForm.get('numeroIdentificacion')?.disable();
+    this.certificadoBeneficiario.set(null);
+    this.modoBeneficiarioForm.set('editar');
+  }
+
+  /** No se puede registrar un beneficiario sin certificado. Editar no vuelve a pedirlo. */
+  get faltaCertificadoBeneficiario(): boolean {
+    return this.modoBeneficiarioForm() === 'nuevo' && !this.certificadoBeneficiario();
+  }
+
+  /** Se valida al elegir el archivo, no al guardar: así el mensaje aparece de inmediato. */
+  onCertificadoBeneficiarioSeleccionado(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    if (file) {
+      const problema = this.problemaDelCertificadoBeneficiario(file);
+      if (problema) {
+        input.value = '';
+        this.snackBar.open(problema, 'Cerrar', { duration: 5000 });
+        return;
+      }
+    }
+
+    this.certificadoBeneficiario.set(file);
+  }
+
+  quitarCertificadoBeneficiario(): void {
+    this.certificadoBeneficiario.set(null);
+  }
+
+  /** Solo PDF, máximo 10 MB (§5 del contrato — mismo tope que valida `FileService`). */
+  private problemaDelCertificadoBeneficiario(file: File): string | null {
+    if (!/\.pdf$/i.test(file.name)) {
+      return 'El certificado bancario debe ser un archivo PDF (.pdf).';
+    }
+    if (!this.fileService.validateFileSize(file.size)) {
+      return `El certificado bancario supera el tamaño máximo de ${this.fileService.formatFileSize(this.fileService.getMaxFileSize())}.`;
+    }
+    return null;
+  }
+
+  guardarBeneficiario(): void {
+    if (this.beneficiarioForm.invalid) return;
+    const entidad = this.entidadActual();
+    if (!entidad) return;
+
+    const esNuevo = this.modoBeneficiarioForm() === 'nuevo';
+    const certificado = this.certificadoBeneficiario();
+    // El botón ya queda deshabilitado sin certificado; esto es el guardarraíl del lado del código.
+    if (esNuevo && !certificado) return;
+
+    this.savingSubEntidad.set(true);
+    const data = { ...this.beneficiarioForm.getRawValue(), entidad: { codigo: entidad.codigo } };
+
+    // Alta: multipart con certificado, POST /cbbp/conCertificado (único camino de alta, §3.2).
+    // Edición: PUT /cbbp de siempre — no lleva certificado.
+    const obs = esNuevo
+      ? this.cuentaBancariaBeneficiarioService.addConCertificado(data, certificado!, this.getNombreUsuario())
+      : this.cuentaBancariaBeneficiarioService.update(data);
+
+    obs.subscribe({
+      next: () => {
+        this.cuentaBancariaBeneficiarioService.porEntidad(entidad.codigo).subscribe(list => {
+          this.beneficiariosParticipe.set(list || []);
+        });
+        this.refrescarUltimaActualizacion();
+        this.modoBeneficiarioForm.set(null);
+        this.certificadoBeneficiario.set(null);
+        this.savingSubEntidad.set(false);
+      },
+      error: (err) => {
+        this.savingSubEntidad.set(false);
+        // 409 = ya existe un beneficiario con esa identificación para este partícipe (§3.3).
+        this.snackBar.open(err?.mensaje || 'No se pudo guardar el beneficiario.', 'Cerrar', { duration: 6000 });
+      }
+    });
+  }
+
+  /**
+   * «Desactivar», nunca «Eliminar»: el backend no expone `DELETE` a propósito (§3.5 del
+   * contrato) — esta tabla es la prueba de a quién se le pagó o se le iba a pagar la plata de un
+   * fallecido, y borrar una fila destruye esa prueba.
+   */
+  desactivarBeneficiario(b: CuentaBancariaBeneficiario): void {
+    if (!confirm(`¿Desactivar al beneficiario ${b.nombre}?`)) return;
+    const data = { ...b, estado: 2 };
+    this.cuentaBancariaBeneficiarioService.update(data).subscribe({
+      next: () => {
+        this.beneficiariosParticipe.update(list =>
+          list.map(x => x.codigo === b.codigo ? { ...x, estado: 2 } : x)
+        );
+        this.refrescarUltimaActualizacion();
+      },
+      error: (err) => {
+        this.snackBar.open(err?.mensaje || 'No se pudo desactivar el beneficiario.', 'Cerrar', { duration: 5000 });
+      }
+    });
+  }
+
+  cancelarBeneficiario(): void {
+    this.modoBeneficiarioForm.set(null);
+    this.certificadoBeneficiario.set(null);
   }
 
   // ─── PATRÓN DATEPICKER ESTÁNDAR ─────────────────────────────
