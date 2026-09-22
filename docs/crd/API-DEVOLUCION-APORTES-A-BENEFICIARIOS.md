@@ -105,18 +105,57 @@ funcionando** como hoy: hay casos históricos y no se rompe nada que ya ande.
 **Decisión del usuario (2026-09-21), la misma de sepelio:** el residuo va **al beneficiario de mayor
 porcentaje**; si empatan, **al de menor código**.
 
+### 5.1 ⛔ SE REPARTE POR TIPO DE APORTE, NO POR EL TOTAL
+
+**Corregido el 2026-09-22, antes de programar**, porque el ejecutor BE preguntó qué pasa cuando el
+detalle trae **varios tipos de aporte** y la primera versión de este contrato no lo cubría.
+
+La devolución no es un escalar: es un `detalle` de `{idTipoAporte, valor}`, y `ejecutarDevolucion`
+**valida saldo y descuenta POR TIPO**. Así que hay **tres** invariantes, no dos:
+
+1. `Σ_beneficiarios valor_i` = total
+2. Para cada beneficiario: `Σ_sus_líneas` = su `valor_i`
+3. ⭐ **Para cada TIPO: `Σ_beneficiarios línea_i(tipo)` = el valor original de ese tipo**
+
+**El algoritmo es repartir cada LÍNEA de tipo entre los beneficiarios:**
+
 ```
-valor_i = redondear(total × porcentaje_i / 100)     para cada beneficiario
-residuo = total − Σ valor_i
-valor_del_mayor += residuo
+para cada tipo T del detalle:
+    para cada beneficiario i:  línea_i(T) = redondear(valor(T) × porcentaje_i / 100)
+    residuo(T) = valor(T) − Σ_i línea_i(T)
+    línea_del_mayor(T) += residuo(T)          # mismo criterio: mayor %, empate → menor código
+
+valor_i = Σ_T línea_i(T)                       # el total de cada beneficiario SALE de sus líneas
 ```
 
-⛔ **La guarda dura, y es la que hay que escribir primero:** `Σ valor_i` tiene que dar
-**exactamente** el total a devolver. Si no cuadra, **no se registra ninguna devolución**: se lanza y
-se revierte todo. Nunca se reparte de más ni de menos.
+Con esto **las tres invariantes se cumplen por construcción** y no queda residuo huérfano en ninguna
+dimensión.
 
-⭐ Este fondo ya se quemó con un residuo abandonado (**H48**, la cascada de pagos). El redondeo
-por línea **no alcanza**: la guarda es sobre la suma.
+### 5.2 Por qué NO se reparte el total y después se escalan las líneas
+
+Es la alternativa intuitiva —y la que propuso el ejecutor— pero **descuadra el tipo**. Contraejemplo
+medido, con dos tipos (A = 100,00 · B = 0,01) y tres beneficiarios (33,33 % · 33,33 % · 33,34 %):
+
+| | Repartiendo por TOTAL (mal) | Repartiendo por TIPO (bien) |
+|---|---|---|
+| A | 33,33 + 33,33 + **33,35** = **100,01** ❌ | 33,33 + 33,33 + 33,34 = **100,00** ✅ |
+| B | 0,00 + 0,00 + 0,00 = **0,00** ❌ | 0,00 + 0,00 + 0,01 = **0,01** ✅ |
+
+⇒ Repartiendo por el total, **se devuelve un centavo MÁS del tipo A del que el partícipe tiene**, y
+uno menos del B. La suma general cuadra y aun así el movimiento por tipo está mal: exactamente la
+clase de descuadre que no se ve hasta que alguien concilia.
+
+⚠️ **Consecuencia aceptada:** `valor_i` puede no ser exactamente `total × porcentaje_i`, porque sale
+de sumar líneas redondeadas por separado. Es correcto y explicable: **cada tipo se reparte con su
+propio redondeo.**
+
+### 5.3 La guarda dura
+
+Verificar **las tres** invariantes antes de registrar nada. Si alguna no cuadra, **no se registra
+ninguna devolución**: se lanza y se revierte todo. Nunca se reparte de más ni de menos.
+
+⭐ Este fondo ya se quemó con un residuo abandonado (**H48**, la cascada de pagos). El redondeo por
+línea **no alcanza**: la guarda es sobre las sumas.
 
 ---
 
