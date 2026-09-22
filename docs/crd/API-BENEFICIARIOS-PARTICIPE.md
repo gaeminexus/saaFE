@@ -112,6 +112,17 @@ disco. Es exactamente lo que hace `crearConCertificado:131`.
 | **409** | ⭐ **ya existe un beneficiario con esa identificación PARA ESE PARTÍCIPE** |
 | **500** | `TIPO_ADJUNTO_CERTIFICADO_NO_CONFIGURADO` — falta la fila de `CRD.TPDJ` |
 
+⚠️ **Precisión agregada el 2026-09-22, después de implementarlo:** si el partícipe o el banco no
+existen, este endpoint responde **400**, no 404 (`ENTIDAD_NO_ENCONTRADA`, `BANCO_NO_ENCONTRADO`).
+La tabla de arriba no enumeraba un 404 y el ejecutor respetó el listado en vez de inventarlo, que es
+lo correcto. El **404 sí existe en el `PUT`** (§3.4) para un beneficiario inexistente. **El frontend
+debe mostrar el mensaje del cuerpo, no deducir la causa del código.**
+
+**Estado (`CBBPIDST`): `1` activo, `2` inactivo** — rubro `com.saa.rubros.EstadoCuentasBancarias`,
+el mismo que usa `TSR.CuentaBancaria`. ⛔ **No es el rubro genérico `Estado`**, cuyo `INACTIVO`
+vale **0** y violaría el `CK_CBBP_ESTADO` del DDL. (El adjunto del certificado sí usa `Estado.ACTIVO`,
+porque `CRD.ADJN` es otra tabla con otra semántica — igual que en `CNBP`.)
+
 ### 3.3 El 409, y por qué no se deja que reviente el índice
 
 El índice `UX_CBBP_PARTICIPE_IDENT` es `(ENTDCDGO, CBBPIDNT)`. **Chequear antes e informar 409**,
@@ -163,9 +174,17 @@ ni en la suma.
 
 ## 5. El certificado bancario
 
-Va en **`CRD.ADJN`**, con el tipo de `CRD.TPDJ` **«CERTIFICADO BANCARIO»**, resuelto **por nombre**
-(`LIKE '%CERTIFICADO%BANCARIO%'`), exactamente como `CuentaBancariaParticipeServiceImpl
-.crearConCertificado`. Sólo PDF, máximo 10 MB.
+Va en **`CRD.ADJN`**, con el tipo de `CRD.TPDJ` **«CERTIFICADO BANCARIO»**, resuelto reusando
+`TipoAdjuntoDaoService.selectByNombre`, exactamente como
+`CuentaBancariaParticipeServiceImpl.resolverTipoCertificadoBancario`. Sólo PDF, máximo 10 MB.
+
+⚠️ **Corregido el 2026-09-22.** Este contrato decía que el tipo se resuelve con
+`LIKE '%CERTIFICADO%BANCARIO%'`. **Era falso.** `TipoAdjuntoDaoServiceImpl.selectByNombre:25-31`
+hace `UPPER(t.nombre) = UPPER(:nombre)` **y además** filtra `t.estado = Estado.ACTIVO`: igualdad
+exacta contra la constante `"CERTIFICADO BANCARIO"`, no coincidencia parcial. Lo levantó el
+ejecutor BE programando contra el código en vez de contra esta prosa, que es exactamente para lo
+que sirve que lea el código. La guarda de la casa —ni cero ni más de una fila activa— se reusa tal
+cual.
 
 ⛔ **Sin la fila de `CRD.TPDJ` no se puede subir ningún certificado** y el error es un 500 que no
 explica nada. El usuario informó el 2026-09-22 que `CARGA-TIPO-ADJUNTO-CERTIFICADO-BANCARIO.sql` ya
