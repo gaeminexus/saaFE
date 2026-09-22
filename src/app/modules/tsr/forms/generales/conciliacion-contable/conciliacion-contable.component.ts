@@ -416,6 +416,22 @@ export class ConciliacionContableComponent implements OnInit {
     return String(asiento?.numero ?? '');
   }
 
+  /**
+   * Referencia bancaria del asiento, extraída de `asiento.observaciones` — ahí la deja el pago
+   * de tesorería con el formato `" | Ref. banco: <número>"`, y hay datos grabados con `" | Ref:
+   * <número>"` también. Se toma lo que sigue al marcador hasta el próximo `|` o el fin del
+   * texto. Si no hay marcador (un asiento manual, de nómina, etc.) devuelve `null` — el que
+   * llama debe ocultar el dato, no mostrarlo vacío: acá no aplica, no es que falte.
+   */
+  referenciaBancoAsiento(asiento: { observaciones?: string } | null | undefined): string | null {
+    const observaciones = asiento?.observaciones;
+    if (!observaciones) return null;
+    const match = /Ref\.?\s*banco\s*:\s*([^|]*)|Ref\s*:\s*([^|]*)/i.exec(observaciones);
+    if (!match) return null;
+    const valor = (match[1] ?? match[2] ?? '').trim();
+    return valor !== '' ? valor : null;
+  }
+
   toggleExtracto(codigo: number): void {
     if (this.periodoActualCerrado) {
       return;

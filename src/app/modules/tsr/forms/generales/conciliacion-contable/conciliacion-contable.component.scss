@@ -383,6 +383,33 @@ mat-card-title {
     white-space: nowrap;
   }
 
+  // Envuelve descripción + referencia de banco (panel de asiento) para que
+  // ambas quepan en la misma columna del grid sin agregar un track propio:
+  // la referencia es condicional por fila y un track fijo desalinearía el
+  // valor de las filas que no la tienen.
+  .fila-desc-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+
+    .fila-desc {
+      min-width: 0;
+      flex-shrink: 1;
+    }
+  }
+
+  .fila-ref {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #1565c0;
+    background: #e3f2fd;
+    padding: 2px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
   .fila-valor {
     text-align: right;
     font-weight: 600;

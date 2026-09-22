@@ -367,7 +367,12 @@
             <div class="fila-info fila-info-asiento">
               <span class="fila-fecha">{{ formatearSoloFecha(fila.asiento?.fechaAsiento) }}</span>
               <span class="tipo-badge" [matTooltip]="'Asiento #' + numeroAsientoMostrar(fila.asiento)">#{{ numeroAsientoMostrar(fila.asiento) }}</span>
-              <span class="fila-desc" [matTooltip]="fila.descripcion">{{ fila.descripcion }}</span>
+              <div class="fila-desc-wrap">
+                <span class="fila-desc" [matTooltip]="fila.descripcion">{{ fila.descripcion }}</span>
+                @if (referenciaBancoAsiento(fila.asiento); as refBanco) {
+                <span class="fila-ref" [matTooltip]="'Ref. banco: ' + refBanco">{{ refBanco }}</span>
+                }
+              </div>
               <span class="fila-valor" [class.valor-negativo]="valorNetoAsiento(fila) < 0">
                 {{ valorNetoAsiento(fila) | number : '1.2-2' }}
               </span>
