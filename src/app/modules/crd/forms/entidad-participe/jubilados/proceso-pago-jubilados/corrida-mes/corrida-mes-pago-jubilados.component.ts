@@ -59,6 +59,9 @@ export type FiltroTotal = 'PRESTAMOS' | 'DINERO' | 'SEGURO_INTERNO' | 'TOTAL' | 
 /** Medio centavo: por debajo de esto, en pantalla el monto ya figura como $0,00. */
 const TOLERANCIA_MONTO = 0.005;
 
+/** Cuántos motivos de error del seguro médico se listan antes de recortar a "y N más". */
+const MAX_ERRORES_SEGURO_VISIBLES = 5;
+
 /**
  * Pestaña B — «Corrida del mes». Contrato: docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md §4bis/§6.
  * Diseño: docs/crd/DISENO-PANTALLA-PAGO-JUBILADOS.md §3/§3bis. Patrón copiado de `cierre-cartera`
@@ -142,7 +145,12 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
   errorCorrida = signal<string | null>(null);
 
   generandoSeguro = signal(false);
+  /** Rojo: la llamada HTTP falló de verdad — no se generó nada. */
   errorSeguro = signal<string | null>(null);
+  /** Ámbar: generó, pero `conError > 0` — el mensaje del cuerpo trae el resumen. */
+  avisoSeguro = signal<string | null>(null);
+  /** El motivo de cada fallo, uno por jubilado ("Entidad {id}: {mensaje}") — para verlo sin ir al log del servidor. */
+  erroresSeguro = signal<string[]>([]);
 
   generandoPensiones = signal(false);
 
@@ -266,22 +274,55 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       });
   }
 
+  /**
+   * `POST /pgpc/seguro/generar` NO manda el sobre `{exito, mensaje, resultado}` — devuelve el
+   * objeto directo (§9 del contrato de los dos procesos mensuales). El éxito lo decide la llamada
+   * HTTP, no un `exito` que este endpoint no tiene: si el `subscribe` cae en `next`, generó.
+   *
+   * `conError` (NUNCA deducido del texto de `mensaje`, es un contador del propio DTO) decide si el
+   * aviso va en ámbar: generó igual, pero con jubilados que fallaron. `errores` trae el motivo de
+   * cada uno — se muestra en el banner para que el operador no tenga que ir al log del servidor.
+   */
   private generarSeguroConfirmado(): void {
     this.errorSeguro.set(null);
+    this.avisoSeguro.set(null);
+    this.erroresSeguro.set([]);
     this.generandoSeguro.set(true);
 
-    this.pgpcService.generarSeguro(this.solicitudProceso()).subscribe((resp) => {
-      this.generandoSeguro.set(false);
-      if (resp.exito) {
-        this.notificar(resp.mensaje || 'Seguro médico generado.', true);
+    this.pgpcService.generarSeguro(this.solicitudProceso()).subscribe({
+      next: (resultado) => {
+        this.generandoSeguro.set(false);
+        const mensaje = resultado.mensaje || 'Seguro médico generado.';
+        const conError = (resultado.conError ?? 0) > 0;
+        if (conError) {
+          this.avisoSeguro.set(mensaje);
+          this.erroresSeguro.set(resultado.errores || []);
+        }
+        this.notificar(mensaje, !conError);
         // La fuente de verdad de "qué pasó" es la cabecera de corrida, no el cuerpo de esta
-        // respuesta (§4.3) — se relee para que las dos tarjetas queden al día de una sola vez.
+        // respuesta (§4.3) — se relee SIEMPRE, generó limpio o con avisos parciales.
         this.cargarCorrida();
-      } else {
-        this.errorSeguro.set(resp.mensaje ?? 'No se pudo generar el seguro médico.');
-        this.notificar(resp.mensaje ?? 'No se pudo generar el seguro médico.', false);
-      }
+      },
+      error: (mensaje: string) => {
+        // Acá sí es un error real: la llamada HTTP falló, nada se generó.
+        this.generandoSeguro.set(false);
+        this.errorSeguro.set(mensaje || 'No se pudo generar el seguro médico.');
+        this.notificar(mensaje || 'No se pudo generar el seguro médico.', false);
+        // Mismo criterio del ítem 1: releer la cabecera SIEMPRE, pase lo que pase — si el proceso
+        // alcanzó a sellar algo antes de que la llamada fallara, la pantalla tiene que mostrarlo.
+        this.cargarCorrida();
+      },
     });
+  }
+
+  /** Los primeros `MAX_ERRORES_SEGURO_VISIBLES` motivos de error del seguro médico. */
+  get erroresSeguroVisibles(): string[] {
+    return this.erroresSeguro().slice(0, MAX_ERRORES_SEGURO_VISIBLES);
+  }
+
+  /** Cuántos motivos quedan sin listar, para el "y N más". */
+  get erroresSeguroRestantes(): number {
+    return Math.max(0, this.erroresSeguro().length - MAX_ERRORES_SEGURO_VISIBLES);
   }
 
   confirmarGenerarPensiones(): void {

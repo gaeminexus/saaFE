@@ -16,13 +16,20 @@ import { ServiciosCrd } from './ws-crd';
 
 /**
  * Corrida mensual de pago a jubilados (pensión complementaria). Contrato:
- * docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md.
+ * docs/crd/API-PAGO-PENSION-COMPLEMENTARIA.md y, para los dos procesos mensuales (seguro/pensiones),
+ * docs/crd/API-DOS-PROCESOS-MENSUALES-JUBILADOS.md.
  *
- * `generarPagosDelMes` y `sincronizarPagos` NUNCA propagan el error de HTTP: el backend responde
- * el mismo sobre `{exito, mensaje, resultado}` tanto en 2xx como en 4xx (mismo criterio que
- * `OperacionesPagoPrestamoService`), así que ambos métodos emiten `RespuestaPgpc` y solo se
- * ramifica por `resp.exito`. ⛔ Un 200 con `resp.resultado.conError > 0` NO es una corrida
+ * `generarPagosDelMes`, `generarPensiones` y `sincronizarPagos` NUNCA propagan el error de HTTP:
+ * el backend responde el mismo sobre `{exito, mensaje, resultado}` tanto en 2xx como en 4xx
+ * (mismo criterio que `OperacionesPagoPrestamoService`), así que los tres emiten `RespuestaPgpc` y
+ * solo se ramifica por `resp.exito`. ⛔ Un 200 con `resp.resultado.conError > 0` NO es una corrida
  * limpia: hay que leer `conError`/`errores` del cuerpo, no solo el status HTTP (§6 del contrato).
+ *
+ * ⚠️ `generarSeguro` es la EXCEPCIÓN a ese patrón, medido y confirmado contra el backend real
+ * (§9 de `API-DOS-PROCESOS-MENSUALES-JUBILADOS.md`, H-corrida-mes-2026-09-22): no tiene sobre,
+ * devuelve `ResultadoGeneracionSeguro` directo. Tratarlo como si mandara `exito` deja a la
+ * pantalla SIEMPRE en la rama de error aunque haya generado bien — es justo el bug que motivó
+ * documentar esto acá. Ver el comentario del método.
  *
  * `porPeriodo` y `porEntidad` sí propagan el error de HTTP: no tienen sobre, son un arreglo
  * pelado de la entidad, y un período/entidad sin datos responde `[]`, nunca 404.
@@ -98,11 +105,18 @@ export class PagoPensionComplementariaService {
    * POST /pgpc/seguro/generar — inicio de mes (§4.1). Genera UNA orden agregada al proveedor del
    * seguro médico y escribe `PGPCVLSG` en cada jubilado del padrón vigente. Se bloquea si el
    * seguro de ese período ya se generó — mismo criterio de idempotencia que `generarPagosDelMes`.
+   *
+   * ⚠️ **Asimetría con `generarPensiones` y `generarPagosDelMes`: este endpoint NO manda el sobre
+   * `{exito, mensaje, resultado}`, devuelve `ResultadoGeneracionSeguro` DIRECTO (§9 del contrato
+   * de los dos procesos mensuales).** Por eso NO pasa por `normalizarError`/`RespuestaPgpc`: un
+   * 200 es éxito sin más (el `mensaje` del cuerpo es informativo, puede traer avisos de error
+   * parcial), y solo hay error real si la llamada HTTP falla — ahí sí se propaga con el mismo
+   * criterio que `porPeriodo`/`porEntidad`, que tampoco tienen sobre.
    */
-  generarSeguro(solicitud: SolicitudProcesoJubilados): Observable<RespuestaPgpc<ResultadoGeneracionSeguro>> {
+  generarSeguro(solicitud: SolicitudProcesoJubilados): Observable<ResultadoGeneracionSeguro> {
     return this.http
-      .post<RespuestaPgpc<ResultadoGeneracionSeguro>>(`${this.base}/seguro/generar`, solicitud)
-      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+      .post<ResultadoGeneracionSeguro>(`${this.base}/seguro/generar`, solicitud)
+      .pipe(catchError((e: HttpErrorResponse) => throwError(() => this.extraerMensajeError(e))));
   }
 
   /**

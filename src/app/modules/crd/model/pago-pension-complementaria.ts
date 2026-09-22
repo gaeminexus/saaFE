@@ -223,17 +223,28 @@ export interface SolicitudProcesoJubilados {
 }
 
 /**
- * §4.1 — cuerpo de `resultado` de `POST /pgpc/seguro/generar`. ⚠️ Forma inferida: el contrato no
- * publica el JSON de este endpoint (solo describe los pasos) — verificar contra el backend real
- * cuando esté disponible. Por eso la pantalla NO depende de este tipo para pintar el estado del
- * proceso: siempre vuelve a pedir `corrida()` después de generar, que es la fuente de verdad.
+ * §9 del contrato (`ResultadoGeneracionSeguroMedico`, verificado por el árbitro contra el Java)
+ * — cuerpo de `POST /pgpc/seguro/generar`, **canonizado, no un sobre**: a diferencia de
+ * `generarPagosDelMes`/`generarPensiones`, este endpoint devuelve el objeto DIRECTO, sin
+ * `{exito, mensaje, resultado}`.
+ *
+ * ⚠️ Por eso la pantalla NO depende de este tipo para decidir si "salió bien": el éxito lo decide
+ * la llamada HTTP (200 = generó), no un campo `exito` que este endpoint no manda. Y por eso
+ * siempre vuelve a pedir `corrida()` después, que es la fuente de verdad de qué quedó sellado.
+ *
+ * ⭐ `conError`/`errores` son el diagnóstico: si `conError > 0`, `errores` trae el motivo de cada
+ * fallo, uno por jubilado, con la forma `"Entidad {id}: {mensaje}"`. Mostrarlos — antes de esto el
+ * operador no tenía forma de saber quién falló ni por qué sin ir al log del servidor.
  */
 export interface ResultadoGeneracionSeguro {
-  anio: number;
-  mes: number;
   jubilados: number;
+  evaluados: number;
+  yaGenerados: number;
+  conError: number;
   total: number;
   idOrdenPago: number;
+  errores: string[];
+  mensaje?: string;
 }
 
 /**

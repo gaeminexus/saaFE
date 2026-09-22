@@ -90,6 +90,25 @@
               <span>{{ errorSeguro() }}</span>
             </div>
           }
+          @if (avisoSeguro()) {
+            <!-- Ámbar, no rojo: SÍ se generó, el mensaje solo trae avisos de error parcial. -->
+            <div class="aviso-banner aviso-banner-proceso aviso-banner-con-detalle">
+              <mat-icon>info_outline</mat-icon>
+              <div>
+                <span>{{ avisoSeguro() }}</span>
+                @if (erroresSeguro().length) {
+                  <ul class="lista-errores-seguro">
+                    @for (e of erroresSeguroVisibles; track $index) {
+                      <li>{{ e }}</li>
+                    }
+                  </ul>
+                  @if (erroresSeguroRestantes > 0) {
+                    <span class="errores-seguro-restantes">y {{ erroresSeguroRestantes }} más.</span>
+                  }
+                }
+              </div>
+            </div>
+          }
 
           <button
             mat-raised-button

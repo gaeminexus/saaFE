@@ -658,6 +658,29 @@
   margin: 10px 0;
 }
 
+.aviso-banner-proceso {
+  margin: 10px 0;
+}
+
+.aviso-banner-con-detalle {
+  align-items: flex-start;
+
+  .lista-errores-seguro {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .errores-seguro-restantes {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.78rem;
+    font-style: italic;
+    opacity: 0.85;
+  }
+}
+
 .procesos-mes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
