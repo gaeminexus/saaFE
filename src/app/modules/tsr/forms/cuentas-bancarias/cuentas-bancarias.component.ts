@@ -4,6 +4,7 @@ import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -20,8 +21,8 @@ import { DetalleRubro } from '../../../../shared/model/detalle-rubro';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
 import { ExportService } from '../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
+import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { PlanCuenta } from '../../../cnt/model/plan-cuenta';
-import { PlanCuentaService } from '../../../cnt/service/plan-cuenta.service';
 import { Banco } from '../../model/banco';
 import { CuentaBancaria } from '../../model/cuenta-bancaria';
 import { BancoService } from '../../service/banco.service';
@@ -102,7 +103,6 @@ export class CuentasBancariasComponent implements OnInit {
   tiposCuenta = signal<DetalleRubro[]>([]);
   tiposMoneda = signal<DetalleRubro[]>([]);
   estadosCuenta = signal<DetalleRubro[]>([]);
-  cuentasContables = signal<PlanCuenta[]>([]);
 
   // Tablas: columnas
   displayedColumnsBancos: string[] = ['nombre'];
@@ -124,9 +124,9 @@ export class CuentasBancariasComponent implements OnInit {
     private bancoService: BancoService,
     private cuentaService: CuentaBancariaService,
     private detalleRubroService: DetalleRubroService,
-    private planCuentaService: PlanCuentaService,
     private exportService: ExportService,
     private funcionesDatos: FuncionesDatosService,
+    private dialog: MatDialog,
   ) {}
 
   ngOnInit(): void {
@@ -134,9 +134,6 @@ export class CuentasBancariasComponent implements OnInit {
     this.cargarTiposCuenta();
     this.cargarTiposMoneda();
     this.cargarEstadosCuenta();
-
-    // Cargar cuentas contables (necesarias para el selector), luego bancos
-    this.cargarCuentasContables();
     this.cargarBancos();
   }
 
@@ -294,69 +291,34 @@ export class CuentasBancariasComponent implements OnInit {
     }
   }
 
-  cargarCuentasContables(): void {
-    const empresaCodigo = this.getEmpresaCodigo();
-    const criterios: DatosBusqueda[] = [];
-
-    if (empresaCodigo) {
-      const dbEmpresa = new DatosBusqueda();
-      dbEmpresa.asignaValorConCampoPadre(
-        TipoDatosBusqueda.LONG,
-        'empresa',
-        'codigo',
-        empresaCodigo.toString(),
-        TipoComandosBusqueda.IGUAL
-      );
-      criterios.push(dbEmpresa);
-    }
-
-    const dbCuenta = new DatosBusqueda();
-    dbCuenta.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.STRING,
-      'cuentaContable',
-      '1.1%',
-      TipoComandosBusqueda.LIKE
-    );
-    criterios.push(dbCuenta);
-
-    const procesarResultado = (data: PlanCuenta[] | null) => {
-      let lista = Array.isArray(data) ? data : [];
-      lista = lista.filter((c) => c.estado === 1);
-      lista.sort((a, b) =>
-        (a.cuentaContable || '').localeCompare(b.cuentaContable || '', undefined, { numeric: true })
-      );
-      this.cuentasContables.set(lista);
-    };
-
-    this.planCuentaService.selectByCriteria(criterios).subscribe({
-      next: procesarResultado,
-      error: () => {
-        // Fallback: getAll con filtro client-side
-        this.planCuentaService.getAll().subscribe({
-          next: (data) => {
-            let lista = Array.isArray(data) ? data : [];
-            if (empresaCodigo) {
-              lista = lista.filter((c) => (c as any).empresa?.codigo === empresaCodigo);
-            }
-            lista = lista.filter(
-              (c) => c.estado === 1 && (c.cuentaContable ?? '').startsWith('1.1')
-            );
-            lista.sort((a, b) =>
-              (a.cuentaContable || '').localeCompare(b.cuentaContable || '', undefined, { numeric: true })
-            );
-            this.cuentasContables.set(lista);
-          },
-          error: () => this.errorMsg.set('Error al cargar cuentas contables'),
-        });
-      },
-    });
+  /**
+   * Abre el selector con TODO el plan de cuentas (no un combo filtrado) — pedido del
+   * usuario: el combo de antes sólo dejaba ver cuentas que empezaran con '1.1', a mano.
+   * `mostrarSoloMovimiento` se deja en su default (true): no filtra la lista, sólo impide
+   * *elegir* una cuenta de grupo, que es justo lo que corresponde para una cuenta bancaria.
+   */
+  buscarCuentaContable(): void {
+    if (!this.modoEdicion()) return;
+    this.dialog
+      .open(PlanCuentaSelectorDialogComponent, {
+        width: '900px',
+        maxWidth: '98vw',
+        data: {
+          titulo: 'Seleccionar Cuenta Contable',
+          cuentaPreseleccionada: this.cuentaContableSeleccionada ?? undefined,
+        },
+      })
+      .afterClosed()
+      .subscribe((cuenta: PlanCuenta | null) => {
+        // Cancelar (null/undefined) no debe perder la selección previa.
+        if (cuenta) this.cuentaContableSeleccionada = cuenta;
+      });
   }
 
-  // Función para comparar cuentas contables en el mat-select
-  compararCuentas(c1: PlanCuenta | null, c2: PlanCuenta | null): boolean {
-    if (!c1 || !c2) return c1 === c2;
-    // Normalizar comparación (manejar string vs number)
-    return String(c1.codigo) === String(c2.codigo);
+  /** Quita la cuenta contable asignada — el guardado la trata como opcional (`:450`). */
+  limpiarCuentaContable(): void {
+    if (!this.modoEdicion()) return;
+    this.cuentaContableSeleccionada = null;
   }
 
   private obtenerCuentaContableRegistro(row: any): PlanCuenta | null {
@@ -585,17 +547,10 @@ export class CuentasBancariasComponent implements OnInit {
     this.cobroCredito = (row as any).cobroCredito === 1;
     this.manejaChequera = (row as any).manejaChequera === 1;
 
-    // Buscar la cuenta contable en la lista cargada (por codigo)
-    const planCuentaRaw = this.obtenerCuentaContableRegistro(row);
-    if (planCuentaRaw) {
-      // Buscar el objeto equivalente en cuentasContables() para que el mat-select lo reconozca
-      const encontrada = this.cuentasContables().find(
-        (c) => String(c.codigo) === String(planCuentaRaw.codigo)
-      );
-      this.cuentaContableSeleccionada = encontrada ?? planCuentaRaw;
-    } else {
-      this.cuentaContableSeleccionada = null;
-    }
+    // El backend ya trae la cuenta contable anidada completa (cuentaContable + nombre),
+    // así que alcanza con lo que venga en el registro — ya no hace falta buscarla en un
+    // combo cargado aparte, ahora que la elección pasa por el diálogo del plan de cuentas.
+    this.cuentaContableSeleccionada = this.obtenerCuentaContableRegistro(row);
 
     this.errorMsg.set('');
   }

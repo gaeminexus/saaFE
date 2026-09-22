@@ -223,12 +223,21 @@
 
         <mat-form-field appearance="outline">
           <mat-label>Cuenta Contable</mat-label>
-          <mat-select [(ngModel)]="cuentaContableSeleccionada" [compareWith]="compararCuentas" [disabled]="!modoEdicion()">
-            <mat-option [value]="null">-- Sin especificar --</mat-option>
-            <mat-option *ngFor="let c of cuentasContables()" [value]="c">
-              {{ c.cuentaContable }} - {{ c.nombre }}
-            </mat-option>
-          </mat-select>
+          <input
+            matInput
+            readonly
+            [value]="cuentaContableSeleccionada ? (cuentaContableSeleccionada.cuentaContable + ' — ' + cuentaContableSeleccionada.nombre) : ''"
+            [disabled]="!modoEdicion()"
+            (click)="buscarCuentaContable()"
+          />
+          @if (cuentaContableSeleccionada && modoEdicion()) {
+          <button mat-icon-button matSuffix type="button" (click)="limpiarCuentaContable()">
+            <mat-icon>close</mat-icon>
+          </button>
+          }
+          <button mat-icon-button matSuffix type="button" [disabled]="!modoEdicion()" (click)="buscarCuentaContable()">
+            <mat-icon>search</mat-icon>
+          </button>
         </mat-form-field>
       </div>
 
