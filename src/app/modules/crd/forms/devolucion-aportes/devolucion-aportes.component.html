@@ -145,7 +145,41 @@
       <!-- ============ Paso 2: destino del dinero ============ -->
       <div class="section-label">2 &middot; Destino del dinero</div>
 
-      @if (participeSinCuentaActiva()) {
+      @if (entidadFallecida()) {
+        <!--
+          Partícipe fallecido (docs/crd/API-DEVOLUCION-APORTES-A-BENEFICIARIOS.md §7): el destino
+          es el reparto entre beneficiarios, no una cuenta bancaria del titular. §7.3: si no hay
+          beneficiarios activos o no suman 100, explicar qué falta y llevar a la ficha.
+        -->
+        @if (cargandoBeneficiariosDevolucion()) {
+          <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
+        }
+        @if (!cargandoBeneficiariosDevolucion() && !beneficiariosListosParaReparto()) {
+          <mat-card class="bloqueo-card">
+            <mat-card-content class="bloqueo-body">
+              <mat-icon>groups</mat-icon>
+              <div>
+                @if (beneficiariosActivosDevolucion().length === 0) {
+                  <b>Este partícipe fallecido no tiene beneficiarios activos cargados.</b>
+                  <p>
+                    No se puede registrar la devolución sin a quién repartírsela. Cargue los
+                    beneficiarios en la ficha del partícipe y vuelva a esta pantalla.
+                  </p>
+                } @else {
+                  <b>Los porcentajes de los beneficiarios activos suman {{ sumaPorcentajeBeneficiariosDevolucion() | number:'1.0-2' }}%, no 100%.</b>
+                  <p>
+                    El backend exige que sumen exactamente 100 para poder repartir. Corrija los
+                    porcentajes en la ficha del partícipe y vuelva a esta pantalla.
+                  </p>
+                }
+                <button mat-stroked-button color="primary" (click)="irAFichaParticipe()">
+                  <mat-icon>badge</mat-icon> Ir a la ficha del partícipe
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      } @else if (participeSinCuentaActiva()) {
         <mat-card class="bloqueo-card">
           <mat-card-content class="bloqueo-body">
             <mat-icon>account_balance</mat-icon>
@@ -165,29 +199,31 @@
         <mat-card-content>
           <div class="campos-grid">
 
-            <mat-form-field appearance="outline">
-              <mat-label>Cuenta del partícipe (destino)</mat-label>
-              <mat-select [ngModel]="cuentaParticipeSeleccionada()"
-                          (ngModelChange)="cuentaParticipeSeleccionada.set($event)"
-                          [disabled]="cargandoCuentasParticipe() || !cuentasParticipe().length"
-                          panelClass="select-con-buscador"
-                          (openedChange)="!$event && (filtroCuentaParticipe = '')">
-                <mat-option class="select-search-option"
-                            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
-                            (click)="$event.stopPropagation()">
-                  <input class="select-search-input" placeholder="Buscar por banco o número de cuenta..."
-                         [value]="filtroCuentaParticipe"
-                         (mousedown)="$event.stopPropagation()"
-                         (click)="$event.stopPropagation()"
-                         (keydown)="$event.stopPropagation()"
-                         (input)="filtroCuentaParticipe = $any($event.target).value" />
-                </mat-option>
-                @for (c of cuentasParticipeFiltradas; track c.codigo) {
-                  <mat-option [value]="c">{{ etiquetaCuentaParticipe(c) }}</mat-option>
-                }
-              </mat-select>
-              <mat-hint>Solo se muestran los últimos 4 dígitos de la cuenta.</mat-hint>
-            </mat-form-field>
+            @if (!entidadFallecida()) {
+              <mat-form-field appearance="outline">
+                <mat-label>Cuenta del partícipe (destino)</mat-label>
+                <mat-select [ngModel]="cuentaParticipeSeleccionada()"
+                            (ngModelChange)="cuentaParticipeSeleccionada.set($event)"
+                            [disabled]="cargandoCuentasParticipe() || !cuentasParticipe().length"
+                            panelClass="select-con-buscador"
+                            (openedChange)="!$event && (filtroCuentaParticipe = '')">
+                  <mat-option class="select-search-option"
+                              (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                              (click)="$event.stopPropagation()">
+                    <input class="select-search-input" placeholder="Buscar por banco o número de cuenta..."
+                           [value]="filtroCuentaParticipe"
+                           (mousedown)="$event.stopPropagation()"
+                           (click)="$event.stopPropagation()"
+                           (keydown)="$event.stopPropagation()"
+                           (input)="filtroCuentaParticipe = $any($event.target).value" />
+                  </mat-option>
+                  @for (c of cuentasParticipeFiltradas; track c.codigo) {
+                    <mat-option [value]="c">{{ etiquetaCuentaParticipe(c) }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>Solo se muestran los últimos 4 dígitos de la cuenta.</mat-hint>
+              </mat-form-field>
+            }
 
             <mat-form-field appearance="outline">
               <mat-label>Fecha de la devolución</mat-label>
@@ -205,6 +241,43 @@
             </mat-form-field>
 
           </div>
+
+          @if (entidadFallecida() && beneficiariosListosParaReparto()) {
+            <!-- Tabla del reparto (§7.1/§7.2): se recalcula sola al cambiar el monto porque sale
+                 de `repartoBeneficiarios()`, un computed sobre `totalADevolver()`. -->
+            <div class="reparto-beneficiarios">
+              <table class="tabla-reparto-pantalla">
+                <thead>
+                  <tr>
+                    <th>Beneficiario</th>
+                    <th>Identificación</th>
+                    <th>Banco</th>
+                    <th>Cuenta</th>
+                    <th class="num">Porcentaje</th>
+                    <th class="num">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of repartoBeneficiarios(); track r.beneficiario.codigo) {
+                    <tr>
+                      <td>{{ r.beneficiario.nombre }}</td>
+                      <td>{{ r.beneficiario.numeroIdentificacion }}</td>
+                      <td>{{ r.beneficiario.bancoExterno.nombre }}</td>
+                      <td>{{ r.beneficiario.numeroCuenta }}</td>
+                      <td class="num">{{ r.beneficiario.porcentaje | number:'1.0-2' }}%</td>
+                      <td class="num">{{ formatMoneda(r.valor) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              <!-- Mismo cuadre que valida el backend, mostrado antes de apretar (§7.2). -->
+              <div class="total-repartido" [class.descuadrado]="totalRepartidoBeneficiarios() !== totalADevolver()">
+                <span>Total repartido</span>
+                <b>{{ formatMoneda(totalRepartidoBeneficiarios()) }}</b>
+                <span class="vs">de {{ formatMoneda(totalADevolver()) }} a devolver</span>
+              </div>
+            </div>
+          }
 
           <div class="fila-debito">
             <mat-checkbox [(ngModel)]="debitoAutomatico">
@@ -225,6 +298,10 @@
             <button mat-raised-button color="primary" (click)="registrar()" [disabled]="!puedeRegistrar()">
               @if (registrando()) {
                 <mat-spinner diameter="20"></mat-spinner>
+              } @else if (entidadFallecida()) {
+                <ng-container>
+                  <mat-icon>undo</mat-icon> Registrar {{ repartoBeneficiarios().length }} devoluciones de {{ formatMoneda(totalADevolver()) }}
+                </ng-container>
               } @else {
                 <ng-container>
                   <mat-icon>undo</mat-icon> Registrar devolución de {{ formatMoneda(totalADevolver()) }}

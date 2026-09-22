@@ -159,7 +159,8 @@ table.tabla-resultados {
 
     mat-icon { font-size: 32px; width: 32px; height: 32px; color: #dc2626; flex-shrink: 0; }
     b { display: block; margin-bottom: 0.25rem; }
-    p { margin: 0; color: #991b1b; line-height: 1.45; }
+    p { margin: 0 0 0.6rem; color: #991b1b; line-height: 1.45; }
+    button { min-height: 40px; border-radius: 10px; font-weight: 600; }
   }
 }
 
@@ -184,6 +185,40 @@ table.tabla-resultados {
 .confirm-actions {
   display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 1rem; flex-wrap: wrap;
   button { min-height: 48px; border-radius: 10px; font-weight: 600; }
+}
+
+/* ---------- reparto entre beneficiarios (partícipe fallecido) ---------- */
+.reparto-beneficiarios {
+  margin-top: 0.6rem;
+
+  table.tabla-reparto-pantalla {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+
+    thead th {
+      background: #edf2f7; color: #2d3748; font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.03em; padding: 8px 10px; text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+  }
+
+  /* Mismo cuadre que valida el backend (§5/§7.2 del contrato): verde por construcción, ámbar
+     solo si algo quedara inconsistente — no debería pasar nunca, pero se marca si pasa. */
+  .total-repartido {
+    display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+    background: rgba(34, 197, 94, 0.08); border-left: 4px solid #16a34a; border-radius: 8px;
+    padding: 0.7rem 1rem; margin-top: 0.7rem;
+
+    span { font-size: 0.78rem; color: #15803d; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    b { font-size: 17px; font-weight: 700; font-family: 'Roboto Mono', monospace; color: #15803d; }
+    .vs { font-size: 0.74rem; font-weight: 400; text-transform: none; letter-spacing: normal; color: #4a5568; }
+
+    &.descuadrado {
+      background: rgba(220, 38, 38, 0.08); border-left-color: #dc2626;
+      span, b { color: #b91c1c; }
+    }
+  }
 }
 
 .aviso {

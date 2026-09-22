@@ -165,6 +165,38 @@ export interface RespuestaReemisionPago extends RespuestaDevolucion<ResultadoDev
   idPagoNuevo?: number | null;
 }
 
+// ══════════════ POST /dvap/registrarParaBeneficiarios (docs/crd/API-DEVOLUCION-APORTES-A-BENEFICIARIOS.md) ══════════════
+
+/**
+ * Igual que `SolicitudDevolucion`, menos `idCuentaBancariaParticipe`: el destino sale de los
+ * beneficiarios activos de `CRD.CBBP`, no de una cuenta elegida en pantalla (§4 del contrato).
+ */
+export interface SolicitudDevolucionBeneficiarios {
+  idEntidad: number;
+  idEmpresa: number;
+  idUsuario: number;
+  usuario: string;
+  /** `yyyy-MM-dd`, igual que en `SolicitudDevolucion`. */
+  fecha: string | null;
+  motivo?: string | null;
+  debitoAutomatico: boolean;
+  referencia?: string | null;
+  detalle: DetalleSolicitudDevolucion[];
+}
+
+/**
+ * Una de las N devoluciones generadas — una por beneficiario ACTIVO, nunca una sola repartida en
+ * N órdenes (§3 del contrato: CXP rechaza un segundo pago vivo para el mismo origen).
+ */
+export interface ResultadoDevolucionBeneficiario {
+  idDevolucion: number;
+  idBeneficiario: number;
+  nombre: string;
+  identificacion: string;
+  valor: number;
+  idPago: number | null;
+}
+
 // ══════════════ POST /dvap/sincronizar ══════════════
 
 /** Recuperación manual del reconciliador; el timer de CRD hace lo mismo cada 30 minutos. */

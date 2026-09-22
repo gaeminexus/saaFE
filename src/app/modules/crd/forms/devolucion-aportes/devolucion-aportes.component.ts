@@ -4,6 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 
 import {
   MotivoDialogComponent,
@@ -20,6 +21,7 @@ import { FuncionesDatosService } from '../../../../shared/services/funciones-dat
 import { JasperReportesService } from '../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
+import { CuentaBancariaBeneficiario } from '../../model/cuenta-bancaria-beneficiario';
 import { CuentaBancariaParticipe } from '../../model/cuenta-bancaria-participe';
 import {
   CLASE_ESTADO_DEVOLUCION,
@@ -34,16 +36,25 @@ import {
   DetalleSolicitudDevolucion,
   DeudaVigenteParticipe,
   DevolucionListado,
+  ResultadoDevolucionBeneficiario,
   SolicitudDevolucion,
+  SolicitudDevolucionBeneficiarios,
 } from '../../model/devolucion/devolucion-aporte';
 import { mensajeDeRespuestaDevolucion } from '../../model/devolucion/respuesta-devolucion';
 import { Entidad } from '../../model/entidad';
+import { CodigoEstadoParticipe } from '../../model/estado-participe';
 import { SaldoAporte } from '../../model/pagos/operaciones-pago';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { CuentaBancariaBeneficiarioService } from '../../service/cuenta-bancaria-beneficiario.service';
 import { CuentaBancariaParticipeService } from '../../service/cuenta-bancaria-participe.service';
 import { DevolucionAporteService } from '../../service/devolucion-aporte.service';
 import { EntidadService } from '../../service/entidad.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
+import {
+  ConfirmarDevolucionBeneficiariosDialogComponent,
+  ConfirmarDevolucionBeneficiariosData,
+  LineaRepartoBeneficiario,
+} from './confirmar-devolucion-beneficiarios-dialog.component';
 import {
   ConfirmarDevolucionDialogComponent,
   LineaConfirmacionDevolucion,
@@ -58,6 +69,7 @@ import {
   ReemitirPagoDialogData,
   ReemitirPagoDialogResultado,
 } from './reemitir-pago-dialog.component';
+import { ResultadoDevolucionBeneficiariosDialogComponent } from './resultado-devolucion-beneficiarios-dialog.component';
 
 /** Nombre del reporte Jasper y módulo, fijos por contrato (`API-INFORME-NECESIDAD-PAGO.md`). */
 const REPORTE_INFORME_NECESIDAD_PAGO = 'RPRT_INFR_DVAP';
@@ -72,6 +84,12 @@ interface SaldoDevolucion {
 
 /** Rubro del catálogo de tipos de cuenta bancaria (el mismo que usa Pagos por Transferencia). */
 const RUBRO_TIPO_CUENTA_BANCARIA = 23;
+
+/** Un beneficiario con el valor que le toca en el reparto, calculado del lado del cliente (§5 del contrato de beneficiarios). */
+interface RepartoBeneficiarioDevolucion {
+  beneficiario: CuentaBancariaBeneficiario;
+  valor: number;
+}
 
 /**
  * Devolución de aportes a un partícipe.
@@ -102,11 +120,13 @@ export class DevolucionAportesComponent {
   private operaciones = inject(OperacionesPagoPrestamoService);
   private devolucionService = inject(DevolucionAporteService);
   private cuentaParticipeService = inject(CuentaBancariaParticipeService);
+  private beneficiarioService = inject(CuentaBancariaBeneficiarioService);
   private detalleRubroService = inject(DetalleRubroService);
   private funcionesDatos = inject(FuncionesDatosService);
   private jasperReportes = inject(JasperReportesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   /** Tope del datepicker: el backend rechaza una fecha futura (`FECHA_INVALIDA`). */
   readonly hoy = new Date();
@@ -144,6 +164,15 @@ export class DevolucionAportesComponent {
   filtroCuentaParticipe = '';
 
   private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
+
+  // ---- beneficiarios del partícipe FALLECIDO (docs/crd/API-DEVOLUCION-APORTES-A-BENEFICIARIOS.md) ----
+  //
+  // Cuando el partícipe está fallecido, el destino del dinero no es una cuenta bancaria elegida
+  // en pantalla: es el reparto entre sus beneficiarios activos de CRD.CBBP (§7 del contrato). Se
+  // cargan aparte de `cuentasParticipe` — no se reemplaza esa señal, para no tocar el camino de
+  // los partícipes vivos.
+  cargandoBeneficiariosDevolucion = signal(false);
+  beneficiariosDevolucion = signal<CuentaBancariaBeneficiario[]>([]);
 
   /**
    * Deuda vigente del partícipe. Solo se usa para avisar en el diálogo de confirmación: no
@@ -207,14 +236,98 @@ export class DevolucionAportesComponent {
       this.cuentasParticipe().length === 0
   );
 
+  /**
+   * `ENTDIDST = 5` (`CodigoEstadoParticipe.CESANTE_FALLECIDO`) — cuando el partícipe elegido está
+   * fallecido, la pantalla reparte entre sus beneficiarios en vez de pedir una cuenta bancaria del
+   * titular (§7 del contrato de beneficiarios).
+   */
+  entidadFallecida = computed(() => this.entidadSeleccionada()?.idEstado === CodigoEstadoParticipe.CESANTE_FALLECIDO);
+
+  /** Solo los ACTIVOS entran en el reparto — un beneficiario inactivo no cobra (§4 del contrato de CBBP). */
+  beneficiariosActivosDevolucion = computed(() => this.beneficiariosDevolucion().filter((b) => b.estado === 1));
+
+  sumaPorcentajeBeneficiariosDevolucion = computed(() =>
+    +this.beneficiariosActivosDevolucion().reduce((s, b) => s + (Number(b.porcentaje) || 0), 0).toFixed(2)
+  );
+
+  /**
+   * El backend rechaza con 400 si no hay beneficiarios activos o si sus porcentajes no suman
+   * exactamente 100 (§4 del contrato). Se valida acá con los mismos datos ANTES de llamar, para
+   * explicar qué falta en vez de que el operador se entere recién al enviar (§7.3).
+   */
+  beneficiariosListosParaReparto = computed(
+    () =>
+      !this.cargandoBeneficiariosDevolucion() &&
+      this.beneficiariosActivosDevolucion().length > 0 &&
+      Math.abs(this.sumaPorcentajeBeneficiariosDevolucion() - 100) < 0.01
+  );
+
+  /**
+   * El reparto entre los beneficiarios activos, **por LÍNEA DE TIPO DE APORTE, no por el total**
+   * (§5.1 del contrato, corregido el 2026-09-22 después de que el ejecutor BE preguntara qué
+   * pasaba con varios tipos). Repartir el total y escalar descuadra el tipo — contraejemplo
+   * medido en §5.2 del contrato: con dos tipos, la diferencia cae en un beneficiario equivocado.
+   *
+   * Algoritmo (idéntico al que corre el backend, que es quien valida y rechaza si no cuadra):
+   * para cada tipo, `línea_i = redondear(valor(tipo) × porcentaje_i / 100)`, residuo del tipo al
+   * de mayor porcentaje (empate → menor código); `valor_i` de cada beneficiario sale de SUMAR sus
+   * líneas de todos los tipos, nunca de `total × porcentaje_i` directo.
+   */
+  repartoBeneficiarios = computed<RepartoBeneficiarioDevolucion[]>(() => {
+    this.saldosVersion();
+    const activos = this.beneficiariosActivosDevolucion();
+    if (!this.beneficiariosListosParaReparto()) return [];
+
+    const detallePorTipo = this.saldos
+      .map((f) => ({ idTipoAporte: f.idTipoAporte, valor: this.parseMoneda(f.texto) }))
+      .filter((d) => d.valor > 0.004);
+    if (!detallePorTipo.length) return [];
+
+    const acumuladoPorBeneficiario = new Map<number, number>(activos.map((b) => [b.codigo, 0]));
+
+    for (const tipo of detallePorTipo) {
+      const lineasDelTipo = activos.map((b) => ({
+        beneficiario: b,
+        valor: Math.round((tipo.valor * (Number(b.porcentaje) || 0)) / 100 * 100) / 100,
+      }));
+
+      const sumaLineas = +lineasDelTipo.reduce((s, l) => s + l.valor, 0).toFixed(2);
+      const residuoTipo = +(tipo.valor - sumaLineas).toFixed(2);
+      if (Math.abs(residuoTipo) > 0.001) {
+        let mayor = lineasDelTipo[0];
+        for (const l of lineasDelTipo) {
+          const pMayor = Number(mayor.beneficiario.porcentaje) || 0;
+          const pL = Number(l.beneficiario.porcentaje) || 0;
+          if (pL > pMayor || (pL === pMayor && l.beneficiario.codigo < mayor.beneficiario.codigo)) {
+            mayor = l;
+          }
+        }
+        mayor.valor = +(mayor.valor + residuoTipo).toFixed(2);
+      }
+
+      for (const l of lineasDelTipo) {
+        acumuladoPorBeneficiario.set(l.beneficiario.codigo, (acumuladoPorBeneficiario.get(l.beneficiario.codigo) || 0) + l.valor);
+      }
+    }
+
+    return activos.map((b) => ({
+      beneficiario: b,
+      valor: +(acumuladoPorBeneficiario.get(b.codigo) || 0).toFixed(2),
+    }));
+  });
+
+  /** Siempre visible junto al reparto (§7.2): tiene que cuadrar con `totalADevolver()` por construcción. */
+  totalRepartidoBeneficiarios = computed(() => +this.repartoBeneficiarios().reduce((s, f) => s + f.valor, 0).toFixed(2));
+
   puedeRegistrar = computed(
     () =>
       !!this.entidadSeleccionada() &&
       this.totalADevolver() > 0.004 &&
       !this.hayExcesoEnAlgunTipo() &&
-      !this.participeSinCuentaActiva() &&
-      !!this.cuentaParticipeSeleccionada() &&
-      !this.registrando()
+      !this.registrando() &&
+      (this.entidadFallecida()
+        ? this.beneficiariosListosParaReparto()
+        : !this.participeSinCuentaActiva() && !!this.cuentaParticipeSeleccionada())
   );
 
   /**
@@ -224,6 +337,15 @@ export class DevolucionAportesComponent {
    */
   motivoNoPuedeRegistrar = computed<string | null>(() => {
     if (this.registrando() || !this.entidadSeleccionada()) return null;
+
+    // Partícipe fallecido: el caso "sin beneficiarios activos" o "no suman 100" tiene su propia
+    // tarjeta explicativa con el link a la ficha (§7.3) — acá solo falta avisar si no hay monto.
+    if (this.entidadFallecida()) {
+      if (this.hayExcesoEnAlgunTipo() || !this.beneficiariosListosParaReparto()) return null;
+      if (this.totalADevolver() <= 0.004) return 'Para registrar la devolución, ingrese el monto a devolver.';
+      return null;
+    }
+
     if (this.participeSinCuentaActiva() || this.hayExcesoEnAlgunTipo()) return null;
 
     const faltantes: string[] = [];
@@ -293,6 +415,7 @@ export class DevolucionAportesComponent {
     this.deudaVigente.set(null);
     this.deudaConsultaFallida.set(false);
     this.historial.set([]);
+    this.beneficiariosDevolucion.set([]);
     this.motivo = '';
     this.referencia = '';
     this.debitoAutomatico = false;
@@ -302,6 +425,12 @@ export class DevolucionAportesComponent {
     this.cargarDeudaVigente(entidad.codigo);
     this.cargarCuentasParticipe(entidad.codigo);
     this.cargarHistorial(entidad.codigo);
+
+    // Solo se piden los beneficiarios cuando el partícipe está fallecido: es el único caso donde
+    // la pantalla los usa, y así se evita una consulta de más para el camino de los vivos.
+    if (entidad.idEstado === CodigoEstadoParticipe.CESANTE_FALLECIDO) {
+      this.cargarBeneficiariosDevolucion(entidad.codigo);
+    }
   }
 
   // ================= carga de datos =================
@@ -384,6 +513,19 @@ export class DevolucionAportesComponent {
         this.cuentasParticipe.set([]);
         this.snackBar.open('No se pudieron consultar las cuentas bancarias del partícipe.', 'Cerrar', { duration: 5000 });
       },
+    });
+  }
+
+  /**
+   * Beneficiarios del partícipe fallecido (CRD.CBBP, activos e inactivos — `porEntidad()` los
+   * trae a todos). El propio servicio ya traduce cualquier error a `[]` sin propagar (H73): esta
+   * consulta no puede tumbar la pantalla, la deja simplemente sin reparto para explicar.
+   */
+  private cargarBeneficiariosDevolucion(codigoEntidad: number): void {
+    this.cargandoBeneficiariosDevolucion.set(true);
+    this.beneficiarioService.porEntidad(codigoEntidad).subscribe((lista) => {
+      this.cargandoBeneficiariosDevolucion.set(false);
+      this.beneficiariosDevolucion.set(lista || []);
     });
   }
 
@@ -513,8 +655,17 @@ export class DevolucionAportesComponent {
     if (!this.puedeRegistrar()) return;
 
     const entidad = this.entidadSeleccionada();
+    if (!entidad) return;
+
+    // Partícipe fallecido: reparto entre beneficiarios, un camino aparte que no toca nada de lo
+    // que sigue (§7 del contrato de beneficiarios).
+    if (this.entidadFallecida()) {
+      this.registrarBeneficiarios(entidad);
+      return;
+    }
+
     const cuentaDestino = this.cuentaParticipeSeleccionada();
-    if (!entidad || !cuentaDestino) return;
+    if (!cuentaDestino) return;
 
     const idEmpresa = this.idEmpresaSesion();
     const idUsuario = this.idUsuarioSesion();
@@ -568,6 +719,137 @@ export class DevolucionAportesComponent {
           this.enviarDevolucion(entidad, cuentaDestino, fechaTexto, idEmpresa, idUsuario);
         }
       });
+  }
+
+  // ================= registrar (partícipe fallecido, reparto a beneficiarios) =================
+
+  /** Lleva a la ficha del partícipe (§7.3 del contrato): es donde se cargan los beneficiarios. */
+  irAFichaParticipe(): void {
+    const entidad = this.entidadSeleccionada();
+    if (!entidad) return;
+    this.router.navigate(['/menucreditos/entidad-participe-info'], {
+      queryParams: { codigoEntidad: entidad.codigo, returnUrl: '/menucreditos/devolucion-aportes' },
+    });
+  }
+
+  private registrarBeneficiarios(entidad: Entidad): void {
+    const idEmpresa = this.idEmpresaSesion();
+    const idUsuario = this.idUsuarioSesion();
+    if (!idEmpresa || !idUsuario) {
+      this.snackBar.open(
+        'No se pudo determinar la empresa o el usuario de la sesión. Vuelva a iniciar sesión antes de registrar la devolución.',
+        'Cerrar',
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    const fechaTexto = this.devolucionService.formatearFecha(this.fecha());
+    if (!fechaTexto) {
+      this.snackBar.open('Seleccione una fecha válida para la devolución.', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    const lineas: LineaConfirmacionDevolucion[] = this.saldos
+      .filter((f) => this.parseMoneda(f.texto) > 0.004)
+      .map((f) => ({
+        nombreTipoAporte: f.nombre,
+        valor: +this.parseMoneda(f.texto).toFixed(2),
+        saldoActual: f.saldo,
+      }));
+
+    const reparto: LineaRepartoBeneficiario[] = this.repartoBeneficiarios();
+
+    // Aviso central de este camino (§7.4): no es una devolución, son N — una por beneficiario.
+    const data: ConfirmarDevolucionBeneficiariosData = {
+      participe: entidad.razonSocial,
+      identificacion: entidad.numeroIdentificacion,
+      fecha: this.formatFecha(this.fecha()),
+      motivo: this.motivo.trim(),
+      debitoAutomatico: this.debitoAutomatico,
+      referencia: this.referencia.trim(),
+      lineas,
+      reparto,
+      total: this.totalADevolver(),
+    };
+
+    this.dialog
+      .open(ConfirmarDevolucionBeneficiariosDialogComponent, {
+        data,
+        width: '780px',
+        maxWidth: '96vw',
+        autoFocus: false,
+      })
+      .afterClosed()
+      .subscribe((confirmado?: boolean) => {
+        if (confirmado) {
+          this.enviarDevolucionBeneficiarios(entidad, fechaTexto, idEmpresa, idUsuario);
+        }
+      });
+  }
+
+  private enviarDevolucionBeneficiarios(
+    entidad: Entidad,
+    fechaTexto: string,
+    idEmpresa: number,
+    idUsuario: number
+  ): void {
+    const detalle: DetalleSolicitudDevolucion[] = this.saldos
+      .filter((f) => this.parseMoneda(f.texto) > 0.004)
+      .map((f) => ({ idTipoAporte: f.idTipoAporte, valor: +this.parseMoneda(f.texto).toFixed(2) }));
+
+    if (!detalle.length) return;
+
+    const solicitud: SolicitudDevolucionBeneficiarios = {
+      idEntidad: entidad.codigo,
+      idEmpresa,
+      idUsuario,
+      usuario: usuarioSesion(),
+      fecha: fechaTexto,
+      motivo: this.motivo.trim() || null,
+      debitoAutomatico: this.debitoAutomatico,
+      referencia: this.referencia.trim() || null,
+      detalle,
+    };
+
+    this.registrando.set(true);
+    this.devolucionService.registrarParaBeneficiarios(solicitud).subscribe({
+      next: (creadas: ResultadoDevolucionBeneficiario[]) => {
+        this.registrando.set(false);
+
+        this.limpiarMontos();
+        this.motivo = '';
+        this.referencia = '';
+        this.debitoAutomatico = false;
+        // Igual que en el camino de los vivos: el saldo y el historial se vuelven a pedir al
+        // backend, no se recalculan en memoria. Los beneficiarios también, por si algo cambió.
+        this.cargarSaldos(entidad.codigo);
+        this.cargarHistorial(entidad.codigo);
+        this.cargarBeneficiariosDevolucion(entidad.codigo);
+
+        // §7.4: mostrar las devoluciones creadas, cada una con su número — no dejar que el
+        // operador tenga que ir a buscarlas al historial de abajo.
+        this.dialog.open(ResultadoDevolucionBeneficiariosDialogComponent, {
+          data: { creadas },
+          width: '640px',
+          maxWidth: '96vw',
+          autoFocus: false,
+        });
+      },
+      error: (err: { mensaje?: string } | null) => {
+        this.registrando.set(false);
+        // 400 = partícipe no fallecido, sin beneficiarios activos, o los porcentajes no suman
+        // 100 — se muestra el mensaje del backend tal cual, sin deducir nada del código HTTP.
+        this.snackBar.open(
+          err?.mensaje || 'No se pudo registrar la devolución para los beneficiarios.',
+          'Cerrar',
+          { duration: 8000 }
+        );
+        // Es la red de seguridad de una carrera contra lo que la pantalla ya había validado: se
+        // vuelve a pedir para que la tabla del reparto quede al día con lo que ve el backend.
+        this.cargarBeneficiariosDevolucion(entidad.codigo);
+      },
+    });
   }
 
   private enviarDevolucion(

@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
 
 import {
   AnulacionDevolucionRequest,
@@ -8,9 +8,11 @@ import {
   DevolucionListado,
   ReemisionPagoDevolucionRequest,
   ResultadoDevolucion,
+  ResultadoDevolucionBeneficiario,
   ResultadoSincronizacionDevolucion,
   RespuestaReemisionPago,
   SolicitudDevolucion,
+  SolicitudDevolucionBeneficiarios,
 } from '../model/devolucion/devolucion-aporte';
 import { RespuestaDevolucion } from '../model/devolucion/respuesta-devolucion';
 import { ServiciosCrd } from './ws-crd';
@@ -83,6 +85,32 @@ export class DevolucionAporteService {
     return this.http
       .get<RespuestaDevolucion<DeudaVigenteParticipe>>(url)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  // ===================== Devolución repartida entre beneficiarios (partícipe fallecido) =====================
+  // docs/crd/API-DEVOLUCION-APORTES-A-BENEFICIARIOS.md
+
+  /**
+   * §4 del contrato de beneficiarios. Genera **UNA devolución POR BENEFICIARIO ACTIVO**, nunca
+   * una sola repartida en N órdenes (§3: CXP rechaza un segundo pago vivo para el mismo origen).
+   * Las N se registran en UNA transacción: si una falla, se revierten todas (§6).
+   *
+   * ⚠️ Forma de respuesta DISTINTA al resto de este servicio: acá NO hay sobre
+   * `{exito, mensaje, resultado}` — el contrato define 201 con el arreglo de devoluciones creadas
+   * directo en el cuerpo, así que este método no pasa por `normalizarError()`. El error se
+   * propaga con `throwError` para que el llamador muestre `err?.mensaje` tal cual (400 = partícipe
+   * no fallecido, sin beneficiarios activos, o los porcentajes no suman 100 — la pantalla ya
+   * valida esos dos últimos casos ANTES de llamar, contra los mismos beneficiarios que carga para
+   * la tabla del reparto, así que este 400 es la red de seguridad de una carrera, no el camino
+   * esperado).
+   */
+  registrarParaBeneficiarios(
+    solicitud: SolicitudDevolucionBeneficiarios
+  ): Observable<ResultadoDevolucionBeneficiario[]> {
+    const url = `${ServiciosCrd.RS_DVAP}/registrarParaBeneficiarios`;
+    return this.http
+      .post<ResultadoDevolucionBeneficiario[]>(url, this.limpiar(solicitud), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => throwError(() => e.error)));
   }
 
   // ===================== §6.3 Anular =====================
