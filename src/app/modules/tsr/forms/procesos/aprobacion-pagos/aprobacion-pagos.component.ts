@@ -121,7 +121,12 @@ export class AprobacionPagosComponent implements OnInit {
   cuentas = signal<CuentaBancaria[]>([]);
   cuentaSeleccionada = signal<CuentaBancaria | null>(null);
   formaPago = signal<number>(FormaPagoAplicacion.TRANSFERENCIA);
-  fechaPago = signal<string>('');
+  // Arranca en hoy (yyyy-MM-dd, con componentes locales — nunca toISOString(),
+  // que en Ecuador (UTC-5) muestra el día siguiente desde las 19:00) pero sigue
+  // siendo editable: el binding del input no cambia.
+  fechaPago = signal<string>(
+    this.funcionesDatos.formatearFechaParaBackend(new Date(), TipoFormatoFechaBackend.SOLO_FECHA) ?? '',
+  );
 
   /**
    * «Un solo cheque para varios pagos» — solo aplica con CHEQUE y solo si
