@@ -136,21 +136,56 @@ insertar**. El dato queda protegido por el índice; lo feo es el 500 en esa carr
 
 ### 3.4 `PUT /rest/cbbp` — actualizar
 
-Cambia `porcentaje`, `estado`, `tipoCuenta`, `numeroCuenta`, `bancoExterno` y `nombre`.
-**No cambia `entidad` ni `numeroIdentificacion`**: eso sería otro beneficiario — se inactiva éste y
-se crea el otro.
+Cambia `porcentaje`, `estado`, `tipoCuenta`, `numeroCuenta`, `bancoExterno`, `nombre` **y
+`numeroIdentificacion`**. **No cambia `entidad`**: mover un beneficiario de un partícipe a otro es
+otra operación, nadie la pidió.
 
-**200** entidad actualizada · **400** porcentaje fuera de rango · **404** no existe · **500** error.
+⚠️ **Revisado 2026-09-22 — decisión del usuario: la cédula SÍ se puede corregir.** El contrato
+original decía que `numeroIdentificacion` no cambiaba (era "otro beneficiario"). Ya no: un error de
+tipeo en la cédula se corrige con el mismo `PUT`, no dando de baja y creando de nuevo.
 
-### 3.5 ⛔ `DELETE` — NO se implementa
+**Si la identificación cambia, corre el mismo chequeo de duplicado que el alta** (§3.3): si la
+identificación nueva ya la tiene OTRO beneficiario del mismo partícipe, **409**, mismo formato que el
+alta. Sin este chequeo el `UPDATE` caería en `ORA-00001` crudo contra `UX_CBBP_PARTICIPE_IDENT`.
 
-**Un beneficiario no se borra: se inactiva** (`estado = 2`, por el `PUT`). Esta tabla es la prueba de
-a quién se le pagó o se le iba a pagar la plata de un fallecido; borrar una fila destruye esa prueba.
-Si el `Rest` hereda un `delete` del patrón CRUD, **quitarlo**.
+**200** entidad actualizada · **400** porcentaje fuera de rango o `numeroIdentificacion` vacío ·
+**404** no existe · **409** la identificación nueva ya existe para ese partícipe · **500** error.
+
+### 3.5 `DELETE /rest/cbbp/{id}` — borrado REAL
+
+⚠️ **Revisado 2026-09-22 — decisión del usuario: sí se implementa.** El contrato original decía que
+un beneficiario sólo se inactivaba (`estado = 2`, por el `PUT`) y que `DELETE` no existía, porque
+esta tabla es la prueba de a quién se le pagó o se le iba a pagar la plata de un fallecido. **El
+usuario decidió que, además de inactivar, se pueda borrar de verdad.** Inactivar sigue siendo lo
+recomendado cuando se quiere conservar el historial; `DELETE` es para el caso de un alta hecha por
+error (partícipe equivocado, duplicado cargado a mano antes de que el 409 lo hubiera evitado, etc.).
+
+Borra, **en una transacción**: la fila de `CRD.CBBP`, su adjunto de `CRD.ADJN` y el archivo del
+disco. El archivo se borra al final, con su propio `catch` que loguea y no revierte nada si falla —
+es el inverso del patrón del alta (ahí un fallo de BD borra el archivo recién subido; acá un fallo al
+borrar el archivo no revive las filas ya borradas).
+
+⛔ **Punto de extensión para la fase 2b, hoy sin código:** si el beneficiario ya tuviera un pago
+asociado, `DELETE` debería rechazar con **409** y remitir a inactivar en vez de borrar. **Hoy no
+puede pasar** — la fase 2b (pago a beneficiarios) no existe y ninguna tabla referencia `CBBP` — así
+que el service sólo deja un `// TODO fase 2b` comentado, sin ninguna consulta inventada. **Quien
+implemente la 2b tiene que volver acá** antes de dejar que un beneficiario con pagos se pueda borrar.
+
+**200** eliminado · **404** no existe · **500** error.
 
 ### 3.6 Estándar
 
 `GET /getAll`, `GET /getId/{id}` y `POST /selectByCriteria` como en cualquier entidad.
+
+### 3.7 El certificado: consultar y descargar
+
+Calcados de `CuentaBancariaParticipeRest` (`:216-271`), mismo manejo de errores.
+
+- `GET /rest/cbbp/{id}/certificado` → metadatos del `Adjunto` (nombre, fecha). **404** si el
+  beneficiario no tiene certificado registrado.
+- `GET /rest/cbbp/{id}/certificado/descargar` → el PDF inline, con
+  `Content-Disposition: attachment`. **404** si no hay certificado registrado, o si el archivo ya no
+  existe en el servidor (`fileService.fileExists` en falso) aunque el registro en `CRD.ADJN` siga.
 
 ---
 
@@ -174,21 +209,32 @@ ni en la suma.
 
 ## 5. El certificado bancario
 
-Va en **`CRD.ADJN`**, con el tipo de `CRD.TPDJ` **«CERTIFICADO BANCARIO»**, resuelto reusando
-`TipoAdjuntoDaoService.selectByNombre`, exactamente como
-`CuentaBancariaParticipeServiceImpl.resolverTipoCertificadoBancario`. Sólo PDF, máximo 10 MB.
+Va en **`CRD.ADJN`**, con el tipo de `CRD.TPDJ` **«CERTIFICADO BANCARIO BENEFICIARIO»** — tipo
+**PROPIO** de los beneficiarios, resuelto reusando `TipoAdjuntoDaoService.selectByNombre`, mismo
+criterio que `CuentaBancariaParticipeServiceImpl.resolverTipoCertificadoBancario` (igualdad exacta
+más estado activo, exigiendo una sola fila activa, ni cero ni más de una). Sólo PDF, máximo 10 MB.
 
 ⚠️ **Corregido el 2026-09-22.** Este contrato decía que el tipo se resuelve con
 `LIKE '%CERTIFICADO%BANCARIO%'`. **Era falso.** `TipoAdjuntoDaoServiceImpl.selectByNombre:25-31`
 hace `UPPER(t.nombre) = UPPER(:nombre)` **y además** filtra `t.estado = Estado.ACTIVO`: igualdad
-exacta contra la constante `"CERTIFICADO BANCARIO"`, no coincidencia parcial. Lo levantó el
-ejecutor BE programando contra el código en vez de contra esta prosa, que es exactamente para lo
-que sirve que lea el código. La guarda de la casa —ni cero ni más de una fila activa— se reusa tal
-cual.
+exacta, no coincidencia parcial. Lo levantó el ejecutor BE programando contra el código en vez de
+contra esta prosa, que es exactamente para lo que sirve que lea el código.
+
+⛔⛔ **Tipo propio, encontrado el 2026-09-22 por el árbitro antes de que se cargara el primer
+beneficiario.** La primera versión de esta fase reusaba el MISMO tipo `«CERTIFICADO BANCARIO»` que
+usa `CNBP` (cuenta bancaria del propio partícipe). **`AdjuntoDaoServiceImpl.selectByReferenciaYTipo`
+resuelve el adjunto SÓLO por `(ADJNIDRF, TPDJCDGO)`, y `CRD.ADJN` no tiene ninguna columna que diga
+de qué tabla viene esa referencia.** `CRD.CBBP` arranca en 1 y `CRD.CNBP` tiene cientos de filas con
+códigos bajos: el beneficiario 1 y la cuenta bancaria de partícipe 1 habrían compartido clave, y el
+certificado de uno se habría devuelto (o pisado) como el del otro. Con un tipo propio, los dos
+catálogos de adjuntos quedan separados aunque compartan el mismo `ADJNIDRF` numérico.
+
+Script: `crd/sql/240_TIPO_ADJUNTO_CERTIFICADO_BENEFICIARIO.sql` — crea `«CERTIFICADO BANCARIO
+BENEFICIARIO»` en `CRD.TPDJ`, controla que `CRD.CBBP` esté vacía todavía (no hay nada que migrar) y
+que el tipo de `CNBP` siga intacto. **Va antes del WAR**, igual que el `233`.
 
 ⛔ **Sin la fila de `CRD.TPDJ` no se puede subir ningún certificado** y el error es un 500 que no
-explica nada. El usuario informó el 2026-09-22 que `CARGA-TIPO-ADJUNTO-CERTIFICADO-BANCARIO.sql` ya
-corrió; el bloque **0.5** del script `233` lo confirma contra la base.
+explica nada.
 
 ---
 
