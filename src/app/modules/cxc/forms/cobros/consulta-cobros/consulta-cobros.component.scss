@@ -1,7 +1,7 @@
 .consulta-cobros {
   .filters {
     display: grid;
-    grid-template-columns: repeat(5, minmax(180px, 1fr));
+    grid-template-columns: repeat(6, minmax(180px, 1fr));
     gap: 12px;
   }
   .table-wrapper {
@@ -36,5 +36,21 @@
   }
   tr.fila-reversada {
     opacity: 0.7;
+  }
+  // «Sin contabilizar» es un estado, no un código de asiento — apagado y en cursiva para que
+  // no se confunda con un numeroAlterno real.
+  .sin-contabilizar {
+    color: #757575;
+    font-style: italic;
+  }
+  // Trunca observaciones largas (hasta 2000 caracteres en el backend) sin romper la fila;
+  // el texto completo va en el tooltip.
+  .observacion-truncada {
+    display: inline-block;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
   }
 }

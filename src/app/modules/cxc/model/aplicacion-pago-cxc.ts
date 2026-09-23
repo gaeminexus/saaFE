@@ -103,6 +103,8 @@ export interface CobroListado {
   asiento: { id: number; numeroAlterno: string } | null;
   /** Ver EstadoAplicacion: 1 Activo, 2 Reversado. */
   estado: number;
+  /** Puede venir null — no todos los cobros la tienen. La pantalla la oculta cuando falta. */
+  observacion?: string | null;
 }
 
 /** Query params de GET /aplc/listar. Todos opcionales salvo idEmpresa. */

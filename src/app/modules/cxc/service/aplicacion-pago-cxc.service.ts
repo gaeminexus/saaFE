@@ -83,6 +83,17 @@ export class AplicacionPagoCxcService {
   }
 
   /**
+   * PDF del comprobante de un cobro (`GET /aplc/comprobante/{id}`). Binario — se pide como
+   * `blob`, no como JSON, o el PDF llega corrupto. Sin `catchError(this.handleError)` a
+   * propósito: el error también viaja como `Blob` y hay que leerlo con
+   * `mensajeReporteFallido` (`shared/services/descarga-reporte.ts`), que `handleError` no sabe
+   * desenvolver.
+   */
+  comprobante(idAplicacion: number): Observable<Blob> {
+    return this.http.get(`${ServiciosCxc.RS_APLC}/comprobante/${idAplicacion}`, { responseType: 'blob' });
+  }
+
+  /**
    * El backend devuelve el mensaje de negocio como string JSON directo, ya
    * redactado en español para mostrarse tal cual al usuario.
    */

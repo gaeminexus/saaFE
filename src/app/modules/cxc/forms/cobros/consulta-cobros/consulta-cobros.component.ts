@@ -22,10 +22,13 @@ import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { EstadoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { Titular } from '../../../../tsr/model/titular';
+import { Periodo } from '../../../../cnt/model/periodo';
+import { PeriodoService } from '../../../../cnt/service/periodo.service';
 
 import { CobroListado, FORMA_PAGO_COBRO_LABELS } from '../../../model/aplicacion-pago-cxc';
 import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.service';
@@ -65,6 +68,7 @@ export class ConsultaCobrosComponent implements OnInit {
   private permisosService = inject(PermisosService);
   private exportService = inject(ExportService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private periodoService = inject(PeriodoService);
   private router = inject(Router);
 
   readonly EstadoAplicacion = EstadoAplicacion;
@@ -80,18 +84,49 @@ export class ConsultaCobrosComponent implements OnInit {
   estadoFiltro = signal<number | null>(null);
   desde = signal<string>('');
   hasta = signal<string>('');
+  /** Sólo azúcar de pantalla: al elegir un período se copian sus fechas a `desde`/`hasta` una
+   *  única vez. El backend sigue recibiendo `desde`/`hasta`, nunca un id de período — y si el
+   *  usuario después toca una fecha a mano, no hay nada que se la vuelva a pisar. */
+  periodoFiltro = signal<number | null>(null);
+  periodos = signal<Periodo[]>([]);
 
   rows = signal<CobroListado[]>([]);
   loading = signal(false);
   anulando = signal<number | null>(null);
+  descargandoComprobante = signal<number | null>(null);
 
   total = computed(() => this.rows().reduce((s, r) => s + (Number(r.valor) || 0), 0));
 
-  readonly columnas = ['fecha', 'titular', 'documento', 'formaPago', 'valor', 'asiento', 'estado', 'acciones'];
+  readonly columnas = ['fecha', 'titular', 'documento', 'formaPago', 'valor', 'asiento', 'estado', 'observacion', 'acciones'];
 
   ngOnInit(): void {
     this.setRangoMesActual();
+    this.cargarPeriodos();
     this.buscar();
+  }
+
+  private cargarPeriodos(): void {
+    this.periodoService.getAll().subscribe({
+      next: (data) => {
+        const ordenados = (data || []).sort((a, b) => (b.anio !== a.anio ? b.anio - a.anio : b.mes - a.mes));
+        this.periodos.set(ordenados);
+      },
+      error: () => this.periodos.set([]),
+    });
+  }
+
+  /** Rellena `desde`/`hasta` con las fechas del período elegido. No vuelve a tocarlas después. */
+  aplicarPeriodo(codigoPeriodo: number | null): void {
+    this.periodoFiltro.set(codigoPeriodo);
+    if (codigoPeriodo == null) return;
+
+    const periodo = this.periodos().find((p) => p.codigo === codigoPeriodo);
+    if (!periodo) return;
+
+    const primerDia = this.funcionesDatos.convertirFechaDesdeBackend(periodo.primerDia);
+    const ultimoDia = this.funcionesDatos.convertirFechaDesdeBackend(periodo.ultimoDia);
+    if (primerDia) this.desde.set(this.aFechaISO(primerDia));
+    if (ultimoDia) this.hasta.set(this.aFechaISO(ultimoDia));
   }
 
   private setRangoMesActual(): void {
@@ -169,6 +204,7 @@ export class ConsultaCobrosComponent implements OnInit {
     this.titularFiltro.set(null);
     this.formaPagoFiltro.set(null);
     this.estadoFiltro.set(null);
+    this.periodoFiltro.set(null);
     this.setRangoMesActual();
     this.buscar();
   }
@@ -229,6 +265,26 @@ export class ConsultaCobrosComponent implements OnInit {
     );
   }
 
+  /**
+   * PDF del comprobante de un cobro. Deshabilita el botón de esa fila mientras se genera —evita
+   * el doble clic— y si falla muestra el mensaje del backend, no un «error» genérico: el cuerpo
+   * de un error de `responseType: 'blob'` llega como `Blob`, así que hay que leerlo primero
+   * (`mensajeReporteFallido`).
+   */
+  descargarComprobante(row: CobroListado): void {
+    this.descargandoComprobante.set(row.id);
+    this.aplicacionPagoService.comprobante(row.id).subscribe({
+      next: (blob) => {
+        this.descargandoComprobante.set(null);
+        guardarArchivo(blob, `comprobante-cobro-${row.id}.pdf`);
+      },
+      error: async (err) => {
+        this.descargandoComprobante.set(null);
+        this.mostrarError(await mensajeReporteFallido(err));
+      },
+    });
+  }
+
   /** Exporta lo que se está viendo — ya filtrado en el servidor (GET /aplc/listar). */
   exportarCSV(): void {
     const rows = this.rows();
@@ -246,10 +302,11 @@ export class ConsultaCobrosComponent implements OnInit {
       valor: Number(r.valor || 0),
       asiento: r.asiento?.numeroAlterno || '',
       estado: this.estadoLabel(r.estado),
+      observacion: r.observacion || '',
     }));
 
-    const headers = ['ID', 'Fecha', 'Titular', 'Documento', 'Forma de pago', 'Valor', 'Asiento', 'Estado'];
-    const keys = ['id', 'fecha', 'titular', 'documento', 'formaPago', 'valor', 'asiento', 'estado'];
+    const headers = ['ID', 'Fecha', 'Titular', 'Documento', 'Forma de pago', 'Valor', 'Asiento', 'Estado', 'Observación'];
+    const keys = ['id', 'fecha', 'titular', 'documento', 'formaPago', 'valor', 'asiento', 'estado', 'observacion'];
     this.exportService.exportToCSV(plano, `consulta_cobros_${fechaCsv(new Date())}`, headers, keys);
   }
 
