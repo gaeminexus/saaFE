@@ -21,7 +21,7 @@ import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { Titular } from '../../../../tsr/model/titular';
 import { CargaArchivoTxt } from '../../../model/carga-archivo-txt';
-import { DocumentoCxp } from '../../../model/documento-cxp';
+import { AccionNovedad, DocumentoCxp } from '../../../model/documento-cxp';
 import { BLOQUEANTE_TIPO_LABELS, ErrorBloqueante } from '../../../model/error-bloqueante';
 import { ProgresoLote } from '../../../model/progreso-lote';
 import { CargaArchivoTxtService } from '../../../service/carga-archivo-txt.service';
@@ -1148,7 +1148,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
     if (accion === 'MANTENER') {
       if (!confirm(`¿Mantener el documento ${doc.serieComprobante} sin cambios?`)) return;
       this.procesando.set(true);
-      this.processService.resolverNovedad(doc.id, { accion: 'MANTENER', idUsuario: this.idUsuario }).subscribe({
+      this.processService.resolverNovedad(doc.id, { accion: AccionNovedad.MANTENER, idUsuario: this.idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido'); this.cargar(); },
         error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
       });
@@ -1157,7 +1157,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
       const reader = new FileReader();
       reader.onload = (e) => {
         const contenidoXml = (e.target?.result as string) || '';
-        this.processService.resolverNovedad(doc.id, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
+        this.processService.resolverNovedad(doc.id, { accion: AccionNovedad.REEMPLAZAR, contenidoXml, idUsuario: this.idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado'); this.cargar(); },
           error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });

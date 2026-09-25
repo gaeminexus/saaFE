@@ -3,6 +3,18 @@
 import { Empresa } from "../../../shared/model/empresa";
 import { Periodo } from "../../cnt/model/periodo";
 
+/**
+ * `com.saa.rubros.AccionNovedad` (rubro 177), documentado en
+ * `ProcesoCargaDocumentosService:144-147` (saaBE). El endpoint `resolverNovedad`
+ * (`ProcesoCargaDocumentosRest:344-345`) hace `Integer.valueOf(params.get("accion"))` — un
+ * `Integer`, no el texto "MANTENER"/"REEMPLAZAR" que mandaba el frontend hasta este ítem
+ * (`Error al resolver novedad: For input string: "MANTENER"`, sin funcionar desde 20/07).
+ */
+export enum AccionNovedad {
+  MANTENER = 1,
+  REEMPLAZAR = 2,
+}
+
 // Tabla PGS.DCXP — UN solo registro por documento (por claveAcceso)
 export interface DocumentoCxp {
   id: number;

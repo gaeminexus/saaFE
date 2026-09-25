@@ -12,7 +12,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { CargaArchivoTxt } from '../../../model/carga-archivo-txt';
 import { DetalleCargaTxt } from '../../../model/detalle-carga-txt';
-import { DocumentoCxp } from '../../../model/documento-cxp';
+import { AccionNovedad, DocumentoCxp } from '../../../model/documento-cxp';
 import { CargaArchivoTxtService } from '../../../service/carga-archivo-txt.service';
 import { CargaDocumentosService, GrupoProducto, ProductoNuevo } from '../../../service/carga-documentos.service';
 import { DetalleCargaTxtService } from '../../../service/detalle-carga-txt.service';
@@ -304,7 +304,7 @@ export class BandejaElectronicaComponent implements OnInit {
     if (accion === 'MANTENER') {
       if (!confirm(`¿Mantener el documento ${detalle.documento.serieComprobante} sin cambios?`)) return;
       this.procesando.set(true);
-      this.processService.resolverNovedad(idDocumentoCxp, { accion: 'MANTENER', idUsuario: this.idUsuario }).subscribe({
+      this.processService.resolverNovedad(idDocumentoCxp, { accion: AccionNovedad.MANTENER, idUsuario: this.idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido sin cambios'); this.recargarDetalle(); },
         error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err) || 'Error al resolver'); },
       });
@@ -313,7 +313,7 @@ export class BandejaElectronicaComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = (e) => {
         const contenidoXml = (e.target?.result as string) || '';
-        this.processService.resolverNovedad(idDocumentoCxp, { accion: 'REEMPLAZAR', contenidoXml, idUsuario: this.idUsuario }).subscribe({
+        this.processService.resolverNovedad(idDocumentoCxp, { accion: AccionNovedad.REEMPLAZAR, contenidoXml, idUsuario: this.idUsuario }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado correctamente'); this.recargarDetalle(); },
           error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });

@@ -1,7 +1,7 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
-import { DocumentoCxp } from '../model/documento-cxp';
+import { AccionNovedad, DocumentoCxp } from '../model/documento-cxp';
 import { DetalleCargaTxt } from '../model/detalle-carga-txt';
 import { CuadraturaReembolso } from '../model/reembolso-factura-compra';
 import { ProgresoLote } from '../model/progreso-lote';
@@ -158,9 +158,12 @@ export class CargaDocumentosService {
     return this.http.post<any>(`${PROCESS_URL}/crearProductosYRegistrar/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
   }
 
-  /** FASE 4 — Resuelve una novedad (MANTENER o REEMPLAZAR) */
+  /**
+   * FASE 4 — Resuelve una novedad (MANTENER o REEMPLAZAR). `accion` va como `AccionNovedad`
+   * (rubro 177, `Integer`) — el backend lo lee con `Integer.valueOf`, no acepta texto.
+   */
   resolverNovedad(idDocumentoCxp: number, payload: {
-    accion: 'MANTENER' | 'REEMPLAZAR';
+    accion: AccionNovedad;
     contenidoXml?: string;
     idUsuario: number;
     esReembolso?: number;
