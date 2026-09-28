@@ -1,0 +1,235 @@
+.ats-detalle-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .header-icon {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #667eea;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+    max-width: 760px;
+  }
+}
+
+.filtros-card {
+  border-radius: 12px;
+}
+
+.filtros-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  mat-form-field {
+    min-width: 260px;
+  }
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+.aviso-error {
+  background: #fdecea;
+  color: #611a15;
+}
+.aviso-info {
+  background: #e8eaf6;
+  color: #283593;
+}
+
+.referencia-archivo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.tabs-detalle {
+  ::ng-deep .mat-mdc-tab-body-content {
+    overflow: visible;
+  }
+}
+
+.tab-body {
+  padding: 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tab-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filtro-texto {
+  min-width: 320px;
+}
+
+h3 {
+  margin: 12px 0 4px;
+  font-size: 1rem;
+}
+h4 {
+  margin: 12px 0 6px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.totales-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.total-item {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f5f7fa;
+
+  &.destacado {
+    background: #e8eaf6;
+  }
+
+  .label {
+    font-size: 0.72rem;
+    color: #555;
+  }
+  .value {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-compras,
+.tabla-simple {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    white-space: nowrap;
+  }
+
+  .num {
+    text-align: right;
+  }
+}
+
+.tabla-simple {
+  th {
+    background: #f5f7fa;
+  }
+  td.sin-filas,
+  .sin-filas {
+    text-align: center;
+    color: rgba(0, 0, 0, 0.5);
+    white-space: normal;
+    padding: 16px;
+  }
+}
+
+.icono-aviso-fecha {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: #b26a00;
+  cursor: help;
+}
+
+.fila-detalle-oculta {
+  display: none;
+}
+
+.detalle-expandido {
+  padding: 12px 16px;
+  background: #fafafa;
+  border-radius: 6px;
+  margin: 6px 0;
+}
+
+.detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px 16px;
+
+  > div {
+    display: flex;
+    flex-direction: column;
+
+    .label {
+      font-size: 0.7rem;
+      color: #777;
+    }
+    .value {
+      font-size: 0.85rem;
+    }
+  }
+}
+
+.tabla-air {
+  width: 100%;
+  max-width: 480px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  margin-top: 4px;
+
+  th,
+  td {
+    text-align: left;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+  .num {
+    text-align: right;
+  }
+}
+
+.lista-avisos {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+
+  li {
+    margin-bottom: 6px;
+  }
+}

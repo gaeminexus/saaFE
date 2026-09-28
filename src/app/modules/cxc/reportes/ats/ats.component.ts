@@ -9,6 +9,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
@@ -51,6 +52,7 @@ export class AtsComponent implements OnInit {
   private atsS = inject(AtsService);
   private cuadreS = inject(CuadreSriService);
   private appState = inject(AppStateService);
+  private router = inject(Router);
 
   facturadores = signal<Facturador[]>([]);
   facturadorSeleccionado = signal<Facturador | null>(null);
@@ -74,6 +76,8 @@ export class AtsComponent implements OnInit {
   cuadre103 = signal<Cuadre103Response | null>(null);
 
   puedeGenerar = computed(() => !!this.facturadorSeleccionado() && this.periodoValido() && !this.generando());
+  /** Igual que `puedeGenerar`, pero sin depender de `generando`: ver el detalle no genera nada. */
+  puedeVerDetalle = computed(() => !!this.facturadorSeleccionado() && this.periodoValido());
   puedeConsultarCuadres = computed(
     () => !!this.facturadorSeleccionado() && this.periodoValido()
       && !this.cargandoCuadre104() && !this.cargandoCuadre103(),
@@ -168,6 +172,16 @@ export class AtsComponent implements OnInit {
     enlace.download = resultado.nombreArchivo || 'ats.zip';
     enlace.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** Navega al detalle del ATS con el facturador/período ya elegidos aquí, para comparar sin generar. */
+  verDetalle(): void {
+    const facturador = this.facturadorSeleccionado();
+    if (!this.puedeVerDetalle() || !facturador) return;
+
+    this.router.navigate(['/menucuentasxcobrar/reportes/ats-detalle'], {
+      queryParams: { idFacturador: facturador.id, periodo: this.periodoMes() },
+    });
   }
 
   consultarCuadres(): void {

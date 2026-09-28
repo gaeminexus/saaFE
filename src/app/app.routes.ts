@@ -985,6 +985,12 @@ export const routes: Routes = [
         data: { title: 'ATS y Cuadre 103/104' },
       },
       {
+        path: 'reportes/ats-detalle',
+        loadComponent: () => import('./modules/cxc/reportes/ats-detalle').then((m) => m.AtsDetalleComponent),
+        canActivate: [authGuard],
+        data: { title: 'Detalle del ATS' },
+      },
+      {
         path: 'reportes/dash-ventas',
         loadComponent: () => import('./modules/cxc/reportes/dash-ventas').then((m) => m.DashVentasComponent),
         canActivate: [authGuard],

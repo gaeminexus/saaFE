@@ -140,6 +140,12 @@ export class MenucuentasxcobrarComponent {
           idPermiso: Permisos.CXC_ATS_Y_CUADRE_103_104,
           route: '/menucuentasxcobrar/reportes/ats',
         },
+        {
+          displayName: 'Detalle del ATS',
+          iconName: 'table_view',
+          idPermiso: Permisos.CXC_ATS_Y_CUADRE_103_104,
+          route: '/menucuentasxcobrar/reportes/ats-detalle',
+        },
       ],
     },
   ];

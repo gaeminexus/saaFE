@@ -43,6 +43,10 @@
           }
           Generar ATS
         </button>
+        <button mat-stroked-button [disabled]="!puedeVerDetalle()" (click)="verDetalle()">
+          <mat-icon>table_view</mat-icon>
+          Ver detalle
+        </button>
       </div>
 
       @if (errorGeneracion()) {

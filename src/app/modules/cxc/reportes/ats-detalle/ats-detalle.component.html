@@ -1,0 +1,462 @@
+<div class="ats-detalle-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">table_view</mat-icon>
+    <div>
+      <h1>Detalle del ATS</h1>
+      <p class="subtitle">
+        Muestra el mismo listado de documentos que arma la generación del ATS, para comparar sus
+        valores antes de exportar el archivo. No es una consulta paralela: si algo cambia aquí,
+        cambia igual en el ZIP.
+      </p>
+    </div>
+  </div>
+
+  <mat-card class="filtros-card">
+    <mat-card-content>
+      <div class="filtros-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Facturador</mat-label>
+          <mat-select [ngModel]="facturadorSeleccionado()" (ngModelChange)="facturadorSeleccionado.set($event)">
+            @for (f of facturadores(); track f.id) {
+              <mat-option [value]="f">{{ etiquetaFacturador(f) }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Período</mat-label>
+          <input matInput type="month" [ngModel]="periodoMes()" (ngModelChange)="periodoMes.set($event)" />
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" [disabled]="!puedeConsultar()" (click)="consultar()">
+          @if (cargando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>search</mat-icon>
+          }
+          Consultar
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (error()) {
+    <div class="aviso aviso-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  @if (consultaHecha() && !error() && detalle(); as resp) {
+    <div class="referencia-archivo">
+      <mat-icon>description</mat-icon>
+      <span>Referencia: <strong>{{ resp.nombreArchivo }}</strong> — así se llamaría el XML si se generara ahora.</span>
+    </div>
+
+    @if (sinDocumentos()) {
+      <div class="aviso aviso-info">
+        <mat-icon>info</mat-icon>
+        <span>Sin documentos en el período.</span>
+      </div>
+    } @else {
+      <mat-tab-group class="tabs-detalle" animationDuration="0ms">
+        <!-- ================= COMPRAS ================= -->
+        <mat-tab [label]="'Compras (' + resp.compras.length + ')'">
+          <div class="tab-body">
+            <div class="tab-toolbar">
+              <mat-form-field appearance="outline" class="filtro-texto">
+                <mat-label>Buscar por proveedor, RUC o N° documento</mat-label>
+                <input matInput [ngModel]="filtroCompras()" (ngModelChange)="aplicarFiltroCompras($event)" />
+                <mat-icon matSuffix>search</mat-icon>
+              </mat-form-field>
+              <button mat-stroked-button (click)="exportarComprasCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar CSV
+              </button>
+            </div>
+
+            <div class="totales-grid">
+              <div class="total-item"><span class="label">Cantidad</span><span class="value">{{ resp.totalesCompras.cantidad }}</span></div>
+              <div class="total-item"><span class="label">No objeto</span><span class="value">{{ resp.totalesCompras.baseNoGraIva | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Base 0%</span><span class="value">{{ resp.totalesCompras.baseImponible | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Base gravada</span><span class="value">{{ resp.totalesCompras.baseImpGrav | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Exento</span><span class="value">{{ resp.totalesCompras.baseImpExe | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">ICE</span><span class="value">{{ resp.totalesCompras.montoIce | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">IVA</span><span class="value">{{ resp.totalesCompras.montoIva | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Total</span><span class="value">{{ resp.totalesCompras.total | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Ret. IVA</span><span class="value">{{ resp.totalesCompras.retencionIva | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Ret. renta</span><span class="value">{{ resp.totalesCompras.retencionRenta | number: '1.2-2' }}</span></div>
+            </div>
+
+            <div class="tabla-scroll">
+              <table mat-table [dataSource]="comprasDataSource" matSort multiTemplateDataRows class="tabla-compras">
+                <ng-container matColumnDef="expand">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let row">
+                    <button mat-icon-button type="button" (click)="toggleFila(row, $event)">
+                      <mat-icon>{{ filaExpandida() === row ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="tipoComprobante">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
+                  <td mat-cell *matCellDef="let row">{{ row.tipoComprobante }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="numeroDocumento">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>N° documento</th>
+                  <td mat-cell *matCellDef="let row">{{ row.numeroDocumento }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="proveedor">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Proveedor</th>
+                  <td mat-cell *matCellDef="let row">{{ row.proveedor }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="idProv">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>RUC</th>
+                  <td mat-cell *matCellDef="let row">{{ row.idProv }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaEmision">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>F. emisión</th>
+                  <td mat-cell *matCellDef="let row">{{ row.fechaEmisionDate ? (row.fechaEmisionDate | date: 'dd/MM/yyyy') : '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaRegistro">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>F. registro</th>
+                  <td mat-cell *matCellDef="let row">
+                    {{ row.fechaRegistroDate ? (row.fechaRegistroDate | date: 'dd/MM/yyyy') : '—' }}
+                    @if (!row.fechaRegistroCapturada) {
+                      <mat-icon class="icono-aviso-fecha" matTooltip="No capturada: el ATS usa la fecha de emisión">info</mat-icon>
+                    }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="baseNoGraIva">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">No objeto</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.baseNoGraIva | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="baseImponible">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Base 0%</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.baseImponible | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="baseImpGrav">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num"
+                      matTooltip="baseImpGrav del ATS: subtotal − 0% − no objeto − exento">
+                    Base gravada (15% + 5% + 8%)
+                  </th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.baseImpGrav | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="baseImpExe">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Exento</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.baseImpExe | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="montoIva">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">IVA</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.montoIva | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="montoIce">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">ICE</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.montoIce | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="total">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Total</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.total | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="retencionIva">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Ret. IVA</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.retencionIva | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="retencionRenta">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Ret. renta</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.retencionRenta | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="numeroRetencion">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>N° retención</th>
+                  <td mat-cell *matCellDef="let row">{{ row.numeroRetencion || '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="expandedDetail">
+                  <td mat-cell *matCellDef="let row" [attr.colspan]="columnasCompras.length">
+                    <div class="detalle-expandido">
+                      <div class="detalle-grid">
+                        <div><span class="label">Origen</span><span class="value">{{ row.origen }} (ID {{ row.idDocumento }})</span></div>
+                        <div><span class="label">Cod. sustento</span><span class="value">{{ row.codSustento }}</span></div>
+                        <div><span class="label">Tipo ID prov.</span><span class="value">{{ row.tpIdProv }}</span></div>
+                        <div><span class="label">Estab-PtoEmi-Secuencial</span><span class="value">{{ row.establecimiento }}-{{ row.puntoEmision }}-{{ row.secuencial }}</span></div>
+                        <div><span class="label">Autorización</span><span class="value">{{ row.autorizacion }}</span></div>
+                        <div><span class="label">Autorización retención</span><span class="value">{{ row.autorizacionRetencion || '—' }}</span></div>
+                        <div><span class="label">F. retención</span><span class="value">{{ row.fechaRetencionDate ? (row.fechaRetencionDate | date: 'dd/MM/yyyy') : '—' }}</span></div>
+                        <div><span class="label">Formas de pago</span><span class="value">{{ etiquetaFormasPago(row) }} ({{ row.formasPagoDeclaradas ? 'declaradas' : 'no declaradas' }})</span></div>
+                      </div>
+
+                      <h4>Retención de IVA por tarifa</h4>
+                      <div class="detalle-grid">
+                        <div><span class="label">10% (valRetBien10)</span><span class="value">{{ row.valRetBien10 | number: '1.2-2' }}</span></div>
+                        <div><span class="label">20% (valRetServ20)</span><span class="value">{{ row.valRetServ20 | number: '1.2-2' }}</span></div>
+                        <div><span class="label">30% (valorRetBienes)</span><span class="value">{{ row.valorRetBienes | number: '1.2-2' }}</span></div>
+                        <div><span class="label">50% (valRetServ50)</span><span class="value">{{ row.valRetServ50 | number: '1.2-2' }}</span></div>
+                        <div><span class="label">70% (valorRetServicios)</span><span class="value">{{ row.valorRetServicios | number: '1.2-2' }}</span></div>
+                        <div><span class="label">100% (valRetServ100)</span><span class="value">{{ row.valRetServ100 | number: '1.2-2' }}</span></div>
+                      </div>
+
+                      @if (row.air && row.air.length > 0) {
+                        <h4>Retención de renta (AIR)</h4>
+                        <table class="tabla-air">
+                          <thead>
+                            <tr>
+                              <th>Código</th>
+                              <th class="num">Base</th>
+                              <th class="num">%</th>
+                              <th class="num">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (a of row.air; track a.codRetAir) {
+                              <tr>
+                                <td>{{ a.codRetAir }}</td>
+                                <td class="num">{{ a.baseImpAir | number: '1.2-2' }}</td>
+                                <td class="num">{{ a.porcentajeAir | number: '1.2-2' }}</td>
+                                <td class="num">{{ a.valRetAir | number: '1.2-2' }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      }
+                    </div>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="columnasCompras"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasCompras;"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['expandedDetail']"
+                    [class.fila-detalle-oculta]="row !== filaExpandida()" class="fila-detalle"></tr>
+              </table>
+
+              @if (comprasDataSource.filteredData.length === 0) {
+                <p class="sin-filas">Ningún documento coincide con el filtro.</p>
+              }
+            </div>
+
+            <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+          </div>
+        </mat-tab>
+
+        <!-- ================= VENTAS ================= -->
+        <mat-tab [label]="'Ventas (' + resp.ventas.length + ')'">
+          <div class="tab-body">
+            <div class="aviso aviso-info">
+              <mat-icon>info</mat-icon>
+              <span>El ATS declara las ventas agrupadas por cliente y tipo de comprobante, no por documento.</span>
+            </div>
+
+            <div class="tab-toolbar">
+              <button mat-stroked-button (click)="exportarVentasCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar CSV
+              </button>
+            </div>
+
+            <div class="totales-grid">
+              <div class="total-item"><span class="label">Líneas</span><span class="value">{{ resp.totalesVentas.cantidadLineas }}</span></div>
+              <div class="total-item"><span class="label">Comprobantes</span><span class="value">{{ resp.totalesVentas.numeroComprobantes }}</span></div>
+              <div class="total-item"><span class="label">Base imponible</span><span class="value">{{ resp.totalesVentas.baseImponible | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Base gravada</span><span class="value">{{ resp.totalesVentas.baseImpGrav | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">IVA</span><span class="value">{{ resp.totalesVentas.montoIva | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">ICE</span><span class="value">{{ resp.totalesVentas.montoIce | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Ret. IVA</span><span class="value">{{ resp.totalesVentas.valorRetIva | number: '1.2-2' }}</span></div>
+              <div class="total-item"><span class="label">Ret. renta</span><span class="value">{{ resp.totalesVentas.valorRetRenta | number: '1.2-2' }}</span></div>
+              <div class="total-item destacado"><span class="label">Total ventas declarado</span><span class="value">{{ resp.totalVentasDeclarado | number: '1.2-2' }}</span></div>
+            </div>
+
+            <div class="tabla-scroll">
+              <table class="tabla-simple">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>RUC/Cédula</th>
+                    <th>Tipo</th>
+                    <th class="num">N° comprobantes</th>
+                    <th class="num">Base imponible</th>
+                    <th class="num">Base gravada</th>
+                    <th class="num">IVA</th>
+                    <th class="num">ICE</th>
+                    <th class="num">Ret. IVA</th>
+                    <th class="num">Ret. renta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (v of resp.ventas; track v.idCliente + v.tipoComprobante) {
+                    <tr>
+                      <td>{{ v.cliente }}</td>
+                      <td>{{ v.idCliente }}</td>
+                      <td>{{ v.tipoComprobante }}</td>
+                      <td class="num">{{ v.numeroComprobantes }}</td>
+                      <td class="num">{{ v.baseImponible | number: '1.2-2' }}</td>
+                      <td class="num">{{ v.baseImpGrav | number: '1.2-2' }}</td>
+                      <td class="num">{{ v.montoIva | number: '1.2-2' }}</td>
+                      <td class="num">{{ v.montoIce | number: '1.2-2' }}</td>
+                      <td class="num">{{ v.valorRetIva | number: '1.2-2' }}</td>
+                      <td class="num">{{ v.valorRetRenta | number: '1.2-2' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="10" class="sin-filas">Sin ventas en el período.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- ================= ANULADOS ================= -->
+        <mat-tab [label]="'Anulados (' + resp.anulados.length + ')'">
+          <div class="tab-body">
+            <div class="tab-toolbar">
+              <button mat-stroked-button (click)="exportarAnuladosCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar CSV
+              </button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tabla-simple">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Establecimiento</th>
+                    <th>Punto emisión</th>
+                    <th>Secuencial</th>
+                    <th>Autorización</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (a of resp.anulados; track a.autorizacion) {
+                    <tr>
+                      <td>{{ a.tipoComprobante }}</td>
+                      <td>{{ a.establecimiento }}</td>
+                      <td>{{ a.puntoEmision }}</td>
+                      <td>{{ a.secuencial }}</td>
+                      <td>{{ a.autorizacion }}</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="sin-filas">Sin documentos anulados en el período.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- ================= EXCLUIDAS Y SIN ENLAZAR ================= -->
+        <mat-tab [label]="'Excluidas y sin enlazar (' + (resp.excluidas.length + resp.retencionesNoEnlazadas.length) + ')'">
+          <div class="tab-body">
+            <h3>Facturas de intermediario excluidas del ATS</h3>
+            <div class="tab-toolbar">
+              <button mat-stroked-button (click)="exportarExcluidasCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar CSV
+              </button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tabla-simple">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>Proveedor</th>
+                    <th>RUC</th>
+                    <th>N° documento</th>
+                    <th>F. emisión</th>
+                    <th class="num">Subtotal</th>
+                    <th class="num">IVA</th>
+                    <th class="num">Total</th>
+                    <th>Motivo</th>
+                    <th>N° retención</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (e of resp.excluidas; track e.idDocumento) {
+                    <tr>
+                      <td>{{ e.tipoComprobante }}</td>
+                      <td>{{ e.proveedor }}</td>
+                      <td>{{ e.idProv }}</td>
+                      <td>{{ e.numeroDocumento }}</td>
+                      <td>{{ formatearFecha(e.fechaEmision) }}</td>
+                      <td class="num">{{ e.subtotal | number: '1.2-2' }}</td>
+                      <td class="num">{{ e.montoIva | number: '1.2-2' }}</td>
+                      <td class="num">{{ e.total | number: '1.2-2' }}</td>
+                      <td>{{ e.motivo }}</td>
+                      <td>{{ e.numeroRetencion || '—' }}</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="10" class="sin-filas">Sin facturas excluidas en el período.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <h3>Retenciones de compra sin enlazar a ninguna línea</h3>
+            <div class="tab-toolbar">
+              <button mat-stroked-button (click)="exportarNoEnlazadasCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar CSV
+              </button>
+            </div>
+            <div class="tabla-scroll">
+              <table class="tabla-simple">
+                <thead>
+                  <tr>
+                    <th>N° retención</th>
+                    <th>Documento sustento</th>
+                    <th>Autorización</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (r of resp.retencionesNoEnlazadas; track r.numeroRetencion) {
+                    <tr>
+                      <td>{{ r.numeroRetencion }}</td>
+                      <td>{{ r.documentoSustento }}</td>
+                      <td>{{ r.autorizacion }}</td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="3" class="sin-filas">Sin retenciones sueltas en el período.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- ================= AVISOS ================= -->
+        <mat-tab [label]="'Avisos (' + resp.avisos.length + ')'">
+          <div class="tab-body">
+            <div class="tab-toolbar">
+              <button mat-stroked-button [disabled]="resp.avisos.length === 0" (click)="exportarAvisosCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar CSV
+              </button>
+            </div>
+            @if (resp.avisos.length > 0) {
+              <ul class="lista-avisos">
+                @for (a of resp.avisos; track a) {
+                  <li>{{ a }}</li>
+                }
+              </ul>
+            } @else {
+              <p class="sin-filas">Sin avisos en el período.</p>
+            }
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    }
+  }
+</div>
