@@ -45,7 +45,7 @@ export interface Empleado {
   telefonoEmergencia?: string | null; // MPLDTLEM
   foto?: string | null; // MPLDFOTO
 
-  estado: string; // MPLDESTD
+  estado: number | null; // MPLDESTD - rubro 185 RhhEstadoEmpleado
   fechaRegistro: Date; // MPLDFCHR
   usuarioRegistro: string; // MPLDUSRR
 }

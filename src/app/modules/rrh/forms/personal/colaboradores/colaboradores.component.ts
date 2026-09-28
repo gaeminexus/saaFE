@@ -24,6 +24,9 @@ import { opcionesAviso } from '../../comunes/avisos';
 
 const CLAVE_LISTA = 'personal:colaboradores';
 
+/** Estado del colaborador que la lista pinta como «Activo». Rubro 185 RhhEstadoEmpleado. */
+const ESTADO_ACTIVO = 1;
+
 /**
  * Listado de colaboradores — rediseño de 2026-09-01, molde de `app-tabla-rrh` (el mismo de
  * `liquidacion-list`), no el de vista propia de `contratos` ni el de edición en línea de
@@ -117,7 +120,7 @@ export class ColaboradoresComponent implements OnInit {
   }
 
   private activo(estado: unknown): boolean {
-    return String(estado ?? '').toUpperCase().startsWith('A');
+    return Number(estado) === ESTADO_ACTIVO;
   }
 
   private tonoEstado(fila: any): TonoPastilla {
@@ -156,7 +159,7 @@ export class ColaboradoresComponent implements OnInit {
       apellidos: (v.apellidos as string).trim().toUpperCase(),
       nombres: (v.nombres as string).trim().toUpperCase(),
       empresa: referenciaEmpresa(),
-      estado: 'A',
+      estado: ESTADO_ACTIVO,
       usuarioRegistro: usuarioSesion(),
     };
 
