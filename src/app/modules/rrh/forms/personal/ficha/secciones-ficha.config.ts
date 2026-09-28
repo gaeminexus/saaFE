@@ -161,7 +161,7 @@ export function seccionesFicha(col: ColeccionesFicha): SeccionFicha[] {
         },
       ],
       campos: [
-        { name: 'numero', label: 'Número de contrato', tipo: 'texto', grupo: 'Identificación' },
+        { name: 'numero', label: 'Número de contrato', tipo: 'texto', requerido: true, grupo: 'Identificación' },
         {
           name: 'tipoContratoEmpleado',
           label: 'Tipo de contrato',
@@ -169,6 +169,7 @@ export function seccionesFicha(col: ColeccionesFicha): SeccionFicha[] {
           coleccion: col.tiposContrato,
           // RHH.TPCE no tiene un segundo campo identificatorio, solo banderas: aplica la excepción
           buscarPor: ['nombre'],
+          requerido: true,
           grupo: 'Identificación',
         },
         {
@@ -179,7 +180,7 @@ export function seccionesFicha(col: ColeccionesFicha): SeccionFicha[] {
           grupo: 'Identificación',
         },
         { name: 'jornada', label: 'Jornada', tipo: 'rubro', rubro: RubrosRrh.TIPO_JORNADA, grupo: 'Identificación' },
-        { name: 'fechaInicio', label: 'Fecha de inicio', tipo: 'fecha', grupo: 'Vigencia' },
+        { name: 'fechaInicio', label: 'Fecha de inicio', tipo: 'fecha', requerido: true, grupo: 'Vigencia' },
         { name: 'fechaFin', label: 'Fecha de fin', tipo: 'fecha', grupo: 'Vigencia' },
         { name: 'salarioBase', label: 'Sueldo base', tipo: 'numero', requerido: true, grupo: 'Remuneración' },
         { name: 'horasSemanales', label: 'Horas semanales', tipo: 'numero', grupo: 'Vigencia' },
