@@ -281,7 +281,15 @@ export const ORIGEN_PAGO_LABELS: Record<OrigenPago, string> = {
   CRD_DESEMBOLSO_PRESTAMO: 'Desembolso de préstamo',
 };
 
-/** Fila de GET /pgtr/porAprobar — proyección `PagoPorAprobar`, no la entidad. */
+/**
+ * Fila de GET /pgtr/porAprobar — proyección `PagoPorAprobar`, no la entidad.
+ *
+ * `idTitular`/`tieneCuentaDestino`/`cuentaDestino` son OPCIONALES a propósito
+ * (docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.2): si se despliega el FE antes que el WAR que
+ * los agrega, llegan `undefined`. Por eso el aviso/botón de "Asignar cuenta" solo se activan con
+ * `tieneCuentaDestino === false` — nunca con `!p.tieneCuentaDestino`, que también sería true con
+ * `undefined` y mentiría con un WAR viejo.
+ */
 export interface PagoPorAprobar {
   id: number;
   origen: OrigenPago;
@@ -289,6 +297,11 @@ export interface PagoPorAprobar {
   concepto: string;
   valor: number;
   fechaSolicitada: unknown;
+  /** `null` si el pago no tiene titular (origen externo con beneficiario ocasional). */
+  idTitular?: number | null;
+  tieneCuentaDestino?: boolean;
+  /** Texto para mostrar (banco — número de cuenta), `null` si no tiene. */
+  cuentaDestino?: string | null;
 }
 
 /**

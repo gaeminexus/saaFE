@@ -122,6 +122,17 @@ export class PagoProgramadoService {
     );
   }
 
+  /**
+   * Asigna (o reasigna) la cuenta de destino de un pago POR_APROBAR, desde la bandeja de
+   * aprobación — docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §3.3/§4.1. Un pago que ya tenía cuenta
+   * se puede reasignar: cambiar de cuenta antes de aprobar es legítimo.
+   */
+  asignarCuentaDestino(idPago: number, idCuentaDestinoTitular: number, idUsuario: number): Observable<any> {
+    return this.http.post<any>(
+      `${ServiciosCxp.RS_PGTR}/cuentaDestino/${idPago}`, { idCuentaDestinoTitular, idUsuario }, this.httpOptions
+    ).pipe(catchError(this.handleError));
+  }
+
   /** Revierte un pago ya confirmado: deshace contabilidad y devuelve saldo a la factura. */
   revertirConfirmado(idPago: number, datos: MotivoRequest): Observable<RevertirPagoResponse> {
     return this.http.post<RevertirPagoResponse>(

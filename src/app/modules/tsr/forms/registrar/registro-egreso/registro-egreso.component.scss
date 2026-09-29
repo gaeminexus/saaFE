@@ -63,4 +63,20 @@
     color: #b91c1c;
     font-weight: 500;
   }
+
+  .aviso-error-cuentas {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -4px 0 12px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #fdecea;
+    color: #611a15;
+    font-size: 0.85rem;
+
+    button {
+      margin-left: auto;
+    }
+  }
 }

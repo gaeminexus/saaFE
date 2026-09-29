@@ -44,11 +44,20 @@
                 <mat-hint>Elija primero el beneficiario</mat-hint>
               } @else if (cargandoCuentasDestino()) {
                 <mat-hint>Consultando las cuentas del beneficiario…</mat-hint>
-              } @else if (beneficiarioSinCuentaDestino) {
+              } @else if (!cuentasDestinoError() && beneficiarioSinCuentaDestino) {
                 <mat-hint class="hint-error">El beneficiario no tiene cuenta bancaria registrada</mat-hint>
+              } @else if (!cuentasDestinoError() && cuentasDestino().length > 0 && regIdCuentaDestino == null) {
+                <mat-hint class="hint-error">Elija la cuenta a la que se transfiere</mat-hint>
               }
             </mat-form-field>
           </div>
+
+          @if (cuentasDestinoError()) {
+            <div class="aviso aviso-error-cuentas">
+              <span>{{ cuentasDestinoError() }}</span>
+              <button mat-button type="button" (click)="reintentarCuentasDestino()">Reintentar</button>
+            </div>
+          }
 
           <div class="fila-campos">
             <mat-form-field appearance="outline">

@@ -19,6 +19,7 @@ import { FormaPagoAplicacion, FORMA_PAGO_LABELS } from '../../../../../shared/mo
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 import { GrupoProductoPago } from '../../../../cxp/model/grupo_producto_pago';
 import { ProductoPago } from '../../../../cxp/model/producto_pago';
@@ -88,6 +89,13 @@ export class RegistroEgresoComponent implements OnInit {
   /** Catálogo de tipos de cuenta bancaria (rubro 23) para etiquetar cada cuenta. */
   private tiposCuentaBancaria = signal<DetalleRubro[]>([]);
   cargandoCuentasDestino = signal(false);
+  /**
+   * Mensaje solo cuando la consulta de cuentas FALLÓ de verdad — un titular sin cuentas no es un
+   * error (`selectByCriteria` responde 500 con "no devolvio ningun registro" cuando no hay
+   * filas, docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.3.3): ese caso deja `cuentasDestino` vacía
+   * sin pasar por aquí, igual que antes.
+   */
+  cuentasDestinoError = signal('');
   regIdCuentaDestino: number | null = null;
   regDescripcion = '';
   regValor = '';
@@ -246,13 +254,23 @@ export class RegistroEgresoComponent implements OnInit {
     return t.razonSocial || t.nombre || t.identificacion || `Titular ${t.codigo}`;
   }
 
+  /** Titular de la última consulta de cuentas — para que "Reintentar" no obligue a re-elegir el beneficiario. */
+  private ultimoCodigoTitularCuentas: number | undefined;
+
   /**
    * Sin cuenta de destino el pago se registra pero el backend lo rechaza al
    * armar el archivo del banco, así que se exige ya desde el registro.
+   *
+   * `selectByCriteria` responde 500 con "no devolvio ningun registro" cuando el titular no tiene
+   * cuentas (docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.3.3): eso NO es un fallo, se trata igual
+   * que antes (lista vacía). Un fallo real de verdad deja `cuentasDestinoError` visible y bloquea
+   * `puedeRegistrar` hasta reintentar con éxito.
    */
   private cargarCuentasDestino(codigoTitular: number | undefined): void {
     this.regIdCuentaDestino = null;
     this.cuentasDestino.set([]);
+    this.cuentasDestinoError.set('');
+    this.ultimoCodigoTitularCuentas = codigoTitular;
     if (!codigoTitular) return;
 
     this.cargandoCuentasDestino.set(true);
@@ -267,11 +285,30 @@ export class RegistroEgresoComponent implements OnInit {
         this.cuentasDestino.set((data ?? []).filter((c) => this.esCuentaActiva(c)));
         this.autoSeleccionarCuentaDestino();
       },
-      error: () => {
+      error: (err) => {
         this.cargandoCuentasDestino.set(false);
-        this.cuentasDestino.set([]);
+        if (this.esRespuestaVaciaCuentas(err)) {
+          this.cuentasDestino.set([]);
+        } else {
+          this.cuentasDestinoError.set(mensajeDeError(err, 'No se pudieron consultar las cuentas del beneficiario'));
+        }
       },
     });
+  }
+
+  /** Repite la consulta de cuentas con el mismo beneficiario, sin obligar a volver a buscarlo. */
+  reintentarCuentasDestino(): void {
+    this.cargarCuentasDestino(this.ultimoCodigoTitularCuentas);
+  }
+
+  /** Patrón copiado de tsr/service/estado-cuenta-titular.service.ts:245-251 (mensajeDeError + sin tildes). */
+  private esRespuestaVaciaCuentas(error: unknown): boolean {
+    const mensaje = this.sinTildes(mensajeDeError(error, '').toLowerCase());
+    return mensaje.includes('no devolvio ningun registro') || mensaje.includes('no devolvio registros');
+  }
+
+  private sinTildes(texto: string): string {
+    return texto.normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
 
   /** Con una sola cuenta no hay nada que elegir; con varias se decide a mano. */
@@ -309,10 +346,17 @@ export class RegistroEgresoComponent implements OnInit {
   }
 
   get puedeRegistrar(): boolean {
+    // Titular con cuentas y ninguna elegida todavía: no dejar salir el pago sin cuenta por
+    // descuido (docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.3, arreglo B). Sin beneficiario, o
+    // uno sin cuentas, se registra igual que antes — se paga por cheque o débito.
+    if (this.cuentasDestino().length > 0 && this.regIdCuentaDestino == null) return false;
+
     return this.regIdProducto != null
       && !!this.regDescripcion.trim()
       && this.regValorNumerico > 0
-      && !this.registrando();
+      && !this.registrando()
+      && !this.cargandoCuentasDestino()
+      && !this.cuentasDestinoError();
   }
 
   /**
@@ -359,6 +403,7 @@ export class RegistroEgresoComponent implements OnInit {
     this.regIdProducto = null;
     this.regBeneficiario.set(null);
     this.cuentasDestino.set([]);
+    this.cuentasDestinoError.set('');
     this.regIdCuentaDestino = null;
     this.regDescripcion = '';
     this.regValor = '';

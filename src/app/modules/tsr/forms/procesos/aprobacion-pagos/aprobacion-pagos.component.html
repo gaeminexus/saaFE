@@ -87,7 +87,18 @@
 
             <ng-container matColumnDef="beneficiario">
               <th mat-header-cell *matHeaderCellDef>Beneficiario</th>
-              <td mat-cell *matCellDef="let p">{{ p.beneficiario }}</td>
+              <td mat-cell *matCellDef="let p">
+                {{ p.beneficiario }}
+                @if (p.cuentaDestino) {
+                  <div class="cuenta-destino-texto">{{ p.cuentaDestino }}</div>
+                }
+                @if (faltaCuentaDestino(p)) {
+                  <div class="aviso-fila-sin-cuenta">
+                    <mat-icon>warning</mat-icon>
+                    <span>Sin cuenta de destino</span>
+                  </div>
+                }
+              </td>
             </ng-container>
 
             <ng-container matColumnDef="concepto">
@@ -111,6 +122,11 @@
                 <button mat-icon-button matTooltip="Ver seguimiento del pago" (click)="irASeguimiento(p)">
                   <mat-icon>timeline</mat-icon>
                 </button>
+                @if (puedeAsignarCuenta(p)) {
+                  <button mat-icon-button matTooltip="Asignar cuenta de destino" (click)="asignarCuenta(p)">
+                    <mat-icon>account_balance</mat-icon>
+                  </button>
+                }
                 <button
                   mat-icon-button
                   color="warn"

@@ -20,6 +20,7 @@ import { AppStateService } from '../../../../../shared/services/app-state.servic
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { MotivoDialogComponent } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import { AsignarCuentaDestinoDialogComponent } from './asignar-cuenta-destino-dialog/asignar-cuenta-destino-dialog.component';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
 import { FormaPagoAplicacion } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
@@ -302,6 +303,38 @@ export class AprobacionPagosComponent implements OnInit {
 
   origenLabel(origen: string): string {
     return ORIGEN_PAGO_LABELS[origen as OrigenPago] || origen;
+  }
+
+  /**
+   * Solo `=== false` activa el aviso — con un WAR viejo el campo llega `undefined` y no se
+   * muestra nada (docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.2/§5.2).
+   */
+  faltaCuentaDestino(pago: PagoPorAprobar): boolean {
+    return pago.tieneCuentaDestino === false;
+  }
+
+  /** Además de faltarle la cuenta, el pago necesita tener titular: sin él no hay de dónde elegir una cuenta. */
+  puedeAsignarCuenta(pago: PagoPorAprobar): boolean {
+    return this.faltaCuentaDestino(pago) && pago.idTitular != null;
+  }
+
+  /** Abre el diálogo de cuentas del titular y, si asigna, recarga la bandeja (§4.2). */
+  asignarCuenta(pago: PagoPorAprobar): void {
+    if (pago.idTitular == null) return;
+
+    this.dialog.open(AsignarCuentaDestinoDialogComponent, {
+      width: '520px',
+      data: {
+        idPago: pago.id,
+        idTitular: pago.idTitular,
+        beneficiario: pago.beneficiario,
+        idUsuario: this.appState.getIdUsuario(),
+      },
+    }).afterClosed().subscribe((mensaje: string | null) => {
+      if (!mensaje) return;
+      this.snackBar.open(mensaje, 'Cerrar', { duration: 5000, panelClass: ['snackbar-success'] });
+      this.buscar();
+    });
   }
 
   aprobar(): void {

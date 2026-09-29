@@ -51,6 +51,25 @@
     background: #f0f7ff;
   }
 
+  .cuenta-destino-texto {
+    font-size: 0.78rem;
+    color: #777;
+  }
+
+  .aviso-fila-sin-cuenta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: #b26a00;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+    }
+  }
+
   .aprobar-card {
     .form-grid {
       display: grid;
