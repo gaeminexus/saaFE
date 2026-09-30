@@ -206,11 +206,15 @@
                       <td>
                         @if (fila.cuadro.valido && estaSeleccionado(fila)) {
                           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pv-input-memorando"
-                                          [class.pv-memorando-vacio]="!memorandoDe(fila.cuadro.idPrestamo).trim()">
-                            <input matInput [ngModel]="memorandoDe(fila.cuadro.idPrestamo)"
+                                          [class.pv-memorando-vacio]="memorandoFaltante(fila.cuadro.idPrestamo)">
+                            <input matInput inputmode="numeric" maxlength="5"
+                                   [ngModel]="memorandoDe(fila.cuadro.idPrestamo)"
                                    (ngModelChange)="setMemorando(fila.cuadro.idPrestamo, $event)"
-                                   placeholder="Nro. de memorando" />
+                                   placeholder="Ej. 46" />
                           </mat-form-field>
+                          @if (previsualizarMemorando(fila.cuadro.idPrestamo); as preview) {
+                            <div class="pv-memorando-preview">{{ preview }}</div>
+                          }
                         }
                       </td>
                       <td>{{ fila.cuadro.numeroPrestamo }}</td>

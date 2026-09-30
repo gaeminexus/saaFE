@@ -162,6 +162,14 @@ Si nunca se declaró nada, devuelve los cuatro campos en `null` con **200**, no 
 }
 ```
 
+⛔ **`numeroMemorando` es SÓLO EL NÚMERO** (D26, 2026-09-30): el frontend manda los dígitos, p. ej.
+`"46"`. El backend valida que sea un entero positivo (sólo dígitos, sin ceros «vacíos» como `0`)
+→ si no, **400** `PARAMETRO_INVALIDO`. Luego lo compone como
+`ASOPREP-FCPC-CREDITO-GR-` + número con ceros a la izquierda hasta 3 dígitos + `-` + año en curso,
+p. ej. **`ASOPREP-FCPC-CREDITO-GR-046-2026`**. **Eso** es lo que se graba en `PLVNNMMM`, lo que se valida
+como único, lo que se imprime y lo que devuelven las respuestas (`numeroMemorando` del §5 y del §9
+es siempre el compuesto). La constante del prefijo vive en un solo lugar del backend.
+
 **Validaciones, en este orden:**
 1. `fechaCorte` obligatoria y no futura. `usuario` y `prestamos` obligatorios; `prestamos` no vacío. Si
    falla → **400** `PARAMETRO_INVALIDO`.

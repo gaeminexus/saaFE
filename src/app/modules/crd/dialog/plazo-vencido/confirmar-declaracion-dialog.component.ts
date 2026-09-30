@@ -10,12 +10,16 @@ export interface ConfirmarDeclaracionDialogData {
   totalPorCobrar: number;
   cuotasSinSeguro: number;
   /**
-   * Números de los préstamos seleccionados. Con filtros y paginado en la tabla (ítem 1/2 del
-   * pedido del árbitro del 2026-09-30), la selección puede incluir préstamos que hoy no están
-   * visibles — esta lista es la única forma de que el usuario vea TODO lo que va a declarar antes
-   * de confirmar, esté o no en pantalla.
+   * Un renglón por préstamo seleccionado. Con filtros y paginado en la tabla (ítem 1/2 del pedido
+   * del árbitro del 2026-09-30), la selección puede incluir préstamos que hoy no están visibles —
+   * esta lista es la única forma de que el usuario vea TODO lo que va a declarar antes de
+   * confirmar, esté o no en pantalla.
+   *
+   * `numeroMemorandoPreview` es la VISTA PREVIA armada en el cliente (D26,
+   * docs/crd/API-PASE-A-PLAZO-VENCIDO.md §5) — todavía no existe el compuesto real, que solo
+   * devuelve el backend al declarar. Nunca se manda al backend: el POST solo lleva el número.
    */
-  numerosPrestamo: string[];
+  filas: { numeroPrestamo: string; numeroMemorandoPreview: string }[];
 }
 
 /**
@@ -51,8 +55,13 @@ export interface ConfirmarDeclaracionDialogData {
       <div class="lista-prestamos">
         <div class="lista-prestamos-titulo">Préstamos seleccionados (aunque no estén visibles en la tabla):</div>
         <div class="lista-prestamos-chips">
-          @for (numero of data.numerosPrestamo; track numero) {
-            <span class="chip-prestamo">{{ numero }}</span>
+          @for (fila of data.filas; track fila.numeroPrestamo) {
+            <span class="chip-prestamo">
+              {{ fila.numeroPrestamo }}
+              @if (fila.numeroMemorandoPreview) {
+                <span class="chip-memorando"> — {{ fila.numeroMemorandoPreview }}</span>
+              }
+            </span>
           }
         </div>
       </div>
@@ -86,6 +95,7 @@ export interface ConfirmarDeclaracionDialogData {
       background: #eef2ff; color: #3730a3; border-radius: 12px;
       padding: 0.15rem 0.6rem; font-size: 0.82rem; font-weight: 600;
     }
+    .chip-memorando { font-weight: 400; color: #4b4f9e; }
     mat-dialog-actions button { min-height: 44px; border-radius: 10px; font-weight: 600; }
   `],
 })

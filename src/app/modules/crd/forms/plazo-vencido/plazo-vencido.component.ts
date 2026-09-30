@@ -227,7 +227,7 @@ export class PlazoVencidoComponent {
   /** Cuántas filas seleccionadas todavía no tienen memorando — para el aviso bajo el botón. */
   seleccionadosSinMemorando = computed(() => {
     const memos = this.memorandos();
-    return this.filasSeleccionadas().filter((f) => !(memos.get(f.cuadro.idPrestamo) ?? '').trim()).length;
+    return this.filasSeleccionadas().filter((f) => !this.memorandoValido(memos.get(f.cuadro.idPrestamo))).length;
   });
 
   puedeDeclarar = computed(() => {
@@ -323,10 +323,39 @@ export class PlazoVencidoComponent {
     return this.memorandos().get(idPrestamo) ?? '';
   }
 
+  /** Solo dígitos, máximo 5 (D26): lo que se teclea de más se filtra, nunca se rechaza en silencio. */
   setMemorando(idPrestamo: number, valor: string): void {
+    const soloDigitos = (valor ?? '').replace(/\D/g, '').slice(0, 5);
     const map = new Map(this.memorandos());
-    map.set(idPrestamo, valor);
+    map.set(idPrestamo, soloDigitos);
     this.memorandos.set(map);
+  }
+
+  /** Un memorando vacío o «0» cuentan como faltantes (pedido del árbitro, 2026-09-30). */
+  private memorandoValido(valor: string | undefined): boolean {
+    const limpio = (valor ?? '').trim();
+    if (!limpio) return false;
+    const numero = parseInt(limpio, 10);
+    return Number.isFinite(numero) && numero > 0;
+  }
+
+  /** Para resaltar en rojo el campo de una fila seleccionada: vacío o «0» cuentan como faltantes. */
+  memorandoFaltante(idPrestamo: number): boolean {
+    return !this.memorandoValido(this.memorandoDe(idPrestamo));
+  }
+
+  /**
+   * Vista previa informativa de cómo va a quedar el memorando compuesto (D26,
+   * docs/crd/API-PASE-A-PLAZO-VENCIDO.md §5): `ASOPREP-FCPC-CREDITO-GR-` + el número con ceros a
+   * la izquierda hasta 3 dígitos + el año actual del navegador. El que compone de verdad es el
+   * backend — esto nunca se manda tal cual, solo el número (`memorandoDe`).
+   */
+  previsualizarMemorando(idPrestamo: number): string {
+    const digitos = this.memorandoDe(idPrestamo);
+    if (!this.memorandoValido(digitos)) return '';
+    const numero = parseInt(digitos, 10);
+    const anio = new Date().getFullYear();
+    return `ASOPREP-FCPC-CREDITO-GR-${String(numero).padStart(3, '0')}-${anio}`;
   }
 
   /**
@@ -403,7 +432,10 @@ export class PlazoVencidoComponent {
           cantidadPrestamos: this.seleccionados().size,
           totalPorCobrar: this.totalSeleccionado(),
           cuotasSinSeguro: this.cuotasSinSeguroSeleccionado(),
-          numerosPrestamo: this.filasSeleccionadas().map((f) => f.cuadro.numeroPrestamo),
+          filas: this.filasSeleccionadas().map((f) => ({
+            numeroPrestamo: f.cuadro.numeroPrestamo,
+            numeroMemorandoPreview: this.previsualizarMemorando(f.cuadro.idPrestamo),
+          })),
         },
         width: '480px',
         autoFocus: false,
