@@ -52,8 +52,37 @@
   color: #666;
 }
 
+.pv-filtros-busqueda {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.pv-contador {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 600;
+}
+
 .pv-tabla-scroll {
   overflow-x: auto;
+}
+
+.pv-th-ordenable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+
+  &:hover { background: #ececec; }
+}
+
+.pv-icono-orden {
+  vertical-align: middle;
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+  margin-left: 0.15rem;
 }
 
 .pv-tabla {

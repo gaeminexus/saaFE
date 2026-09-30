@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
+import { PageEvent } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
@@ -29,6 +30,12 @@ interface FilaCandidatoPlazoVencido {
   cuadro: CuadroPlazoVencido;
   numeroMemorando: string;
 }
+
+/** `Todos` | solo `valido=true` | solo `valido=false` — filtro de "estado del cálculo" (ítem 1). */
+type FiltroEstadoCalculo = 'todos' | 'habilitados' | 'inconsistencias';
+
+/** Columnas ordenables de la tabla de candidatos (ítem 2 — mínimo pedido por el árbitro). */
+type ColumnaOrdenCandidatos = 'numero' | 'participe' | 'inicioMora' | 'total';
 
 /** Fila mutable de la bandeja "Por liquidar" (pestaña 2): cada una lleva su propia fecha de corte. */
 interface FilaPorLiquidar {
@@ -73,7 +80,111 @@ export class PlazoVencidoComponent {
   consultandoCandidatos = signal(false);
   errorCandidatos = signal<string | null>(null);
   filasCandidatos = signal<FilaCandidatoPlazoVencido[]>([]);
+  /**
+   * Claves de `idPrestamo`, nunca de fila ni de índice de página: así la selección sobrevive a
+   * cambiar de filtro o de página (ítem 2, regla dura del árbitro). `FilaCandidatoPlazoVencido`
+   * tampoco se clona al filtrar/ordenar/paginar — es siempre la misma referencia de
+   * `filasCandidatos()` — así que `numeroMemorando` tecleado en una fila que un filtro esconde
+   * después no se pierde.
+   */
   seleccionados = signal<Set<number>>(new Set());
+
+  // ---- filtros en memoria sobre `filasCandidatos()` (ítem 1) — no vuelven a llamar al backend ----
+  filtroTexto = signal('');
+  filtroTipoCredito = signal<string | null>(null);
+  filtroMoraDesde = signal<Date | null>(null);
+  filtroMoraHasta = signal<Date | null>(null);
+  filtroTotalMin = signal<number | null>(null);
+  filtroTotalMax = signal<number | null>(null);
+  filtroEstadoCalculo = signal<FiltroEstadoCalculo>('todos');
+
+  // ---- orden y paginado, también en memoria (ítem 2) ----
+  ordenColumna = signal<ColumnaOrdenCandidatos | null>(null);
+  ordenDireccion = signal<'asc' | 'desc'>('asc');
+  paginaActual = signal(0);
+  tamanoPagina = signal(25);
+  readonly opcionesTamanoPagina = [25, 50, 100];
+
+  tiposCreditoDisponibles = computed(() => {
+    const set = new Set<string>();
+    for (const f of this.filasCandidatos()) if (f.cuadro.tipoCredito) set.add(f.cuadro.tipoCredito);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+  });
+
+  /** Filtrado en memoria (ítem 1): texto sin mayúsculas ni tildes, tipo, rango de mora, rango de total, estado del cálculo. */
+  filasFiltradas = computed(() => {
+    const texto = this.normalizarTexto(this.filtroTexto());
+    const tipo = this.filtroTipoCredito();
+    const desde = this.filtroMoraDesde();
+    const hasta = this.filtroMoraHasta();
+    const min = this.filtroTotalMin();
+    const max = this.filtroTotalMax();
+    const estadoCalculo = this.filtroEstadoCalculo();
+
+    return this.filasCandidatos().filter((f) => {
+      const c = f.cuadro;
+      if (estadoCalculo === 'habilitados' && !c.valido) return false;
+      if (estadoCalculo === 'inconsistencias' && c.valido) return false;
+      if (tipo && c.tipoCredito !== tipo) return false;
+
+      if (texto) {
+        const encontrado =
+          this.normalizarTexto(c.numeroPrestamo).includes(texto) ||
+          this.normalizarTexto(c.nombreParticipe).includes(texto) ||
+          this.normalizarTexto(c.cedula).includes(texto);
+        if (!encontrado) return false;
+      }
+
+      if (desde && (!c.fechaInicioMora || c.fechaInicioMora.getTime() < this.inicioDelDia(desde).getTime())) return false;
+      if (hasta && (!c.fechaInicioMora || c.fechaInicioMora.getTime() > this.finDelDia(hasta).getTime())) return false;
+
+      if (min != null && (c.totalPorCobrar ?? 0) < min) return false;
+      if (max != null && (c.totalPorCobrar ?? 0) > max) return false;
+
+      return true;
+    });
+  });
+
+  /** Solo las filtradas que además se pueden seleccionar — para el checkbox de cabecera y su contador. */
+  filasFiltradasHabilitadas = computed(() => this.filasFiltradas().filter((f) => f.cuadro.valido));
+
+  todosVisiblesSeleccionados = computed(() => {
+    const habilitadas = this.filasFiltradasHabilitadas();
+    if (!habilitadas.length) return false;
+    const set = this.seleccionados();
+    return habilitadas.every((f) => set.has(f.cuadro.idPrestamo));
+  });
+
+  algunosVisiblesSeleccionados = computed(() => {
+    const set = this.seleccionados();
+    return this.filasFiltradasHabilitadas().some((f) => set.has(f.cuadro.idPrestamo));
+  });
+
+  filasOrdenadas = computed(() => {
+    const columna = this.ordenColumna();
+    const filtradas = this.filasFiltradas();
+    if (!columna) return filtradas;
+
+    const factor = this.ordenDireccion() === 'asc' ? 1 : -1;
+    return [...filtradas].sort((a, b) => {
+      switch (columna) {
+        case 'numero':
+          return factor * a.cuadro.numeroPrestamo.localeCompare(b.cuadro.numeroPrestamo, 'es', { numeric: true });
+        case 'participe':
+          return factor * a.cuadro.nombreParticipe.localeCompare(b.cuadro.nombreParticipe, 'es');
+        case 'inicioMora':
+          return factor * this.compararFechas(a.cuadro.fechaInicioMora, b.cuadro.fechaInicioMora);
+        case 'total':
+          return factor * ((a.cuadro.totalPorCobrar ?? 0) - (b.cuadro.totalPorCobrar ?? 0));
+      }
+    });
+  });
+
+  /** Página actual, ya filtrada y ordenada — lo único que el `@for` de la tabla recorre. */
+  filasPagina = computed(() => {
+    const inicio = this.paginaActual() * this.tamanoPagina();
+    return this.filasOrdenadas().slice(inicio, inicio + this.tamanoPagina());
+  });
 
   paraNombre = signal('');
   paraCargo = signal('');
@@ -110,6 +221,19 @@ export class PlazoVencidoComponent {
     this.cargarEncabezado();
     this.cargarPorLiquidar();
     this.buscarHistorial();
+
+    // Cualquier cambio de filtro vuelve a la página 0 — si no, se puede quedar viendo una página
+    // vacía porque el filtro nuevo dejó menos filas de las que había antes.
+    effect(() => {
+      this.filtroTexto();
+      this.filtroTipoCredito();
+      this.filtroMoraDesde();
+      this.filtroMoraHasta();
+      this.filtroTotalMin();
+      this.filtroTotalMax();
+      this.filtroEstadoCalculo();
+      this.paginaActual.set(0);
+    });
   }
 
   private cargarEncabezado(): void {
@@ -140,6 +264,7 @@ export class PlazoVencidoComponent {
     this.errorCandidatos.set(null);
     this.resultadoDeclaracion.set(null);
     this.seleccionados.set(new Set());
+    this.limpiarFiltrosCandidatos();
 
     this.servicio.candidatos(fecha).subscribe({
       next: (filas) => {
@@ -166,6 +291,71 @@ export class PlazoVencidoComponent {
     return this.seleccionados().has(fila.cuadro.idPrestamo);
   }
 
+  /**
+   * Cabecera «seleccionar todos los visibles habilitados» (ítem 2): opera sobre TODO lo que pasa
+   * el filtro actual (`filasFiltradasHabilitadas()`), no solo la página en pantalla — y nunca toca
+   * un `idPrestamo` que ya estuviera seleccionado desde otro filtro/página. Los `valido=false`
+   * jamás entran acá: `filasFiltradasHabilitadas()` ya los excluye.
+   */
+  alternarSeleccionTodosVisibles(): void {
+    const habilitadas = this.filasFiltradasHabilitadas();
+    const set = new Set(this.seleccionados());
+    if (this.todosVisiblesSeleccionados()) {
+      for (const f of habilitadas) set.delete(f.cuadro.idPrestamo);
+    } else {
+      for (const f of habilitadas) set.add(f.cuadro.idPrestamo);
+    }
+    this.seleccionados.set(set);
+  }
+
+  // ---- filtros / orden / paginado (ítems 1 y 2) ----
+
+  limpiarFiltrosCandidatos(): void {
+    this.filtroTexto.set('');
+    this.filtroTipoCredito.set(null);
+    this.filtroMoraDesde.set(null);
+    this.filtroMoraHasta.set(null);
+    this.filtroTotalMin.set(null);
+    this.filtroTotalMax.set(null);
+    this.filtroEstadoCalculo.set('todos');
+  }
+
+  alternarOrden(columna: ColumnaOrdenCandidatos): void {
+    if (this.ordenColumna() === columna) {
+      this.ordenDireccion.set(this.ordenDireccion() === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.ordenColumna.set(columna);
+      this.ordenDireccion.set('asc');
+    }
+  }
+
+  cambiarPagina(evento: PageEvent): void {
+    this.paginaActual.set(evento.pageIndex);
+    this.tamanoPagina.set(evento.pageSize);
+  }
+
+  private normalizarTexto(texto: string): string {
+    return texto
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '');
+  }
+
+  private inicioDelDia(fecha: Date): Date {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 0, 0, 0, 0);
+  }
+
+  private finDelDia(fecha: Date): Date {
+    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate(), 23, 59, 59, 999);
+  }
+
+  private compararFechas(a: Date | null, b: Date | null): number {
+    const ta = a ? a.getTime() : -Infinity;
+    const tb = b ? b.getTime() : -Infinity;
+    return ta - tb;
+  }
+
   declararPlazoVencido(): void {
     if (!this.puedeDeclarar()) return;
 
@@ -175,6 +365,7 @@ export class PlazoVencidoComponent {
           cantidadPrestamos: this.seleccionados().size,
           totalPorCobrar: this.totalSeleccionado(),
           cuotasSinSeguro: this.cuotasSinSeguroSeleccionado(),
+          numerosPrestamo: this.filasSeleccionadas().map((f) => f.cuadro.numeroPrestamo),
         },
         width: '480px',
         autoFocus: false,

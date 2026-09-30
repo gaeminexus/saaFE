@@ -9,6 +9,13 @@ export interface ConfirmarDeclaracionDialogData {
   cantidadPrestamos: number;
   totalPorCobrar: number;
   cuotasSinSeguro: number;
+  /**
+   * Números de los préstamos seleccionados. Con filtros y paginado en la tabla (ítem 1/2 del
+   * pedido del árbitro del 2026-09-30), la selección puede incluir préstamos que hoy no están
+   * visibles — esta lista es la única forma de que el usuario vea TODO lo que va a declarar antes
+   * de confirmar, esté o no en pantalla.
+   */
+  numerosPrestamo: string[];
 }
 
 /**
@@ -40,6 +47,15 @@ export interface ConfirmarDeclaracionDialogData {
         <mat-icon>info</mat-icon>
         <span>Cada préstamo pasa a estado DE_PLAZO_VENCIDO. No genera ningún asiento contable.</span>
       </div>
+
+      <div class="lista-prestamos">
+        <div class="lista-prestamos-titulo">Préstamos seleccionados (aunque no estén visibles en la tabla):</div>
+        <div class="lista-prestamos-chips">
+          @for (numero of data.numerosPrestamo; track numero) {
+            <span class="chip-prestamo">{{ numero }}</span>
+          }
+        </div>
+      </div>
     </mat-dialog-content>
 
     <mat-dialog-actions align="end">
@@ -60,6 +76,16 @@ export interface ConfirmarDeclaracionDialogData {
       font-size: 0.9rem; color: #3730a3; margin-top: 0.5rem;
     }
     .aviso mat-icon { flex-shrink: 0; }
+    .lista-prestamos { margin-top: 0.75rem; }
+    .lista-prestamos-titulo { font-size: 0.82rem; color: #666; margin-bottom: 0.4rem; }
+    .lista-prestamos-chips {
+      display: flex; flex-wrap: wrap; gap: 0.35rem;
+      max-height: 140px; overflow-y: auto; padding-right: 0.25rem;
+    }
+    .chip-prestamo {
+      background: #eef2ff; color: #3730a3; border-radius: 12px;
+      padding: 0.15rem 0.6rem; font-size: 0.82rem; font-weight: 600;
+    }
     mat-dialog-actions button { min-height: 44px; border-radius: 10px; font-weight: 600; }
   `],
 })

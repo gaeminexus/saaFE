@@ -81,66 +81,166 @@
         }
 
         @if (filasCandidatos().length) {
-          <div class="pv-tabla-scroll">
-            <table class="pv-tabla">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>Préstamo</th>
-                  <th>Partícipe</th>
-                  <th>Cédula</th>
-                  <th>Tipo</th>
-                  <th>Inicio de mora</th>
-                  <th>Saldo capital</th>
-                  <th>Interés</th>
-                  <th>Desgravamen</th>
-                  <th>Seguro</th>
-                  <th>Mora</th>
-                  <th>Total por cobrar</th>
-                  <th>Cuotas pend. / por vencer</th>
-                  <th>Nro. de memorando</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (fila of filasCandidatos(); track fila.cuadro.idPrestamo) {
-                  <tr [class.pv-fila-invalida]="!fila.cuadro.valido">
-                    <td>
-                      <mat-checkbox [checked]="estaSeleccionado(fila)" [disabled]="!fila.cuadro.valido"
-                                    (change)="alternarSeleccion(fila)"></mat-checkbox>
-                    </td>
-                    <td>{{ fila.cuadro.numeroPrestamo }}</td>
-                    <td>{{ fila.cuadro.nombreParticipe }}</td>
-                    <td>{{ fila.cuadro.cedula }}</td>
-                    <td>{{ fila.cuadro.tipoCredito }}</td>
-                    <td>{{ formatFecha(fila.cuadro.fechaInicioMora) }}</td>
-                    <td>{{ formatMoneda(fila.cuadro.capital.saldo) }}</td>
-                    <td>{{ formatMoneda(fila.cuadro.interes.saldo) }}</td>
-                    <td>{{ formatMoneda(fila.cuadro.desgravamen.saldo) }}</td>
-                    <td>{{ formatMoneda(fila.cuadro.seguroIncendio.saldo) }}</td>
-                    <td>{{ formatMoneda(fila.cuadro.mora.saldo) }}</td>
-                    <td><b>{{ formatMoneda(fila.cuadro.totalPorCobrar) }}</b></td>
-                    <td>{{ fila.cuadro.cuotasPendientes }} / {{ fila.cuadro.cuotasPorVencer }}</td>
-                    <td>
-                      @if (fila.cuadro.valido && estaSeleccionado(fila)) {
-                        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pv-input-memorando">
-                          <input matInput [(ngModel)]="fila.numeroMemorando" placeholder="Nro. de memorando" />
-                        </mat-form-field>
+
+          <!-- Filtros en memoria sobre la lista ya traída — no vuelven a llamar al backend. -->
+          <div class="pv-filtros pv-filtros-busqueda">
+            <mat-form-field appearance="outline">
+              <mat-label>Buscar</mat-label>
+              <input matInput placeholder="Préstamo, partícipe o cédula"
+                     [ngModel]="filtroTexto()" (ngModelChange)="filtroTexto.set($event)" />
+              <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de crédito</mat-label>
+              <mat-select [ngModel]="filtroTipoCredito()" (ngModelChange)="filtroTipoCredito.set($event)">
+                <mat-option [value]="null">Todos</mat-option>
+                @for (tipo of tiposCreditoDisponibles(); track tipo) {
+                  <mat-option [value]="tipo">{{ tipo }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Mora desde</mat-label>
+              <input matInput [matDatepicker]="pickerMoraDesde"
+                     [ngModel]="filtroMoraDesde()" (ngModelChange)="filtroMoraDesde.set($event)" />
+              <mat-datepicker-toggle matSuffix [for]="pickerMoraDesde"></mat-datepicker-toggle>
+              <mat-datepicker #pickerMoraDesde></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Mora hasta</mat-label>
+              <input matInput [matDatepicker]="pickerMoraHasta"
+                     [ngModel]="filtroMoraHasta()" (ngModelChange)="filtroMoraHasta.set($event)" />
+              <mat-datepicker-toggle matSuffix [for]="pickerMoraHasta"></mat-datepicker-toggle>
+              <mat-datepicker #pickerMoraHasta></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Total mínimo</mat-label>
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput type="number" min="0"
+                     [ngModel]="filtroTotalMin()" (ngModelChange)="filtroTotalMin.set($event)" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Total máximo</mat-label>
+              <span matTextPrefix>$&nbsp;</span>
+              <input matInput type="number" min="0"
+                     [ngModel]="filtroTotalMax()" (ngModelChange)="filtroTotalMax.set($event)" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Estado del cálculo</mat-label>
+              <mat-select [ngModel]="filtroEstadoCalculo()" (ngModelChange)="filtroEstadoCalculo.set($event)">
+                <mat-option value="todos">Todos</mat-option>
+                <mat-option value="habilitados">Habilitados</mat-option>
+                <mat-option value="inconsistencias">Con inconsistencias</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <button mat-stroked-button (click)="limpiarFiltrosCandidatos()">
+              <mat-icon>filter_alt_off</mat-icon> Limpiar filtros
+            </button>
+          </div>
+
+          <p class="pv-contador">
+            Mostrando {{ filasFiltradas().length }} de {{ filasCandidatos().length }} préstamos
+            · {{ seleccionados().size }} seleccionados
+          </p>
+
+          @if (!filasFiltradas().length) {
+            <p class="pv-vacio">Ningún préstamo coincide con los filtros. Pruebe limpiarlos.</p>
+          } @else {
+            <div class="pv-tabla-scroll">
+              <table class="pv-tabla">
+                <thead>
+                  <tr>
+                    <th>
+                      <mat-checkbox [checked]="todosVisiblesSeleccionados()"
+                                    [indeterminate]="algunosVisiblesSeleccionados() && !todosVisiblesSeleccionados()"
+                                    matTooltip="Selecciona todos los préstamos habilitados que pasan el filtro actual"
+                                    (change)="alternarSeleccionTodosVisibles()"></mat-checkbox>
+                    </th>
+                    <th class="pv-th-ordenable" (click)="alternarOrden('numero')">
+                      Préstamo
+                      @if (ordenColumna() === 'numero') {
+                        <mat-icon class="pv-icono-orden">{{ ordenDireccion() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
                       }
-                    </td>
+                    </th>
+                    <th class="pv-th-ordenable" (click)="alternarOrden('participe')">
+                      Partícipe
+                      @if (ordenColumna() === 'participe') {
+                        <mat-icon class="pv-icono-orden">{{ ordenDireccion() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                      }
+                    </th>
+                    <th>Cédula</th>
+                    <th>Tipo</th>
+                    <th class="pv-th-ordenable" (click)="alternarOrden('inicioMora')">
+                      Inicio de mora
+                      @if (ordenColumna() === 'inicioMora') {
+                        <mat-icon class="pv-icono-orden">{{ ordenDireccion() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                      }
+                    </th>
+                    <th>Saldo capital</th>
+                    <th>Interés</th>
+                    <th>Desgravamen</th>
+                    <th>Seguro</th>
+                    <th>Mora</th>
+                    <th class="pv-th-ordenable" (click)="alternarOrden('total')">
+                      Total por cobrar
+                      @if (ordenColumna() === 'total') {
+                        <mat-icon class="pv-icono-orden">{{ ordenDireccion() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                      }
+                    </th>
+                    <th>Cuotas pend. / por vencer</th>
+                    <th>Nro. de memorando</th>
                   </tr>
-                  @if (!fila.cuadro.valido && fila.cuadro.inconsistencias.length) {
-                    <tr class="pv-fila-inconsistencias">
-                      <td></td>
-                      <td colspan="13">
-                        <mat-icon>report</mat-icon>
-                        <span>{{ fila.cuadro.inconsistencias.join(' · ') }}</span>
+                </thead>
+                <tbody>
+                  @for (fila of filasPagina(); track fila.cuadro.idPrestamo) {
+                    <tr [class.pv-fila-invalida]="!fila.cuadro.valido">
+                      <td>
+                        <mat-checkbox [checked]="estaSeleccionado(fila)" [disabled]="!fila.cuadro.valido"
+                                      (change)="alternarSeleccion(fila)"></mat-checkbox>
+                      </td>
+                      <td>{{ fila.cuadro.numeroPrestamo }}</td>
+                      <td>{{ fila.cuadro.nombreParticipe }}</td>
+                      <td>{{ fila.cuadro.cedula }}</td>
+                      <td>{{ fila.cuadro.tipoCredito }}</td>
+                      <td>{{ formatFecha(fila.cuadro.fechaInicioMora) }}</td>
+                      <td>{{ formatMoneda(fila.cuadro.capital.saldo) }}</td>
+                      <td>{{ formatMoneda(fila.cuadro.interes.saldo) }}</td>
+                      <td>{{ formatMoneda(fila.cuadro.desgravamen.saldo) }}</td>
+                      <td>{{ formatMoneda(fila.cuadro.seguroIncendio.saldo) }}</td>
+                      <td>{{ formatMoneda(fila.cuadro.mora.saldo) }}</td>
+                      <td><b>{{ formatMoneda(fila.cuadro.totalPorCobrar) }}</b></td>
+                      <td>{{ fila.cuadro.cuotasPendientes }} / {{ fila.cuadro.cuotasPorVencer }}</td>
+                      <td>
+                        @if (fila.cuadro.valido && estaSeleccionado(fila)) {
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pv-input-memorando">
+                            <input matInput [(ngModel)]="fila.numeroMemorando" placeholder="Nro. de memorando" />
+                          </mat-form-field>
+                        }
                       </td>
                     </tr>
+                    @if (!fila.cuadro.valido && fila.cuadro.inconsistencias.length) {
+                      <tr class="pv-fila-inconsistencias">
+                        <td></td>
+                        <td colspan="13">
+                          <mat-icon>report</mat-icon>
+                          <span>{{ fila.cuadro.inconsistencias.join(' · ') }}</span>
+                        </td>
+                      </tr>
+                    }
                   }
-                }
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+
+            <mat-paginator [length]="filasFiltradas().length" [pageIndex]="paginaActual()"
+                            [pageSize]="tamanoPagina()" [pageSizeOptions]="opcionesTamanoPagina"
+                            (page)="cambiarPagina($event)"></mat-paginator>
+          }
 
           <div class="pv-acciones-finales">
             <button mat-raised-button color="accent" [disabled]="!puedeDeclarar()" (click)="declararPlazoVencido()">
