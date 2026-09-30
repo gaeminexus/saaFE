@@ -142,9 +142,9 @@ Todo lo nuevo es **opcional y viene apagado**. La caja chica no cambia.
     que es cómo se cayó la base el 03-09 (`ORA-04036`).
   - De la respuesta se usan solo los documentos con `saldo > 0`. Mapeo a `DocumentoCruceProveedor`:
     `tipoDocumento` `FACTURA` y `NOTA_VENTA` → `tipo: 'FACTURA'` (la nota de venta lleva
-    `tipoComprobante: '02'`); `LIQUIDACION` → `tipo: 'LIQUIDACION'`; `idDocumento` → `id`;
+    `tipoComprobante: '02'`); `LIQUIDACION` → `tipo: 'LIQUIDACION_COMPRA'` (el literal que ya usa `TipoDocumentoCruceProveedor`, que no es el `LIQUIDACION` de cxc; **corregido 2026-09-30**: la primera versión decía `'LIQUIDACION'`, y el ejecutor lo marcó); `idDocumento` → `id`;
     `numeroDocumento` → `numero`; `fechaEmision` → `fecha`; `total`; y `estadoPago: null`.
-- `DocumentoCruceProveedor` gana tres campos opcionales: `idTitular?`, `nombreTitular?` y `saldo?`.
+- `DocumentoCruceProveedor` gana **cuatro** campos opcionales: `idTitular?`, `nombreTitular?`, `identificacion?` y `saldo?`. (**Corregido 2026-09-30:** eran tres, y sin `identificacion` no se puede filtrar por RUC. Lo agregó el ejecutor.)
   En modo «todos» se llenan desde la cartera. En el modo de siempre se llenan con el proveedor del
   diálogo (sin `saldo`, como hoy).
 - Con el check encendido, la tabla muestra además la columna **Proveedor**, y el filtro de texto busca

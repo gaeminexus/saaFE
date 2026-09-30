@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -58,6 +58,18 @@ export class CruceAnticipoProveedorComponent implements OnInit {
   procesando = signal(false);
   error = signal('');
   resultado = signal<ResultadoAplicacionCxp | null>(null);
+
+  /**
+   * El documento elegido es de otro proveedor distinto al de los anticipos —
+   * docs/cxp/API-CRUCE-ANTICIPO-OTRO-PROVEEDOR.md §4.2. `idTitular` solo llega desde el modo
+   * "todos los proveedores" del selector; en el modo de siempre (mismo proveedor) no viene, y
+   * esto da `false`.
+   */
+  otroProveedor = computed(() => {
+    const doc = this.documentoElegido();
+    const prov = this.proveedor();
+    return !!doc && !!prov && doc.idTitular != null && doc.idTitular !== prov.codigo;
+  });
 
   ngOnInit(): void {
     const id = this.route.snapshot.queryParamMap.get('idFactura');
@@ -125,6 +137,7 @@ export class CruceAnticipoProveedorComponent implements OnInit {
         codigoTitular: titular.codigo,
         nombreTitular: this.nombreProveedor(),
         soloPendientes: true,
+        permitirOtrosProveedores: true,
       },
     }).afterClosed().subscribe((doc: DocumentoCruceProveedor | null) => {
       if (!doc) return;
@@ -295,13 +308,19 @@ export class CruceAnticipoProveedorComponent implements OnInit {
       ? { idLiquidacionCompra: this.idDocumento }
       : { idFacturaCompra: this.idDocumento };
 
-    const payload: CruceAnticiposCxpRequest = {
+    // Sin anotación de tipo a propósito: `permitirOtroProveedor` todavía no está declarado en
+    // `CruceAnticiposCxpRequest` (fuera de alcance de este frente, ver docs/cxp/
+    // API-CRUCE-ANTICIPO-OTRO-PROVEEDOR.md §3.2) y anotar el literal activaría el chequeo de
+    // propiedades excedentes de TypeScript. Se manda SOLO cuando el proveedor difiere — con el
+    // mismo proveedor, el body es exactamente el de siempre.
+    const payload = {
       ...referenciaDocumento,
       anticipos: lineas,
       fechaAplicacion: this.fechaISO(),
       idEmpresa: this.idEmpresaSesion(),
       idUsuario: this.idUsuarioSesion(),
       observacion: this.formObservacion.trim(),
+      ...(this.otroProveedor() ? { permitirOtroProveedor: true } : {}),
     };
 
     this.aplicacionPagoS.cruzarAnticipos(payload).subscribe({

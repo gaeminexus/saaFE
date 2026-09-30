@@ -46,6 +46,17 @@
         </mat-form-field>
       </div>
 
+      @if (otroProveedor()) {
+        <div class="mensaje-advertencia">
+          <mat-icon>warning</mat-icon>
+          <span>
+            La factura {{ documentoElegido()?.numero }} es de {{ documentoElegido()?.nombreTitular }}.
+            Los anticipos son de {{ nombreProveedor() }}. El asiento debitará la cuenta por pagar de
+            {{ documentoElegido()?.nombreTitular }} y acreditará los anticipos de {{ nombreProveedor() }}.
+          </span>
+        </div>
+      }
+
       @if (cargandoSaldo()) {
         <div class="estado-linea">
           <mat-spinner diameter="24"></mat-spinner>

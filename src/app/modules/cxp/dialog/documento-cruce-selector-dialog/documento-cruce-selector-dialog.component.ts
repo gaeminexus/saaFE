@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,11 +16,15 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { ESTADO_PAGO_LABELS, EstadoPagoFactura } from '../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
+import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
+import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import { etiquetaTipoComprobanteFactura } from '../../../../shared/utils/tipo-comprobante-cxp.util';
 import { FacturaCompra } from '../../model/factura-compra';
 import { LiquidacionCompraCompra } from '../../model/liquidacion-compra-compra';
+import { DocumentoCartera } from '../../model/cartera';
 import { FacturaCompraService } from '../../service/factura-compra.service';
 import { LiquidacionCompraCompraService } from '../../service/liquidacion-compra-compra.service';
+import { AplicacionPagoCxpService } from '../../service/aplicacion-pago-cxp.service';
 
 /**
  * Tipo del documento afectado por el cruce de anticipo de proveedor — determina a qué ruta de
@@ -43,6 +48,20 @@ export interface DocumentoCruceProveedor {
   estadoPago: number | null;
   /** Solo en `tipo: 'FACTURA'` — distingue factura ("01") de nota de venta manual ("02"). */
   tipoComprobante?: string;
+  /**
+   * Solo con el check "todas los proveedores" encendido (docs/cxp/API-CRUCE-ANTICIPO-OTRO-PROVEEDOR.md
+   * §4.1) — en el modo de siempre (un solo proveedor) quedan sin usar, porque ya se sabe de quién
+   * es el documento por `data.codigoTitular`/`data.nombreTitular`.
+   */
+  idTitular?: number;
+  nombreTitular?: string;
+  /**
+   * Identificación (RUC/cédula) del titular — no está en la lista original de "tres campos" del
+   * contrato, pero el filtro de texto que el propio contrato pide ("busca por proveedor, RUC o
+   * número de documento") no se puede armar sin ella. Agregada para que ese filtro funcione.
+   */
+  identificacion?: string;
+  saldo?: number;
 }
 
 export interface DocumentoCruceSelectorDialogData {
@@ -50,6 +69,12 @@ export interface DocumentoCruceSelectorDialogData {
   nombreTitular: string;
   /** Oculta los documentos ya pagados por completo. */
   soloPendientes?: boolean;
+  /**
+   * Habilita el check "Mostrar las facturas pendientes de todos los proveedores"
+   * (docs/cxp/API-CRUCE-ANTICIPO-OTRO-PROVEEDOR.md §4.1). Apagado por defecto y ausente en la
+   * caja chica (`gastos-caja-chica.component.ts`): ese llamador no cambia de comportamiento.
+   */
+  permitirOtrosProveedores?: boolean;
 }
 
 /**
@@ -70,6 +95,7 @@ export interface DocumentoCruceSelectorDialogData {
     MatFormFieldModule,
     MatButtonModule,
     MatIconModule,
+    MatCheckboxModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
   ],
@@ -79,9 +105,20 @@ export class DocumentoCruceSelectorDialogComponent implements OnInit {
   cargando = signal(false);
   error = signal('');
 
+  private readonly columnasBase = ['tipo', 'id', 'numero', 'fecha', 'total', 'estadoPago', 'accion'];
+  private readonly columnasConProveedor = ['tipo', 'id', 'numero', 'proveedor', 'fecha', 'total', 'estadoPago', 'accion'];
+
+  /** Check "todos los proveedores" — apagado al abrir, y solo visible si `data.permitirOtrosProveedores`. */
+  mostrarTodosProveedores = signal(false);
+
   private todos: DocumentoCruceProveedor[] = [];
+  /** Documentos del proveedor del diálogo — lo de siempre; se recupera al apagar el check. */
+  private porProveedor: DocumentoCruceProveedor[] = [];
+  /** Cache de la cartera completa, para no volver a pedirla si se prende/apaga el check varias veces. */
+  private cacheTodosProveedores: DocumentoCruceProveedor[] | null = null;
+
   dataSource = new MatTableDataSource<DocumentoCruceProveedor>([]);
-  columnas = ['tipo', 'id', 'numero', 'fecha', 'total', 'estadoPago', 'accion'];
+  columnas = this.columnasBase;
 
   textoBusqueda = '';
 
@@ -90,6 +127,7 @@ export class DocumentoCruceSelectorDialogComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: DocumentoCruceSelectorDialogData,
     private facturaService: FacturaCompraService,
     private liquidacionService: LiquidacionCompraCompraService,
+    private aplicacionPagoS: AplicacionPagoCxpService,
   ) {}
 
   ngOnInit(): void {
@@ -149,17 +187,101 @@ export class DocumentoCruceSelectorDialogComponent implements OnInit {
         lista = lista.filter((d) => d.estadoPago !== EstadoPagoFactura.PAGADA);
       }
 
+      this.porProveedor = lista;
       this.todos = lista;
       this.dataSource.data = [...lista];
     });
   }
 
+  /**
+   * Check "Mostrar las facturas pendientes de todos los proveedores" — opt-in, apagado al abrir
+   * (docs/cxp/API-CRUCE-ANTICIPO-OTRO-PROVEEDOR.md §4.1). Apagado: lo de siempre, sin volver a
+   * pedir nada. Encendido: carga (o reusa) la cartera completa.
+   */
+  toggleTodosProveedores(encendido: boolean): void {
+    this.mostrarTodosProveedores.set(encendido);
+    this.columnas = encendido ? this.columnasConProveedor : this.columnasBase;
+
+    if (!encendido) {
+      this.todos = this.porProveedor;
+      this.filtrar();
+      return;
+    }
+
+    if (this.cacheTodosProveedores) {
+      this.todos = this.cacheTodosProveedores;
+      this.filtrar();
+      return;
+    }
+
+    this.cargarTodosProveedores();
+  }
+
+  /**
+   * ⛔ Nunca `selectByCriteria` sin filtro sobre facturas: cargaría el grafo EAGER completo de
+   * todas las facturas (el `ORA-04036` del 03-09). Se usa la cartera, que ya está agregada en la
+   * base y solo trae escalares.
+   */
+  private cargarTodosProveedores(): void {
+    const idEmpresa = empresaSesionCodigo();
+    if (!idEmpresa) {
+      this.error.set('No se pudo determinar la empresa de la sesión');
+      this.toggleTodosProveedores(false);
+      return;
+    }
+
+    this.cargando.set(true);
+    this.error.set('');
+
+    this.aplicacionPagoS.carteraPorPagar({ idEmpresa }).subscribe({
+      next: (resp) => {
+        this.cargando.set(false);
+        const lista = (resp.documentos ?? [])
+          .filter((d) => Number(d.saldo) > 0)
+          .map((d) => this.mapearDocumentoCartera(d));
+        this.cacheTodosProveedores = lista;
+        this.todos = lista;
+        this.filtrar();
+      },
+      error: (err) => {
+        this.cargando.set(false);
+        this.error.set(mensajeDeError(err, 'No se pudieron cargar las facturas pendientes de todos los proveedores'));
+        // El check vuelve a apagarse: no se deja al usuario en un estado a medias.
+        this.toggleTodosProveedores(false);
+      },
+    });
+  }
+
+  /** §4.1 del contrato: FACTURA/NOTA_VENTA → 'FACTURA' (la nota de venta con tipoComprobante '02'); LIQUIDACION → 'LIQUIDACION_COMPRA' (mismo tipo que ya usa este diálogo, ver el comentario de cabecera sobre no confundirlo con el 'LIQUIDACION' de cxc). */
+  private mapearDocumentoCartera(d: DocumentoCartera): DocumentoCruceProveedor {
+    const esLiquidacion = d.tipoDocumento === 'LIQUIDACION';
+    return {
+      tipo: esLiquidacion ? 'LIQUIDACION_COMPRA' : 'FACTURA',
+      id: d.idDocumento,
+      numero: d.numeroDocumento,
+      fecha: d.fechaEmision,
+      total: Number(d.total ?? 0),
+      estadoPago: null,
+      tipoComprobante: d.tipoDocumento === 'NOTA_VENTA' ? '02' : undefined,
+      idTitular: d.idTitular,
+      nombreTitular: d.titular,
+      identificacion: d.identificacion,
+      saldo: Number(d.saldo ?? 0),
+    };
+  }
+
   filtrar(): void {
     const termino = this.textoBusqueda.trim().toLowerCase();
     if (!termino) { this.dataSource.data = [...this.todos]; return; }
-    this.dataSource.data = this.todos.filter((d) =>
-      (d.numero || '').toLowerCase().includes(termino) || String(d.id || '').includes(termino)
-    );
+    this.dataSource.data = this.todos.filter((d) => {
+      const coincideDocumento = (d.numero || '').toLowerCase().includes(termino) || String(d.id || '').includes(termino);
+      if (coincideDocumento) return true;
+      if (!this.mostrarTodosProveedores()) return false;
+      // Solo con el check encendido se busca además por proveedor/RUC — en el modo de siempre
+      // esos campos ni se llenan.
+      return (d.nombreTitular || '').toLowerCase().includes(termino)
+        || (d.identificacion || '').toLowerCase().includes(termino);
+    });
   }
 
   etiquetaTipo(row: DocumentoCruceProveedor): string {

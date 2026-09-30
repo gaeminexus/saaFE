@@ -2,8 +2,16 @@
 <p class="dialog-subtitulo">Proveedor: <strong>{{ data.nombreTitular }}</strong></p>
 
 <mat-dialog-content class="dialog-content">
+  @if (data.permitirOtrosProveedores) {
+    <div class="check-todos-proveedores">
+      <mat-checkbox [ngModel]="mostrarTodosProveedores()" (ngModelChange)="toggleTodosProveedores($event)">
+        Mostrar las facturas pendientes de todos los proveedores
+      </mat-checkbox>
+    </div>
+  }
+
   <mat-form-field appearance="outline" class="busqueda-field">
-    <mat-label>Buscar por número de documento</mat-label>
+    <mat-label>{{ mostrarTodosProveedores() ? 'Buscar por proveedor, RUC o número de documento' : 'Buscar por número de documento' }}</mat-label>
     <input matInput [(ngModel)]="textoBusqueda" (input)="filtrar()" placeholder="001-001-000000001" />
     <mat-icon matSuffix>search</mat-icon>
   </mat-form-field>
@@ -21,7 +29,9 @@
 
   @if (!cargando() && !error() && dataSource.data.length === 0) {
     <div class="sin-resultados">
-      @if (data.soloPendientes) {
+      @if (mostrarTodosProveedores()) {
+        No se encontraron facturas ni liquidaciones pendientes de pago de ningún proveedor.
+      } @else if (data.soloPendientes) {
         No se encontraron facturas ni liquidaciones pendientes de pago para este proveedor.
       } @else {
         No se encontraron facturas ni liquidaciones para este proveedor.
@@ -48,6 +58,11 @@
       <ng-container matColumnDef="numero">
         <th mat-header-cell *matHeaderCellDef>Número</th>
         <td mat-cell *matCellDef="let row">{{ row.numero || '-' }}</td>
+      </ng-container>
+
+      <ng-container matColumnDef="proveedor">
+        <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+        <td mat-cell *matCellDef="let row">{{ row.nombreTitular || '-' }}</td>
       </ng-container>
 
       <ng-container matColumnDef="fecha">
@@ -96,6 +111,7 @@
 <style>
   .dialog-subtitulo { margin: -8px 24px 8px; color: #555; font-size: 0.9rem; }
   .dialog-content { min-height: 200px; max-height: 500px; overflow-y: auto; }
+  .check-todos-proveedores { margin-bottom: 8px; }
   .busqueda-field { width: 100%; margin-bottom: 8px; }
   .loading-center { display: flex; flex-direction: column; align-items: center; padding: 32px; gap: 12px; }
   .error-msg { color: #c62828; padding: 16px; background: #ffebee; border-radius: 4px; }
