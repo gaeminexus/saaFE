@@ -553,9 +553,11 @@ export class PlazoVencidoComponent {
   /**
    * Filtrado en memoria sobre `historial()` (que ya viene filtrado por estado/fecha desde el
    * backend): texto libre y rango de Nro. de memorando. El rango se aplica sobre la parte numérica
-   * del compuesto (`…-GR-046-2026` → 46, `numeroMemorandoNumerico()`); si el compuesto no calza con
-   * el patrón (memorandos viejos con otro formato) la fila queda FUERA del filtro cuando hay un
-   * rango puesto, pero se sigue mostrando si no hay ningún rango (regla explícita del árbitro).
+   * (`numeroMemorandoNumerico()`), que entiende tanto el compuesto (`…-GR-046-2026` → 46) como el
+   * número pelado (`"60"` → 60) que todavía tienen las declaraciones viejas en producción mientras
+   * no corra `sql/300`. Si ninguna de las dos formas calza, la fila queda FUERA del filtro cuando
+   * hay un rango puesto, pero se sigue mostrando si no hay ningún rango (regla explícita del
+   * árbitro). `desde`/`hasta` son independientes: si solo se pone uno, el otro no filtra nada.
    */
   historialFiltrado = computed(() => {
     const texto = this.normalizarTexto(this.filtroTextoHistorial());
@@ -640,6 +642,25 @@ export class PlazoVencidoComponent {
     });
   }
 
+  /**
+   * `type="number"` con `ngModel` ya entrega `number | null` (Angular convierte el campo vacío a
+   * `null`, nunca a `0` ni a `NaN`) — pero se sanea igual acá por si algún día el campo pasa a ser
+   * de texto, o si el navegador deja pasar algo raro antes del blur. Nunca un `NaN` llega al signal.
+   */
+  setFiltroMemorandoDesdeHistorial(valor: number | string | null): void {
+    this.filtroMemorandoDesdeHistorial.set(this.comoNumeroONull(valor));
+  }
+
+  setFiltroMemorandoHastaHistorial(valor: number | string | null): void {
+    this.filtroMemorandoHastaHistorial.set(this.comoNumeroONull(valor));
+  }
+
+  private comoNumeroONull(valor: number | string | null | undefined): number | null {
+    if (valor === null || valor === undefined || valor === '') return null;
+    const numero = typeof valor === 'number' ? valor : parseFloat(valor);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
   limpiarFiltrosHistorial(): void {
     this.filtroEstadoHistorial.set(null);
     this.filtroDesdeHistorial.set(null);
@@ -691,12 +712,32 @@ export class PlazoVencidoComponent {
     });
   }
 
-  /** Toma la parte numérica de un memorando compuesto (`…-GR-046-2026` → `46`). `null` si no calza el patrón. */
-  private numeroMemorandoNumerico(compuesto: string | null | undefined): number | null {
-    const match = /-(\d+)-\d{4}\s*$/.exec((compuesto ?? '').trim());
-    if (!match) return null;
-    const numero = parseInt(match[1], 10);
-    return Number.isFinite(numero) ? numero : null;
+  /**
+   * Toma la parte numérica de un memorando, aceptando las formas que hay en producción
+   * (2026-10-01, reportadas por el árbitro):
+   * - el compuesto normal (`…-GR-046-2026` → `46`);
+   * - el compuesto con sufijo de reverso chocado (`sql/301`: `…-GR-046-2026-REV-12` → `46`) —
+   *   pasa cuando una REVERTIDA chocaba de número con una declaración viva;
+   * - el número pelado (`"60"` → `60`) — declaraciones viejas que el `sql/300` de normalización
+   *   puede no haber corrido todavía. Sin este caso, un rango puesto las descartaba todas.
+   * Cualquier otra cosa (texto sin dígitos, vacío) devuelve `null`, igual que antes.
+   */
+  private numeroMemorandoNumerico(valor: string | null | undefined): number | null {
+    const limpio = (valor ?? '').trim();
+    if (!limpio) return null;
+
+    const compuesto = /-GR-(\d+)-\d{4}(?:-REV-\d+)?\s*$/.exec(limpio);
+    if (compuesto) {
+      const numero = parseInt(compuesto[1], 10);
+      return Number.isFinite(numero) ? numero : null;
+    }
+
+    if (/^\d+$/.test(limpio)) {
+      const numero = parseInt(limpio, 10);
+      return Number.isFinite(numero) ? numero : null;
+    }
+
+    return null;
   }
 
   /** `yyyyMMdd_HHmm`, mismo formato que usa el backend para el ZIP (§8bis) — solo de respaldo, sin `Content-Disposition`. */

@@ -376,12 +376,12 @@
           <mat-form-field appearance="outline">
             <mat-label>Nro. de memorando desde</mat-label>
             <input matInput type="number" min="0" inputmode="numeric"
-                   [ngModel]="filtroMemorandoDesdeHistorial()" (ngModelChange)="filtroMemorandoDesdeHistorial.set($event)" />
+                   [ngModel]="filtroMemorandoDesdeHistorial()" (ngModelChange)="setFiltroMemorandoDesdeHistorial($event)" />
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Nro. de memorando hasta</mat-label>
             <input matInput type="number" min="0" inputmode="numeric"
-                   [ngModel]="filtroMemorandoHastaHistorial()" (ngModelChange)="filtroMemorandoHastaHistorial.set($event)" />
+                   [ngModel]="filtroMemorandoHastaHistorial()" (ngModelChange)="setFiltroMemorandoHastaHistorial($event)" />
           </mat-form-field>
         </div>
 
