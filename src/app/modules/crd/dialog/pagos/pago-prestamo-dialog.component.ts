@@ -137,16 +137,22 @@ export class PagoPrestamoDialogComponent {
    * Si la pantalla mandó `pendientesAcumulados` se usan esos montos, que son el pendiente real de
    * cada cuota sumado en orden de cobro. El múltiplo de `valorCuota` es solo el respaldo: da un
    * monto aproximado cuando la primera cuota viene parcialmente pagada o alguna arrastra mora.
+   *
+   * Ese respaldo NO se ofrece si la pantalla ya sabe que sus pagos no cargaron (`pagosCargados ===
+   * false`): un múltiplo de la cuota completa ahí sería, otra vez, el total en vez de lo pendiente.
+   * Si la pantalla no manda `pagosCargados` (p. ej. `cruce-de-valores`), el respaldo se sigue
+   * ofreciendo igual que antes.
    */
   sugerencias = computed(() => {
     const opciones: { etiqueta: string; valor: number }[] = [];
     const acumulados = this.data.pendientesAcumulados ?? [];
     const cuota = this.data.valorCuota ?? 0;
     const saldo = this.data.saldoTotal ?? 0;
+    const permiteRespaldoDeCuota = this.data.pagosCargados !== false;
 
     for (let i = 0; i < 3; i++) {
       const etiqueta = i === 0 ? '1 cuota' : `${i + 1} cuotas`;
-      const valor = acumulados[i] ?? (cuota > 0 ? +(cuota * (i + 1)).toFixed(2) : 0);
+      const valor = acumulados[i] ?? (permiteRespaldoDeCuota && cuota > 0 ? +(cuota * (i + 1)).toFixed(2) : 0);
       if (valor > 0) opciones.push({ etiqueta, valor: +valor.toFixed(2) });
     }
 

@@ -53,10 +53,20 @@
         <div class="pg-dato-valor">{{ formatMoneda(data.saldoCapital) }}</div>
       </div>
       <div class="pg-dato">
-        <div class="pg-dato-label">Cuota actual</div>
+        <div class="pg-dato-label">Cuota pactada</div>
         <div class="pg-dato-valor">{{ formatMoneda(data.valorCuota) }}</div>
         <div class="pg-dato-nota">Incluye desgravamen y seguro</div>
       </div>
+      @if (data.pendienteCuota != null) {
+        <div class="pg-dato">
+          <div class="pg-dato-label">Pendiente de esta cuota</div>
+          @if (data.pagosCargados === false) {
+            <div class="pg-dato-valor">Calculando…</div>
+          } @else {
+            <div class="pg-dato-valor">{{ formatMoneda(data.pendienteCuota) }}</div>
+          }
+        </div>
+      }
       <div class="pg-dato">
         <div class="pg-dato-label">Plazo</div>
         <div class="pg-dato-valor">{{ data.plazo ?? '—' }}</div>

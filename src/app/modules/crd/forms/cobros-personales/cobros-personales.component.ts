@@ -1888,6 +1888,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
       saldoCapital: this.saldoCapitalPrestamo(),
       valorCuota: this.valorCuotaPrestamo(),
       pendientesAcumulados: this.pendientesAcumulados(),
+      pendienteCuota: this.pendientesAcumulados()[0] ?? null,
+      pagosCargados: this.pagosCargadosDe(prestamo),
       respaldoSugerido: this.respaldoSugerido(),
     };
   }

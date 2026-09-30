@@ -47,6 +47,19 @@ export interface ContextoPrestamo {
    * y no tiene por qué repetirlo al derivar a otra operación.
    */
   respaldoSugerido?: Partial<DatosRespaldoCobro> | null;
+  /**
+   * Lo que falta pagar de la próxima cuota (pactado − pagado), no la cuota completa. Es
+   * `pendientesAcumulados[0]` de la pantalla que abre el diálogo. `null`/`undefined` cuando la
+   * pantalla que abre el diálogo no calcula este dato (p. ej. `cruce-de-valores`): en ese caso el
+   * diálogo no debe mostrar ninguna tarjeta de pendiente, para no inventar un número.
+   */
+  pendienteCuota?: number | null;
+  /**
+   * ¿Ya se cargaron los pagos vigentes del préstamo? Sin ellos, `pendienteCuota` saldría igual a
+   * la cuota completa (no hay nada que restar) — que es exactamente el defecto que este campo
+   * evita mostrar como si fuera un cálculo real.
+   */
+  pagosCargados?: boolean;
 }
 
 export function contextoDesdePrestamo(prestamo: Prestamo, participante?: string | null): ContextoPrestamo {
