@@ -185,21 +185,30 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
   private cargar(): void {
     this.cargando.set(true);
 
-    const sinFallo = (fuente: Observable<any[] | null>): Observable<any[]> =>
+    /**
+     * Un catálogo que falla no puede dejar el combo vacío en silencio: se avisa y se sigue con
+     * lista vacía, para no bloquear toda la pantalla por un catálogo secundario. El detalle de la
+     * liquidación NO pasa por acá — si `/lqex/detalle` falla, tiene que fallar toda la carga (ver
+     * más abajo), porque mostrar la cabecera sin sus conceptos es la trampa del contrato §8.1.
+     */
+    const sinFallo = (fuente: Observable<any[] | null>, etiqueta: string): Observable<any[]> =>
       fuente.pipe(
         map((filas) => filas ?? []),
-        catchError(() => of<any[]>([])),
+        catchError((err) => {
+          this.avisar(mensajeDeError(err, `No se pudo cargar ${etiqueta}.`), true);
+          return of<any[]>([]);
+        }),
       );
 
     forkJoin({
-      causales: sinFallo(this.causalService.selectByCriteria(criteriosPorEmpresa('nombre'))),
-      productos: sinFallo(this.productoPagoService.selectByCriteria(criteriosPorEmpresa('nombre'))),
-      bancos: sinFallo(this.bancoService.getAll()),
-      liquidacion: this.codigo
-        ? this.liquidacionExternaService.getById(this.codigo).pipe(catchError(() => of(null)))
-        : of(null),
+      causales: sinFallo(this.causalService.selectByCriteria(criteriosPorEmpresa('nombre')), 'las causales de terminación'),
+      productos: sinFallo(this.productoPagoService.selectByCriteria(criteriosPorEmpresa('nombre')), 'los productos de pago'),
+      bancos: sinFallo(this.bancoService.getAll(), 'los bancos'),
+      liquidacion: this.codigo ? this.liquidacionExternaService.getById(this.codigo) : of(null),
+      // Sin catchError a propósito: si el detalle no carga, toda la carga tiene que fallar (ver
+      // el `error` de abajo) en vez de mostrar la liquidación sin sus conceptos.
       detalles: this.codigo
-        ? this.liquidacionExternaService.detalle(this.codigo).pipe(catchError(() => of([] as DetalleLiquidacionExterna[])))
+        ? this.liquidacionExternaService.detalle(this.codigo)
         : of([] as DetalleLiquidacionExterna[]),
     }).subscribe({
       next: ({ causales, productos, bancos, liquidacion, detalles }) => {
@@ -502,10 +511,17 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
       });
   }
 
+  /**
+   * Refresca tras una acción que ya se aplicó en el servidor (enviar a tesorería, sincronizar
+   * pago, anular). Sin `catchError` en `detalles` a propósito, mismo motivo que en `cargar()`: si
+   * el detalle no carga, no se pinta la cabecera nueva con los conceptos de antes o sin ninguno.
+   * El `error` avisa que la acción sí se aplicó pero la pantalla no se pudo refrescar — antes se
+   * tragaba en silencio (`error: () => undefined`), que es la misma trampa del contrato §8.1.
+   */
   private recargar(codigo: number): void {
     forkJoin({
       liquidacion: this.liquidacionExternaService.getById(codigo),
-      detalles: this.liquidacionExternaService.detalle(codigo).pipe(catchError(() => of([] as DetalleLiquidacionExterna[]))),
+      detalles: this.liquidacionExternaService.detalle(codigo),
     }).subscribe({
       next: ({ liquidacion, detalles }) => {
         this.liquidacion.set(liquidacion);
@@ -517,7 +533,12 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
           })),
         );
       },
-      error: () => undefined,
+      error: (err) => {
+        this.avisar(
+          mensajeDeError(err, 'La acción se aplicó, pero la pantalla no se pudo refrescar. Vuelva a abrir la liquidación.'),
+          true,
+        );
+      },
     });
   }
 
