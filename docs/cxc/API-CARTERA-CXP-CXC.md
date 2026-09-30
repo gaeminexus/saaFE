@@ -135,7 +135,12 @@ saldo         = total − aplicado
 ### 3.4 Vencimiento y antigüedad
 
 1. **Plazo en días** = el **mayor** de los plazos de P3 de ese documento, convertido según
-   `UNIDADTIEMPO` en mayúsculas y sin espacios:
+   `UNIDADTIEMPO` en mayúsculas, sin espacios y **sin tildes** (`Normalizer` NFD + quitar las marcas):
+   > ⛔ **Corregido el 2026-09-30, por la salida del `e2-75`.** En `PGS.FPFM` conviven `DIAS` (76 filas)
+   > y **`DÍAS` con tilde** (51 filas, con plazos de hasta 15 días). La primera versión de esta regla
+   > decía «mayúsculas y sin espacios», y `"DÍAS".contains("DIA")` es **false**. Esos 51 documentos
+   > quedaban sin plazo, o sea vencidos desde el día de emisión. **Error del contrato, no del
+   > ejecutor**: implementó exactamente lo que estaba escrito.
    - contiene `DIA` → días;
    - contiene `SEMANA` → × 7;
    - contiene `MES` → × 30;
