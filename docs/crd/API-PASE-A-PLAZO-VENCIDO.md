@@ -39,6 +39,12 @@ de cartera mensual.
    - **Mora:** `ProcesoMoraPrestamoService.calcularMoraCuota(cuota, tasaDiaria, corte)` sobre las cuotas
      vencidas e impagas al corte. ⛔ **Nunca** el campo `mora` persistido.
    - En cada fila: saldo = devengado − cobrado.
+   - ⛔ **Cobrado = pagos válidos de `CRD.PGPR`** (no anulados), sumados por componente: la **misma
+     fuente** que usa `MotorPagoPrestamoServiceImpl.calcularSaldosCuota` (:121-188) y el frontend
+     (`saldo-prestamo.service.ts`). **No** las columnas `*Pagado` de `DTPR`: en créditos migrados no son
+     confiables, y `DTPR` no tiene columna de seguro de incendio pagado (ése sale de PGPR
+     `valorSeguroIncendio`). *Corrección del árbitro, 2026-09-30, antes de despachar: el diseño §4.4bis
+     decía Σ `capitalPagado` y compañía.*
 3. **Cinco invariantes** (diseño §4.4bis). Si una falla, el préstamo **no se puede declarar** y se dice cuál:
    - devengado = cobrado + saldo, fila por fila;
    - Σ saldos = total por cobrar;
@@ -108,8 +114,10 @@ incoherencias (diseño §1).
   falla y con qué valores. **La pantalla muestra el préstamo, pero no deja seleccionarlo.**
 - `cuotasConSeguroAAnular`: cuántas cuotas posteriores al corte tienen desgravamen o incendio mayor a
   cero. Es lo que `declarar` va a poner en cero.
-- ⚠️ **`numeroPrestamo`: el ejecutor mide qué campo es** el «No. 60123» de los documentos. Candidato:
-  `PRSTCDGO`. **Si no es ese, reporta y se detiene.** No elige.
+- **`numeroPrestamo`** = `Prestamo.idAsoprep` (`PRSTIDAS`, número de operación en ASOPREP) y, si es nulo,
+  `codigo` (`PRSTCDGO`), como **texto**. Es la convención de todas las pantallas del frontend
+  (`idAsoprep ?? codigo`, 23 lugares). *Medido por el ejecutor BE el 2026-09-30: el candidato inicial
+  `PRSTCDGO` era incorrecto.* Al declarar se congela en `PLVNNMPS`, y los documentos imprimen eso.
 
 ---
 
