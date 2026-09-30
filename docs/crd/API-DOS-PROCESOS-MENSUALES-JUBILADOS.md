@@ -83,6 +83,29 @@ que el proceso sea idempotente por construcción y no por convención.
 
 Cuerpo: `{ idEmpresa, anio, mes, usuario, idUsuario }` (el mismo que hoy recibe `generarPagosDelMes`).
 
+> ⚠️ **Nota 2026-09-22:** `PagoPensionComplementariaRest` declaraba `idEmpresa`/`anio`/`mes`/`usuario`
+> como `@QueryParam` en los dos endpoints de este §4 (`/seguro/generar` y `/pensiones/generar`),
+> contra este mismo contrato, que siempre pidió el cuerpo. Bloqueó en producción el primer día que
+> alguien corrió el seguro médico de verdad («Debe indicar idEmpresa», `Periodo: null/null`).
+> **Corregido:** los dos endpoints ahora reciben el cuerpo (forma canónica, la de arriba) **y**
+> siguen aceptando los mismos cuatro valores por `@QueryParam`, por compatibilidad con quien ya
+> los llamara así. **El cuerpo tiene precedencia** cuando llegan los dos. `generarPagosDelMes`
+> (el endpoint viejo, deprecado) no se tocó: sigue siendo sólo `@QueryParam`.
+>
+> ⚠️ **Límite de esa compatibilidad, anotado por el árbitro y no medido contra el servidor:** los
+> dos métodos llevan ahora `@Consumes(APPLICATION_JSON)`, que hace falta para que RESTEasy
+> deserialice el cuerpo. Como contrapartida, **una llamada sin `Content-Type: application/json`
+> puede responder 415** antes de mirar los query params. Es decir que el respaldo por query params
+> sirve para un cliente que igual manda JSON, no para un `curl` pelado. Quien necesite disparar
+> estos procesos a mano —por ejemplo mientras se espera un WAR— debe mandar **igualmente**
+> `Content-Type: application/json` y un cuerpo, aunque sea `{}`. **No afecta al frontend**, que
+> siempre manda JSON.
+>
+> ⭐ **Por qué este defecto vivió sin que nadie lo viera:** el frente figuraba terminado hacía
+> días, «esperando WAR». Las dos puntas compilaban y ninguna se había ejecutado nunca contra la
+> otra. **Compilar en los dos lados no prueba que se entiendan** — el mismo riesgo que sigue
+> abierto en P22 (calificación de riesgo: código listo de las dos puntas, nunca probado).
+
 1. Guards de precondición **del seguro solamente**: `verificarCuentaProductoPagoSeguroMedico`,
    el proveedor y su cuenta bancaria. **No** los de pensión.
 2. Si `CRJB` de ese período ya tiene `CRJBESSG = 1` → `IncomeException`:
@@ -237,8 +260,34 @@ frontend tuvo que inferirlo. Su inferencia era la correcta y se canoniza acá:
 
 | Endpoint | Devuelve |
 |---|---|
-| `POST /pgpc/seguro/generar` | `{ jubilados, total, idOrdenPago, mensaje }` |
+| `POST /pgpc/seguro/generar` | `{ jubilados, total, idOrdenPago, mensaje }` **+ el diagnóstico de abajo** |
 | `POST /pgpc/pensiones/generar` | El **mismo `ResultadoGeneracionPagosPension`** que hoy devuelve `generarPagosDelMes`, más `totalSeguroRetroactivoNoPagado` y su conteo (§10) |
+
+### ⚠️ Precisado el 2026-09-22 — la forma COMPLETA de `/seguro/generar`, y la asimetría entre los dos
+
+**`/seguro/generar` devuelve el objeto DIRECTO** (`ResultadoGeneracionSeguroMedico`), sin sobre.
+**`/pensiones/generar` devuelve un sobre** `{ exito, mensaje, resultado }` que el REST arma a mano.
+⛔ **Los dos NO tienen la misma forma**, y tratarlos igual ya costó un defecto en producción: el
+frontend tipaba los dos con sobre, `exito` venía `undefined`, y **una generación exitosa se mostraba
+en rojo y no refrescaba la pantalla** (180 pagos y la orden 478 hechos, y la tarjeta diciendo
+«todavía no se ha generado»).
+
+**Los campos que `/seguro/generar` trae además de los cuatro de la tabla**, verificados contra
+`ResultadoGeneracionSeguroMedico`:
+
+| Campo | Tipo | Para qué |
+|---|---|---|
+| `evaluados` | `int` | cuántos jubilados recorrió |
+| `yaGenerados` | `int` | cuántos ya tenían el seguro fijado |
+| `conError` | `int` | ⭐ **cuántos fallaron** |
+| `errores` | `List<String>` | ⭐ **el motivo de cada fallo**, uno por jubilado |
+| `anio`, `mes` | `Integer` | el período |
+
+⭐ **`conError` y `errores` son la diferencia entre una pantalla útil y una inútil.** El frontend NO
+debe deducir si hubo errores parciales leyendo el texto de `mensaje` con una expresión regular: **hay
+un contador**. Y `errores` trae el motivo por jubilado, así que **la pantalla puede decir quiénes
+fallaron y por qué, sin que nadie tenga que ir al log del servidor** — que es exactamente lo que hubo
+que hacer el 2026-09-22 para averiguar qué pasó con 2 de 182.
 
 ⭐ **Y el frontend hizo algo mejor que adivinar bien: se blindó de la duda.** Después de cada
 generación vuelve a pedir `GET /corrida`, que **sí** tenía forma exacta, y repinta las dos tarjetas
@@ -272,3 +321,147 @@ fallar y sin bloquear.
 **Por qué así y no de otra forma:** si el caso nunca ocurre, el campo queda en cero y no molesta a
 nadie. Si ocurre, aparece **en el resultado de la corrida** en vez de descubrirse tres meses después
 conciliando con el proveedor. Es la diferencia entre un supuesto verificado y un supuesto olvidado.
+
+---
+
+## 11. ⛔⛔ H60 — el seguro se paga al proveedor sólo por lo que el jubilado TIENE (opción A, 2026-09-14)
+
+**Decisión del usuario, 2026-09-14:** opción **A**. El seguro se fija ya topado por el saldo, y en la
+corrida de pensiones se descuenta **PRIMERO**, porque su orden al proveedor ya salió. Regla madre del
+usuario: *«el sistema no debe permitir devolver más dinero o cruzarlo con préstamos del que un
+partícipe tenga»*.
+
+**Por qué hacía falta.** El proceso 4.1 fijaba el seguro **nominal** del VPPC y pagaba al proveedor
+por la suma, sin mirar nada. Después la corrida de pensiones lo descontaba topado por el saldo que
+quedaba **tras el cruce**. Resultado: al proveedor se le pagaba más de lo que salía de la cuenta del
+jubilado. Y un segundo agujero del mismo tipo: 4.1 fija seguro a **todo** `JUBILADO_COMPLEMENTARIO`,
+pero la corrida de pensiones sale temprano como `SIN_ANCLA` o `AL_DIA` **sin descontar nada** → seguro
+pagado al proveedor que no sale de la cuenta de nadie.
+
+### 11.1 Proceso de seguro (`generarSeguroIndividual`)
+
+```
+seguroPendientePrevio = Σ PGPCVLSG de las filas del jubilado con PGPCVLPN nulo, de períodos
+                        ANTERIORES al que se fija (stubs cuyo seguro ya se pagó y aún no se descontó)
+saldoLibre            = max(0, saldo aporte 23 − seguroPendientePrevio)
+seguroFijado          = min(nominal VPPC, saldoLibre)
+```
+
+Y además `seguroFijado = 0` cuando la corrida de pensiones **no lo descontaría**:
+- **sin ancla** (`resolverAnclaRetroactivo == null`), o
+- **al día** para ese período (`YearMonth(ancla) + 1 > período`).
+
+La fila se graba **igual**, con el valor topado (puede ser `0.0`): así la corrida de pensiones la
+reconoce como fijada y no la trata como `SIN_SEGURO_DEL_PERIODO`. El total de la orden al proveedor es
+la suma de lo **fijado**, no de lo nominal. El `mensaje` del resumen dice cuántos quedaron topados y
+cuánto seguro nominal no se cobró. **Sin cambios de forma** en la respuesta.
+
+### 11.2 Corrida de pensiones (`generarMesesRetroactivos`) — orden SEGURO → CRUCE → PENSIÓN
+
+1. **Reserva al empezar**, antes del bucle: `seguroReservado` = Σ `PGPCVLSG` de las filas stub
+   (`PGPCVLPN` nulo) del jubilado en los meses `[desde, corrida]`. Si
+   `saldo < seguroReservado − TOLERANCIA` → `IncomeException(ERR_SALDO_INSUFICIENTE)` con un mensaje que
+   diga que ese seguro **ya se pagó al proveedor** y cuánto falta. Es una carrera (algo movió el saldo
+   entre los dos procesos) y tiene que verse, no taparse.
+   `saldoLibre = saldo − seguroReservado`.
+2. **Por mes:**
+   - `seguroMes` = el `PGPCVLSG` **exacto** del stub del mes si existe (ya reservado: no se vuelve a
+     restar de `saldoLibre`); si el mes no tiene stub, `0` con `usarSeguroFijado`. Sin
+     `usarSeguroFijado` (camino deprecado): `min(valorSeguro, saldoLibre)`, y ése sí se resta de
+     `saldoLibre`.
+   - `ollaTrasSeguro = valorTotal − seguroMes`.
+   - **Cruce:** `disponibleMes = min(ollaTrasSeguro, deudaExigible si hay préstamo, saldoLibre)`.
+   - **Pensión:** `remanenteMes = max(0, min(ollaTrasSeguro − cruce, saldoLibre − cruce))`.
+   - `saldoLibre −= cruce + (remanenteMes si sale al banco)`.
+3. **Con `saldoLibre <= TOLERANCIA`** (corregido 2026-09-14, la primera redacción era del árbitro y
+   estaba mal):
+   - si **este** mes tiene stub con seguro > 0 → se procesa: seguro exacto, cruce 0, pensión 0;
+   - si este mes **no** tiene stub con seguro > 0 pero **alguno posterior sí** → `continue`: el mes
+     **no se genera** (no hay nada que descontar ni pagar). Procesarlo daba un PGPC `PAGADA` por $0 y
+     un asiento de devengo **sin líneas**;
+   - si no queda ningún stub con seguro > 0 → `SALDO_AGOTADO`, `break`, como siempre.
+   El mes salteado no se vuelve a pagar después (el movimiento del seguro posterior mueve el ancla),
+   que es la misma semántica que `SALDO_AGOTADO`: sin saldo, no hay pensión.
+4. Los cortes tempranos `SIN_ANCLA` y `AL_DIA` quedan como están: con 11.1, un jubilado en esos casos
+   ya no tiene seguro fijado > 0 en el período.
+
+### 11.3 Prevuelo (`previsualizarJubilado`) — mismo orden
+
+```
+montoSeguro   = min(seguroAcumulado, saldo)
+montoACruzar  = min(pensionesAcumuladas − montoSeguro, deudaExigible, saldo − montoSeguro)
+pension       = max(0, min(pensionesAcumuladas − montoSeguro − montoACruzar, saldo − montoSeguro − montoACruzar))
+```
+
+Sigue siendo una aproximación sobre el nominal (no lee los stubs), igual que antes.
+
+### 11.4 Invariantes que la implementación tiene que cumplir
+
+- Σ seguro fijado a un jubilado y aún no descontado **≤** su saldo del aporte 23.
+- En la corrida: `seguro + cruce + pensión al banco ≤ saldo` al empezar, siempre.
+- Orden al proveedor = Σ seguro fijado = Σ seguro que la corrida de pensiones descuenta (salvo los
+  jubilados que fallen, que quedan en `errores` con su stub para el mes siguiente).
+- `crearMovimientoNegativo` sigue revalidando el saldo (H60, despacho 1): es la red, no el control.
+
+### 11.5 Lo ya pagado no se toca
+
+Esto rige desde el próximo WAR. Agosto 2026 y anteriores se miden con `crd/sql/222` (bloque 4) y lo
+que haya se decide aparte.
+
+---
+
+# 12. ⭐ El asiento del seguro médico — decisión del usuario, 2026-09-23
+
+**Reportado por el usuario:** *«al procesar solo seguro médico no se está generando el asiento que da
+de baja las cuentas individuales contra los seguros médicos por pagar»*.
+
+## Lo que pasaba, medido
+
+**El proceso de seguro (§4.1) NO generaba ningún asiento.** Verificado: su único acto contable es
+`generarOrdenPagoProveedorSeguro`. El asiento del seguro existía, pero dentro del **devengo de
+pensiones** (`generarAsientoDevengoPension`, líneas **aux1=3 y aux1=4** de la plantilla 35), que
+corre a **fin de mes**.
+
+⛔ **El desfase que eso produce:** el dinero le sale al proveedor al **inicio** del mes (la orden
+agregada) y el pasivo se reconoce al **final**. Si tesorería paga esa orden antes de que corran las
+pensiones, el asiento del pago **debita «seguros médicos por pagar» sin que nada la haya
+acreditado** — la cuenta queda en negativo. Y si el período contable se cierra en el medio, deja de
+ser temporal.
+
+## La decisión
+
+**El proceso de seguro genera su propio asiento**, en el momento en que fija los valores y manda a
+pagar: **D cuentas individuales / H seguros médicos por pagar**.
+
+⭐ **UN SOLO ASIENTO por corrida, por el total del período. No uno por jubilado.**
+
+| | |
+|---|---|
+| **Por qué uno solo** | El hecho económico es uno —«este mes se descontó X y se le debe X al proveedor»— y **el pago con el que hay que cuadrarlo también es uno solo**, la orden agregada. Conciliar devengado contra pagado pasa a ser comparar un asiento contra una orden |
+| **Contrapartida aceptada** | Desde el asiento **no se ve a quién se le bajó**. Ese detalle vive en `CRD.PGPC` (`PGPCVLSG` por jubilado) y en el reporte de la corrida |
+| **Por qué no uno por jubilado** | Duplicaría los asientos del mes (180 de devengo pasarían a 360) y dejaría el devengo individual enfrentado a un pago agregado |
+
+**Dónde se guarda:** `CRD.CRJB.CRJBASSG`, columna nueva (`crd/sql/244`). Número sin FK, mismo
+criterio que `PGPC.PGPCNMAS`. **Nulo = todavía no se generó.**
+
+## ⛔ La regla que evita devengar el seguro DOS veces
+
+El devengo de pensiones **deja de incluir las líneas aux1=3 y 4 sólo cuando el período tiene
+`CRJBASSG` generado**. No siempre.
+
+**Por qué la condición y no quitarlas a secas**, que es el error fácil:
+
+1. **La corrida de 9/2026 ya se generó** (orden 478, $450,40) **antes** de este cambio, así que su
+   `CRJBASSG` queda nulo. Si el devengo dejara de incluir el seguro sin mirar esa columna,
+   **septiembre se quedaría sin devengar el seguro por ningún lado**.
+2. **Los meses retroactivos** (§10) no tienen cabecera de corrida con asiento de seguro. Su seguro
+   se sigue devengando por el camino de siempre, dentro del asiento de pensiones.
+
+⇒ **El esquema nuevo empieza a regir con la corrida de octubre.** Septiembre se devenga completo por
+el camino viejo, una sola vez.
+
+## Cuándo NO se genera
+
+Si el total del período es 0, **no se genera asiento** — mismo criterio que la orden de pago, que
+tampoco se crea (*«Sin seguro médico que pagar al proveedor… ($0)»*). Un asiento sin líneas no se
+graba: es el defecto que §11.2 ya había atajado para los meses sin stub.
