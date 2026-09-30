@@ -146,6 +146,12 @@ export class MenucuentasxcobrarComponent {
           idPermiso: Permisos.CXC_ATS_Y_CUADRE_103_104,
           route: '/menucuentasxcobrar/reportes/ats-detalle',
         },
+        {
+          displayName: 'Cuentas por Cobrar',
+          iconName: 'account_balance_wallet',
+          idPermiso: Permisos.CXC_REPORTES,
+          route: '/menucuentasxcobrar/reportes/cartera',
+        },
       ],
     },
   ];

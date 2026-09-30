@@ -11,6 +11,7 @@ import {
   FiltrosListarCobros,
   ResultadoAplicacionCxc,
 } from '../model/aplicacion-pago-cxc';
+import { ParametrosCartera, ReporteCartera } from '../../cxp/model/cartera';
 import { ServiciosCxc } from './ws-cxc';
 
 /** Abonos, saldo y cobros de una factura de venta (APLC). */
@@ -45,6 +46,20 @@ export class AplicacionPagoCxcService {
     if (filtros.formaPago != null) params = params.set('formaPago', filtros.formaPago);
     if (filtros.estado != null) params = params.set('estado', filtros.estado);
     return this.http.get<CobroListado[]>(`${ServiciosCxc.RS_APLC}/listar`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Cartera por cobrar: todos los documentos pendientes a una fecha de corte, con saldo y
+   * antigüedad — docs/cxc/API-CARTERA-CXP-CXC.md §3.1/§4 (mismo DTO que el lado CxP, no se
+   * duplica). `fechaCorte` omitida = hoy; `idTitular` omitido = todos.
+   */
+  carteraPorCobrar(params: ParametrosCartera): Observable<ReporteCartera> {
+    let httpParams = new HttpParams().set('idEmpresa', params.idEmpresa);
+    if (params.fechaCorte) httpParams = httpParams.set('fechaCorte', params.fechaCorte);
+    if (params.idTitular != null) httpParams = httpParams.set('idTitular', params.idTitular);
+    return this.http.get<ReporteCartera>(`${ServiciosCxc.RS_APLC}/cartera`, { params: httpParams }).pipe(
       catchError(this.handleError)
     );
   }

@@ -995,6 +995,12 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/cxc/reportes/dash-ventas').then((m) => m.DashVentasComponent),
         canActivate: [authGuard],
       },
+      {
+        path: 'reportes/cartera',
+        loadComponent: () => import('./modules/cxp/forms/reportes/cartera/cartera.component').then((m) => m.CarteraComponent),
+        canActivate: [authGuard],
+        data: { title: 'Cuentas por Cobrar', tipo: 'POR_COBRAR' },
+      },
     ],
   },
   {
@@ -1107,6 +1113,12 @@ export const routes: Routes = [
         path: 'reportes/dashboard',
         loadComponent: () => import('./modules/cxp/forms/reportes/dashboard-cxp/dashboard-cxp.component').then((m) => m.DashboardCxpComponent),
         canActivate: [authGuard],
+      },
+      {
+        path: 'reportes/cartera',
+        loadComponent: () => import('./modules/cxp/forms/reportes/cartera/cartera.component').then((m) => m.CarteraComponent),
+        canActivate: [authGuard],
+        data: { title: 'Cuentas por Pagar', tipo: 'POR_PAGAR' },
       },
     ],
   },

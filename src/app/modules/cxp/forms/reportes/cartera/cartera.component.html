@@ -1,0 +1,345 @@
+<div class="cartera-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">account_balance_wallet</mat-icon>
+    <div>
+      <h1>{{ titulo }}</h1>
+      <p class="subtitle">
+        Todos los documentos pendientes a una fecha de corte, con saldo y antigüedad. Lee de las
+        mismas aplicaciones que ya calculan el saldo de cada documento — no es un segundo cálculo.
+      </p>
+    </div>
+  </div>
+
+  <mat-card class="filtros-card">
+    <mat-card-content>
+      <div class="filtros-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de corte</mat-label>
+          <input matInput type="date" [ngModel]="fechaCorte()" (ngModelChange)="fechaCorte.set($event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-titular">
+          <mat-label>{{ etiquetaRolTitular }} (opcional)</mat-label>
+          <input matInput readonly [value]="etiquetaTitularFiltro()" placeholder="Todos" (click)="buscarTitular()" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar {{ etiquetaRolTitular }}" (click)="buscarTitular()">
+            <mat-icon>search</mat-icon>
+          </button>
+          @if (titularFiltro()) {
+            <button mat-icon-button matSuffix type="button" matTooltip="Quitar filtro" (click)="quitarTitular()">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" [disabled]="cargando()" (click)="consultar()">
+          @if (cargando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>search</mat-icon>
+          }
+          Consultar
+        </button>
+      </div>
+
+      <div class="aviso aviso-info nota-anticipos">
+        <mat-icon>info</mat-icon>
+        <span>Los anticipos disponibles son a hoy, no a la fecha de corte.</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (error()) {
+    <div class="aviso aviso-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  @if (consultaHecha() && !error() && reporte(); as rep) {
+    <div class="totales-grid">
+      <div class="total-item destacado">
+        <span class="label">Saldo total</span>
+        <span class="value">{{ rep.totales.saldo | number: '1.2-2' }}</span>
+      </div>
+      <div class="total-item">
+        <span class="label">Por vencer</span>
+        <span class="value">{{ rep.totales.porVencer | number: '1.2-2' }}</span>
+      </div>
+      <div class="total-item">
+        <span class="label">Vencido</span>
+        <span class="value">{{ (rep.totales.d1a30 + rep.totales.d31a60 + rep.totales.d61a90 + rep.totales.mas90) | number: '1.2-2' }}</span>
+      </div>
+      <div class="total-item">
+        <span class="label">Anticipos disponibles</span>
+        <span class="value">{{ rep.totales.anticiposDisponibles | number: '1.2-2' }}</span>
+      </div>
+      <div class="total-item destacado">
+        <span class="label">Saldo neto</span>
+        <span class="value">{{ rep.totales.saldoNeto | number: '1.2-2' }}</span>
+      </div>
+    </div>
+
+    @if (rep.avisos && rep.avisos.length > 0) {
+      <mat-expansion-panel class="avisos-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>warning</mat-icon>
+            Avisos ({{ rep.avisos.length }})
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <ul class="lista-avisos">
+          @for (a of rep.avisos; track a) {
+            <li>{{ a }}</li>
+          }
+        </ul>
+      </mat-expansion-panel>
+    }
+
+    @if (sinDocumentos()) {
+      <div class="aviso aviso-info">
+        <mat-icon>info</mat-icon>
+        <span>No hay documentos pendientes a la fecha de corte.</span>
+      </div>
+    } @else {
+      <mat-tab-group class="tabs-cartera" animationDuration="0ms">
+        <!-- ================= RESUMEN POR TITULAR ================= -->
+        <mat-tab [label]="'Resumen por titular (' + rep.resumen.length + ')'">
+          <div class="tab-body">
+            <div class="tab-toolbar">
+              <mat-form-field appearance="outline" class="filtro-texto">
+                <mat-label>Buscar por identificación o {{ etiquetaRolTitular | lowercase }}</mat-label>
+                <input matInput [ngModel]="filtroTextoResumen()" (ngModelChange)="aplicarFiltroResumen($event)" />
+                <mat-icon matSuffix>search</mat-icon>
+              </mat-form-field>
+              <button mat-stroked-button (click)="exportarResumenCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar resumen
+              </button>
+            </div>
+
+            <div class="tabla-scroll">
+              <table mat-table [dataSource]="resumenDataSource" matSort #sortResumen="matSort" multiTemplateDataRows class="tabla-resumen">
+                <ng-container matColumnDef="expand">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let row">
+                    <button mat-icon-button type="button" (click)="toggleTitular(row.idTitular); $event.stopPropagation()">
+                      <mat-icon>{{ titularExpandido() === row.idTitular ? 'expand_less' : 'expand_more' }}</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="identificacion">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Identificación</th>
+                  <td mat-cell *matCellDef="let row">{{ row.identificacion }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="titular">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ etiquetaRolTitular }}</th>
+                  <td mat-cell *matCellDef="let row">{{ row.titular }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="documentos">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Docs.</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.documentos }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="total">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Total</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.total | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="aplicado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Aplicado</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.aplicado | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="saldo">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Saldo</th>
+                  <td mat-cell *matCellDef="let row" class="num" [class.sobrepagado]="row.saldo < 0">{{ row.saldo | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="porVencer">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Por vencer</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.porVencer | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="d1a30">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">1-30</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.d1a30 | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="d31a60">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">31-60</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.d31a60 | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="d61a90">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">61-90</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.d61a90 | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="mas90">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">+90</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.mas90 | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="anticiposDisponibles">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num" matTooltip="A hoy, no a la fecha de corte">Anticipos</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.anticiposDisponibles | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="saldoNeto">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Saldo neto</th>
+                  <td mat-cell *matCellDef="let row" class="num">{{ row.saldoNeto | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="expandedDetail">
+                  <td mat-cell *matCellDef="let row" [attr.colspan]="columnasResumen.length">
+                    <div class="detalle-expandido">
+                      <table class="tabla-simple">
+                        <thead>
+                          <tr>
+                            <th>Tipo</th>
+                            <th>N° documento</th>
+                            <th>F. emisión</th>
+                            <th>F. vencimiento</th>
+                            <th>Tramo</th>
+                            <th class="num">Total</th>
+                            <th class="num">Saldo</th>
+                            @if (esCxp) { <th>Intermediario</th> }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (d of documentosDeTitular(row.idTitular); track claveDocumento(d)) {
+                            <tr [class.sobrepagado-fila]="d.sobrepagado">
+                              <td>{{ d.tipoDocumento }}</td>
+                              <td>{{ d.numeroDocumento }}</td>
+                              <td>{{ d.fechaEmisionDate ? (d.fechaEmisionDate | date: 'dd/MM/yyyy') : '—' }}</td>
+                              <td>{{ d.fechaVencimientoDate ? (d.fechaVencimientoDate | date: 'dd/MM/yyyy') : '—' }}</td>
+                              <td>{{ etiquetaTramo(d.tramo) }}</td>
+                              <td class="num">{{ d.total | number: '1.2-2' }}</td>
+                              <td class="num" [class.sobrepagado]="d.sobrepagado">{{ d.saldo | number: '1.2-2' }}</td>
+                              @if (esCxp) { <td>{{ d.intermediario ? 'Sí' : '—' }}</td> }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="columnasResumen"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasResumen;"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['expandedDetail']"
+                    [class.fila-detalle-oculta]="row.idTitular !== titularExpandido()" class="fila-detalle"></tr>
+              </table>
+            </div>
+
+            <mat-paginator #paginatorResumen [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+          </div>
+        </mat-tab>
+
+        <!-- ================= DOCUMENTOS ================= -->
+        <mat-tab [label]="'Documentos (' + rep.documentos.length + ')'">
+          <div class="tab-body">
+            <div class="tab-toolbar">
+              <mat-form-field appearance="outline" class="filtro-texto">
+                <mat-label>Buscar por N° documento, identificación o {{ etiquetaRolTitular | lowercase }}</mat-label>
+                <input matInput [ngModel]="filtroTextoDocs()" (ngModelChange)="onCambioFiltroTextoDocs($event)" />
+                <mat-icon matSuffix>search</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Tramo</mat-label>
+                <mat-select [ngModel]="filtroTramoDocs()" (ngModelChange)="onCambioFiltroTramoDocs($event)">
+                  <mat-option [value]="null">Todos</mat-option>
+                  @for (t of tramoOptions; track t.codigo) {
+                    <mat-option [value]="t.codigo">{{ t.texto }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <button mat-stroked-button (click)="exportarDetalleCSV()">
+                <mat-icon>download</mat-icon>
+                Exportar detalle
+              </button>
+            </div>
+
+            <div class="tabla-scroll">
+              <table mat-table [dataSource]="documentosDataSource" matSort #sortDocs="matSort" class="tabla-documentos">
+                <ng-container matColumnDef="tipoDocumento">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
+                  <td mat-cell *matCellDef="let d">{{ d.tipoDocumento }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="numeroDocumento">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>N° documento</th>
+                  <td mat-cell *matCellDef="let d">
+                    {{ d.numeroDocumento }}
+                    @if (esCxp && d.intermediario) {
+                      <span class="chip-intermediario">Intermediario</span>
+                    }
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="titular">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ etiquetaRolTitular }}</th>
+                  <td mat-cell *matCellDef="let d">{{ d.titular }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="identificacion">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Identificación</th>
+                  <td mat-cell *matCellDef="let d">{{ d.identificacion }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaEmision">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>F. emisión</th>
+                  <td mat-cell *matCellDef="let d">{{ d.fechaEmisionDate ? (d.fechaEmisionDate | date: 'dd/MM/yyyy') : '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="fechaVencimiento">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>F. vencimiento</th>
+                  <td mat-cell *matCellDef="let d">{{ d.fechaVencimientoDate ? (d.fechaVencimientoDate | date: 'dd/MM/yyyy') : '—' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="diasVencido">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Días vencido</th>
+                  <td mat-cell *matCellDef="let d" class="num">{{ d.diasVencido }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="tramo">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Tramo</th>
+                  <td mat-cell *matCellDef="let d">{{ etiquetaTramo(d.tramo) }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="total">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Total</th>
+                  <td mat-cell *matCellDef="let d" class="num">{{ d.total | number: '1.2-2' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="saldo">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Saldo</th>
+                  <td mat-cell *matCellDef="let d" class="num" [class.sobrepagado]="d.sobrepagado">
+                    {{ d.saldo | number: '1.2-2' }}
+                    @if (d.sobrepagado) {
+                      <mat-icon class="icono-sobrepagado" matTooltip="Sobrepagado: pagado de más">error</mat-icon>
+                    }
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="columnasDocumentos"></tr>
+                <tr mat-row *matRowDef="let row; columns: columnasDocumentos;" [class.fila-sobrepagada]="row.sobrepagado"></tr>
+              </table>
+
+              @if (documentosDataSource.filteredData.length === 0) {
+                <p class="sin-filas">Ningún documento coincide con el filtro.</p>
+              }
+            </div>
+
+            <mat-paginator #paginatorDocs [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    }
+  }
+</div>

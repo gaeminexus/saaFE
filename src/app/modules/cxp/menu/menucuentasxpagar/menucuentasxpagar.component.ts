@@ -136,6 +136,12 @@ export class MenucuentaxpagarComponent {
           idPermiso: Permisos.CXP_DASHBOARD,
           route: '/menucuentaxpagar/reportes/dashboard',
         },
+        {
+          displayName: 'Cuentas por Pagar',
+          iconName: 'account_balance_wallet',
+          idPermiso: Permisos.CXP_REPORTES,
+          route: '/menucuentaxpagar/reportes/cartera',
+        },
       ],
     },
     {

@@ -8,6 +8,7 @@ import {
   CruceAnticiposCxpRequest,
   ResultadoAplicacionCxp,
 } from '../model/aplicacion-pago-cxp';
+import { ParametrosCartera, ReporteCartera } from '../model/cartera';
 import { ServiciosCxp } from './ws-cxp';
 
 /** Abonos y saldo de una factura de compra (APLP). */
@@ -61,6 +62,20 @@ export class AplicacionPagoCxpService {
   getByLiquidacion(idLiquidacion: number, soloActivas = true): Observable<AplicacionPagoCxp[]> {
     const params = new HttpParams().set('soloActivas', soloActivas);
     return this.http.get<AplicacionPagoCxp[]>(`${ServiciosCxp.RS_APLP}/liquidacion/${idLiquidacion}`, { params }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * Cartera por pagar: todos los documentos pendientes a una fecha de corte, con saldo y
+   * antigüedad — docs/cxp/API-CARTERA-CXP-CXC.md §3.1/§4. `fechaCorte` omitida = hoy;
+   * `idTitular` omitido = todos.
+   */
+  carteraPorPagar(params: ParametrosCartera): Observable<ReporteCartera> {
+    let httpParams = new HttpParams().set('idEmpresa', params.idEmpresa);
+    if (params.fechaCorte) httpParams = httpParams.set('fechaCorte', params.fechaCorte);
+    if (params.idTitular != null) httpParams = httpParams.set('idTitular', params.idTitular);
+    return this.http.get<ReporteCartera>(`${ServiciosCxp.RS_APLP}/cartera`, { params: httpParams }).pipe(
       catchError(this.handleError)
     );
   }

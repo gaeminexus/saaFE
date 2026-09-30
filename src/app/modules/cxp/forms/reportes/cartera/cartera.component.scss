@@ -1,0 +1,210 @@
+.cartera-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .header-icon {
+    font-size: 36px;
+    width: 36px;
+    height: 36px;
+    color: #667eea;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+    max-width: 760px;
+  }
+}
+
+.filtros-card {
+  border-radius: 12px;
+}
+
+.filtros-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+
+  mat-form-field {
+    min-width: 240px;
+  }
+  .campo-titular {
+    min-width: 320px;
+  }
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.aviso-error {
+  background: #fdecea;
+  color: #611a15;
+}
+.aviso-info {
+  background: #e8eaf6;
+  color: #283593;
+}
+.nota-anticipos {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.totales-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.total-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #f5f7fa;
+
+  &.destacado {
+    background: #e8eaf6;
+  }
+
+  .label {
+    font-size: 0.75rem;
+    color: #555;
+  }
+  .value {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+}
+
+.avisos-panel {
+  border-radius: 8px;
+
+  mat-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #7a5c00;
+  }
+}
+.lista-avisos {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+
+  li {
+    margin-bottom: 4px;
+  }
+}
+
+.tab-body {
+  padding: 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tab-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filtro-texto {
+  min-width: 320px;
+}
+
+.tabla-scroll {
+  overflow-x: auto;
+}
+
+.tabla-resumen,
+.tabla-documentos,
+.tabla-simple {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    white-space: nowrap;
+  }
+
+  .num {
+    text-align: right;
+  }
+}
+
+.tabla-simple {
+  th {
+    background: #f5f7fa;
+  }
+}
+
+.sin-filas {
+  text-align: center;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 16px;
+}
+
+.sobrepagado {
+  color: #c62828;
+  font-weight: 600;
+}
+tr.sobrepagado-fila,
+tr.fila-sobrepagada {
+  background: #fdecea;
+}
+
+.icono-sobrepagado {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  vertical-align: middle;
+  margin-left: 4px;
+  color: #c62828;
+  cursor: help;
+}
+
+.chip-intermediario {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  background: #fff3e0;
+  color: #b26a00;
+  white-space: nowrap;
+}
+
+.fila-detalle-oculta {
+  display: none;
+}
+
+.detalle-expandido {
+  padding: 10px 16px;
+  background: #fafafa;
+  border-radius: 6px;
+  margin: 6px 0;
+}
