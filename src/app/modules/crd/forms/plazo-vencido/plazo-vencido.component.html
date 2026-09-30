@@ -161,6 +161,7 @@
                                     matTooltip="Selecciona todos los préstamos habilitados que pasan el filtro actual"
                                     (change)="alternarSeleccionTodosVisibles()"></mat-checkbox>
                     </th>
+                    <th>Nro. de memorando</th>
                     <th class="pv-th-ordenable" (click)="alternarOrden('numero')">
                       Préstamo
                       @if (ordenColumna() === 'numero') {
@@ -193,7 +194,6 @@
                       }
                     </th>
                     <th>Cuotas pend. / por vencer</th>
-                    <th>Nro. de memorando</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -202,6 +202,16 @@
                       <td>
                         <mat-checkbox [checked]="estaSeleccionado(fila)" [disabled]="!fila.cuadro.valido"
                                       (change)="alternarSeleccion(fila)"></mat-checkbox>
+                      </td>
+                      <td>
+                        @if (fila.cuadro.valido && estaSeleccionado(fila)) {
+                          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pv-input-memorando"
+                                          [class.pv-memorando-vacio]="!memorandoDe(fila.cuadro.idPrestamo).trim()">
+                            <input matInput [ngModel]="memorandoDe(fila.cuadro.idPrestamo)"
+                                   (ngModelChange)="setMemorando(fila.cuadro.idPrestamo, $event)"
+                                   placeholder="Nro. de memorando" />
+                          </mat-form-field>
+                        }
                       </td>
                       <td>{{ fila.cuadro.numeroPrestamo }}</td>
                       <td>{{ fila.cuadro.nombreParticipe }}</td>
@@ -215,13 +225,6 @@
                       <td>{{ formatMoneda(fila.cuadro.mora.saldo) }}</td>
                       <td><b>{{ formatMoneda(fila.cuadro.totalPorCobrar) }}</b></td>
                       <td>{{ fila.cuadro.cuotasPendientes }} / {{ fila.cuadro.cuotasPorVencer }}</td>
-                      <td>
-                        @if (fila.cuadro.valido && estaSeleccionado(fila)) {
-                          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pv-input-memorando">
-                            <input matInput [(ngModel)]="fila.numeroMemorando" placeholder="Nro. de memorando" />
-                          </mat-form-field>
-                        }
-                      </td>
                     </tr>
                     @if (!fila.cuadro.valido && fila.cuadro.inconsistencias.length) {
                       <tr class="pv-fila-inconsistencias">
@@ -243,6 +246,9 @@
           }
 
           <div class="pv-acciones-finales">
+            @if (motivoNoPuedeDeclarar(); as motivo) {
+              <span class="pv-motivo-deshabilitado">{{ motivo }}</span>
+            }
             <button mat-raised-button color="accent" [disabled]="!puedeDeclarar()" (click)="declararPlazoVencido()">
               @if (declarando()) {
                 <mat-spinner diameter="18"></mat-spinner>

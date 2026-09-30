@@ -25,10 +25,14 @@ import {
 } from '../../model/plazo-vencido/plazo-vencido.model';
 import { PlazoVencidoService } from '../../service/plazo-vencido.service';
 
-/** Fila mutable de la tabla de candidatos (pestaña 1): guarda el nro. de memorando que se teclea. */
+/**
+ * Fila de la tabla de candidatos (pestaña 1). El nro. de memorando NO vive acá — vive en el signal
+ * `memorandos` (Map por `idPrestamo`): un `computed` no reacciona a la mutación de una propiedad
+ * plana de un objeto, así que si estuviera acá `puedeDeclarar` podía quedar colgado con "false"
+ * después de escribir el memorando (defecto reportado el 2026-09-30, ver `memorandos` más abajo).
+ */
 interface FilaCandidatoPlazoVencido {
   cuadro: CuadroPlazoVencido;
-  numeroMemorando: string;
 }
 
 /** `Todos` | solo `valido=true` | solo `valido=false` — filtro de "estado del cálculo" (ítem 1). */
@@ -88,6 +92,14 @@ export class PlazoVencidoComponent {
    * después no se pierde.
    */
   seleccionados = signal<Set<number>>(new Set());
+
+  /**
+   * Nro. de memorando por `idPrestamo`, en un signal (no una propiedad plana de la fila): así
+   * `puedeDeclarar` y compañía SÍ se recalculan cuando el usuario lo teclea, sea cual sea el orden
+   * en que seleccionó la fila y escribió el memorando. Igual que `seleccionados`, sobrevive a
+   * filtros/orden/página porque está indexado por `idPrestamo`, no por posición en ningún arreglo.
+   */
+  memorandos = signal<Map<number, string>>(new Map());
 
   // ---- filtros en memoria sobre `filasCandidatos()` (ítem 1) — no vuelven a llamar al backend ----
   filtroTexto = signal('');
@@ -212,9 +224,24 @@ export class PlazoVencidoComponent {
     () => !!this.paraNombre().trim() && !!this.paraCargo().trim() && !!this.ccNombre().trim() && !!this.ccCargo().trim()
   );
 
+  /** Cuántas filas seleccionadas todavía no tienen memorando — para el aviso bajo el botón. */
+  seleccionadosSinMemorando = computed(() => {
+    const memos = this.memorandos();
+    return this.filasSeleccionadas().filter((f) => !(memos.get(f.cuadro.idPrestamo) ?? '').trim()).length;
+  });
+
   puedeDeclarar = computed(() => {
     if (this.declarando() || !this.seleccionados().size || !this.encabezadoCompleto()) return false;
-    return this.filasSeleccionadas().every((f) => f.numeroMemorando.trim().length > 0);
+    return this.seleccionadosSinMemorando() === 0;
+  });
+
+  /** Una sola línea explicando por qué el botón está deshabilitado — `null` cuando SÍ se puede declarar. */
+  motivoNoPuedeDeclarar = computed(() => {
+    if (this.declarando() || this.puedeDeclarar()) return null;
+    if (!this.seleccionados().size) return 'Seleccione al menos un préstamo.';
+    if (!this.encabezadoCompleto()) return 'Complete PARA y CC.';
+    const faltantes = this.seleccionadosSinMemorando();
+    return `Falta el Nro. de memorando en ${faltantes} préstamo${faltantes === 1 ? '' : 's'} seleccionado${faltantes === 1 ? '' : 's'}.`;
   });
 
   constructor() {
@@ -264,12 +291,13 @@ export class PlazoVencidoComponent {
     this.errorCandidatos.set(null);
     this.resultadoDeclaracion.set(null);
     this.seleccionados.set(new Set());
+    this.memorandos.set(new Map());
     this.limpiarFiltrosCandidatos();
 
     this.servicio.candidatos(fecha).subscribe({
       next: (filas) => {
         this.consultandoCandidatos.set(false);
-        this.filasCandidatos.set(filas.map((cuadro) => ({ cuadro, numeroMemorando: '' })));
+        this.filasCandidatos.set(filas.map((cuadro) => ({ cuadro })));
       },
       error: (e: Error) => {
         this.consultandoCandidatos.set(false);
@@ -289,6 +317,16 @@ export class PlazoVencidoComponent {
 
   estaSeleccionado(fila: FilaCandidatoPlazoVencido): boolean {
     return this.seleccionados().has(fila.cuadro.idPrestamo);
+  }
+
+  memorandoDe(idPrestamo: number): string {
+    return this.memorandos().get(idPrestamo) ?? '';
+  }
+
+  setMemorando(idPrestamo: number, valor: string): void {
+    const map = new Map(this.memorandos());
+    map.set(idPrestamo, valor);
+    this.memorandos.set(map);
   }
 
   /**
@@ -380,9 +418,10 @@ export class PlazoVencidoComponent {
     const fecha = this.servicio.formatearFecha(this.fechaCorteDeclarar());
     if (!fecha) return;
 
+    const memos = this.memorandos();
     const prestamos: PrestamoADeclararPlazoVencido[] = this.filasSeleccionadas().map((f) => ({
       idPrestamo: f.cuadro.idPrestamo,
-      numeroMemorando: f.numeroMemorando.trim(),
+      numeroMemorando: (memos.get(f.cuadro.idPrestamo) ?? '').trim(),
     }));
 
     this.declarando.set(true);
