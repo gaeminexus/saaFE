@@ -1,0 +1,303 @@
+<div class="vista">
+  <header class="contexto">
+    <button mat-icon-button type="button" (click)="volver()" matTooltip="Volver a la lista de liquidaciones">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="quien">
+      <span class="colaborador">Liquidación de ex-colaborador</span>
+      <h1>{{ titulo() }}</h1>
+    </div>
+
+    <span class="estado" [class.estado-cerrado]="!esNuevo()">{{ etiquetaEstado() }}</span>
+  </header>
+
+  @if (cargando()) {
+    <div class="cargando">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Cargando…</span>
+    </div>
+  } @else {
+    <div class="cuerpo">
+      @if (puedeEditar()) {
+        <section class="grupo">
+          <h2>Identificación</h2>
+          <form [formGroup]="formulario" class="campos">
+            <!-- tipoIdentificacion es 'C'/'P' fijo: no pasa por app-campo-formulario (ver comentario del .ts) -->
+            <div class="fila">
+              <span class="etiqueta">
+                Tipo de identificación
+                <span class="marca-obligatorio" aria-hidden="true">*</span>
+              </span>
+              <div class="valor">
+                <mat-form-field appearance="outline" [hideRequiredMarker]="true">
+                  <mat-select formControlName="tipoIdentificacion">
+                    <mat-option value="C">Cédula</mat-option>
+                    <mat-option value="P">Pasaporte</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </div>
+
+            @for (campo of campos(); track campo.name) {
+              @if (campo.grupo === 'Identificación') {
+                <app-campo-formulario
+                  [campo]="campo"
+                  [formulario]="formulario"
+                  disposicion="izquierda"
+                  [class.campo-completo]="campo.ancho === 'completo'"
+                >
+                </app-campo-formulario>
+              }
+            }
+          </form>
+        </section>
+
+        <section class="grupo">
+          <h2>Relación laboral</h2>
+          <form [formGroup]="formulario" class="campos">
+            @for (campo of campos(); track campo.name) {
+              @if (campo.grupo === 'Relación laboral') {
+                <app-campo-formulario
+                  [campo]="campo"
+                  [formulario]="formulario"
+                  disposicion="izquierda"
+                  [class.campo-completo]="campo.ancho === 'completo'"
+                >
+                </app-campo-formulario>
+              }
+            }
+          </form>
+          @if (formulario.get('fechaSalida')?.hasError('fechaSalidaPosterior2026')) {
+            <p class="error-inline">
+              Esta pantalla es solo para salidas anteriores a 2026. Use la liquidación de haberes.
+            </p>
+          }
+        </section>
+
+        <section class="grupo">
+          <h2>Pago</h2>
+          <form [formGroup]="formulario" class="campos">
+            @for (campo of campos(); track campo.name) {
+              @if (campo.grupo === 'Pago') {
+                <app-campo-formulario
+                  [campo]="campo"
+                  [formulario]="formulario"
+                  disposicion="izquierda"
+                  [class.campo-completo]="campo.ancho === 'completo'"
+                >
+                </app-campo-formulario>
+              }
+            }
+          </form>
+          <p class="nota">
+            Con banco, tipo y número de cuenta completos, Tesorería puede pagar por transferencia.
+            Sin ellos, se puede grabar igual y pagar con cheque.
+          </p>
+        </section>
+
+        <section class="grupo">
+          <h2>Observación</h2>
+          <form [formGroup]="formulario" class="campos">
+            @for (campo of campos(); track campo.name) {
+              @if (campo.grupo === 'Observación') {
+                <app-campo-formulario
+                  [campo]="campo"
+                  [formulario]="formulario"
+                  disposicion="izquierda"
+                  class="campo-completo"
+                >
+                </app-campo-formulario>
+              }
+            }
+          </form>
+        </section>
+      } @else if (liquidacion(); as l) {
+        <section class="grupo">
+          <h2>Identificación</h2>
+          <dl class="resumen">
+            <div><dt>Tipo</dt><dd>{{ l.tipoIdentificacion === 'C' ? 'Cédula' : 'Pasaporte' }}</dd></div>
+            <div><dt>Identificación</dt><dd>{{ l.identificacion }}</dd></div>
+            <div><dt>Nombre</dt><dd>{{ l.apellidos }} {{ l.nombres }}</dd></div>
+            @if (l.cargo) {
+              <div><dt>Cargo</dt><dd>{{ l.cargo }}</dd></div>
+            }
+          </dl>
+        </section>
+
+        <section class="grupo">
+          <h2>Relación laboral</h2>
+          <dl class="resumen">
+            @if (l.fechaIngreso) {
+              <div><dt>Fecha de ingreso</dt><dd>{{ fecha(l.fechaIngreso) | date: 'dd/MM/yyyy' }}</dd></div>
+            }
+            <div><dt>Fecha de salida</dt><dd>{{ fecha(l.fechaSalida) | date: 'dd/MM/yyyy' }}</dd></div>
+            <div><dt>Causal</dt><dd>{{ causalLabel() }}</dd></div>
+            @if (l.ultimaRemuneracion !== null && l.ultimaRemuneracion !== undefined) {
+              <div><dt>Última remuneración</dt><dd>{{ l.ultimaRemuneracion | number: '1.2-2' }}</dd></div>
+            }
+          </dl>
+        </section>
+
+        <section class="grupo">
+          <h2>Pago</h2>
+          <dl class="resumen">
+            <div><dt>Producto de pago</dt><dd>{{ productoPagoLabel() }}</dd></div>
+            @if (l.banco) {
+              <div><dt>Banco</dt><dd>{{ bancoLabel() }}</dd></div>
+              <div><dt>Tipo de cuenta</dt><dd>{{ l.tipoCuenta === 1 ? 'Ahorro' : 'Corriente' }}</dd></div>
+              <div><dt>Número de cuenta</dt><dd>{{ l.numeroCuenta }}</dd></div>
+            }
+            @if (estadoActual() === 2) {
+              <div><dt>Pago</dt><dd>Enviado a tesorería (Nº {{ l.idPago }}) — esperando confirmación</dd></div>
+            }
+            @if (estadoActual() === 3) {
+              <div><dt>Fecha de pago</dt><dd>{{ fecha(l.fechaPago) | date: 'dd/MM/yyyy' }}</dd></div>
+              @if (l.idAsiento) {
+                <div><dt>Asiento</dt><dd>{{ l.idAsiento }}</dd></div>
+              }
+            }
+            @if (estadoActual() === 4 && l.motivoAnulacion) {
+              <div><dt>Motivo de anulación</dt><dd>{{ l.motivoAnulacion }}</dd></div>
+            }
+          </dl>
+          @if (l.observacion) {
+            <p class="nota">{{ l.observacion }}</p>
+          }
+        </section>
+      }
+
+      <section class="grupo">
+        <h2>Conceptos</h2>
+
+        @if (puedeEditar()) {
+          <table class="grilla-conceptos">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th class="a-la-derecha">Valor</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of detalles(); track $index) {
+                <tr>
+                  <td>
+                    <mat-form-field appearance="outline" class="celda-select">
+                      <mat-select
+                        [ngModel]="fila.tipoConcepto"
+                        (ngModelChange)="actualizarTipoConcepto($index, $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                        placeholder="Elija un tipo"
+                      >
+                        @for (tipo of tiposConcepto; track tipo.codigo) {
+                          <mat-option [value]="tipo.codigo">{{ tipo.texto }}</mat-option>
+                        }
+                      </mat-select>
+                    </mat-form-field>
+                  </td>
+                  <td>
+                    <mat-form-field appearance="outline" class="celda-texto">
+                      <input
+                        matInput
+                        type="text"
+                        [ngModel]="fila.descripcion"
+                        (ngModelChange)="actualizarDescripcionConcepto($index, $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                        placeholder="Opcional — si va vacía, el acta usa el nombre del tipo"
+                      />
+                    </mat-form-field>
+                  </td>
+                  <td class="a-la-derecha">
+                    <mat-form-field appearance="outline" class="celda-numero">
+                      <input
+                        matInput
+                        type="number"
+                        min="0.01"
+                        [ngModel]="fila.valor"
+                        (ngModelChange)="actualizarValorConcepto($index, $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      />
+                    </mat-form-field>
+                  </td>
+                  <td>
+                    <button mat-icon-button type="button" (click)="quitarConcepto($index)" matTooltip="Quitar este concepto">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <button mat-stroked-button type="button" (click)="agregarConcepto()">
+            <mat-icon>add</mat-icon>
+            Agregar concepto
+          </button>
+        } @else {
+          <table class="desglose">
+            <thead>
+              <tr>
+                <th>Concepto</th>
+                <th class="a-la-derecha">Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (fila of detalles(); track $index) {
+                <tr>
+                  <td>{{ fila.descripcion || etiquetaTipoConcepto(fila.tipoConcepto) }}</td>
+                  <td class="a-la-derecha">{{ fila.valor | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <div class="totales">
+          <span>Ingresos <strong>{{ totalIngresos() | number: '1.2-2' }}</strong></span>
+          <span>Descuentos <strong>{{ totalDescuentos() | number: '1.2-2' }}</strong></span>
+          <span class="neto">Neto <strong>{{ neto() | number: '1.2-2' }}</strong></span>
+        </div>
+      </section>
+    </div>
+
+    <footer class="acciones">
+      <span class="pista">
+        @if (ocupado()) {
+          Procesando…
+        }
+      </span>
+
+      @if (puedeEditar()) {
+        <button mat-raised-button color="primary" type="button" (click)="guardar()" [disabled]="ocupado()">
+          <mat-icon>save</mat-icon>
+          Guardar
+        </button>
+      }
+      @if (puedeEnviarATesoreria()) {
+        <button mat-stroked-button type="button" (click)="enviarATesoreria()" [disabled]="ocupado()">
+          <mat-icon>send</mat-icon>
+          Enviar a tesorería
+        </button>
+      }
+      @if (puedeSincronizarPago()) {
+        <button mat-stroked-button type="button" (click)="sincronizarPago()" [disabled]="ocupado()">
+          <mat-icon>sync</mat-icon>
+          Actualizar pago
+        </button>
+      }
+      @if (puedeAnular()) {
+        <button mat-stroked-button color="warn" type="button" (click)="anular()" [disabled]="ocupado()">
+          <mat-icon>cancel</mat-icon>
+          Anular
+        </button>
+      }
+      @if (puedeDescargarActa()) {
+        <button mat-stroked-button type="button" (click)="descargarActa()" [disabled]="descargandoActa()">
+          <mat-icon>description</mat-icon>
+          Acta de finiquito
+        </button>
+      }
+    </footer>
+  }
+</div>

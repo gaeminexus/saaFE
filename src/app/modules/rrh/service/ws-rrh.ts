@@ -106,5 +106,10 @@ export class ServiciosRhh {
   // encadenado a una orden de pago, nunca se borra, solo se anula (§8).
   public static RS_VNPG = `${API_URL}/vnpg`;
 
+  // Liquidaciones de ex-colaboradores de la administración anterior — RHH.LQEX/RHH.DLEX
+  // (docs/rrh/API-LIQUIDACION-EXCOLABORADORES.md). @Path("lqex") en el backend, escribiéndose en
+  // paralelo (2026-09-30): implementado contra el contrato congelado, no contra código real todavía.
+  public static RS_LQEX = `${API_URL}/lqex`;
+
   // Agregar más endpoints de RRHH acá según necesidades
 }

@@ -1,0 +1,42 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  color: $text-primary;
+}
+
+.cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+
+  h1 {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    margin: 0;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+
+    mat-icon {
+      color: $primary-color;
+    }
+  }
+
+  p {
+    margin: $spacing-xs 0 0;
+    max-width: $breakpoint-md;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+}
+
+.filtro-estado {
+  max-width: 260px;
+}

@@ -1,0 +1,240 @@
+@use '../../../../../../styles/abstracts/colors' as *;
+@use '../../../../../../styles/abstracts/variables' as *;
+
+/** Misma estructura que contrato-form/liquidacion-form: contexto arriba, cuerpo que scrollea, acciones abajo. */
+.vista {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: $text-primary;
+}
+
+.contexto {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: $z-index-sticky;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $background-primary;
+  border-bottom: $border-width solid $border-light;
+
+  .quien {
+    display: flex;
+    flex-direction: column;
+    line-height: $line-height-tight;
+    min-width: 0;
+  }
+
+  .colaborador {
+    font-size: $font-size-xs;
+    color: $text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+  }
+
+  .estado {
+    margin-left: auto;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $border-radius-lg;
+    border: $border-width solid $border-medium;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+    color: $text-secondary;
+
+    &.estado-cerrado {
+      border-color: $primary-color;
+      color: $primary-color;
+    }
+  }
+}
+
+.cuerpo {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: $spacing-md;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
+}
+
+.grupo {
+  padding: $spacing-md;
+  border-radius: $border-radius-md;
+  background: $background-primary;
+  border: $border-width solid $border-light;
+
+  h2 {
+    margin: 0 0 $spacing-sm;
+    padding-bottom: $spacing-xs;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $secondary-color;
+    border-bottom: $border-width solid $border-light;
+  }
+}
+
+.campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 $spacing-xl;
+
+  .campo-completo {
+    grid-column: 1 / -1;
+  }
+
+  .fila {
+    display: flex;
+    align-items: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-xs 0;
+
+    .etiqueta {
+      flex: 0 0 40%;
+      font-size: $font-size-sm;
+      color: $text-secondary;
+      padding-top: $spacing-sm;
+    }
+
+    .valor {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .marca-obligatorio {
+      color: $error-color;
+    }
+  }
+}
+
+@media (max-width: $breakpoint-md) {
+  .campos {
+    grid-template-columns: 1fr;
+  }
+}
+
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(#{$breakpoint-sm * 0.3}, 1fr));
+  gap: $spacing-sm $spacing-md;
+  margin: 0;
+
+  dt {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+
+  dd {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: $text-primary;
+  }
+}
+
+.desglose,
+.grilla-conceptos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    text-align: left;
+    padding: $spacing-xs $spacing-sm;
+    color: $text-secondary;
+    font-weight: $font-weight-medium;
+    border-bottom: $border-width solid $border-light;
+  }
+
+  td {
+    padding: $spacing-xs $spacing-sm;
+    border-bottom: $border-width solid $border-light;
+    vertical-align: middle;
+  }
+}
+
+.grilla-conceptos {
+  margin-bottom: $spacing-sm;
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  .celda-select {
+    min-width: 220px;
+  }
+
+  .celda-numero {
+    max-width: 140px;
+  }
+}
+
+.a-la-derecha {
+  text-align: right;
+}
+
+.totales {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-lg;
+  padding-top: $spacing-sm;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+
+  .neto strong {
+    color: $primary-color;
+    font-size: $font-size-base;
+  }
+}
+
+.nota {
+  margin: $spacing-sm 0 0;
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.error-inline {
+  margin: $spacing-xs 0 0;
+  font-size: $font-size-xs;
+  color: $error-color;
+}
+
+.acciones {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: $z-index-sticky;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+  background: $background-secondary;
+  border-top: $border-width solid $border-light;
+
+  .pista {
+    margin-right: auto;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+  }
+}
+
+.cargando {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  padding: $spacing-xl;
+  color: $text-muted;
+  font-size: $font-size-sm;
+}

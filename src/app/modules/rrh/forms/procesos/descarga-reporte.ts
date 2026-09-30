@@ -39,4 +39,14 @@ export class ReportesNomina {
   public static readonly ACTA_FINIQUITO = 'RPRT_ACTA_FNQT';
   public static readonly FORMULARIO_107 = 'RPRT_F107_INDV';
   public static readonly CONTROL_IESS = 'RPRT_IESS_CNTR';
+
+  /**
+   * Acta de finiquito de un ex-colaborador de la administración anterior — copia del layout de
+   * `ACTA_FINIQUITO` pero contra `RHH.LQEX`/`RHH.DLEX`, no `RHH.LQDC` (docs/rrh/
+   * API-LIQUIDACION-EXCOLABORADORES.md §7). Pide `P_LQEX_CODIGO` + `P_USUARIO`, no `P_LQDC_CODIGO`.
+   * El `.jrxml` lo entrega el backend en paralelo — no confirmado en `rep/rhh/` todavía
+   * (2026-09-30): si el nombre no coincide carácter por carácter, da 404 en tiempo de ejecución,
+   * no al compilar.
+   */
+  public static readonly ACTA_FINIQUITO_EXCOLABORADOR = 'RPRT_ACTA_FNQT_EXCL';
 }

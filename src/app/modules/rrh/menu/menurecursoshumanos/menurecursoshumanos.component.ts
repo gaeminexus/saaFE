@@ -350,6 +350,12 @@ export class MenurecursoshumanosComponent implements OnInit {
           route: '/menurecursoshumanos/procesos/liquidacion',
         },
         {
+          displayName: 'Liquidaciones anteriores',
+          iconName: 'history_edu',
+          idPermiso: PermisosRrh.LIQUIDACIONES_EXCOLABORADORES,
+          route: '/menurecursoshumanos/procesos/liquidaciones-excolaboradores',
+        },
+        {
           displayName: 'Salidas oficiales',
           iconName: 'assured_workload',
           idPermiso: PermisosRrh.SALIDAS_OFICIALES,

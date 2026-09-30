@@ -1,0 +1,39 @@
+<div class="pantalla">
+  <header class="cabecera">
+    <div class="titulos">
+      <h1>
+        <mat-icon>history_edu</mat-icon>
+        Liquidaciones anteriores
+      </h1>
+      <p>
+        Ex-colaboradores de la administración anterior que dejaron de trabajar antes de enero de
+        2026 y recién están cobrando su liquidación. No se los crea como colaboradores.
+      </p>
+    </div>
+    <button mat-raised-button color="primary" type="button" (click)="nuevo()">
+      <mat-icon>add</mat-icon>
+      Nueva liquidación
+    </button>
+  </header>
+
+  <mat-form-field appearance="outline" class="filtro-estado">
+    <mat-label>Estado</mat-label>
+    <mat-select [ngModel]="filtroEstado()" (ngModelChange)="filtroEstado.set($event)">
+      <mat-option [value]="null">Todos</mat-option>
+      @for (opcion of estadoOptions; track opcion.codigo) {
+        <mat-option [value]="opcion.codigo">{{ opcion.texto }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <app-tabla-rrh
+    [columnas]="columnas"
+    [filas]="filasFiltradas()"
+    [cargando]="cargando()"
+    [estadoInicial]="estadoLista"
+    mensajeVacio="Todavía no se ha registrado ninguna liquidación de ex-colaborador."
+    (editar)="abrir($event)"
+    (estadoCambia)="recordarEstado($event)"
+  >
+  </app-tabla-rrh>
+</div>

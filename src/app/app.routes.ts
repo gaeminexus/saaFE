@@ -886,6 +886,24 @@ export const routes: Routes = [
         canActivate: [authGuard],
         data: { title: 'Finiquito' },
       },
+      {
+        path: 'procesos/liquidaciones-excolaboradores',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/liquidacion-excolaboradores/liquidacion-excolaboradores-list.component'
+          ).then((m) => m.LiquidacionExcolaboradoresListComponent),
+        canActivate: [authGuard],
+        data: { title: 'Liquidaciones anteriores' },
+      },
+      {
+        path: 'procesos/liquidaciones-excolaboradores/:codigo',
+        loadComponent: () =>
+          import(
+            './modules/rrh/forms/procesos/liquidacion-excolaboradores/liquidacion-excolaboradores-form.component'
+          ).then((m) => m.LiquidacionExcolaboradoresFormComponent),
+        canActivate: [authGuard],
+        data: { title: 'Liquidación de ex-colaborador' },
+      },
     ],
   },
   {

@@ -107,4 +107,16 @@ export class PermisosRrh {
 
   /** Valores no pagados — saaBE/docs/logica-negocio/rhh/PLAN-VALORES-NO-PAGADOS.md. */
   public static readonly VALORES_NO_PAGADOS = 1543;           // RRH_VALORES_NO_PAGADOS
+
+  /**
+   * Liquidaciones de ex-colaboradores de la administración anterior —
+   * docs/rrh/API-LIQUIDACION-EXCOLABORADORES.md. Pantalla nueva (2026-09-30): todavía no tiene nodo
+   * en `docs/seguridad/CODIGOS-PERMISOS-SAA.md` ni en `Permisos` (`shared/model/permisos.ts`), así
+   * que no hay número que copiar todavía — mismo criterio que `NOMINA`/`APORTES_RETENCIONES`:
+   * `undefined`, no un número inventado. `PermisosService` no bloquea con `idPermiso` ausente
+   * (activación incremental). Cuando el árbitro asigne el par de códigos (lista + formulario) en el
+   * árbol de SAA > RECURSOS HUMANOS > PROCESOS, se reemplaza acá.
+   */
+  public static readonly LIQUIDACIONES_EXCOLABORADORES: number | undefined = undefined;
+  public static readonly FORMULARIO_LIQUIDACION_EXCOLABORADOR: number | undefined = undefined;
 }
