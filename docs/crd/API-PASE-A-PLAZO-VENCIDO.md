@@ -283,9 +283,43 @@ es siempre el compuesto). La constante del prefijo vive en un solo lugar del bac
 
 ---
 
+## 8bis. Descarga masiva — `POST /rest/plvn/documentos` (pedido del usuario, 2026-09-30)
+
+Desde la pestaña Historial, el usuario selecciona varias declaraciones y con **un solo botón** baja
+**el memorando y la liquidación** de todas. Va **un solo ZIP** armado por el backend, porque el
+navegador bloquea decenas de descargas sueltas.
+
+**Cuerpo:** `{ "ids": [1, 2, 3], "formato": "PDF" }`. `formato` puede ser `PDF` (por defecto) o `DOCX`.
+
+**Validaciones:**
+- `ids` es obligatorio, no vacío, sin repetidos y con **200 como máximo** → si no, **400** `PARAMETRO_INVALIDO`.
+- Algún id no existe → **404** `DECLARACION_NO_ENCONTRADA`, con los ids que faltan. No se arma un ZIP
+  a medias.
+
+**Qué va en el ZIP, por declaración:**
+- **Siempre, el memorando.**
+- **La liquidación, sólo si existe**: estado 2, o estado 3 revertida después de liquidar (tiene
+  `PLVNFCLQ`). Si no existe, no va, y **no es un error**: el pedido es «los documentos que haya».
+- Una REVERTIDA sale con su marca, igual que la descarga individual.
+- Nombres dentro del ZIP: `{numeroPrestamo}_ORDEN_DE_COBRO_{APELLIDOS_NOMBRES}.pdf` y
+  `{numeroPrestamo}_LIQUIDACION_{APELLIDOS_NOMBRES}.pdf` (o `.docx`), así ordenados quedan juntos
+  los dos del mismo préstamo. Sin caracteres raros en el nombre, con el mismo saneo de la descarga
+  individual.
+- **Los documentos se generan EXACTAMENTE por el mismo camino que la descarga individual del §8**: los
+  mismos parámetros y `generarReporteDesdeColeccion`. Se extrae ese armado a un método compartido,
+  **nunca una copia**: dos copias del armado de parámetros son dos documentos que tarde o temprano
+  dicen cosas distintas.
+
+**200:** `application/zip`, con `Content-Disposition: attachment; filename="PLAZO_VENCIDO_{yyyyMMdd_HHmm}.zip"`.
+
 ## 9. Consultas
 
 ### `GET /rest/plvn/listar?estado=&desde=&hasta=`
+
+**Historial en el frontend (pedido del usuario, 2026-09-30):** la pestaña filtra por **fecha del
+memorando** (`desde`/`hasta`, que ya los resuelve este endpoint) y por **rango de número de memorando**.
+El rango se aplica en el cliente sobre la parte numérica del compuesto: `…-GR-046-2026` → 46. El
+backend no tiene filtro por número porque son a lo sumo cientos de filas.
 - `estado` es opcional (1, 2 o 3). `desde` y `hasta` son opcionales y filtran por la fecha del memorando.
 - Es la **bandeja de Contabilidad** (`estado=1`) y el historial de Crédito.
 

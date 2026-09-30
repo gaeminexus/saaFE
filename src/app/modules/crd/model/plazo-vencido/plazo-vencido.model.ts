@@ -167,8 +167,17 @@ export interface ResultadoReversoPlazoVencido {
 /** `PDF` por defecto en el backend; el frontend siempre lo manda explícito. */
 export type FormatoDocumentoPlazoVencido = 'PDF' | 'DOCX';
 
-/** Documento descargado (§8): el blob y el nombre sacado de `Content-Disposition`. */
+/** Documento descargado (§8, §8bis): el blob y el nombre sacado de `Content-Disposition`. */
 export interface DocumentoPlazoVencido {
   blob: Blob;
   nombreArchivo: string;
 }
+
+/** Cuerpo de `POST /plvn/documentos` (§8bis) — descarga masiva, un solo ZIP armado por el backend. */
+export interface SolicitudDocumentosMasivosPlazoVencido {
+  ids: number[];
+  formato: FormatoDocumentoPlazoVencido;
+}
+
+/** Máximo de `ids` por pedido de `/plvn/documentos` (§8bis) — el mismo límite que valida el backend. */
+export const MAXIMO_IDS_DOCUMENTOS_MASIVOS_PLAZO_VENCIDO = 200;

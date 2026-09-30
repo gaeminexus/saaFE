@@ -19,6 +19,7 @@ import {
   EstadoPlazoVencido,
   FiltrosListarPlazoVencido,
   FormatoDocumentoPlazoVencido,
+  MAXIMO_IDS_DOCUMENTOS_MASIVOS_PLAZO_VENCIDO,
   PrestamoADeclararPlazoVencido,
   ResultadoDeclaracionPlazoVencido,
   TEXTO_ESTADO_PLAZO_VENCIDO,
@@ -536,12 +537,84 @@ export class PlazoVencidoComponent {
 
   // ========================= Pestaña 3: Historial =========================
 
+  // ---- filtros que van al backend (§9: estado, fecha del memorando) ----
   filtroEstadoHistorial = signal<EstadoPlazoVencido | null>(null);
   filtroDesdeHistorial = signal<Date | null>(null);
   filtroHastaHistorial = signal<Date | null>(null);
   cargandoHistorial = signal(false);
   errorHistorial = signal<string | null>(null);
   historial = signal<DeclaracionPlazoVencido[]>([]);
+
+  // ---- filtros en memoria (§9, nota del árbitro 2026-09-30): texto libre y rango de Nro. de memorando ----
+  filtroTextoHistorial = signal('');
+  filtroMemorandoDesdeHistorial = signal<number | null>(null);
+  filtroMemorandoHastaHistorial = signal<number | null>(null);
+
+  /**
+   * Filtrado en memoria sobre `historial()` (que ya viene filtrado por estado/fecha desde el
+   * backend): texto libre y rango de Nro. de memorando. El rango se aplica sobre la parte numérica
+   * del compuesto (`…-GR-046-2026` → 46, `numeroMemorandoNumerico()`); si el compuesto no calza con
+   * el patrón (memorandos viejos con otro formato) la fila queda FUERA del filtro cuando hay un
+   * rango puesto, pero se sigue mostrando si no hay ningún rango (regla explícita del árbitro).
+   */
+  historialFiltrado = computed(() => {
+    const texto = this.normalizarTexto(this.filtroTextoHistorial());
+    const desde = this.filtroMemorandoDesdeHistorial();
+    const hasta = this.filtroMemorandoHastaHistorial();
+    const hayRango = desde != null || hasta != null;
+
+    return this.historial().filter((d) => {
+      if (texto) {
+        const encontrado =
+          this.normalizarTexto(d.numeroPrestamo).includes(texto) ||
+          this.normalizarTexto(d.nombreParticipe).includes(texto) ||
+          this.normalizarTexto(d.cedula).includes(texto);
+        if (!encontrado) return false;
+      }
+
+      if (hayRango) {
+        const numero = this.numeroMemorandoNumerico(d.numeroMemorando);
+        if (numero == null) return false;
+        if (desde != null && numero < desde) return false;
+        if (hasta != null && numero > hasta) return false;
+      }
+
+      return true;
+    });
+  });
+
+  // ---- selección para la descarga masiva (§8bis), por `idDeclaracion` — mismo patrón que Declarar ----
+  seleccionadosHistorial = signal<Set<number>>(new Set());
+  formatoDescargaMasiva = signal<FormatoDocumentoPlazoVencido>('PDF');
+  descargandoMasivo = signal(false);
+  readonly maximoDescargaMasiva = MAXIMO_IDS_DOCUMENTOS_MASIVOS_PLAZO_VENCIDO;
+
+  todosVisiblesSeleccionadosHistorial = computed(() => {
+    const filas = this.historialFiltrado();
+    if (!filas.length) return false;
+    const set = this.seleccionadosHistorial();
+    return filas.every((d) => set.has(d.idDeclaracion));
+  });
+
+  algunosVisiblesSeleccionadosHistorial = computed(() => {
+    const set = this.seleccionadosHistorial();
+    return this.historialFiltrado().some((d) => set.has(d.idDeclaracion));
+  });
+
+  excedeMaximoDescargaMasiva = computed(() => this.seleccionadosHistorial().size > this.maximoDescargaMasiva);
+
+  puedeDescargarMasivo = computed(
+    () => this.seleccionadosHistorial().size > 0 && !this.excedeMaximoDescargaMasiva() && !this.descargandoMasivo()
+  );
+
+  /** Una línea explicando por qué «Descargar documentos» está deshabilitado — `null` si no hace falta avisar. */
+  motivoNoPuedeDescargarMasivo = computed(() => {
+    if (this.descargandoMasivo() || !this.seleccionadosHistorial().size) return null;
+    if (this.excedeMaximoDescargaMasiva()) {
+      return `Máximo ${this.maximoDescargaMasiva} declaraciones por descarga — hay ${this.seleccionadosHistorial().size} seleccionadas.`;
+    }
+    return null;
+  });
 
   buscarHistorial(): void {
     const filtros: FiltrosListarPlazoVencido = {};
@@ -554,6 +627,7 @@ export class PlazoVencidoComponent {
 
     this.cargandoHistorial.set(true);
     this.errorHistorial.set(null);
+    this.seleccionadosHistorial.set(new Set());
     this.servicio.listar(filtros).subscribe({
       next: (lista) => {
         this.cargandoHistorial.set(false);
@@ -570,7 +644,69 @@ export class PlazoVencidoComponent {
     this.filtroEstadoHistorial.set(null);
     this.filtroDesdeHistorial.set(null);
     this.filtroHastaHistorial.set(null);
+    this.filtroTextoHistorial.set('');
+    this.filtroMemorandoDesdeHistorial.set(null);
+    this.filtroMemorandoHastaHistorial.set(null);
     this.buscarHistorial();
+  }
+
+  estaSeleccionadoHistorial(d: DeclaracionPlazoVencido): boolean {
+    return this.seleccionadosHistorial().has(d.idDeclaracion);
+  }
+
+  alternarSeleccionHistorial(d: DeclaracionPlazoVencido): void {
+    const set = new Set(this.seleccionadosHistorial());
+    if (set.has(d.idDeclaracion)) set.delete(d.idDeclaracion);
+    else set.add(d.idDeclaracion);
+    this.seleccionadosHistorial.set(set);
+  }
+
+  /** Cabecera «todos los visibles»: opera sobre TODO lo que pasa el filtro actual, no solo la página. */
+  alternarSeleccionTodosVisiblesHistorial(): void {
+    const filas = this.historialFiltrado();
+    const set = new Set(this.seleccionadosHistorial());
+    if (this.todosVisiblesSeleccionadosHistorial()) {
+      for (const d of filas) set.delete(d.idDeclaracion);
+    } else {
+      for (const d of filas) set.add(d.idDeclaracion);
+    }
+    this.seleccionadosHistorial.set(set);
+  }
+
+  /** `POST /plvn/documentos` (§8bis): un solo ZIP con lo que haya de cada declaración seleccionada. */
+  descargarDocumentosMasivos(): void {
+    if (!this.puedeDescargarMasivo()) return;
+
+    const ids = Array.from(this.seleccionadosHistorial());
+    this.descargandoMasivo.set(true);
+    this.servicio.documentosMasivos(ids, this.formatoDescargaMasiva()).subscribe({
+      next: (doc) => {
+        this.descargandoMasivo.set(false);
+        guardarArchivo(doc.blob, doc.nombreArchivo || `PLAZO_VENCIDO_${this.marcaTiempoArchivo()}.zip`);
+      },
+      error: (e: Error) => {
+        this.descargandoMasivo.set(false);
+        this.mostrarError(e.message);
+      },
+    });
+  }
+
+  /** Toma la parte numérica de un memorando compuesto (`…-GR-046-2026` → `46`). `null` si no calza el patrón. */
+  private numeroMemorandoNumerico(compuesto: string | null | undefined): number | null {
+    const match = /-(\d+)-\d{4}\s*$/.exec((compuesto ?? '').trim());
+    if (!match) return null;
+    const numero = parseInt(match[1], 10);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  /** `yyyyMMdd_HHmm`, mismo formato que usa el backend para el ZIP (§8bis) — solo de respaldo, sin `Content-Disposition`. */
+  private marcaTiempoArchivo(): string {
+    const ahora = new Date();
+    const dosDigitos = (n: number) => String(n).padStart(2, '0');
+    return (
+      `${ahora.getFullYear()}${dosDigitos(ahora.getMonth() + 1)}${dosDigitos(ahora.getDate())}` +
+      `_${dosDigitos(ahora.getHours())}${dosDigitos(ahora.getMinutes())}`
+    );
   }
 
   /** Revertir solo aparece en DECLARADA o LIQUIDADA (§7, §11). */

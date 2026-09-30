@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
@@ -14,6 +14,7 @@ import {
   ResultadoDeclaracionPlazoVencido,
   ResultadoReversoPlazoVencido,
   SolicitudDeclararPlazoVencido,
+  SolicitudDocumentosMasivosPlazoVencido,
   SolicitudLiquidarPlazoVencido,
   SolicitudRevertirPlazoVencido,
   UltimoEncabezadoPlazoVencido,
@@ -115,15 +116,34 @@ export class PlazoVencidoService {
     return this.descargarDocumento(`${ServiciosCrd.RS_PLVN}/${id}/liquidacion`, formato);
   }
 
+  /**
+   * `POST /plvn/documentos` (§8bis): un solo ZIP con memorando (siempre) y liquidación (solo si
+   * existe) de cada declaración. Todo o nada: si algún `id` no existe, el backend responde 404
+   * `DECLARACION_NO_ENCONTRADA` sin armar el ZIP — no hay ZIP parcial que distinguir.
+   */
+  documentosMasivos(ids: number[], formato: FormatoDocumentoPlazoVencido = 'PDF'): Observable<DocumentoPlazoVencido> {
+    const solicitud: SolicitudDocumentosMasivosPlazoVencido = { ids, formato };
+    return this.http
+      .post(`${ServiciosCrd.RS_PLVN}/documentos`, solicitud, { responseType: 'blob', observe: 'response' })
+      .pipe(
+        map((resp) => this.comoDocumento(resp)),
+        catchError((e: HttpErrorResponse) => this.lanzarErrorDeDocumento(e))
+      );
+  }
+
   private descargarDocumento(url: string, formato: FormatoDocumentoPlazoVencido): Observable<DocumentoPlazoVencido> {
     const params = new HttpParams().set('formato', formato);
     return this.http.get(url, { params, responseType: 'blob', observe: 'response' }).pipe(
-      map((resp) => ({
-        blob: resp.body ?? new Blob(),
-        nombreArchivo: PlazoVencidoService.nombreDesdeContentDisposition(resp.headers.get('Content-Disposition')),
-      })),
+      map((resp) => this.comoDocumento(resp)),
       catchError((e: HttpErrorResponse) => this.lanzarErrorDeDocumento(e))
     );
+  }
+
+  private comoDocumento(resp: HttpResponse<Blob>): DocumentoPlazoVencido {
+    return {
+      blob: resp.body ?? new Blob(),
+      nombreArchivo: PlazoVencidoService.nombreDesdeContentDisposition(resp.headers.get('Content-Disposition')),
+    };
   }
 
   private static nombreDesdeContentDisposition(disposition: string | null): string {

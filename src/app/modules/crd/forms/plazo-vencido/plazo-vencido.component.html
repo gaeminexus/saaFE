@@ -361,8 +361,28 @@
             <mat-icon>search</mat-icon> Buscar
           </button>
           <button mat-stroked-button (click)="limpiarFiltrosHistorial()">
-            <mat-icon>filter_alt_off</mat-icon> Limpiar
+            <mat-icon>filter_alt_off</mat-icon> Limpiar filtros
           </button>
+        </div>
+
+        <!-- Filtros en memoria (ítem 1, 2026-09-30): no vuelven a llamar al backend. -->
+        <div class="pv-filtros pv-filtros-busqueda">
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar</mat-label>
+            <input matInput placeholder="Préstamo, partícipe o cédula"
+                   [ngModel]="filtroTextoHistorial()" (ngModelChange)="filtroTextoHistorial.set($event)" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Nro. de memorando desde</mat-label>
+            <input matInput type="number" min="0" inputmode="numeric"
+                   [ngModel]="filtroMemorandoDesdeHistorial()" (ngModelChange)="filtroMemorandoDesdeHistorial.set($event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Nro. de memorando hasta</mat-label>
+            <input matInput type="number" min="0" inputmode="numeric"
+                   [ngModel]="filtroMemorandoHastaHistorial()" (ngModelChange)="filtroMemorandoHastaHistorial.set($event)" />
+          </mat-form-field>
         </div>
 
         @if (errorHistorial(); as error) {
@@ -374,10 +394,45 @@
         } @else if (!historial().length) {
           <p class="pv-vacio">No hay declaraciones para los filtros elegidos.</p>
         } @else {
+
+          <p class="pv-contador">
+            Mostrando {{ historialFiltrado().length }} de {{ historial().length }} declaraciones
+            · {{ seleccionadosHistorial().size }} seleccionadas
+          </p>
+
+          <div class="pv-acciones-masivas">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Formato</mat-label>
+              <mat-select [ngModel]="formatoDescargaMasiva()" (ngModelChange)="formatoDescargaMasiva.set($event)">
+                <mat-option value="PDF">PDF</mat-option>
+                <mat-option value="DOCX">Word</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <button mat-raised-button color="primary" [disabled]="!puedeDescargarMasivo()" (click)="descargarDocumentosMasivos()">
+              @if (descargandoMasivo()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <ng-container><mat-icon>folder_zip</mat-icon> Descargar documentos ({{ seleccionadosHistorial().size }})</ng-container>
+              }
+            </button>
+            @if (motivoNoPuedeDescargarMasivo(); as motivo) {
+              <span class="pv-motivo-deshabilitado">{{ motivo }}</span>
+            }
+          </div>
+
+          @if (!historialFiltrado().length) {
+            <p class="pv-vacio">Ninguna declaración coincide con los filtros. Pruebe limpiarlos.</p>
+          } @else {
           <div class="pv-tabla-scroll">
             <table class="pv-tabla">
               <thead>
                 <tr>
+                  <th>
+                    <mat-checkbox [checked]="todosVisiblesSeleccionadosHistorial()"
+                                  [indeterminate]="algunosVisiblesSeleccionadosHistorial() && !todosVisiblesSeleccionadosHistorial()"
+                                  matTooltip="Selecciona todas las declaraciones que pasan el filtro actual"
+                                  (change)="alternarSeleccionTodosVisiblesHistorial()"></mat-checkbox>
+                  </th>
                   <th>Memorando</th>
                   <th>Préstamo</th>
                   <th>Partícipe</th>
@@ -389,8 +444,11 @@
                 </tr>
               </thead>
               <tbody>
-                @for (d of historial(); track d.idDeclaracion) {
+                @for (d of historialFiltrado(); track d.idDeclaracion) {
                   <tr>
+                    <td>
+                      <mat-checkbox [checked]="estaSeleccionadoHistorial(d)" (change)="alternarSeleccionHistorial(d)"></mat-checkbox>
+                    </td>
                     <td>{{ d.numeroMemorando }}</td>
                     <td>{{ d.numeroPrestamo }}</td>
                     <td>{{ d.nombreParticipe }}</td>
@@ -435,6 +493,7 @@
               </tbody>
             </table>
           </div>
+          }
         }
 
       </div>
