@@ -138,21 +138,24 @@ export class PagoPrestamoDialogComponent {
    * cada cuota sumado en orden de cobro. El múltiplo de `valorCuota` es solo el respaldo: da un
    * monto aproximado cuando la primera cuota viene parcialmente pagada o alguna arrastra mora.
    *
-   * Ese respaldo NO se ofrece si la pantalla ya sabe que sus pagos no cargaron (`pagosCargados ===
-   * false`): un múltiplo de la cuota completa ahí sería, otra vez, el total en vez de lo pendiente.
-   * Si la pantalla no manda `pagosCargados` (p. ej. `cruce-de-valores`), el respaldo se sigue
-   * ofreciendo igual que antes.
+   * Si la pantalla ya sabe que sus pagos no cargaron (`pagosCargados === false`), NO se ofrece
+   * ningún chip: ni el respaldo de `valorCuota × n` (sería el total, no lo pendiente) NI
+   * `pendientesAcumulados`, porque ese arreglo se calcula con `saldoPendienteDe()`, que sin pagos
+   * cargados no tiene nada que restar y devuelve la cuota completa igual que `valorCuota` — es el
+   * mismo defecto disfrazado de "ya viene calculado". Si la pantalla no manda `pagosCargados`
+   * (p. ej. `cruce-de-valores`), los chips se siguen ofreciendo igual que antes.
    */
   sugerencias = computed(() => {
+    if (this.data.pagosCargados === false) return [];
+
     const opciones: { etiqueta: string; valor: number }[] = [];
     const acumulados = this.data.pendientesAcumulados ?? [];
     const cuota = this.data.valorCuota ?? 0;
     const saldo = this.data.saldoTotal ?? 0;
-    const permiteRespaldoDeCuota = this.data.pagosCargados !== false;
 
     for (let i = 0; i < 3; i++) {
       const etiqueta = i === 0 ? '1 cuota' : `${i + 1} cuotas`;
-      const valor = acumulados[i] ?? (permiteRespaldoDeCuota && cuota > 0 ? +(cuota * (i + 1)).toFixed(2) : 0);
+      const valor = acumulados[i] ?? (cuota > 0 ? +(cuota * (i + 1)).toFixed(2) : 0);
       if (valor > 0) opciones.push({ etiqueta, valor: +valor.toFixed(2) });
     }
 

@@ -1169,6 +1169,7 @@ export const routes: Routes = [
       { path: 'consulta-cobros', loadComponent: () => import('./modules/crd/forms/cobros/consulta-cobros/consulta-cobros.component').then((m) => m.ConsultaCobrosComponent) },
       { path: 'seguimiento-cobros', loadComponent: () => import('./modules/crd/forms/cobros/seguimiento-cobros/seguimiento-cobros.component').then((m) => m.SeguimientoCobrosComponent) },
       { path: 'acuerdo-condonacion', loadComponent: () => import('./modules/crd/forms/acuerdos/acuerdo-condonacion/acuerdo-condonacion.component').then((m) => m.AcuerdoCondonacionComponent) },
+      { path: 'plazo-vencido', loadComponent: () => import('./modules/crd/forms/plazo-vencido/plazo-vencido.component').then((m) => m.PlazoVencidoComponent) },
       {
         path: 'entidad-edit',
         loadComponent: () => import('./modules/crd/forms/entidad-participe/entidad-edit/entidad-edit.component').then((m) => m.EntidadEditComponent),

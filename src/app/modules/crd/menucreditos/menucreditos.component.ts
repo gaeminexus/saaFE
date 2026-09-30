@@ -328,6 +328,14 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_CONDONACION_DE_VALORES,
           route: '/menucreditos/acuerdo-condonacion',
         },
+        // Sin `idPermiso` (D24, docs/crd/API-PASE-A-PLAZO-VENCIDO.md §11): el nodo de permiso para
+        // esta pantalla no existe todavía — lo crea el frente de seguridad, en otro equipo. Nombre
+        // corto a propósito (H71): uno más largo no se recorta, desaparece entero.
+        {
+          displayName: 'Plazo Vencido',
+          iconName: 'gavel',
+          route: '/menucreditos/plazo-vencido',
+        },
         // "Dash" comentado el 2026-09-10: sin `route` activa (estaba comentada) y por lo tanto sin
         // opción de menú real — ver docs/seguridad/INVENTARIO-PANTALLAS-SAA.md, ÍTEM 2(a). El
         // destino `/menucreditos/participe-dash` (ParticipeDashComponent) sigue vivo y alcanzable

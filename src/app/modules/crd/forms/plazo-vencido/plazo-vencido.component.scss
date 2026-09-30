@@ -1,0 +1,143 @@
+.pv-container {
+  padding: 1.25rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pv-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.pv-tab-contenido {
+  padding: 1.25rem 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pv-encabezado,
+.pv-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+
+  mat-form-field {
+    min-width: 200px;
+  }
+}
+
+.pv-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+
+  &.alerta { background: #fff4e5; color: #7a4a00; }
+  &.error { background: #fdecea; color: #a52a1e; }
+  &.ok { background: #e8f5e9; color: #1b5e20; }
+
+  mat-icon { flex-shrink: 0; }
+}
+
+.pv-vacio,
+.pv-cargando {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.pv-tabla-scroll {
+  overflow-x: auto;
+}
+
+.pv-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th, td {
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #f5f5f5;
+    font-weight: 600;
+  }
+}
+
+.pv-fila-invalida {
+  opacity: 0.55;
+}
+
+.pv-fila-inconsistencias td {
+  background: #fdecea;
+  color: #a52a1e;
+  font-size: 0.8rem;
+  white-space: normal;
+
+  mat-icon {
+    vertical-align: middle;
+    margin-right: 0.35rem;
+    font-size: 1.1rem;
+    height: 1.1rem;
+    width: 1.1rem;
+  }
+}
+
+.pv-input-memorando {
+  width: 180px;
+}
+
+.pv-acciones-finales {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pv-resultado {
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pv-lista-resultado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pv-item-resultado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pv-acciones-doc {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pv-estado {
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+}
+
+.pv-estado-declarada { background: #fff4e5; color: #7a4a00; }
+.pv-estado-liquidada { background: #e8f5e9; color: #1b5e20; }
+.pv-estado-revertida { background: #eceff1; color: #455a64; }

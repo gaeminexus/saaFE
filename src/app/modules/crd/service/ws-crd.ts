@@ -104,6 +104,7 @@ export class ServiciosCrd {
   public static RS_RVSG = `${API_URL}/rvsg`; // RecepcionValorSeguro — valores de seguro (sepelio) recibidos (docs/crd/API-RECEPCION-VALORES-SEGURO.md)
   public static RS_CTAP =`${API_URL}/ctap`; // CuentaTipoAporte — cuentas contables por tipo de aporte y empresa (docs/crd/API-CUENTAS-TIPO-APORTE.md)
   public static RS_CBBP = `${API_URL}/cbbp`; // CuentaBancariaBeneficiario — beneficiarios del partícipe, sepelio fase 2a (docs/crd/API-BENEFICIARIOS-PARTICIPE.md)
+  public static RS_PLVN = `${API_URL}/plvn`; // Declaración de plazo vencido — memorando, liquidación y reverso (docs/crd/API-PASE-A-PLAZO-VENCIDO.md)
 }
 /*
 export class ServiciosCrd {

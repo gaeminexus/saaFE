@@ -1,0 +1,334 @@
+<div class="pv-container">
+  <h2 class="pv-titulo">
+    <mat-icon>gavel</mat-icon>
+    Plazo Vencido
+  </h2>
+
+  <mat-tab-group class="pv-tabs" animationDuration="200ms">
+
+    <!-- ==================== 1. Declarar ==================== -->
+    <mat-tab label="Declarar">
+      <div class="pv-tab-contenido">
+
+        <div class="pv-encabezado">
+          <mat-form-field appearance="outline">
+            <mat-label>PARA — nombre</mat-label>
+            <input matInput [ngModel]="paraNombre()" (ngModelChange)="paraNombre.set($event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>PARA — cargo</mat-label>
+            <input matInput [ngModel]="paraCargo()" (ngModelChange)="paraCargo.set($event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>CC — nombre</mat-label>
+            <input matInput [ngModel]="ccNombre()" (ngModelChange)="ccNombre.set($event)" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>CC — cargo</mat-label>
+            <input matInput [ngModel]="ccCargo()" (ngModelChange)="ccCargo.set($event)" />
+          </mat-form-field>
+        </div>
+        @if (!encabezadoCompleto()) {
+          <div class="pv-aviso alerta">
+            <mat-icon>warning_amber</mat-icon>
+            <span>Complete PARA y CC antes de declarar: van impresos en el memorando.</span>
+          </div>
+        }
+
+        <div class="pv-filtros">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de corte</mat-label>
+            <input matInput [matDatepicker]="pickerCorte" [max]="hoy"
+                   [ngModel]="fechaCorteDeclarar()" (ngModelChange)="fechaCorteDeclarar.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerCorte"></mat-datepicker-toggle>
+            <mat-datepicker #pickerCorte></mat-datepicker>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="consultarCandidatos()" [disabled]="consultandoCandidatos()">
+            @if (consultandoCandidatos()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <ng-container><mat-icon>search</mat-icon> Consultar</ng-container>
+            }
+          </button>
+        </div>
+
+        @if (errorCandidatos(); as error) {
+          <div class="pv-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (resultadoDeclaracion(); as resultado) {
+          <div class="pv-resultado">
+            <div class="pv-aviso ok">
+              <mat-icon>check_circle</mat-icon>
+              <span>{{ resultado.length }} préstamo(s) declarado(s). Descargue el memorando de cada uno:</span>
+            </div>
+            <div class="pv-lista-resultado">
+              @for (r of resultado; track r.idDeclaracion) {
+                <div class="pv-item-resultado">
+                  <span>{{ r.numeroMemorando }} — {{ formatMoneda(r.totalPorCobrar) }}</span>
+                  <span class="pv-acciones-doc">
+                    <button mat-stroked-button (click)="descargarMemorando(r.idDeclaracion, r.numeroMemorando, 'PDF')">
+                      <mat-icon>picture_as_pdf</mat-icon> PDF
+                    </button>
+                    <button mat-stroked-button (click)="descargarMemorando(r.idDeclaracion, r.numeroMemorando, 'DOCX')">
+                      <mat-icon>description</mat-icon> Word
+                    </button>
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @if (filasCandidatos().length) {
+          <div class="pv-tabla-scroll">
+            <table class="pv-tabla">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Préstamo</th>
+                  <th>Partícipe</th>
+                  <th>Cédula</th>
+                  <th>Tipo</th>
+                  <th>Inicio de mora</th>
+                  <th>Saldo capital</th>
+                  <th>Interés</th>
+                  <th>Desgravamen</th>
+                  <th>Seguro</th>
+                  <th>Mora</th>
+                  <th>Total por cobrar</th>
+                  <th>Cuotas pend. / por vencer</th>
+                  <th>Nro. de memorando</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of filasCandidatos(); track fila.cuadro.idPrestamo) {
+                  <tr [class.pv-fila-invalida]="!fila.cuadro.valido">
+                    <td>
+                      <mat-checkbox [checked]="estaSeleccionado(fila)" [disabled]="!fila.cuadro.valido"
+                                    (change)="alternarSeleccion(fila)"></mat-checkbox>
+                    </td>
+                    <td>{{ fila.cuadro.numeroPrestamo }}</td>
+                    <td>{{ fila.cuadro.nombreParticipe }}</td>
+                    <td>{{ fila.cuadro.cedula }}</td>
+                    <td>{{ fila.cuadro.tipoCredito }}</td>
+                    <td>{{ formatFecha(fila.cuadro.fechaInicioMora) }}</td>
+                    <td>{{ formatMoneda(fila.cuadro.capital.saldo) }}</td>
+                    <td>{{ formatMoneda(fila.cuadro.interes.saldo) }}</td>
+                    <td>{{ formatMoneda(fila.cuadro.desgravamen.saldo) }}</td>
+                    <td>{{ formatMoneda(fila.cuadro.seguroIncendio.saldo) }}</td>
+                    <td>{{ formatMoneda(fila.cuadro.mora.saldo) }}</td>
+                    <td><b>{{ formatMoneda(fila.cuadro.totalPorCobrar) }}</b></td>
+                    <td>{{ fila.cuadro.cuotasPendientes }} / {{ fila.cuadro.cuotasPorVencer }}</td>
+                    <td>
+                      @if (fila.cuadro.valido && estaSeleccionado(fila)) {
+                        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="pv-input-memorando">
+                          <input matInput [(ngModel)]="fila.numeroMemorando" placeholder="Nro. de memorando" />
+                        </mat-form-field>
+                      }
+                    </td>
+                  </tr>
+                  @if (!fila.cuadro.valido && fila.cuadro.inconsistencias.length) {
+                    <tr class="pv-fila-inconsistencias">
+                      <td></td>
+                      <td colspan="13">
+                        <mat-icon>report</mat-icon>
+                        <span>{{ fila.cuadro.inconsistencias.join(' · ') }}</span>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="pv-acciones-finales">
+            <button mat-raised-button color="accent" [disabled]="!puedeDeclarar()" (click)="declararPlazoVencido()">
+              @if (declarando()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <ng-container><mat-icon>gavel</mat-icon> Declarar plazo vencido ({{ seleccionados().size }})</ng-container>
+              }
+            </button>
+          </div>
+        } @else if (!consultandoCandidatos() && !errorCandidatos()) {
+          <p class="pv-vacio">Elija la fecha de corte y presione «Consultar» para ver los préstamos en mora.</p>
+        }
+
+      </div>
+    </mat-tab>
+
+    <!-- ==================== 2. Por liquidar ==================== -->
+    <mat-tab label="Por liquidar">
+      <div class="pv-tab-contenido">
+
+        @if (errorPorLiquidar(); as error) {
+          <div class="pv-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (cargandoPorLiquidar()) {
+          <div class="pv-cargando"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else if (!filasPorLiquidar().length) {
+          <p class="pv-vacio">No hay declaraciones pendientes de liquidar.</p>
+        } @else {
+          <div class="pv-tabla-scroll">
+            <table class="pv-tabla">
+              <thead>
+                <tr>
+                  <th>Memorando</th>
+                  <th>Préstamo</th>
+                  <th>Partícipe</th>
+                  <th>Fecha del memorando</th>
+                  <th>Total por cobrar</th>
+                  <th>Fecha de corte de liquidación</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of filasPorLiquidar(); track fila.declaracion.idDeclaracion) {
+                  <tr>
+                    <td>{{ fila.declaracion.numeroMemorando }}</td>
+                    <td>{{ fila.declaracion.numeroPrestamo }}</td>
+                    <td>{{ fila.declaracion.nombreParticipe }}</td>
+                    <td>{{ formatFecha(fila.declaracion.fechaCorte) }}</td>
+                    <td>{{ formatMoneda(fila.declaracion.cuadro.totalPorCobrar) }}</td>
+                    <td>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <input matInput [matDatepicker]="pickerLiq" [max]="hoy" [min]="fila.declaracion.fechaCorte"
+                               [(ngModel)]="fila.fechaCorte" />
+                        <mat-datepicker-toggle matSuffix [for]="pickerLiq"></mat-datepicker-toggle>
+                        <mat-datepicker #pickerLiq></mat-datepicker>
+                      </mat-form-field>
+                    </td>
+                    <td>
+                      <button mat-raised-button color="primary" [disabled]="fila.liquidando" (click)="liquidar(fila)">
+                        @if (fila.liquidando) {
+                          <mat-spinner diameter="18"></mat-spinner>
+                        } @else {
+                          <ng-container><mat-icon>request_quote</mat-icon> Liquidar</ng-container>
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+      </div>
+    </mat-tab>
+
+    <!-- ==================== 3. Historial ==================== -->
+    <mat-tab label="Historial">
+      <div class="pv-tab-contenido">
+
+        <div class="pv-filtros">
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [ngModel]="filtroEstadoHistorial()" (ngModelChange)="filtroEstadoHistorial.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              <mat-option [value]="EstadoPlazoVencido.DECLARADA">Declarada</mat-option>
+              <mat-option [value]="EstadoPlazoVencido.LIQUIDADA">Liquidada</mat-option>
+              <mat-option [value]="EstadoPlazoVencido.REVERTIDA">Revertida</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Desde</mat-label>
+            <input matInput [matDatepicker]="pickerDesde" [max]="hoy"
+                   [ngModel]="filtroDesdeHistorial()" (ngModelChange)="filtroDesdeHistorial.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerDesde"></mat-datepicker-toggle>
+            <mat-datepicker #pickerDesde></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Hasta</mat-label>
+            <input matInput [matDatepicker]="pickerHasta" [max]="hoy"
+                   [ngModel]="filtroHastaHistorial()" (ngModelChange)="filtroHastaHistorial.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerHasta"></mat-datepicker-toggle>
+            <mat-datepicker #pickerHasta></mat-datepicker>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="buscarHistorial()" [disabled]="cargandoHistorial()">
+            <mat-icon>search</mat-icon> Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltrosHistorial()">
+            <mat-icon>filter_alt_off</mat-icon> Limpiar
+          </button>
+        </div>
+
+        @if (errorHistorial(); as error) {
+          <div class="pv-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (cargandoHistorial()) {
+          <div class="pv-cargando"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else if (!historial().length) {
+          <p class="pv-vacio">No hay declaraciones para los filtros elegidos.</p>
+        } @else {
+          <div class="pv-tabla-scroll">
+            <table class="pv-tabla">
+              <thead>
+                <tr>
+                  <th>Memorando</th>
+                  <th>Préstamo</th>
+                  <th>Partícipe</th>
+                  <th>Fecha corte</th>
+                  <th>Estado</th>
+                  <th>Total por cobrar</th>
+                  <th>Documentos</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of historial(); track d.idDeclaracion) {
+                  <tr>
+                    <td>{{ d.numeroMemorando }}</td>
+                    <td>{{ d.numeroPrestamo }}</td>
+                    <td>{{ d.nombreParticipe }}</td>
+                    <td>{{ formatFecha(d.fechaCorte) }}</td>
+                    <td>
+                      <span class="pv-estado" [class.pv-estado-declarada]="d.estado === EstadoPlazoVencido.DECLARADA"
+                            [class.pv-estado-liquidada]="d.estado === EstadoPlazoVencido.LIQUIDADA"
+                            [class.pv-estado-revertida]="d.estado === EstadoPlazoVencido.REVERTIDA">
+                        {{ textoEstado[d.estado] }}
+                      </span>
+                    </td>
+                    <td>{{ formatMoneda(d.cuadro.totalPorCobrar) }}</td>
+                    <td class="pv-acciones-doc">
+                      <button mat-stroked-button matTooltip="Memorando PDF" (click)="descargarMemorando(d.idDeclaracion, d.numeroMemorando, 'PDF')">
+                        <mat-icon>picture_as_pdf</mat-icon>
+                      </button>
+                      <button mat-stroked-button matTooltip="Memorando Word" (click)="descargarMemorando(d.idDeclaracion, d.numeroMemorando, 'DOCX')">
+                        <mat-icon>description</mat-icon>
+                      </button>
+                      @if (d.liquidacion) {
+                        <button mat-stroked-button matTooltip="Liquidación PDF" (click)="descargarLiquidacion(d.idDeclaracion, d.numeroMemorando, 'PDF')">
+                          <mat-icon>picture_as_pdf</mat-icon> Liq.
+                        </button>
+                        <button mat-stroked-button matTooltip="Liquidación Word" (click)="descargarLiquidacion(d.idDeclaracion, d.numeroMemorando, 'DOCX')">
+                          <mat-icon>description</mat-icon> Liq.
+                        </button>
+                      }
+                      <button mat-stroked-button matTooltip="Tabla de amortización"
+                              (click)="imprimirTablaAmortizacion(d.idPrestamo, d.numeroPrestamo)">
+                        <mat-icon>table_chart</mat-icon>
+                      </button>
+                    </td>
+                    <td>
+                      @if (puedeRevertir(d)) {
+                        <button mat-stroked-button color="warn" (click)="revertir(d)">
+                          <mat-icon>undo</mat-icon> Revertir
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>
