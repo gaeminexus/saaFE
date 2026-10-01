@@ -122,6 +122,12 @@ export class MenucuentaxpagarComponent {
           idPermiso: Permisos.CXP_CRUCE_DE_ANTICIPO,
           route: '/menucuentaxpagar/pagos/cruce-anticipo',
         },
+        {
+          displayName: 'Devolución de Anticipo',
+          iconName: 'undo',
+          idPermiso: Permisos.CXP_PAGOS,
+          route: '/menucuentaxpagar/pagos/devolucion-anticipo',
+        },
       ],
     },
     {

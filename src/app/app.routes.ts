@@ -1096,6 +1096,12 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'pagos/devolucion-anticipo',
+        loadComponent: () => import('./modules/cxp/forms/pagos/devolucion-anticipo/devolucion-anticipo.component').then((m) => m.DevolucionAnticipoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Devolución de Anticipo' },
+      },
+      {
         path: 'pagos/solicitud',
         loadComponent: () => import('./modules/cxp/forms/pagos/solicitud-pago/solicitud-pago.component').then((m) => m.SolicitudPagoComponent),
         canActivate: [authGuard],

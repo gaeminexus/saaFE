@@ -1,0 +1,261 @@
+<div class="pagina-devolucion">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>undo</mat-icon>
+      <span>Devolución de Anticipo — Proveedor</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <!-- Selección de proveedor, cuenta y fecha -->
+      <div class="fila-campos">
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Proveedor</mat-label>
+          <input matInput readonly [value]="nombreProveedor()" placeholder="Busque un proveedor" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar proveedor" (click)="buscarProveedor()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Cuenta bancaria (propia)</mat-label>
+          <mat-select [ngModel]="cuentaSeleccionada()" (ngModelChange)="cuentaSeleccionada.set($event)">
+            @for (c of cuentas(); track c.codigo) {
+              <mat-option [value]="c">{{ c.banco?.nombre }} — {{ c.numeroCuenta }}</mat-option>
+            }
+          </mat-select>
+          @if (cuentas().length === 0) {
+            <mat-hint>No hay cuentas bancarias activas</mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha del depósito</mat-label>
+          <input matInput [matDatepicker]="pickerFecha" [(ngModel)]="formFecha" name="fecha" />
+          <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFecha></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Referencia</mat-label>
+          <input matInput [(ngModel)]="formReferencia" name="referencia" placeholder="N° del depósito" />
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="campo-ancho">
+        <mat-label>Observación</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="formObservacion" name="observacion"></textarea>
+      </mat-form-field>
+
+      <!-- Anticipos con saldo a favor -->
+      <div class="bloque-anticipos">
+        <div class="cabecera-anticipos">
+          <h3>
+            <mat-icon>account_balance_wallet</mat-icon>
+            Anticipos con saldo a favor
+          </h3>
+          <div class="acciones-anticipos">
+            <button mat-stroked-button type="button" [disabled]="!haySeleccion" (click)="limpiarSeleccion()">
+              <mat-icon>backspace</mat-icon>
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        @if (cargandoAnticipos()) {
+          <div class="cargando"><mat-spinner diameter="24"></mat-spinner></div>
+        } @else if (anticipos().length === 0) {
+          <div class="mensaje-advertencia">
+            <mat-icon>info</mat-icon>
+            <span>
+              @if (proveedor()) {
+                El proveedor no tiene anticipos con saldo a favor disponible.
+              } @else {
+                Seleccione un proveedor para ver sus anticipos.
+              }
+            </span>
+          </div>
+        } @else {
+          <div class="tabla-anticipos">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>N° Documento</th>
+                  <th class="num">Valor</th>
+                  <th class="num">Saldo a favor</th>
+                  <th class="num">A devolver</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of anticipos(); track a.id) {
+                  <tr [class.fila-usada]="montoDe(a) > 0">
+                    <td>{{ formatearFecha(a.fechaAnticipo) }}</td>
+                    <td>{{ a.numeroDoc || ('#' + a.id) }}</td>
+                    <td class="num">{{ a.valor | number: '1.2-2' }}</td>
+                    <td class="num saldo-disp">{{ a.saldo | number: '1.2-2' }}</td>
+                    <td class="num">
+                      <input type="number" min="0" step="0.01" class="input-monto"
+                             [class.input-error]="excedeAnticipo(a)"
+                             [(ngModel)]="montos[a.id]" [name]="'monto_' + a.id"
+                             placeholder="0.00" />
+                    </td>
+                    <td>
+                      <button mat-icon-button type="button" matTooltip="Devolver todo el saldo"
+                              (click)="aplicarTodoDe(a)">
+                        <mat-icon>keyboard_double_arrow_left</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4">Total a devolver</td>
+                  <td class="num total-cruce">{{ totalADevolver | number: '1.2-2' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          @if (algunAnticipoExcedido) {
+            <div class="mensaje-advertencia">
+              <mat-icon>warning</mat-icon>
+              <span>Hay líneas que superan el saldo a favor de ese anticipo.</span>
+            </div>
+          }
+        }
+      </div>
+
+      @if (error()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      <div class="acciones">
+        <button mat-raised-button class="btn-confirmar" [disabled]="!puedeRegistrar" (click)="registrar()">
+          @if (registrando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>check</mat-icon>
+          }
+          Registrar devolución
+        </button>
+      </div>
+
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Historial -->
+  @if (proveedor()) {
+    <mat-card class="panel">
+      <mat-card-content>
+        <h3 class="titulo-historial">
+          <mat-icon>history</mat-icon>
+          Historial de devoluciones
+        </h3>
+
+        @if (cargandoHistorial()) {
+          <div class="cargando"><mat-spinner diameter="24"></mat-spinner></div>
+        } @else if (errorHistorial()) {
+          <div class="mensaje-error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorHistorial() }}</span>
+          </div>
+        } @else if (historial().length === 0) {
+          <div class="mensaje-advertencia">
+            <mat-icon>info</mat-icon>
+            <span>Este proveedor no tiene devoluciones registradas.</span>
+          </div>
+        } @else {
+          <div class="tabla-historial">
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Fecha</th>
+                  <th class="num">Valor</th>
+                  <th>Referencia</th>
+                  <th>Cuenta</th>
+                  <th>Asiento</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of historial(); track d.id) {
+                  <tr>
+                    <td>
+                      <button mat-icon-button type="button" (click)="toggleDetalle(d.id)">
+                        <mat-icon>{{ filaExpandida() === d.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+                      </button>
+                    </td>
+                    <td>{{ formatearFecha(d.fecha) }}</td>
+                    <td class="num">{{ d.valor | number: '1.2-2' }}</td>
+                    <td>{{ d.referencia || '—' }}</td>
+                    <td>{{ d.cuentaBancaria }}</td>
+                    <td>{{ d.numeroAsiento || '—' }}</td>
+                    <td>
+                      <span class="badge" [class.badge-pagada]="d.estado === EstadoDevolucionAnticipoProveedor.ACTIVA"
+                            [class.badge-anulado]="d.estado === EstadoDevolucionAnticipoProveedor.ANULADA">
+                        {{ d.estado === EstadoDevolucionAnticipoProveedor.ANULADA ? 'Anulada' : 'Activa' }}
+                      </span>
+                      @if (d.motivoAnulacion) {
+                        <div class="motivo-anulacion">{{ d.motivoAnulacion }}</div>
+                      }
+                    </td>
+                    <td>
+                      @if (puedeAnular(d)) {
+                        <button mat-icon-button color="warn" type="button"
+                                [disabled]="anulando() === d.id"
+                                matTooltip="Anular devolución"
+                                (click)="anularDevolucion(d)">
+                          @if (anulando() === d.id) {
+                            <mat-spinner diameter="18"></mat-spinner>
+                          } @else {
+                            <mat-icon>cancel</mat-icon>
+                          }
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                  @if (filaExpandida() === d.id) {
+                    <tr class="fila-detalle">
+                      <td colspan="8">
+                        <table class="tabla-detalle-devolucion">
+                          <thead>
+                            <tr>
+                              <th>Anticipo</th>
+                              <th class="num">Valor devuelto</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (det of d.detalle; track det.idAnticipo) {
+                              <tr>
+                                <td>{{ det.numeroDocAnticipo || ('#' + det.idAnticipo) }}</td>
+                                <td class="num">{{ det.valor | number: '1.2-2' }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
