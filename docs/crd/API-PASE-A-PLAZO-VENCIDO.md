@@ -54,6 +54,12 @@ de cartera mensual.
      Sin sumarlo, todo préstamo con un abono falla la invariante de capital. *Caso real: 62439, abono de
      4.236,80 en la cuota 38; medido contra su tabla el 2026-09-30.* Para el saldo **por cuota** se sigue
      usando sólo `capitalPagado` (el abono no es de esa cuota): el pago extra suma al cobrado de la fila.
+   - ⛔ **Corrección 2026-09-30 (medido en producción, `sql/303` bloque 3): el pago extra cuenta como capital
+     SÓLO en los pagos de tipo `ABONO_CAPITAL`, `MIGRACION` y `PRECANCELACION`.** Hay 8 préstamos en mora
+     cargados por una migración vieja (tipo `DEP`, registrados el 2025-04-03) cuyo `PGPRSLOT` **no** es
+     capital: su tabla suma EXACTO el monto, capital pagado + saldo = monto al centavo, y en algún caso el
+     «extra» es igual al capital de la cuota (65991, cuota 0). Sumarlo dejaba esos préstamos inhabilitados
+     con un «sobrante» falso. En el 62439 (tipo `MIGRACION`) el pago extra SÍ redujo la tabla.
    - **Interés = interés + interés vencido**, en las dos puntas: regla `interes + interesVencido` (DTPR) y
      pagado `interesPagado + interesVencidoPagado` (PGPR). Es la misma agregación de
      `MotorPagoPrestamoServiceImpl.calcularSaldosCuota`. Casi siempre vale 0; incluirlo cierra el hueco.
