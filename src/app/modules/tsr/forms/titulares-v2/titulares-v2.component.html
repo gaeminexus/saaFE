@@ -329,7 +329,11 @@
                                   <td>{{ cls.planCuenta.nombre }}</td>
                                   <td>{{ cls.saldoInicial | number:'1.2-2' }}</td>
                                   <td>
-                                    <button mat-icon-button color="primary" (click)="editarSaldoCuenta(rol, cls)" matTooltip="Editar saldo inicial"><mat-icon>edit</mat-icon></button>
+                                    @if (cls.tipoCuenta === 2) {
+                                      <mat-icon class="saldo-anticipos-lock" matTooltip="El saldo de anticipos lo lleva el sistema: se mueve con los anticipos, los cruces y las devoluciones.">lock</mat-icon>
+                                    } @else {
+                                      <button mat-icon-button color="primary" (click)="editarSaldoCuenta(rol, cls)" matTooltip="Editar saldo inicial"><mat-icon>edit</mat-icon></button>
+                                    }
                                     <button mat-icon-button color="warn" (click)="eliminarCuentaRol(rol, cls)"><mat-icon>delete_outline</mat-icon></button>
                                   </td>
                                 </tr>
