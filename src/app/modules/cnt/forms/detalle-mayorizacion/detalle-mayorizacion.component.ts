@@ -169,15 +169,33 @@ export class DetalleMayorizacionComponent implements OnInit, AfterViewInit {
     });
   }
 
+  /** `primerDia` del período (PRDOINCO), normalizado — nunca se parsea la fecha a mano. */
+  private primerDiaDe(periodo: Periodo | null): Date | null {
+    if (!periodo) return null;
+    const fecha = this.funcionesDatos.convertirFechaDesdeBackend(periodo.primerDia);
+    return fecha instanceof Date && !Number.isNaN(fecha.getTime()) ? fecha : null;
+  }
+
+  private periodoPorCodigo(codigo: number): Periodo | null {
+    return this.periodos().find(p => p.codigo === codigo) ?? null;
+  }
+
   private aplicarFiltrosMaestro(lista: Mayorizacion[]): Mayorizacion[] {
     const periodoDesde = this.periodoDesdeCtrl.value;
     const periodoHasta = this.periodoHastaCtrl.value;
     const fechaDesde   = this.fechaDesdeCtrl.value;
     const fechaHasta   = this.fechaHastaCtrl.value;
 
+    // Por FECHA (primerDia), no por código: los períodos de 2025 se crean con códigos MAYORES
+    // que los de 2026 (backfill tardío), así que comparar PRDOCDGO ordena mal cualquier rango
+    // que cruce esos dos años.
+    const primerDiaDesde = periodoDesde !== null ? this.primerDiaDe(this.periodoPorCodigo(periodoDesde)) : null;
+    const primerDiaHasta = periodoHasta !== null ? this.primerDiaDe(this.periodoPorCodigo(periodoHasta)) : null;
+
     return lista.filter(m => {
-      if (periodoDesde !== null && m.periodo && m.periodo.codigo < periodoDesde) return false;
-      if (periodoHasta !== null && m.periodo && m.periodo.codigo > periodoHasta) return false;
+      const primerDiaMyrz = this.primerDiaDe(m.periodo);
+      if (primerDiaDesde && primerDiaMyrz && primerDiaMyrz.getTime() < primerDiaDesde.getTime()) return false;
+      if (primerDiaHasta && primerDiaMyrz && primerDiaMyrz.getTime() > primerDiaHasta.getTime()) return false;
 
       if (fechaDesde && m.fecha) {
         const fMyrz = this.funcionesDatos.convertirFechaDesdeBackend(m.fecha);

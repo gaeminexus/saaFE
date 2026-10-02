@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { Periodo } from '../../model/periodo';
 import { MayorizacionService } from '../../service/mayorizacion.service';
 import { PeriodoService } from '../../service/periodo.service';
@@ -34,7 +35,8 @@ export class MayorizacionProcesoComponent implements OnInit {
     private mayorizacionService: MayorizacionService,
     private periodoService: PeriodoService,
     private snackBar: MatSnackBar,
-    private detalleRubroService: DetalleRubroService
+    private detalleRubroService: DetalleRubroService,
+    private funcionesDatosS: FuncionesDatosService
   ) {
     this.formProceso = this.fb.group({
       // Empresa ya se filtra por login; no se selecciona en UI
@@ -90,8 +92,12 @@ export class MayorizacionProcesoComponent implements OnInit {
       const proceso = this.formProceso.value.proceso; // 1=Mayorizar, 2=Mayorizar Cierre, 3=Desmayorizar
       const empresaCodigo = this.getEmpresaCodigo().toString();
 
-      // Validar que periodo hasta sea mayor o igual a periodo desde
-      if (periodoHasta < periodoDesde) {
+      // Validar que periodo hasta sea mayor o igual a periodo desde, por FECHA (primerDia), no
+      // por código: los períodos de 2025 se crean con códigos MAYORES que los de 2026 (backfill
+      // tardío), así que comparar PRDOCDGO ordena mal cualquier rango que cruce esos dos años.
+      const fechaDesde = this.primerDiaDe(periodoDesde);
+      const fechaHasta = this.primerDiaDe(periodoHasta);
+      if (fechaDesde && fechaHasta && fechaHasta.getTime() < fechaDesde.getTime()) {
         this.mostrarMensaje('El período hasta debe ser mayor o igual al período desde', 'error');
         this.procesando = false;
         return;
@@ -121,6 +127,14 @@ export class MayorizacionProcesoComponent implements OnInit {
     } else {
       this.mostrarMensaje('Por favor complete todos los campos requeridos', 'warn');
     }
+  }
+
+  /** `primerDia` del período (PRDOINCO), normalizado — nunca se parsea la fecha a mano. */
+  private primerDiaDe(codigoPeriodo: number): Date | null {
+    const periodo = this.periodos.find((p) => p.codigo === codigoPeriodo);
+    if (!periodo) return null;
+    const fecha = this.funcionesDatosS.convertirFechaDesdeBackend(periodo.primerDia);
+    return fecha instanceof Date && !Number.isNaN(fecha.getTime()) ? fecha : null;
   }
 
   private mostrarMensaje(mensaje: string, tipo: 'success' | 'error' | 'warn' = 'success'): void {
