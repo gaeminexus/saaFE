@@ -42,20 +42,38 @@ Cuerpo: `{ "idPrestamo": 123, "valor": 85000.00, "usuario": "x" }`. Graba `PRSTV
 - **409** `NO_ES_HIPOTECARIO_NI_PRENDARIO` si el tipo de préstamo no es 2 ni 3.
 - **404** si el préstamo no existe.
 
-### `POST /posg/sumaAsegurada/carga`
-Carga desde Excel. **El frontend lee el Excel** (columnas `IDAsoprep` y `suma asegurada`) y manda:
-`{ "filas": [{ "idAsoprep": 60123, "valor": 85000.00 }], "confirmar": false, "usuario": "x" }`.
-- Con `confirmar: false` sólo valida y **no graba nada**.
-- Con `confirmar: true` graba **sólo las filas OK**, en una transacción.
+### `POST /posg/sumaAsegurada/carga` — multipart (CORREGIDO 2026-10-02: el Excel lo lee el BACKEND)
+⛔ **Antes decía que el frontend leía el Excel. No hay librería de Excel en el frontend** (medido por el
+ejecutor FE): ni en `package.json` ni en `index.html`, y el único uso, el de `dash-ventas`, está roto.
+**El backend ya lee Excel con Apache POI** (`PrestamoServiceImpl:671`, `WorkbookFactory`) y recibe
+archivos multipart (`PrestamoRest`). Se sigue ese precedente.
+
+Multipart con estos campos:
+- `archivo`: `.xlsx` o `.xls`, con dos columnas, `IDAsoprep` y `suma asegurada`. La primera fila es el
+  encabezado.
+- `confirmar`: `true` o `false`.
+- `usuario`.
+
+Con `confirmar=false` el backend lee el archivo y sólo valida. Con `true` lee y graba **sólo las filas
+OK**, en una transacción. Una celda no numérica o vacía → `VALOR_INVALIDO`.
 
 **200:**
 ```json
 { "total": 120, "ok": 115, "conError": 5,
-  "filas": [{ "idAsoprep": 60123, "idPrestamo": 4567, "valorAnterior": null, "valor": 85000.00,
+  "filas": [{ "fila": 2, "idAsoprep": 60123, "idPrestamo": 4567, "valorAnterior": null, "valor": 85000.00,
               "resultado": "OK" }] }
 ```
 `resultado` puede ser `OK`, `NO_EXISTE`, `NO_ES_HIPOTECARIO_NI_PRENDARIO`, `VALOR_INVALIDO` o
-`DUPLICADO_EN_ARCHIVO`.
+`DUPLICADO_EN_ARCHIVO`. Un archivo ilegible → **400** `ARCHIVO_INVALIDO`.
+
+### Exportaciones a Excel — las arma el BACKEND (`.xlsx` con POI, como `PacificoArchivoPagoFormateador`)
+- `GET /posg/{id}/listado/excel`: el listado de un documento (lo que se manda a la aseguradora o al
+  broker). Columnas: número de préstamo, cédula, partícipe, tipo de préstamo, estado y **base**
+  (saldo de capital o suma asegurada).
+- `GET /posg/listado/preview/excel?tipoSeguro=&fechaCorte=`: la vista previa antes de generar.
+- `GET /posg/{idFactura}/novedades/excel?desde=&hasta=`: dos hojas, Inclusiones y Exclusiones.
+- Respuesta `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` con `Content-Disposition`.
+  El frontend lo baja como blob, igual que los documentos de plazo vencido.
 
 ⚠️ La suma asegurada **no** genera el asiento de cuentas de orden retroactivo (pregunta S14, pendiente).
 
