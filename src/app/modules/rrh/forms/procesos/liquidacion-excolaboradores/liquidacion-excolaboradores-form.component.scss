@@ -173,6 +173,35 @@
     min-width: 220px;
   }
 
+  .celda-cuenta {
+    min-width: 260px;
+
+    input[readonly] {
+      cursor: pointer;
+    }
+  }
+
+  .chips-sugeridas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-xs;
+  }
+
+  .chip-sugerida {
+    font-size: $font-size-xs;
+    line-height: 1.6;
+    padding: 0 $spacing-xs;
+    min-width: 0;
+    color: $primary-color;
+    border-color: $primary-color;
+
+    &.chip-elegida {
+      background: $primary-color;
+      color: $background-primary;
+    }
+  }
+
   .celda-numero {
     max-width: 140px;
   }

@@ -29,16 +29,21 @@ import {
   MotivoDialogComponent,
   MotivoDialogData,
 } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
+import {
+  PlanCuentaSelectorDialogComponent,
+} from '../../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { PlanCuenta } from '../../../../cnt/model/plan-cuenta';
+import { PlanCuentaService } from '../../../../cnt/service/plan-cuenta.service';
 import { BancoExternoService } from '../../../../tsr/service/banco-externo.service';
-import { ProductoPagoService } from '../../../../cxp/service/producto-pago.service';
 import { CausalTerminacionService } from '../../../service/causal-terminacion.service';
 import { LiquidacionExternaService } from '../../../service/liquidacion-externa.service';
 import {
+  CUENTAS_SUGERIDAS_POR_CONCEPTO,
   DetalleLiquidacionExterna,
   ESTADO_LIQUIDACION_EXTERNA_LABELS,
   EstadoLiquidacionExterna,
@@ -63,11 +68,17 @@ interface GrupoCampos {
   campos: CampoFormulario[];
 }
 
-/** Una fila de la grilla de conceptos, en edición (contrato §5.1). `valor` siempre positivo. */
+/** Una fila de la grilla de conceptos, en edición (contrato §5.1, R1). `valor` siempre positivo. */
 interface FilaConcepto {
   tipoConcepto: number | null;
   descripcion: string;
   valor: number | null;
+  /** Cuenta de MOVIMIENTO del plan de cuentas (R1) — opcional para guardar, obligatoria para enviar a Tesorería. */
+  cuentaContable: PlanCuenta | null;
+}
+
+function sinPuntos(codigo: string): string {
+  return (codigo ?? '').replace(/\./g, '');
 }
 
 const FECHA_LIMITE_SALIDA = '2026-01-01';
@@ -121,6 +132,8 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
   formulario: FormGroup = new FormGroup({});
 
   private codigo: number | null = null;
+  /** Cuentas de MOVIMIENTO (tipo 2) del plan de la empresa, para resolver las sugeridas (R1). */
+  private cuentasMovimiento: PlanCuenta[] = [];
 
   readonly esNuevo = computed(() => this.liquidacion() === null);
 
@@ -167,7 +180,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
     private router: Router,
     private liquidacionExternaService: LiquidacionExternaService,
     private causalService: CausalTerminacionService,
-    private productoPagoService: ProductoPagoService,
+    private planCuentaService: PlanCuentaService,
     private bancoService: BancoExternoService,
     private jasperService: JasperReportesService,
     private appState: AppStateService,
@@ -202,7 +215,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
 
     forkJoin({
       causales: sinFallo(this.causalService.selectByCriteria(criteriosPorEmpresa('nombre')), 'las causales de terminación'),
-      productos: sinFallo(this.productoPagoService.selectByCriteria(criteriosPorEmpresa('nombre')), 'los productos de pago'),
+      planCuentas: sinFallo(this.planCuentaService.getAll(), 'el plan de cuentas'),
       bancos: sinFallo(this.bancoService.getAll(), 'los bancos'),
       liquidacion: this.codigo ? this.liquidacionExternaService.getById(this.codigo) : of(null),
       // Sin catchError a propósito: si el detalle no carga, toda la carga tiene que fallar (ver
@@ -211,8 +224,11 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
         ? this.liquidacionExternaService.detalle(this.codigo)
         : of([] as DetalleLiquidacionExterna[]),
     }).subscribe({
-      next: ({ causales, productos, bancos, liquidacion, detalles }) => {
-        this.construirCampos(causales, productos, bancos);
+      next: ({ causales, planCuentas, bancos, liquidacion, detalles }) => {
+        // Solo las de MOVIMIENTO (tipo 2) son seleccionables — mismo criterio que
+        // PlanCuentaSelectorDialogComponent.puedeSeleccionar() con mostrarSoloMovimiento.
+        this.cuentasMovimiento = (planCuentas as PlanCuenta[]).filter((c) => c.tipo === 2);
+        this.construirCampos(causales, bancos);
         this.construirFormulario(liquidacion);
         this.liquidacion.set(liquidacion);
         this.detalles.set(
@@ -220,6 +236,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
             tipoConcepto: d.tipoConcepto,
             descripcion: d.descripcion ?? '',
             valor: d.valor,
+            cuentaContable: (d.cuentaContable as PlanCuenta) ?? null,
           })),
         );
         this.cargando.set(false);
@@ -232,8 +249,8 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
     });
   }
 
-  private construirCampos(causales: any[], productos: any[], bancos: any[]): void {
-    this.campos.set(camposLiquidacionExterna(causales, productos, bancos));
+  private construirCampos(causales: any[], bancos: any[]): void {
+    this.campos.set(camposLiquidacionExterna(causales, bancos));
   }
 
   private construirFormulario(l: LiquidacionExterna | null): void {
@@ -267,7 +284,10 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
   // ─── Grilla de conceptos ───────────────────────────────────────────────────
 
   agregarConcepto(): void {
-    this.detalles.update((filas) => [...filas, { tipoConcepto: null, descripcion: '', valor: null }]);
+    this.detalles.update((filas) => [
+      ...filas,
+      { tipoConcepto: null, descripcion: '', valor: null, cuentaContable: null },
+    ]);
   }
 
   quitarConcepto(indice: number): void {
@@ -294,6 +314,55 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
 
   esIngreso(tipo: number | null): boolean {
     return tipo !== null && esIngresoLiquidacionExterna(tipo);
+  }
+
+  // ─── Cuenta contable por concepto (R1) ─────────────────────────────────────
+
+  /**
+   * Cuentas sugeridas para el tipo de concepto, resueltas contra el plan de la empresa y en el
+   * orden del contrato (R1). Una sugerida que no existe en el plan simplemente no aparece.
+   */
+  cuentasSugeridasPara(tipoConcepto: number | null): PlanCuenta[] {
+    if (tipoConcepto === null) return [];
+    const codigosSugeridos = CUENTAS_SUGERIDAS_POR_CONCEPTO[tipoConcepto] ?? [];
+    const resueltas: PlanCuenta[] = [];
+    for (const codigoSugerido of codigosSugeridos) {
+      const cuenta = this.cuentasMovimiento.find((c) => sinPuntos(c.cuentaContable) === sinPuntos(codigoSugerido));
+      if (cuenta) resueltas.push(cuenta);
+    }
+    return resueltas;
+  }
+
+  asignarCuenta(indice: number, cuenta: PlanCuenta | null): void {
+    this.detalles.update((filas) => filas.map((f, i) => (i === indice ? { ...f, cuentaContable: cuenta } : f)));
+  }
+
+  limpiarCuentaConcepto(indice: number): void {
+    this.asignarCuenta(indice, null);
+  }
+
+  /**
+   * Abre el selector con TODO el plan de cuentas — mismo componente y mismo criterio que
+   * `CuentasBancariasComponent.buscarCuentaContable()` (tsr, commit `df6eb1f`):
+   * `mostrarSoloMovimiento` se deja en su default (`true`), que no filtra la lista, sólo impide
+   * *elegir* una cuenta de grupo.
+   */
+  abrirSelectorCuenta(indice: number): void {
+    const fila = this.detalles()[indice];
+    this.dialog
+      .open(PlanCuentaSelectorDialogComponent, {
+        width: '900px',
+        maxWidth: '98vw',
+        data: {
+          titulo: 'Seleccionar cuenta contable',
+          cuentaPreseleccionada: fila?.cuentaContable ?? undefined,
+        },
+      })
+      .afterClosed()
+      .subscribe((cuenta: PlanCuenta | null) => {
+        // Cancelar (null/undefined) no debe perder la selección previa.
+        if (cuenta) this.asignarCuenta(indice, cuenta);
+      });
   }
 
   private sumar(filtro: (tipo: number) => boolean): number {
@@ -347,7 +416,6 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
       fechaSalida: v.fechaSalida,
       causalTerminacion: referencia(v.causalTerminacion),
       ultimaRemuneracion: v.ultimaRemuneracion === '' || v.ultimaRemuneracion === null ? null : Number(v.ultimaRemuneracion),
-      productoPago: referencia(v.productoPago),
       banco: referencia(v.banco),
       tipoCuenta: extraerCodigo(v.tipoCuenta),
       numeroCuenta: v.numeroCuenta || null,
@@ -362,6 +430,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
         descripcion: f.descripcion || null,
         valor: Number(f.valor),
         orden: i + 1,
+        cuentaContable: referencia(f.cuentaContable),
       })),
     };
 
@@ -390,6 +459,15 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
   enviarATesoreria(): void {
     const l = this.liquidacion();
     if (!l || !this.puedeEnviarATesoreria() || this.ocupado()) return;
+
+    // La cuenta es obligatoria en cada línea para enviar a Tesorería (R1) — se avisa antes de
+    // llamar al backend, no después de que rechace la llamada.
+    const sinCuenta = this.detalles().filter((f) => !f.cuentaContable);
+    if (sinCuenta.length > 0) {
+      const nombres = sinCuenta.map((f) => f.descripcion || this.etiquetaTipoConcepto(f.tipoConcepto)).join(', ');
+      this.avisar(`Falta la cuenta contable de: ${nombres}`, true);
+      return;
+    }
 
     const data: ConfirmDialogData = {
       title: 'Enviar a tesorería',
@@ -530,6 +608,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
             tipoConcepto: d.tipoConcepto,
             descripcion: d.descripcion ?? '',
             valor: d.valor,
+            cuentaContable: (d.cuentaContable as PlanCuenta) ?? null,
           })),
         );
       },
@@ -556,14 +635,13 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
       : '—';
   }
 
-  productoPagoLabel(): string {
-    const p = this.liquidacion()?.productoPago as any;
-    return p?.nombre ?? '—';
-  }
-
   bancoLabel(): string {
     const b = this.liquidacion()?.banco as any;
     return b?.nombre ?? '—';
+  }
+
+  cuentaContableLabel(cuenta: PlanCuenta | null): string {
+    return cuenta ? `${cuenta.cuentaContable} — ${cuenta.nombre}` : '';
   }
 
   volver(): void {

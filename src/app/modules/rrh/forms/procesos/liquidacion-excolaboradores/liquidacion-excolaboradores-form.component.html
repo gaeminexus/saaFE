@@ -142,7 +142,6 @@
         <section class="grupo">
           <h2>Pago</h2>
           <dl class="resumen">
-            <div><dt>Producto de pago</dt><dd>{{ productoPagoLabel() }}</dd></div>
             @if (l.banco) {
               <div><dt>Banco</dt><dd>{{ bancoLabel() }}</dd></div>
               <div><dt>Tipo de cuenta</dt><dd>{{ l.tipoCuenta === 1 ? 'Ahorro' : 'Corriente' }}</dd></div>
@@ -177,6 +176,7 @@
                 <th>Tipo</th>
                 <th>Descripción</th>
                 <th class="a-la-derecha">Valor</th>
+                <th>Cuenta contable</th>
                 <th></th>
               </tr>
             </thead>
@@ -221,6 +221,43 @@
                       />
                     </mat-form-field>
                   </td>
+                  <td class="celda-cuenta">
+                    @if (cuentasSugeridasPara(fila.tipoConcepto); as sugeridas) {
+                      @if (sugeridas.length > 0) {
+                        <div class="chips-sugeridas">
+                          @for (sugerida of sugeridas; track sugerida.codigo) {
+                            <button
+                              mat-stroked-button
+                              type="button"
+                              class="chip-sugerida"
+                              [class.chip-elegida]="fila.cuentaContable?.codigo === sugerida.codigo"
+                              (click)="asignarCuenta($index, sugerida)"
+                              [matTooltip]="sugerida.cuentaContable + ' — ' + sugerida.nombre"
+                            >
+                              Sugerida: {{ sugerida.cuentaContable }}
+                            </button>
+                          }
+                        </div>
+                      }
+                    }
+                    <mat-form-field appearance="outline" class="celda-texto">
+                      <input
+                        matInput
+                        readonly
+                        [value]="cuentaContableLabel(fila.cuentaContable)"
+                        placeholder="Buscar en el plan de cuentas…"
+                        (click)="abrirSelectorCuenta($index)"
+                      />
+                      @if (fila.cuentaContable) {
+                        <button mat-icon-button matSuffix type="button" (click)="limpiarCuentaConcepto($index)">
+                          <mat-icon>close</mat-icon>
+                        </button>
+                      }
+                      <button mat-icon-button matSuffix type="button" (click)="abrirSelectorCuenta($index)">
+                        <mat-icon>search</mat-icon>
+                      </button>
+                    </mat-form-field>
+                  </td>
                   <td>
                     <button mat-icon-button type="button" (click)="quitarConcepto($index)" matTooltip="Quitar este concepto">
                       <mat-icon>delete</mat-icon>
@@ -239,6 +276,7 @@
             <thead>
               <tr>
                 <th>Concepto</th>
+                <th>Cuenta contable</th>
                 <th class="a-la-derecha">Valor</th>
               </tr>
             </thead>
@@ -246,6 +284,7 @@
               @for (fila of detalles(); track $index) {
                 <tr>
                   <td>{{ fila.descripcion || etiquetaTipoConcepto(fila.tipoConcepto) }}</td>
+                  <td>{{ cuentaContableLabel(fila.cuentaContable) || '—' }}</td>
                   <td class="a-la-derecha">{{ fila.valor | number: '1.2-2' }}</td>
                 </tr>
               }
