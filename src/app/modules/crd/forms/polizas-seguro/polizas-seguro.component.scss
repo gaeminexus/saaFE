@@ -1,0 +1,168 @@
+.ps-container {
+  padding: 1.25rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.ps-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ps-tab-contenido {
+  padding: 1.25rem 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ps-seccion-titulo {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #333;
+}
+
+.ps-ayuda {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.ps-separador {
+  border-top: 1px solid #e0e0e0;
+  margin: 0.5rem 0;
+}
+
+.ps-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+
+  mat-form-field {
+    min-width: 180px;
+  }
+}
+
+.ps-buscar {
+  max-width: 320px;
+}
+
+.ps-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ps-ancho-total {
+  width: 100%;
+}
+
+.ps-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+
+  &.alerta { background: #fff4e5; color: #7a4a00; }
+  &.error { background: #fdecea; color: #a52a1e; }
+  &.ok { background: #e8f5e9; color: #1b5e20; }
+
+  mat-icon { flex-shrink: 0; }
+}
+
+.ps-vacio, .ps-cargando {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.ps-tabla-scroll {
+  overflow-x: auto;
+}
+
+.ps-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th, td {
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    white-space: nowrap;
+  }
+
+  th {
+    background: #f5f5f5;
+    font-weight: 600;
+  }
+}
+
+.ps-fila-sin-suma {
+  background: #fff8e1;
+}
+
+.ps-fila-error {
+  background: #fdecea;
+}
+
+.ps-badge-sin-suma {
+  display: inline-block;
+  margin-left: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #a52a1e;
+  background: #fdecea;
+  border-radius: 8px;
+  padding: 0.1rem 0.4rem;
+  white-space: nowrap;
+}
+
+.ps-input-valor {
+  width: 130px;
+}
+
+.ps-nombre-archivo {
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.ps-contadores-carga {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.ps-contador-ok { color: #1b5e20; }
+.ps-contador-error { color: #a52a1e; }
+
+.ps-acciones-finales {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.ps-acciones-fila {
+  display: flex;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.ps-estado {
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.ps-estado-1 { background: #eef2ff; color: #3730a3; }
+.ps-estado-2 { background: #fff4e5; color: #7a4a00; }
+.ps-estado-3 { background: #e3f2fd; color: #0d47a1; }
+.ps-estado-4 { background: #e8f5e9; color: #1b5e20; }
+.ps-estado-5 { background: #eceff1; color: #455a64; }

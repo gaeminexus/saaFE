@@ -1,0 +1,66 @@
+<h2 mat-dialog-title>
+  {{ esDebito() ? 'Registrar nota de débito (inclusión)' : 'Registrar nota de crédito (exclusión)' }}
+</h2>
+
+<mat-dialog-content>
+  <p class="rns-ayuda">
+    {{ esDebito()
+      ? 'Elija los préstamos nuevos que se incluyen en la póliza.'
+      : 'Elija los préstamos que se excluyen de la póliza.' }}
+  </p>
+
+  <div class="rns-lista">
+    @for (c of data.candidatos; track c.idPrestamo) {
+      <label class="rns-item">
+        <mat-checkbox [checked]="estaSeleccionado(c.idPrestamo)" (change)="alternarSeleccion(c.idPrestamo)"></mat-checkbox>
+        <span class="rns-item-texto">
+          {{ c.numeroPrestamo }} — {{ c.nombreParticipe }} ({{ c.cedula }})
+          <span class="rns-item-base">Base: {{ formatMoneda(c.base) }}</span>
+        </span>
+      </label>
+    } @empty {
+      <p class="rns-vacio">No hay préstamos para elegir.</p>
+    }
+  </div>
+
+  <div class="rns-form">
+    <mat-form-field appearance="outline">
+      <mat-label>Aseguradora</mat-label>
+      <input matInput [(ngModel)]="aseguradora" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>RUC</mat-label>
+      <input matInput [(ngModel)]="ruc" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Nro. de póliza</mat-label>
+      <input matInput [(ngModel)]="numeroPoliza" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Nro. de documento</mat-label>
+      <input matInput [(ngModel)]="numeroDocumento" placeholder="001-001-000123" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="rns-ancho-total">
+      <mat-label>Clave de acceso (SRI)</mat-label>
+      <input matInput [(ngModel)]="claveAcceso" maxlength="49" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de emisión</mat-label>
+      <input matInput [matDatepicker]="pickerEmision" [(ngModel)]="fechaEmision" />
+      <mat-datepicker-toggle matSuffix [for]="pickerEmision"></mat-datepicker-toggle>
+      <mat-datepicker #pickerEmision></mat-datepicker>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Valor total</mat-label>
+      <span matTextPrefix>$&nbsp;</span>
+      <input matInput type="number" min="0" [(ngModel)]="valorTotal" />
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancelar()">Cancelar</button>
+  <button mat-raised-button color="primary" [disabled]="!puedeConfirmar()" (click)="confirmar()">
+    <mat-icon>save</mat-icon> Registrar
+  </button>
+</mat-dialog-actions>

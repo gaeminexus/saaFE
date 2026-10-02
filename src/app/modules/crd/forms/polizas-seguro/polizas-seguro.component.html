@@ -1,0 +1,378 @@
+<div class="ps-container">
+  <h2 class="ps-titulo">
+    <mat-icon>shield</mat-icon>
+    Seguros
+  </h2>
+
+  <mat-tab-group class="ps-tabs" animationDuration="200ms">
+
+    <!-- ==================== 1. Suma asegurada ==================== -->
+    <mat-tab label="Suma asegurada">
+      <div class="ps-tab-contenido">
+
+        <div class="ps-seccion-titulo">Búsqueda y edición individual</div>
+        <div class="ps-filtros">
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo</mat-label>
+            <mat-select [ngModel]="tipoSumaAsegurada()" (ngModelChange)="tipoSumaAsegurada.set($event)">
+              <mat-option [value]="TipoSeguro.INCENDIO">{{ textoTipoSeguro[TipoSeguro.INCENDIO] }}</mat-option>
+              <mat-option [value]="TipoSeguro.PRENDARIO">{{ textoTipoSeguro[TipoSeguro.PRENDARIO] }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de referencia</mat-label>
+            <input matInput [matDatepicker]="pickerSA" [max]="hoy"
+                   [ngModel]="fechaSumaAsegurada()" (ngModelChange)="fechaSumaAsegurada.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerSA"></mat-datepicker-toggle>
+            <mat-datepicker #pickerSA></mat-datepicker>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="consultarSumaAsegurada()" [disabled]="consultandoSumaAsegurada()">
+            @if (consultandoSumaAsegurada()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <ng-container><mat-icon>search</mat-icon> Consultar</ng-container>
+            }
+          </button>
+        </div>
+
+        @if (errorSumaAsegurada(); as error) {
+          <div class="ps-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (filasSumaAsegurada().length) {
+          <mat-form-field appearance="outline" class="ps-buscar">
+            <mat-label>Buscar</mat-label>
+            <input matInput placeholder="Préstamo, partícipe o cédula"
+                   [ngModel]="filtroTextoSumaAsegurada()" (ngModelChange)="filtroTextoSumaAsegurada.set($event)" />
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <div class="ps-tabla-scroll">
+            <table class="ps-tabla">
+              <thead>
+                <tr>
+                  <th>Préstamo</th>
+                  <th>Partícipe</th>
+                  <th>Cédula</th>
+                  <th>Tipo</th>
+                  <th>Suma asegurada</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (fila of filasSumaAseguradaFiltradas(); track fila.idPrestamo) {
+                  <tr [class.ps-fila-sin-suma]="fila.sinSumaAsegurada">
+                    <td>{{ fila.numeroPrestamo }}</td>
+                    <td>{{ fila.nombreParticipe }}</td>
+                    <td>{{ fila.cedula }}</td>
+                    <td>{{ fila.tipoPrestamo }}</td>
+                    <td>
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="ps-input-valor">
+                        <span matTextPrefix>$&nbsp;</span>
+                        <input matInput type="number" min="0"
+                               [ngModel]="valorEditadoDe(fila)" (ngModelChange)="setValorEditado(fila.idPrestamo, $event)" />
+                      </mat-form-field>
+                      @if (fila.sinSumaAsegurada) {
+                        <span class="ps-badge-sin-suma">SIN SUMA ASEGURADA</span>
+                      }
+                    </td>
+                    <td>
+                      <button mat-stroked-button color="primary" [disabled]="guardandoEsta(fila.idPrestamo)" (click)="guardarSumaAsegurada(fila)">
+                        @if (guardandoEsta(fila.idPrestamo)) {
+                          <mat-spinner diameter="16"></mat-spinner>
+                        } @else {
+                          <mat-icon>save</mat-icon>
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <div class="ps-separador"></div>
+
+        <div class="ps-seccion-titulo">Carga desde Excel</div>
+        <p class="ps-ayuda">
+          Columnas <b>IDAsoprep</b> y <b>suma asegurada</b>, con encabezado en la primera fila. El backend
+          lee el archivo y valida antes de grabar.
+        </p>
+
+        <div class="ps-filtros">
+          <input #inputExcel type="file" accept=".xls,.xlsx" hidden (change)="onArchivoExcelSeleccionado($event)" />
+          <button mat-raised-button color="primary" (click)="inputExcel.click()" [disabled]="previsualizandoExcel()">
+            <mat-icon>upload_file</mat-icon> Elegir archivo Excel
+          </button>
+          @if (archivoSeleccionado(); as archivo) {
+            <span class="ps-nombre-archivo">{{ archivo.name }}</span>
+          }
+        </div>
+
+        @if (errorCargaExcel(); as error) {
+          <div class="ps-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (previsualizandoExcel()) {
+          <div class="ps-cargando"><mat-spinner diameter="32"></mat-spinner></div>
+        }
+
+        @if (resultadoCargaExcel(); as resultado) {
+          <div class="ps-contadores-carga">
+            <span class="ps-contador">Total: <b>{{ resultado.total }}</b></span>
+            <span class="ps-contador ps-contador-ok">OK: <b>{{ resultado.ok }}</b></span>
+            <span class="ps-contador ps-contador-error">Con error: <b>{{ resultado.conError }}</b></span>
+          </div>
+
+          <div class="ps-tabla-scroll">
+            <table class="ps-tabla">
+              <thead>
+                <tr>
+                  <th>Fila</th>
+                  <th>IDAsoprep</th>
+                  <th>Valor anterior</th>
+                  <th>Valor nuevo</th>
+                  <th>Resultado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of resultado.filas; track f.fila) {
+                  <tr [class.ps-fila-error]="f.resultado !== 'OK'">
+                    <td>{{ f.fila }}</td>
+                    <td>{{ f.idAsoprep }}</td>
+                    <td>{{ formatMoneda(f.valorAnterior) }}</td>
+                    <td>{{ formatMoneda(f.valor) }}</td>
+                    <td>{{ f.resultado }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          @if (archivoSeleccionado()) {
+            <div class="ps-acciones-finales">
+              <button mat-stroked-button (click)="cancelarCargaExcel()">Cancelar</button>
+              <button mat-raised-button color="accent" [disabled]="!resultado.ok || confirmandoExcel()" (click)="confirmarCargaExcel()">
+                @if (confirmandoExcel()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>check_circle</mat-icon> Confirmar carga ({{ resultado.ok }})</ng-container>
+                }
+              </button>
+            </div>
+          }
+        }
+
+      </div>
+    </mat-tab>
+
+    <!-- ==================== 2. Pólizas ==================== -->
+    <mat-tab label="Pólizas">
+      <div class="ps-tab-contenido">
+
+        <div class="ps-seccion-titulo">Nuevo listado</div>
+        <div class="ps-filtros">
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de seguro</mat-label>
+            <mat-select [ngModel]="tipoPoliza()" (ngModelChange)="tipoPoliza.set($event)">
+              <mat-option [value]="TipoSeguro.DESGRAVAMEN">{{ textoTipoSeguro[TipoSeguro.DESGRAVAMEN] }}</mat-option>
+              <mat-option [value]="TipoSeguro.INCENDIO">{{ textoTipoSeguro[TipoSeguro.INCENDIO] }}</mat-option>
+              <mat-option [value]="TipoSeguro.PRENDARIO">{{ textoTipoSeguro[TipoSeguro.PRENDARIO] }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de corte</mat-label>
+            <input matInput [matDatepicker]="pickerCorte" [max]="hoy"
+                   [ngModel]="fechaCortePoliza()" (ngModelChange)="fechaCortePoliza.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerCorte"></mat-datepicker-toggle>
+            <mat-datepicker #pickerCorte></mat-datepicker>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="consultarPreviewListado()" [disabled]="consultandoPreviewListado()">
+            @if (consultandoPreviewListado()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <ng-container><mat-icon>visibility</mat-icon> Vista previa</ng-container>
+            }
+          </button>
+        </div>
+
+        @if (errorPreviewListado(); as error) {
+          <div class="ps-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (previewListadoFilas(); as filas) {
+
+          @if (hayPrestamosSinSumaAsegurada()) {
+            <div class="ps-aviso alerta">
+              <mat-icon>warning_amber</mat-icon>
+              <span>Hay préstamos sin suma asegurada — no se puede generar el listado hasta cargarla (pestaña «Suma asegurada»).</span>
+            </div>
+          }
+
+          <div class="ps-tabla-scroll">
+            <table class="ps-tabla">
+              <thead>
+                <tr>
+                  <th>Préstamo</th>
+                  <th>Partícipe</th>
+                  <th>Cédula</th>
+                  <th>Tipo</th>
+                  <th>Base</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (f of filas; track f.idPrestamo) {
+                  <tr [class.ps-fila-sin-suma]="f.sinSumaAsegurada">
+                    <td>{{ f.numeroPrestamo }}</td>
+                    <td>{{ f.nombreParticipe }}</td>
+                    <td>{{ f.cedula }}</td>
+                    <td>{{ f.tipoPrestamo }}</td>
+                    <td>
+                      {{ formatMoneda(f.base) }}
+                      @if (f.sinSumaAsegurada) {
+                        <span class="ps-badge-sin-suma">SIN SUMA ASEGURADA</span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="ps-vacio">Ningún préstamo elegible a esta fecha.</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="ps-form">
+            <mat-form-field appearance="outline" class="ps-ancho-total">
+              <mat-label>Observación (opcional)</mat-label>
+              <input matInput [ngModel]="observacionListado()" (ngModelChange)="observacionListado.set($event)" />
+            </mat-form-field>
+          </div>
+
+          <div class="ps-acciones-finales">
+            <button mat-stroked-button [disabled]="exportandoPreviewExcel()" (click)="exportarPreviewListadoExcel()">
+              @if (exportandoPreviewExcel()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <ng-container><mat-icon>file_download</mat-icon> Exportar a Excel</ng-container>
+              }
+            </button>
+            <button mat-raised-button color="accent" [disabled]="!filas.length || hayPrestamosSinSumaAsegurada() || generandoListado()"
+                    (click)="generarListado()">
+              @if (generandoListado()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <ng-container><mat-icon>post_add</mat-icon> Generar listado</ng-container>
+              }
+            </button>
+          </div>
+        }
+
+        <div class="ps-separador"></div>
+
+        <div class="ps-seccion-titulo">Documentos</div>
+        <div class="ps-filtros">
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo</mat-label>
+            <mat-select [ngModel]="filtroTipoDocumentos()" (ngModelChange)="filtroTipoDocumentos.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              <mat-option [value]="TipoSeguro.DESGRAVAMEN">{{ textoTipoSeguro[TipoSeguro.DESGRAVAMEN] }}</mat-option>
+              <mat-option [value]="TipoSeguro.INCENDIO">{{ textoTipoSeguro[TipoSeguro.INCENDIO] }}</mat-option>
+              <mat-option [value]="TipoSeguro.PRENDARIO">{{ textoTipoSeguro[TipoSeguro.PRENDARIO] }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Clase</mat-label>
+            <mat-select [ngModel]="filtroClaseDocumentos()" (ngModelChange)="filtroClaseDocumentos.set($event)">
+              <mat-option [value]="null">Todas</mat-option>
+              <mat-option [value]="ClaseDocumentoSeguro.FACTURA">{{ textoClase[ClaseDocumentoSeguro.FACTURA] }}</mat-option>
+              <mat-option [value]="ClaseDocumentoSeguro.NOTA_DEBITO">{{ textoClase[ClaseDocumentoSeguro.NOTA_DEBITO] }}</mat-option>
+              <mat-option [value]="ClaseDocumentoSeguro.NOTA_CREDITO">{{ textoClase[ClaseDocumentoSeguro.NOTA_CREDITO] }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Estado</mat-label>
+            <mat-select [ngModel]="filtroEstadoDocumentos()" (ngModelChange)="filtroEstadoDocumentos.set($event)">
+              <mat-option [value]="null">Todos</mat-option>
+              <mat-option [value]="EstadoDocumentoSeguro.LISTADO_ENVIADO">{{ textoEstado[EstadoDocumentoSeguro.LISTADO_ENVIADO] }}</mat-option>
+              <mat-option [value]="EstadoDocumentoSeguro.DOCUMENTO_REGISTRADO">{{ textoEstado[EstadoDocumentoSeguro.DOCUMENTO_REGISTRADO] }}</mat-option>
+              <mat-option [value]="EstadoDocumentoSeguro.DISTRIBUIDO">{{ textoEstado[EstadoDocumentoSeguro.DISTRIBUIDO] }}</mat-option>
+              <mat-option [value]="EstadoDocumentoSeguro.LIBERADO_A_PAGO">{{ textoEstado[EstadoDocumentoSeguro.LIBERADO_A_PAGO] }}</mat-option>
+              <mat-option [value]="EstadoDocumentoSeguro.ANULADO">{{ textoEstado[EstadoDocumentoSeguro.ANULADO] }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="buscarDocumentos()" [disabled]="cargandoDocumentos()">
+            <mat-icon>search</mat-icon> Buscar
+          </button>
+          <button mat-stroked-button (click)="limpiarFiltrosDocumentos()">
+            <mat-icon>filter_alt_off</mat-icon> Limpiar filtros
+          </button>
+        </div>
+
+        @if (errorDocumentos(); as error) {
+          <div class="ps-aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+        }
+
+        @if (cargandoDocumentos()) {
+          <div class="ps-cargando"><mat-spinner diameter="32"></mat-spinner></div>
+        } @else if (!documentos().length) {
+          <p class="ps-vacio">No hay documentos para los filtros elegidos.</p>
+        } @else {
+          <div class="ps-tabla-scroll">
+            <table class="ps-tabla">
+              <thead>
+                <tr>
+                  <th>Documento</th>
+                  <th>Tipo</th>
+                  <th>Clase</th>
+                  <th>Aseguradora</th>
+                  <th>Vigencia</th>
+                  <th>Valor total</th>
+                  <th>Préstamos</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of documentos(); track d.id) {
+                  <tr>
+                    <td>{{ d.numeroDocumento || '(sin registrar)' }}</td>
+                    <td>{{ textoTipoSeguro[d.tipoSeguro] }}</td>
+                    <td>{{ textoClase[d.clase] }}</td>
+                    <td>{{ d.aseguradora || '—' }}</td>
+                    <td>{{ formatFecha(d.fechaInicio) }} – {{ formatFecha(d.fechaFin) }}</td>
+                    <td>{{ formatMoneda(d.valorTotal) }}</td>
+                    <td>{{ d.cantidadPrestamos }}</td>
+                    <td>
+                      <span class="ps-estado" [class.ps-estado-1]="d.estado === EstadoDocumentoSeguro.LISTADO_ENVIADO"
+                            [class.ps-estado-2]="d.estado === EstadoDocumentoSeguro.DOCUMENTO_REGISTRADO"
+                            [class.ps-estado-3]="d.estado === EstadoDocumentoSeguro.DISTRIBUIDO"
+                            [class.ps-estado-4]="d.estado === EstadoDocumentoSeguro.LIBERADO_A_PAGO"
+                            [class.ps-estado-5]="d.estado === EstadoDocumentoSeguro.ANULADO">
+                        {{ textoEstado[d.estado] }}
+                      </span>
+                    </td>
+                    <td class="ps-acciones-fila">
+                      <button mat-stroked-button color="primary" (click)="abrirDetalle(d)">
+                        <mat-icon>visibility</mat-icon> Ver
+                      </button>
+                      <button mat-stroked-button [disabled]="descargandoEsta(d.id)" (click)="descargarListadoExcel(d)" matTooltip="Exportar listado a Excel">
+                        @if (descargandoEsta(d.id)) {
+                          <mat-spinner diameter="16"></mat-spinner>
+                        } @else {
+                          <mat-icon>file_download</mat-icon>
+                        }
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

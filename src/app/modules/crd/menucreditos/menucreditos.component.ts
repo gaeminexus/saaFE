@@ -195,6 +195,13 @@ export class MenucreditosComponent {
         //   idPermiso: Permisos.CRD_ASIGNACION_DE_SEGUROS,
         //   route: '/menucreditos/asignacion-seguros',
         // },
+        // La reemplaza, con backend real (docs/crd/API-POLIZAS-SEGURO.md). Sin `idPermiso`: el nodo
+        // de permiso no existe todavía (mismo caso que Plazo Vencido). Nombre corto a propósito (H71).
+        {
+          displayName: 'Seguros',
+          iconName: 'shield',
+          route: '/menucreditos/polizas-seguro',
+        },
       ],
     },
     {

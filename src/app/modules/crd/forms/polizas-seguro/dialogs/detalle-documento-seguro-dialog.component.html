@@ -1,0 +1,335 @@
+<h2 mat-dialog-title class="dds-titulo">
+  <mat-icon>description</mat-icon>
+  @if (documento(); as doc) {
+    {{ textoClase[doc.clase] }} {{ doc.numeroDocumento || '(sin registrar)' }}
+    <span class="dds-estado">{{ textoEstado[doc.estado] }}</span>
+  } @else {
+    Documento de seguro
+  }
+</h2>
+
+<mat-dialog-content class="dds-contenido">
+
+  @if (cargando()) {
+    <div class="dds-cargando"><mat-spinner diameter="32"></mat-spinner></div>
+  } @else if (error(); as err) {
+    <div class="dds-aviso error"><mat-icon>error_outline</mat-icon><span>{{ err }}</span></div>
+  } @else if (documento(); as doc) {
+
+    <div class="dds-resumen">
+      <div><span class="dds-label">Vigencia</span> {{ formatFecha(doc.fechaInicio) }} – {{ formatFecha(doc.fechaFin) }}</div>
+      <div><span class="dds-label">Valor total</span> {{ formatMoneda(doc.valorTotal) }}</div>
+      <div><span class="dds-label">Préstamos</span> {{ doc.cantidadPrestamos }}</div>
+      <div><span class="dds-label">Base</span> {{ formatMoneda(doc.sumaBase) }}</div>
+      <div><span class="dds-label">Distribuido</span> {{ formatMoneda(doc.sumaDistribuida) }}</div>
+    </div>
+
+    <mat-tab-group class="dds-tabs" animationDuration="150ms">
+
+      <!-- ==================== Documento ==================== -->
+      <mat-tab label="Documento">
+        <div class="dds-tab-contenido">
+
+          @if (puedeRegistrarDocumento()) {
+            <div class="dds-form">
+              <mat-form-field appearance="outline">
+                <mat-label>Aseguradora</mat-label>
+                <input matInput [(ngModel)]="formAseguradora" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>RUC</mat-label>
+                <input matInput [(ngModel)]="formRuc" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Nro. de póliza</mat-label>
+                <input matInput [(ngModel)]="formNumeroPoliza" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Nro. de documento</mat-label>
+                <input matInput [(ngModel)]="formNumeroDocumento" placeholder="001-001-000123" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="dds-ancho-total">
+                <mat-label>Clave de acceso (SRI)</mat-label>
+                <input matInput [(ngModel)]="formClaveAcceso" maxlength="49" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Fecha de emisión</mat-label>
+                <input matInput [matDatepicker]="pickerEmision" [(ngModel)]="formFechaEmision" />
+                <mat-datepicker-toggle matSuffix [for]="pickerEmision"></mat-datepicker-toggle>
+                <mat-datepicker #pickerEmision></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Vigencia desde</mat-label>
+                <input matInput [matDatepicker]="pickerInicio" [(ngModel)]="formFechaInicio" />
+                <mat-datepicker-toggle matSuffix [for]="pickerInicio"></mat-datepicker-toggle>
+                <mat-datepicker #pickerInicio></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Vigencia hasta</mat-label>
+                <input matInput [matDatepicker]="pickerFin" [min]="formFechaInicio" [(ngModel)]="formFechaFin" />
+                <mat-datepicker-toggle matSuffix [for]="pickerFin"></mat-datepicker-toggle>
+                <mat-datepicker #pickerFin></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Tasa</mat-label>
+                <input matInput type="number" step="0.0001" min="0" [(ngModel)]="formTasa" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Valor total (con impuestos)</mat-label>
+                <span matTextPrefix>$&nbsp;</span>
+                <input matInput type="number" min="0" [(ngModel)]="formValorTotal" />
+              </mat-form-field>
+            </div>
+
+            <div class="dds-acciones">
+              <button mat-raised-button color="primary" [disabled]="!puedeGuardarDocumento() || guardandoDocumento()" (click)="guardarDocumento()">
+                @if (guardandoDocumento()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>save</mat-icon> Guardar documento</ng-container>
+                }
+              </button>
+            </div>
+          } @else {
+            <div class="dds-aviso info">
+              <mat-icon>lock</mat-icon>
+              <span>El documento ya pasó este paso — los datos quedan de solo lectura.</span>
+            </div>
+          }
+
+          <div class="dds-acciones dds-acciones-peligrosas">
+            @if (doc.estado === EstadoDocumentoSeguro.DISTRIBUIDO) {
+              <button mat-stroked-button color="primary" [disabled]="liberandoAPago()" (click)="liberarAPago()">
+                @if (liberandoAPago()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>send</mat-icon> Liberar a pago</ng-container>
+                }
+              </button>
+            }
+            @if (puedeAnular()) {
+              <button mat-stroked-button color="warn" [disabled]="anulando()" (click)="anular()">
+                @if (anulando()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>block</mat-icon> Anular</ng-container>
+                }
+              </button>
+            }
+          </div>
+
+        </div>
+      </mat-tab>
+
+      <!-- ==================== Distribución ==================== -->
+      <mat-tab label="Distribución">
+        <div class="dds-tab-contenido">
+
+          <div class="dds-acciones">
+            <button mat-raised-button color="primary" [disabled]="cargandoDistribucion()" (click)="verDistribucion()">
+              @if (cargandoDistribucion()) {
+                <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+                <ng-container><mat-icon>visibility</mat-icon> Ver distribución</ng-container>
+              }
+            </button>
+          </div>
+
+          @if (errorDistribucion(); as err) {
+            <div class="dds-aviso error"><mat-icon>error_outline</mat-icon><span>{{ err }}</span></div>
+          }
+
+          @if (distribucionPreview(); as preview) {
+            <div class="dds-resumen-distribucion">
+              <div><span class="dds-label">Valor total</span> {{ formatMoneda(preview.valorTotal) }}</div>
+              <div><span class="dds-label">Suma préstamos</span> {{ formatMoneda(preview.sumaPrestamos) }}</div>
+              <div><span class="dds-label">Suma cuotas</span> {{ formatMoneda(preview.sumaCuotas) }}</div>
+              <div class="dds-cuadra" [class.ok]="preview.cuadra" [class.no-ok]="!preview.cuadra">
+                <mat-icon>{{ preview.cuadra ? 'check_circle' : 'error' }}</mat-icon>
+                {{ preview.cuadra ? 'Cuadra' : 'No cuadra' }}
+              </div>
+            </div>
+
+            @if (preview.prestamosSinCuotasEnVigencia.length) {
+              <div class="dds-aviso alerta">
+                <mat-icon>warning_amber</mat-icon>
+                <span>
+                  Sin cuotas en la vigencia (pesan 0):
+                  {{ preview.prestamosSinCuotasEnVigencia | json }}
+                </span>
+              </div>
+            }
+
+            <div class="dds-tabla-scroll">
+              <table class="dds-tabla">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Préstamo</th>
+                    <th>Base</th>
+                    <th>Meses cubiertos</th>
+                    <th>Peso</th>
+                    <th>Valor asignado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (p of preview.prestamos; track p.idPrestamo) {
+                    <tr class="dds-fila-prestamo" (click)="alternarExpansionPrestamo(p.idPrestamo)">
+                      <td><mat-icon>{{ prestamoExpandido(p.idPrestamo) ? 'expand_more' : 'chevron_right' }}</mat-icon></td>
+                      <td>{{ p.numeroPrestamo }}</td>
+                      <td>{{ formatMoneda(p.base) }}</td>
+                      <td>{{ p.mesesCubiertos }}</td>
+                      <td>{{ formatMoneda(p.peso) }}</td>
+                      <td><b>{{ formatMoneda(p.valorAsignado) }}</b></td>
+                    </tr>
+                    @if (prestamoExpandido(p.idPrestamo)) {
+                      <tr class="dds-fila-cuotas">
+                        <td></td>
+                        <td colspan="5">
+                          <table class="dds-tabla dds-tabla-anidada">
+                            <thead>
+                              <tr>
+                                <th>Cuota</th>
+                                <th>Vencimiento</th>
+                                <th>Saldo capital</th>
+                                <th>Seguro anterior</th>
+                                <th>Seguro nuevo</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (c of p.cuotas; track c.idCuota) {
+                                <tr>
+                                  <td>{{ c.numeroCuota }}</td>
+                                  <td>{{ formatFecha(c.fechaVencimiento) }}</td>
+                                  <td>{{ formatMoneda(c.saldoInicialCapital) }}</td>
+                                  <td>{{ formatMoneda(c.seguroAnterior) }}</td>
+                                  <td><b>{{ formatMoneda(c.seguroNuevo) }}</b></td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (doc.estado === EstadoDocumentoSeguro.DOCUMENTO_REGISTRADO) {
+              <div class="dds-acciones">
+                <button mat-raised-button color="accent" [disabled]="!preview.cuadra || distribuyendo()" (click)="confirmarDistribucion()">
+                  @if (distribuyendo()) {
+                    <mat-spinner diameter="18"></mat-spinner>
+                  } @else {
+                    <ng-container><mat-icon>check_circle</mat-icon> Confirmar distribución</ng-container>
+                  }
+                </button>
+              </div>
+            }
+          }
+
+        </div>
+      </mat-tab>
+
+      <!-- ==================== Novedades ==================== -->
+      @if (mostrarNovedades()) {
+        <mat-tab label="Novedades">
+          <div class="dds-tab-contenido">
+
+            <div class="dds-filtros">
+              <mat-form-field appearance="outline">
+                <mat-label>Desde</mat-label>
+                <input matInput [matDatepicker]="pickerNovDesde" [(ngModel)]="filtroDesdeNovedades" />
+                <mat-datepicker-toggle matSuffix [for]="pickerNovDesde"></mat-datepicker-toggle>
+                <mat-datepicker #pickerNovDesde></mat-datepicker>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Hasta</mat-label>
+                <input matInput [matDatepicker]="pickerNovHasta" [max]="hoy" [(ngModel)]="filtroHastaNovedades" />
+                <mat-datepicker-toggle matSuffix [for]="pickerNovHasta"></mat-datepicker-toggle>
+                <mat-datepicker #pickerNovHasta></mat-datepicker>
+              </mat-form-field>
+              <button mat-raised-button color="primary" [disabled]="cargandoNovedades()" (click)="consultarNovedades()">
+                <mat-icon>search</mat-icon> Consultar
+              </button>
+              <button mat-stroked-button [disabled]="!novedades() || exportandoNovedadesExcel()" (click)="exportarNovedadesExcel()">
+                @if (exportandoNovedadesExcel()) {
+                  <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                  <ng-container><mat-icon>file_download</mat-icon> Exportar a Excel</ng-container>
+                }
+              </button>
+            </div>
+
+            @if (errorNovedades(); as err) {
+              <div class="dds-aviso error"><mat-icon>error_outline</mat-icon><span>{{ err }}</span></div>
+            }
+
+            @if (novedades(); as nov) {
+              <div class="dds-novedades-seccion">
+                <div class="dds-novedades-titulo">
+                  Inclusiones ({{ nov.inclusiones.length }})
+                  <button mat-stroked-button [disabled]="!nov.inclusiones.length" (click)="registrarNotaDebito()">
+                    <mat-icon>add_circle</mat-icon> Registrar nota de débito
+                  </button>
+                </div>
+                <div class="dds-tabla-scroll">
+                  <table class="dds-tabla">
+                    <thead><tr><th>Préstamo</th><th>Partícipe</th><th>Cédula</th><th>Base</th></tr></thead>
+                    <tbody>
+                      @for (i of nov.inclusiones; track i.idPrestamo) {
+                        <tr>
+                          <td>{{ i.numeroPrestamo }}</td>
+                          <td>{{ i.nombreParticipe }}</td>
+                          <td>{{ i.cedula }}</td>
+                          <td>{{ formatMoneda(i.base) }}</td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="4" class="dds-vacio">Sin inclusiones en el rango.</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="dds-novedades-seccion">
+                <div class="dds-novedades-titulo">
+                  Exclusiones ({{ nov.exclusiones.length }})
+                  <button mat-stroked-button [disabled]="!nov.exclusiones.length" (click)="registrarNotaCredito()">
+                    <mat-icon>remove_circle</mat-icon> Registrar nota de crédito
+                  </button>
+                </div>
+                <div class="dds-tabla-scroll">
+                  <table class="dds-tabla">
+                    <thead><tr><th>Préstamo</th><th>Partícipe</th><th>Motivo</th><th>Fecha</th></tr></thead>
+                    <tbody>
+                      @for (ex of nov.exclusiones; track ex.idPrestamo) {
+                        <tr>
+                          <td>{{ ex.numeroPrestamo }}</td>
+                          <td>{{ ex.nombreParticipe }}</td>
+                          <td>{{ ex.motivo }}</td>
+                          <td>{{ formatFecha(ex.fecha) }}</td>
+                        </tr>
+                      } @empty {
+                        <tr><td colspan="4" class="dds-vacio">Sin exclusiones en el rango.</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+
+          </div>
+        </mat-tab>
+      }
+
+    </mat-tab-group>
+
+  }
+
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cerrar()">Cerrar</button>
+</mat-dialog-actions>

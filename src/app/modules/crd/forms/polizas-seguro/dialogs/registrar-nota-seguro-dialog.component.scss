@@ -1,0 +1,48 @@
+.rns-ayuda {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.rns-lista {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.rns-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  cursor: pointer;
+}
+
+.rns-item-texto {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.88rem;
+}
+
+.rns-item-base {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.rns-vacio {
+  color: #888;
+  text-align: center;
+  padding: 1rem;
+}
+
+.rns-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem 1rem;
+}
+
+.rns-ancho-total {
+  grid-column: 1 / -1;
+}
