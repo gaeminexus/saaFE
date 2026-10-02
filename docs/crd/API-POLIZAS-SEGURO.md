@@ -75,7 +75,7 @@ OK**, en una transacción. Una celda no numérica o vacía → `VALOR_INVALIDO`.
 - Respuesta `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` con `Content-Disposition`.
   El frontend lo baja como blob, igual que los documentos de plazo vencido.
 
-⚠️ La suma asegurada **no** genera el asiento de cuentas de orden retroactivo (pregunta S14, pendiente).
+La suma asegurada **no** genera ningún asiento: la garantía en cuentas de orden de los préstamos viejos ya se registró en su momento (S14, decidido 2026-10-02).
 
 ---
 
@@ -224,8 +224,8 @@ su carga de XML; levanta el bloqueo y pasa a estado 4. **Fase 1:** el endpoint e
 
 ## 10. Lo que NO cubre esta fase
 
-- **S13**, abono a capital dentro de la vigencia: re-repartir el seguro de la póliza en vez de la
-  constante 1,12/1000. Pendiente de confirmar.
-- **S14**, cuentas de orden de la garantía al cargar la suma asegurada.
+- ~~S13~~ **DECIDIDO** (diseño §5.6bis): el abono a capital re-reparte el seguro de la póliza entre las
+  cuotas nuevas. Lo implementa el backend en `AbonoCapitalPrestamoServiceImpl`; no hay endpoint nuevo.
+- ~~S14~~ **DECIDIDO**: no hay asiento al cargar la suma asegurada.
 - **Ningún asiento contable en crédito:** la contabilidad de la factura, la ND y la NC va por CXP (§5.6
   del diseño).
