@@ -255,3 +255,87 @@ El estilo de error es el de la casa: 500 con el texto del `IncomeException`. El 
   (`LiquidacionHaberesServiceImpl:898`), y traga el error en silencio (`:932`).
 - **El RDEP de hoy no es el XML del SRI**: es un XML propio con tres montos
   (`GeneracionSalidasOficialesServiceImpl:99-126`).
+
+---
+
+# REVISIÓN 2026-10-02 — el documento de Contabilidad cambia conceptos, cuentas y asiento
+
+**Fuente:** «RDEP y Contabilidad», que el contador envió el 2026-10-02 con un caso real. **Esta
+sección manda sobre §1 (D4), §3, §4, §5 y §8 donde se contradigan.**
+
+## R1. Una cuenta contable por concepto, elegida en cada línea
+
+El contador da **dos cuentas posibles para casi cada ingreso**: la del pasivo, si ya estaba
+provisionado o en el rol, y la del gasto, si no. Para los descuentos da cuentas distintas.
+**D4 queda derogada**: cada línea lleva su propia cuenta contable (`DLEX.DLEXPLNN`, cuenta de
+movimiento de `CNT.PLNN`). La elige el usuario, y la pantalla le sugiere primero las del contador.
+
+| Código | Concepto | Clase | Casilla del RDEP (contador) | Cuentas sugeridas (contador) |
+|---|---|---|---|---|
+| 1 | Remuneración pendiente | Ingreso | Sueldos y salarios gravados (materia gravada IESS) | `2501` Remuneraciones por pagar (si hubo rol) · `430105` Remuneraciones (si no) |
+| 2 | Vacaciones no gozadas | Ingreso | Otros ingresos gravados de IR (no materia IESS) | `2514` Vacaciones por pagar · `43019005` Vacaciones (la parte del mes sin provisión) |
+| 3 | Décimo tercer sueldo | Ingreso | Décimo tercer sueldo | `2.5.08` Décimo tercero por pagar (si acumula) · `4.3.01.15.13` Décimo tercero (proporcional no provisionado) |
+| 4 | Décimo cuarto sueldo | Ingreso | Décimo cuarto sueldo | `2.5.09` Décimo cuarto por pagar (si acumula) · `4.3.01.15.14` Décimo cuarto (proporcional) |
+| 5 | Fondos de reserva | Ingreso | Fondo de reserva | — (no indicada) |
+| 6 | Bonificación por desahucio | Ingreso | Otros ingresos no gravados de IR | `4.3.01.35` Por desahucio o despido |
+| 7 | Indemnización por despido intempestivo | Ingreso | Otros ingresos no gravados de IR | `4.3.01.35` Por desahucio o despido |
+| 8 | Participación de utilidades | Ingreso | Participación utilidades | — |
+| 9 | Compensación económica salario digno | Ingreso | Compensación salario digno | — |
+| 10 | Otro ingreso gravado de IR | Ingreso | Otros ingresos gravados de IR | — |
+| 11 | Otro ingreso no gravado de IR | Ingreso | Otros ingresos no gravados de IR | — |
+| 20 | Aporte personal al IESS | Descuento | Aporte personal con este empleador | ⚠️ pendiente del contador («ya se pagó en la planilla») |
+| 21 | Retención de impuesto a la renta | Descuento | Impuesto retenido | ⚠️ pendiente del contador |
+| 22 | Anticipo de quincena | Descuento | — | `1.4.03.10.01` Anticipo quincena |
+| 23 | Anticipo de remuneración | Descuento | — | `1.4.03.10.02` Anticipo remuneración |
+| 24 | Otros conceptos por cobrar | Descuento | — | `1.4.03.90` Otros conceptos |
+| 25 | Otros ingresos (uniformes y similares) | Descuento | — | `5.3.90.90` Otros ingresos |
+
+- **Las sugerencias se resuelven por código** contra `PlanCuenta.cuentaContable` (`PLNNCNTA`),
+  comparando sin puntos: el contador escribe `2501`, `2.5.08` y `4.3.01.15.13`. Si un código no existe
+  en el plan de la empresa, no se sugiere. El usuario puede elegir cualquier cuenta de movimiento.
+- **La cuenta es obligatoria en cada línea para enviar a Tesorería.** Para guardar no.
+- ⚠️ **Los códigos 2 a 9 cambian de significado respecto de §5.1.** Se puede hacer porque `RHH.LQEX`
+  está vacía: el DDL corrió el 2026-10-02 y la pantalla todavía no está desplegada. **No registrar
+  ninguna liquidación hasta desplegar esta revisión.**
+
+## R2. El asiento lo genera RRHH al confirmarse el pago, no Tesorería
+
+Con varias cuentas al DEBE y descuentos al HABER, el asiento de Tesorería (`contabilizarPagoOrigenExterno`,
+que solo arma DEBE contra el banco) ya no sirve. Se sigue el precedente de
+`OrdenBeneficioSocialServiceImpl.confirmarPago` (:366-435):
+
+- `enviarATesoreria` registra el pago **sin desglose**: Tesorería aprueba, paga y confirma sin asiento.
+- `sincronizarPago`, al ver el pago CONFIRMADO, genera **el asiento en RRHH** con
+  `AsientoContableService.generarAsiento`, tipo `RECURSOS_HUMANOS` y fecha igual a la del pago
+  (`fechaRespuesta`):
+  - DEBE: cada ingreso a su cuenta;
+  - HABER: cada descuento a su cuenta;
+  - HABER: el neto al banco de la cuenta bancaria desde la que pagó Tesorería (la cuenta de origen del
+    `PagoProgramado` y su cuenta contable; verificar cómo la obtiene `confirmarPago` de beneficios y
+    usar lo mismo).
+  - Cuadra por construcción (ingresos = descuentos + neto). Si no cuadra: error, y no se graba nada.
+  - Guarda `idAsiento` y pasa a PAGADA en la misma transacción. Si el asiento falla, la liquidación
+    sigue EN_TESORERIA y se informa el error: el pago no se pierde y se puede reintentar.
+- El producto de pago (`LQEXPRDP`) deja de ser obligatorio. La columna pasa a nullable y la pantalla ya
+  no lo pide.
+
+## R3. RDEP
+
+Según la validación del contador, *«ingresos gravados con este empleador»* = remuneración +
+vacaciones + décimo tercero + décimo cuarto: 920,00 + 338,33 + 676,67 + 381,22 = **2.316,22**. El
+desahucio y la indemnización (3.600,00) van como **exentos**.
+
+- `generarRdep`, para las LQEX PAGADAS en el año:
+  - `ingresoGravado` = tipos **1, 2, 3, 4 y 10**;
+  - `aportePersonal` = tipo **20**;
+  - `retencion` = tipo **21**.
+- ⚠️ **Límite conocido:** el RDEP que genera hoy el SAA es un XML propio con esos tres valores
+  (`GeneracionSalidasOficialesServiceImpl:99-126`), no el formato del SRI con todas sus casillas.
+  Los exentos (6, 7 y 11), los fondos de reserva, las utilidades y el salario digno no tienen dónde
+  salir. La casilla de cada concepto queda en la constante para cuando se haga el RDEP completo. Ese
+  es un frente aparte, que afecta a todos los empleados y lo decide el usuario.
+
+## R4. DDL — `rhh/sql/e3-10-liquidacion-excolaboradores-cuenta-por-concepto.sql`
+
+Agrega `DLEX.DLEXPLNN` NUMBER (nullable), deja `LQEX.LQEXPRDP` nullable y cambia `CK_DLEXTPCN` para
+que admita 1-11 y 20-25. Va **antes del WAR** de esta revisión.
