@@ -19,6 +19,7 @@ import { FormaPagoAplicacion, FORMA_PAGO_LABELS } from '../../../../../shared/mo
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { ImprimirAsientoService } from '../../../../../shared/services/imprimir-asiento.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 import { GrupoProductoPago } from '../../../../cxp/model/grupo_producto_pago';
@@ -65,6 +66,7 @@ export class RegistroEgresoComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private permisosService = inject(PermisosService);
+  private imprimirAsientoS = inject(ImprimirAsientoService);
 
   private readonly ROL_PROVEEDOR = 2;
   readonly FormaPagoAplicacion = FormaPagoAplicacion;
@@ -105,6 +107,11 @@ export class RegistroEgresoComponent implements OnInit {
   registrando = signal(false);
   regError = signal('');
   regExito = signal('');
+  /** Asiento del último registro exitoso (solo con débito automático: el de transferencia no contabiliza aquí) — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  ultimoAsiento = signal<{ idAsiento: number; numeroAlterno?: string } | null>(null);
+  imprimiendoAsientoExito = signal(false);
+  /** Id del egreso cuya fila está generando el PDF en la pestaña de consulta. */
+  imprimiendoAsientoFila = signal<number | null>(null);
 
   /** El producto se elige dentro del grupo: la lista completa es muy larga. */
   get productosDelGrupo(): ProductoPago[] {
@@ -371,6 +378,7 @@ export class RegistroEgresoComponent implements OnInit {
     this.registrando.set(true);
     this.regError.set('');
     this.regExito.set('');
+    this.ultimoAsiento.set(null);
 
     this.egresoS.procesar({
       idEmpresa: this.idEmpresaSesion(),
@@ -387,6 +395,9 @@ export class RegistroEgresoComponent implements OnInit {
         this.registrando.set(false);
         const mensaje = resp.mensaje ?? 'Egreso registrado. Queda pendiente de aprobación en tesorería.';
         this.regExito.set(mensaje);
+        if (resp.idAsiento != null) {
+          this.ultimoAsiento.set({ idAsiento: resp.idAsiento, numeroAlterno: resp.asiento });
+        }
         this.limpiar();
         this.cargarEgresos();
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
@@ -394,6 +405,40 @@ export class RegistroEgresoComponent implements OnInit {
       error: (err: Error) => {
         this.registrando.set(false);
         this.regError.set(err.message);
+      },
+    });
+  }
+
+  /** Imprime el asiento del registro recién hecho, con la plantilla oficial de Contabilidad. */
+  imprimirAsientoExito(): void {
+    const info = this.ultimoAsiento();
+    if (!info || this.imprimiendoAsientoExito()) return;
+
+    this.imprimiendoAsientoExito.set(true);
+    this.imprimirAsientoS.imprimir(info.idAsiento, info.numeroAlterno).subscribe({
+      next: () => this.imprimiendoAsientoExito.set(false),
+      error: (err: Error) => {
+        this.imprimiendoAsientoExito.set(false);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  /** Solo con asiento ya generado (débito automático) la fila trae `codigo` — patrón de pagos-transferencia. */
+  tieneAsientoImprimible(egreso: Egreso): boolean {
+    return !!egreso.asiento?.codigo;
+  }
+
+  imprimirAsientoDeFila(egreso: Egreso): void {
+    const asiento = egreso.asiento;
+    if (!asiento?.codigo || this.imprimiendoAsientoFila() != null) return;
+
+    this.imprimiendoAsientoFila.set(egreso.id);
+    this.imprimirAsientoS.imprimir(asiento.codigo, asiento.numeroAlterno).subscribe({
+      next: () => this.imprimiendoAsientoFila.set(null),
+      error: (err: Error) => {
+        this.imprimiendoAsientoFila.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
       },
     });
   }
@@ -419,6 +464,7 @@ export class RegistroEgresoComponent implements OnInit {
     this.filtroProducto = '';
     this.regError.set('');
     this.regExito.set('');
+    this.ultimoAsiento.set(null);
   }
 
   /** El pago del egreso se aprueba desde la pantalla de aprobación de pagos. */

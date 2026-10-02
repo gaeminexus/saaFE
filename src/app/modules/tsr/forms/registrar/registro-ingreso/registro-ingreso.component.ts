@@ -12,6 +12,7 @@ import { GrupoProductoSelectorDialogComponent } from '../../../../../shared/comp
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { ImprimirAsientoService } from '../../../../../shared/services/imprimir-asiento.service';
 
 import { GrupoProductoCobro } from '../../../../cxc/model/grupo-producto-cobro';
 import { ProductoCobro } from '../../../../cxc/model/producto-cobro';
@@ -52,6 +53,7 @@ export class RegistroIngresoComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private imprimirAsientoS = inject(ImprimirAsientoService);
 
   private readonly ROL_CLIENTE = 1;
 
@@ -77,6 +79,11 @@ export class RegistroIngresoComponent implements OnInit {
   registrando = signal(false);
   regError = signal('');
   regExito = signal('');
+  /** Asiento del último registro exitoso, para el botón "Imprimir asiento" del aviso — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. Null si el backend todavía no manda `idAsiento`. */
+  ultimoAsiento = signal<{ idAsiento: number; numeroAlterno?: string } | null>(null);
+  imprimiendoAsientoExito = signal(false);
+  /** Id del ingreso cuya fila está generando el PDF en la pestaña de consulta. */
+  imprimiendoAsientoFila = signal<number | null>(null);
 
   /** El producto se elige dentro del grupo: la lista completa es muy larga. */
   get productosFiltrados(): ProductoCobro[] {
@@ -217,6 +224,7 @@ export class RegistroIngresoComponent implements OnInit {
     this.registrando.set(true);
     this.regError.set('');
     this.regExito.set('');
+    this.ultimoAsiento.set(null);
 
     this.ingresoS.procesar({
       idEmpresa: this.idEmpresaSesion(),
@@ -239,6 +247,9 @@ export class RegistroIngresoComponent implements OnInit {
           mensaje += ` Asiento N° ${resp.asiento}.`;
         }
         this.regExito.set(mensaje);
+        if (resp.idAsiento != null) {
+          this.ultimoAsiento.set({ idAsiento: resp.idAsiento, numeroAlterno: resp.asiento });
+        }
         this.limpiar();
         this.cargarIngresos();
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000 });
@@ -269,6 +280,41 @@ export class RegistroIngresoComponent implements OnInit {
     this.regIdGrupo = null;
     this.regError.set('');
     this.regExito.set('');
+    this.ultimoAsiento.set(null);
+  }
+
+  /** Imprime el asiento del registro recién hecho, con la plantilla oficial de Contabilidad. */
+  imprimirAsientoExito(): void {
+    const info = this.ultimoAsiento();
+    if (!info || this.imprimiendoAsientoExito()) return;
+
+    this.imprimiendoAsientoExito.set(true);
+    this.imprimirAsientoS.imprimir(info.idAsiento, info.numeroAlterno).subscribe({
+      next: () => this.imprimiendoAsientoExito.set(false),
+      error: (err: Error) => {
+        this.imprimiendoAsientoExito.set(false);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  /** Solo con ruta activa la fila trae su asiento con `codigo` (patrón de pagos-transferencia). */
+  tieneAsientoImprimible(ingreso: Ingreso): boolean {
+    return !!ingreso.asiento?.codigo;
+  }
+
+  imprimirAsientoDeFila(ingreso: Ingreso): void {
+    const asiento = ingreso.asiento;
+    if (!asiento?.codigo || this.imprimiendoAsientoFila() != null) return;
+
+    this.imprimiendoAsientoFila.set(ingreso.id);
+    this.imprimirAsientoS.imprimir(asiento.codigo, asiento.numeroAlterno).subscribe({
+      next: () => this.imprimiendoAsientoFila.set(null),
+      error: (err: Error) => {
+        this.imprimiendoAsientoFila.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
   }
 
   // ═══ b) CONSULTA ════════════════════════════════════════

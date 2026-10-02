@@ -14,6 +14,7 @@ import { TipoAsiento } from '../../model/tipo-asiento';
 import { Asiento } from '../../model/asiento';
 import { DetalleAsiento } from '../../model/detalle-asiento';
 import { ExportService } from '../../../../shared/services/export.service';
+import { ImprimirAsientoService } from '../../../../shared/services/imprimir-asiento.service';
 import { PermisosService } from '../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../shared/model/permisos';
 import { DetalleRubroService } from '../../../../shared/services/detalle-rubro.service';
@@ -62,6 +63,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
   // Estado
   loading = signal<boolean>(false);
   loadingDetalles = signal<Set<number>>(new Set()); // Track loading por asiento
+  /** Código del asiento cuyo PDF se está generando con la plantilla oficial (docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md). */
+  imprimiendoAsiento = signal<number | null>(null);
   filtrosExpandidos = signal<boolean>(true); // Panel de filtros expandido/colapsado
   idSucursal: string = '';
   private searchRequestId = 0;
@@ -82,6 +85,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
     private detalleRubroService: DetalleRubroService,
     private snackBar: MatSnackBar,
     private exportService: ExportService,
+    private imprimirAsientoS: ImprimirAsientoService,
     private router: Router,
     private funcionesDatos: FuncionesDatosService,
     private permisosService: PermisosService
@@ -633,39 +637,24 @@ export class ReporteListadoAsientosComponent implements OnInit {
   }
 
   /**
-   * Exporta un asiento individual con sus detalles a PDF
+   * Imprime el asiento con la plantilla oficial de Contabilidad (`RPRT_ASNT_CNTB`), en vez del PDF
+   * genérico que armaba `ExportService.exportToPDF` con jsPDF (sin logo, sin firmas, sin el
+   * formato contable) — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md.
    */
   exportarAsientoPDF(asiento: Asiento): void {
-    const detalles = this.getDetalles(asiento.codigo);
+    if (this.imprimiendoAsiento() != null) return;
 
-    if (detalles.length === 0) {
-      this.snackBar.open('No hay detalles para exportar. Expanda el asiento primero.', 'Cerrar', { duration: 3000 });
-      return;
-    }
-
-    const headers = ['Cuenta', 'Nombre', 'Descripción', 'Debe', 'Haber'];
-    const dataKeys = ['cuenta', 'nombreCuenta', 'descripcion', 'debe', 'haber'];
-
-    const datos = detalles.map(detalle => ({
-      cuenta: detalle.planCuenta?.cuentaContable || 'N/A',
-      nombreCuenta: detalle.planCuenta?.nombre || 'N/A',
-      descripcion: detalle.descripcion || '-',
-      debe: detalle.valorDebe ? detalle.valorDebe.toFixed(2) : '0.00',
-      haber: detalle.valorHaber ? detalle.valorHaber.toFixed(2) : '0.00'
-    }));
-
-    const title = `Asiento #${asiento.numeroAlterno || asiento.numero} - Detalles\nFecha: ${this.formatearFecha(asiento.fechaAsiento)} | Estado: ${this.getEstadoLabel(asiento.estado)}`;
-    const filename = `Asiento_${asiento.numeroAlterno || asiento.numero}_Detalles`;
-
-    this.exportService.exportToPDF(
-      datos,
-      filename,
-      title,
-      headers,
-      dataKeys
-    );
-
-    this.snackBar.open('Detalles del asiento exportados a PDF', 'Cerrar', { duration: 3000 });
+    this.imprimiendoAsiento.set(asiento.codigo);
+    this.imprimirAsientoS.imprimir(asiento.codigo, asiento.numeroAlterno).subscribe({
+      next: () => {
+        this.imprimiendoAsiento.set(null);
+        this.snackBar.open('PDF del asiento generado', 'Cerrar', { duration: 3000 });
+      },
+      error: (err: Error) => {
+        this.imprimiendoAsiento.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
   }
 
   /**

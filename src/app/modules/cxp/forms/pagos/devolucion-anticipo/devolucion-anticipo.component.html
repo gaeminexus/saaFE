@@ -141,6 +141,23 @@
         </div>
       }
 
+      @if (exito()) {
+        <div class="mensaje-exito">
+          <mat-icon>check_circle</mat-icon>
+          <span>{{ exito() }}</span>
+          @if (ultimoAsiento()) {
+            <button mat-stroked-button type="button" [disabled]="imprimiendoAsientoExito()" (click)="imprimirAsientoExito()">
+              @if (imprimiendoAsientoExito()) {
+                <mat-spinner diameter="16"></mat-spinner>
+              } @else {
+                <mat-icon>picture_as_pdf</mat-icon>
+              }
+              Imprimir asiento
+            </button>
+          }
+        </div>
+      }
+
       <div class="acciones">
         <button mat-raised-button class="btn-confirmar" [disabled]="!puedeRegistrar" (click)="registrar()">
           @if (registrando()) {
@@ -214,6 +231,18 @@
                       }
                     </td>
                     <td>
+                      @if (tieneAsientoImprimible(d)) {
+                        <button mat-icon-button type="button"
+                                [disabled]="imprimiendoAsientoFila() === d.id"
+                                matTooltip="Imprimir asiento"
+                                (click)="imprimirAsientoDeFila(d)">
+                          @if (imprimiendoAsientoFila() === d.id) {
+                            <mat-spinner diameter="18"></mat-spinner>
+                          } @else {
+                            <mat-icon>picture_as_pdf</mat-icon>
+                          }
+                        </button>
+                      }
                       @if (puedeAnular(d)) {
                         <button mat-icon-button color="warn" type="button"
                                 [disabled]="anulando() === d.id"

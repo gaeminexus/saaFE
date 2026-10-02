@@ -37,6 +37,8 @@ export interface RegistrarDevolucionAnticipoResponse {
   devolucion: number;
   /** numeroAlterno del asiento. */
   asiento: string;
+  /** Código (PK) del asiento, para imprimirlo con la plantilla oficial — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  idAsiento?: number;
 }
 
 /** Body de POST /dvpr/anular/{id}. */
@@ -71,6 +73,8 @@ export interface DevolucionAnticipoListado {
   /** Texto "banco — número", ya armado por el backend. */
   cuentaBancaria: string;
   numeroAsiento?: string;
+  /** Código (PK) del asiento, para imprimirlo con la plantilla oficial — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  idAsiento?: number;
   motivoAnulacion?: string;
   detalle: DetalleDevolucionAnticipoListado[];
 }

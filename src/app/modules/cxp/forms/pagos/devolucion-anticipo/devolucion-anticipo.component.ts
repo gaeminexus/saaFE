@@ -7,6 +7,7 @@ import { TitularSelectorDialogComponent } from '../../../../../shared/components
 import { MotivoDialogComponent, MotivoDialogData } from '../../../../../shared/components/motivo-dialog/motivo-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { ImprimirAsientoService } from '../../../../../shared/services/imprimir-asiento.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { Titular } from '../../../../tsr/model/titular';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
@@ -41,6 +42,7 @@ export class DevolucionAnticipoComponent implements OnInit {
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private imprimirAsientoS = inject(ImprimirAsientoService);
 
   private readonly ROL_PROVEEDOR = 2;
   readonly EstadoDevolucionAnticipoProveedor = EstadoDevolucionAnticipoProveedor;
@@ -64,6 +66,11 @@ export class DevolucionAnticipoComponent implements OnInit {
 
   registrando = signal(false);
   error = signal('');
+  /** Mensaje persistente del último registro exitoso, con el botón "Imprimir asiento" — a diferencia del snackbar, no se cierra solo. */
+  exito = signal('');
+  /** Asiento del último registro exitoso — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. Null si el backend todavía no manda `idAsiento`. */
+  ultimoAsiento = signal<{ idAsiento: number; numeroAlterno?: string } | null>(null);
+  imprimiendoAsientoExito = signal(false);
 
   // ── Historial ─────────────────────────────────────────────────────────────
   historial = signal<DevolucionAnticipoListado[]>([]);
@@ -71,6 +78,8 @@ export class DevolucionAnticipoComponent implements OnInit {
   errorHistorial = signal('');
   anulando = signal<number | null>(null);
   filaExpandida = signal<number | null>(null);
+  /** Id de la devolución cuya fila está generando el PDF del asiento. */
+  imprimiendoAsientoFila = signal<number | null>(null);
 
   ngOnInit(): void {
     this.cargarCuentas();
@@ -189,15 +198,18 @@ export class DevolucionAnticipoComponent implements OnInit {
 
     this.registrando.set(true);
     this.error.set('');
+    this.exito.set('');
+    this.ultimoAsiento.set(null);
 
     this.devolucionS.registrar(payload).subscribe({
       next: (resp) => {
         this.registrando.set(false);
-        this.snackBar.open(
-          `${resp.mensaje || 'Devolución registrada.'} Asiento ${resp.asiento}.`,
-          'Cerrar',
-          { duration: 6000, panelClass: ['snackbar-success'] },
-        );
+        const mensaje = `${resp.mensaje || 'Devolución registrada.'} Asiento ${resp.asiento}.`;
+        this.exito.set(mensaje);
+        if (resp.idAsiento != null) {
+          this.ultimoAsiento.set({ idAsiento: resp.idAsiento, numeroAlterno: resp.asiento });
+        }
+        this.snackBar.open(mensaje, 'Cerrar', { duration: 6000, panelClass: ['snackbar-success'] });
         this.limpiarFormulario();
         this.cargarAnticipos();
         this.cargarHistorial();
@@ -214,6 +226,39 @@ export class DevolucionAnticipoComponent implements OnInit {
     this.formReferencia = '';
     this.formObservacion = '';
     this.formFecha = new Date();
+  }
+
+  /** Imprime el asiento del registro recién hecho, con la plantilla oficial de Contabilidad. */
+  imprimirAsientoExito(): void {
+    const info = this.ultimoAsiento();
+    if (!info || this.imprimiendoAsientoExito()) return;
+
+    this.imprimiendoAsientoExito.set(true);
+    this.imprimirAsientoS.imprimir(info.idAsiento, info.numeroAlterno).subscribe({
+      next: () => this.imprimiendoAsientoExito.set(false),
+      error: (err: Error) => {
+        this.imprimiendoAsientoExito.set(false);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
+  }
+
+  /** Solo con `idAsiento` en la proyección de /dvpr/listar la fila tiene asiento imprimible. */
+  tieneAsientoImprimible(d: DevolucionAnticipoListado): boolean {
+    return d.idAsiento != null;
+  }
+
+  imprimirAsientoDeFila(d: DevolucionAnticipoListado): void {
+    if (d.idAsiento == null || this.imprimiendoAsientoFila() != null) return;
+
+    this.imprimiendoAsientoFila.set(d.id);
+    this.imprimirAsientoS.imprimir(d.idAsiento, d.numeroAsiento).subscribe({
+      next: () => this.imprimiendoAsientoFila.set(null),
+      error: (err: Error) => {
+        this.imprimiendoAsientoFila.set(null);
+        this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
+      },
+    });
   }
 
   // ── Historial ────────────────────────────────────────────────────────────

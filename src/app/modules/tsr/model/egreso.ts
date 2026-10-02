@@ -100,6 +100,8 @@ export interface RegistrarEgresoResponse {
   debitoAutomatico?: boolean;
   /** Solo en débito automático: número alterno del asiento contable. */
   asiento?: string;
+  /** Solo en débito automático: código (PK) del asiento, para imprimirlo con la plantilla oficial — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  idAsiento?: number;
   /** Solo cuando se pagó con cheque: el número girado. */
   numeroCheque?: number | string;
 }

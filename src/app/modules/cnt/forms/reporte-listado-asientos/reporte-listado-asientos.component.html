@@ -249,9 +249,14 @@
                             <mat-icon>download</mat-icon>
                           </button>
                           <button mat-mini-fab color="primary"
+                                  [disabled]="imprimiendoAsiento() === asiento.codigo"
                                   (click)="exportarAsientoPDF(asiento); $event.stopPropagation()"
-                                  matTooltip="Exportar detalles a PDF">
-                            <mat-icon>picture_as_pdf</mat-icon>
+                                  matTooltip="Imprimir asiento">
+                            @if (imprimiendoAsiento() === asiento.codigo) {
+                              <mat-spinner diameter="20"></mat-spinner>
+                            } @else {
+                              <mat-icon>picture_as_pdf</mat-icon>
+                            }
                           </button>
                         </div>
                       </div>

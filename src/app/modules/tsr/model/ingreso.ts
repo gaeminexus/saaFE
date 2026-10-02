@@ -71,6 +71,8 @@ export interface RegistrarIngresoResponse {
   ingreso?: number;
   /** Número alterno del asiento contable generado. */
   asiento?: string;
+  /** Código (PK) del asiento, para imprimirlo con la plantilla oficial — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  idAsiento?: number;
 }
 
 /** Respuesta de POST /ingr/anular/{id}. */
