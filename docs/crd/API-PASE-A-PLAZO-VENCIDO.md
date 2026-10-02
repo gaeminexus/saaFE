@@ -249,6 +249,13 @@ es siempre el compuesto). La constante del prefijo vive en un solo lugar del bac
    `CANCELADA_ANTICIPADA`): restituye desgravamen, incendio, `total` y `totalConSeguro`, y marca
    `DPLVFCRS`. Una cuota que se pagó sin seguro mientras estuvo en 8 **no se toca**: devolverle el
    seguro la reabriría. Queda contada en la respuesta como `cuotasNoRestituidas`.
+   - ⛔ **H82 (corregido 2026-10-02, sql/307):** `DetallePlazoVencido.idCuota` es un `Long` plano,
+     SIN relación ni FK — antes era un `@ManyToOne` EAGER a `DetallePrestamo`, y un abono a
+     capital o el reverso de una operación **borran** cuotas de `DTPR`
+     (`AbonoCapitalPrestamoServiceImpl:194-203`, `ProcesoPagoPrestamoServiceImpl:1336`). Con la FK,
+     `revertir` reventaba con `EntityNotFoundException` apenas cargaba `DPLV` de una declaración
+     cuyas cuotas ya no existían. Una cuota que ya no existe tampoco se restituye: se busca por su
+     id, se tolera que no exista, y cuenta también como `cuotasNoRestituidas`.
 2. `PRSTIDST` 8 → **11 siempre** (D14). Después decide el proceso nocturno: si ya no tiene cuotas
    vencidas, lo regulariza a 2 como a cualquier préstamo en 11.
 3. Declaración a **3 REVERTIDA**, con usuario, fecha y motivo. **No se borra nada.**
