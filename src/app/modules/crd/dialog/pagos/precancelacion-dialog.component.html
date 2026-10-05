@@ -41,12 +41,21 @@
 
   <div class="pg-form">
     <mat-form-field appearance="outline">
-      <mat-label>Fecha de corte</mat-label>
+      <mat-label>Fecha de pago</mat-label>
       <input matInput [matDatepicker]="pickerCorte" [max]="hoy"
              [ngModel]="fechaCorte()" (ngModelChange)="onFechaCorteCambio($event)" />
       <mat-datepicker-toggle matSuffix [for]="pickerCorte"></mat-datepicker-toggle>
       <mat-datepicker #pickerCorte></mat-datepicker>
-      <mat-hint>La mora se calcula hasta esta fecha</mat-hint>
+      <mat-hint>Con esta fecha se simula la liquidación y se calcula la mora</mat-hint>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Fecha de afectación contable</mat-label>
+      <input matInput [matDatepicker]="pickerAfectacionPrecancelacion" [min]="fechaCorte()" [max]="hoy"
+             [ngModel]="fechaAfectacion()" (ngModelChange)="fechaAfectacion.set($event)" />
+      <mat-datepicker-toggle matSuffix [for]="pickerAfectacionPrecancelacion"></mat-datepicker-toggle>
+      <mat-datepicker #pickerAfectacionPrecancelacion></mat-datepicker>
+      <mat-hint>No puede ser anterior a la fecha de pago ni posterior a hoy</mat-hint>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="pg-ancho-total">
@@ -54,6 +63,16 @@
       <input matInput [(ngModel)]="observacion" maxlength="200" placeholder="Ej.: precancelación por retiro" />
     </mat-form-field>
   </div>
+
+  @if (esPagoTardio()) {
+    <div class="pg-aviso alerta">
+      <mat-icon>schedule</mat-icon>
+      <span>
+        Pago reportado tarde: la mora generada después del pago se eliminará y la contabilidad irá
+        con la fecha de afectación.
+      </span>
+    </div>
+  }
 
   @if (simulando()) {
     <div class="pg-cargando">
@@ -195,27 +214,6 @@
     }
 
     @if (requiereRespaldo()) {
-      <div class="pg-form">
-        <mat-form-field appearance="outline">
-          <mat-label>Fecha de afectación contable</mat-label>
-          <input matInput [matDatepicker]="pickerAfectacionPrecancelacion" [min]="fechaCorte()" [max]="hoy"
-                 [ngModel]="fechaAfectacion()" (ngModelChange)="fechaAfectacion.set($event)" />
-          <mat-datepicker-toggle matSuffix [for]="pickerAfectacionPrecancelacion"></mat-datepicker-toggle>
-          <mat-datepicker #pickerAfectacionPrecancelacion></mat-datepicker>
-          <mat-hint>No puede ser anterior a la fecha de corte ni posterior a hoy</mat-hint>
-        </mat-form-field>
-      </div>
-
-      @if (esPagoTardio()) {
-        <div class="pg-aviso alerta">
-          <mat-icon>schedule</mat-icon>
-          <span>
-            Pago reportado tarde: la mora generada después del pago se eliminará y la contabilidad irá
-            con la fecha de afectación.
-          </span>
-        </div>
-      }
-
       <div class="pg-aviso info">
         <mat-icon>schedule</mat-icon>
         <span>

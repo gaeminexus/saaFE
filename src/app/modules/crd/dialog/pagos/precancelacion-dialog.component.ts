@@ -132,13 +132,15 @@ export class PrecancelacionDialogComponent {
 
   respaldoListo = computed(() => !this.requiereRespaldo() || (this.respaldo()?.completo() ?? false));
 
-  /** Solo se exige con depósito: el 100% aportes no pasa por CBCR y no tiene este campo. */
-  fechaAfectacionValida = computed(
-    () => !this.requiereRespaldo() || this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fechaCorte())
-  );
+  /**
+   * Se exige SIEMPRE (docs/crd/API-FECHA-AFECTACION-COBRO.md §2bis, 2026-10-05): con depósito va
+   * por CBCR (§1); 100% aportes va directo por `/prst/precancelar`, que desde el §2bis también
+   * acepta `fechaAfectacion` (opcional en el body, pero la pantalla la sigue exigiendo siempre).
+   */
+  fechaAfectacionValida = computed(() => this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fechaCorte()));
 
-  /** Aviso del §3.1: la mora que se generó después del pago real se elimina al recalcular. */
-  esPagoTardio = computed(() => this.requiereRespaldo() && this.cobroCreditoService.esPagoTardio(this.fechaCorte()));
+  /** Aviso del §3.1: la mora que se generó después del pago real se elimina al recalcular. Aplica en los dos caminos. */
+  esPagoTardio = computed(() => this.cobroCreditoService.esPagoTardio(this.fechaCorte()));
 
   puedeConfirmar = computed(
     () =>
@@ -351,6 +353,7 @@ export class PrecancelacionDialogComponent {
       .map((f) => ({ idTipoAporte: f.idTipoAporte as number, valor: +this.parseMoneda(f.texto).toFixed(2) }));
 
     const fecha = this.servicio.formatearFecha(this.fechaCorte());
+    const fechaAfectacion = this.servicio.formatearFecha(this.fechaAfectacion());
     const montoEfectivo = +this.parseMoneda(efectivo?.texto).toFixed(2);
 
     // Cualquier reparto CON depósito —100% efectivo/transferencia o mezclado con aportes— pasa por
@@ -359,7 +362,6 @@ export class PrecancelacionDialogComponent {
     // depósito) se sigue aplicando en el acto con el endpoint directo de siempre: sin depósito no
     // hay nada que contabilidad pueda verificar.
     if (montoEfectivo > 0.004) {
-      const fechaAfectacion = this.servicio.formatearFecha(this.fechaAfectacion());
       this.registrarPrecancelacionEnContabilidad(montoEfectivo, aportes, fecha, fechaAfectacion, rutaDocumentoRespaldo);
       return;
     }
@@ -383,6 +385,7 @@ export class PrecancelacionDialogComponent {
         usuario: usuarioSesion(),
         observacion: this.armarObservacion(),
         fecha,
+        fechaAfectacion,
         rutaDocumentoRespaldo,
       })
       .subscribe((resp) => {

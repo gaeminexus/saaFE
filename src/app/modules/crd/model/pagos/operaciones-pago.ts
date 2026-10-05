@@ -273,8 +273,14 @@ export interface PrecancelacionRequest {
   aportes?: DesgloseAporte[];
   usuario: string;
   observacion?: string | null;
-  /** Fecha de corte. Debe ser la misma que se usó al simular. `yyyy-MM-dd`. */
+  /** Fecha de pago/corte. Debe ser la misma que se usó al simular. `yyyy-MM-dd`. */
   fecha?: string | null;
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md §2bis, 2026-10-05).
+   * Opcional: si no viene, el backend usa `fecha`. El asiento del pago con aportes y el reverso de
+   * la provisión se fechan con ella.
+   */
+  fechaAfectacion?: string | null;
   /** Ruta del comprobante ya subido. Se estampa en los pagos que genere la precancelación. */
   rutaDocumentoRespaldo?: string | null;
 }
