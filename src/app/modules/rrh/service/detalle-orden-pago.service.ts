@@ -56,6 +56,21 @@ export class DetalleOrdenPagoNominaService {
     return this.http.delete<DetalleOrdenPagoNomina>(url, this.httpOptions).pipe(catchError(this.handleError));
   }
 
+  /**
+   * POST /rest/drpg/reenviar/{idDetalle} — solo sobre un DRPG RECHAZADO (contrato §3.4). Relee la
+   * cuenta activa actual del empleado, limpia el rechazo y registra un pago nuevo con el mismo
+   * `idOrigen`; el DRPG vuelve a PENDIENTE. `idUsuario`: mismo criterio que `generar()`/`confirmar()`
+   * de `OrdenPagoNominaService` — es el FK real que usa `registrarPagoDeOrigenExterno`.
+   */
+  reenviar(idDetalle: number, idUsuario: number): Observable<DetalleOrdenPagoNomina> {
+    const url = `${ServiciosRhh.RS_DRPG}/reenviar/${idDetalle}`;
+    // Cuerpo exacto del contrato §3.4/§4: solo `idUsuario`, sin usuarioRegistro.
+    const cuerpo = { idUsuario };
+    return this.http
+      .post<DetalleOrdenPagoNomina>(url, cuerpo, this.httpOptions)
+      .pipe(catchError((error) => throwError(() => error.error || error)));
+  }
+
   // Manejo de errores HTTP (respetando patrón de of(null) con status 200)
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {

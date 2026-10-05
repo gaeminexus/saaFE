@@ -82,9 +82,16 @@
     background: $background-tertiary;
     color: $text-secondary;
 
-    &.acreditada {
+    // Confirmada (incluye las acreditadas del camino viejo)
+    &.tono-ok {
       background: rgba($success-color, 0.15);
       color: color.adjust($success-color, $lightness: -8%);
+    }
+
+    // Pagada parcialmente (RECHAZADA_PARCIAL) — alguno rechazado, el resto ya pagado
+    &.tono-aviso {
+      background: rgba($warning-color, 0.2);
+      color: color.adjust($warning-color, $lightness: -25%);
     }
   }
 
@@ -101,6 +108,7 @@
     color: $text-muted;
   }
 
+  /** Órdenes viejas: Situación binaria, exactamente como antes de este frente. */
   .badge-ok {
     font-size: $font-size-xs;
     color: $text-secondary;
@@ -116,6 +124,39 @@
     color: color.adjust($error-color, $lightness: -8%);
     font-size: $font-size-xs;
     font-weight: $font-weight-medium;
+
+    mat-icon {
+      font-size: $font-size-base;
+      width: $font-size-base;
+      height: $font-size-base;
+    }
+  }
+
+  /** Órdenes nuevas: estado del pago de un empleado (Pendiente / Pagado / Rechazado). */
+  .badge-situacion {
+    display: inline-flex;
+    align-items: center;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $border-radius-lg;
+    background: $background-tertiary;
+    color: $text-secondary;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
+
+    &.tono-ok {
+      background: rgba($success-color, 0.15);
+      color: color.adjust($success-color, $lightness: -8%);
+    }
+
+    &.tono-error {
+      background: rgba($error-color, 0.15);
+      color: color.adjust($error-color, $lightness: -8%);
+    }
+  }
+
+  .boton-reenviar {
+    margin-left: $spacing-sm;
+    font-size: $font-size-xs;
 
     mat-icon {
       font-size: $font-size-base;

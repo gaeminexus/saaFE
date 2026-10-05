@@ -260,6 +260,7 @@ export type OrigenPago =
   | 'CRD_PENSION_COMPLEMENTARIA'
   | 'CRD_SEGURO_JUBILADOS'
   | 'RHH_NOMINA'
+  | 'RHH_NOMINA_EMPLEADO'
   | 'RHH_BENEFICIO_SOCIAL'
   | 'RHH_PLANILLA_IESS'
   | 'CRD_DESEMBOLSO_PRESTAMO';
@@ -276,6 +277,8 @@ export const ORIGEN_PAGO_LABELS: Record<OrigenPago, string> = {
   CRD_PENSION_COMPLEMENTARIA: 'Pensión complementaria',
   CRD_SEGURO_JUBILADOS: 'Seguro médico jubilados',
   RHH_NOMINA: 'Nómina',
+  /** Pago de nómina por empleado, uno por cuenta (docs/rrh/API-PAGO-NOMINA-POR-EMPLEADO.md §3.1). */
+  RHH_NOMINA_EMPLEADO: 'Sueldos',
   RHH_BENEFICIO_SOCIAL: 'Beneficio social',
   RHH_PLANILLA_IESS: 'Planilla IESS',
   CRD_DESEMBOLSO_PRESTAMO: 'Desembolso de préstamo',

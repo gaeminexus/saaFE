@@ -110,6 +110,18 @@ export class OrdenPagoNominaService {
       .pipe(catchError((error) => throwError(() => error.error || error)));
   }
 
+  /**
+   * POST /rest/rdpg/sincronizarPagos/{id} — consulta en Tesorería el último pago de cada DRPG
+   * PENDIENTE y actualiza su estado (docs/rrh/API-PAGO-NOMINA-POR-EMPLEADO.md §3.3). Solo aplica
+   * a las órdenes nuevas (un pago por empleado); no lleva cuerpo ni `idUsuario`, es una consulta.
+   */
+  sincronizarPagos(idOrden: number): Observable<OrdenPagoNomina> {
+    const url = `${ServiciosRhh.RS_RDPG}/sincronizarPagos/${idOrden}`;
+    return this.http
+      .post<OrdenPagoNomina>(url, null, this.httpOptions)
+      .pipe(catchError((error) => throwError(() => error.error || error)));
+  }
+
   private handleError(error: HttpErrorResponse): Observable<null> {
     if (+error.status === 200) {
       return of(null);

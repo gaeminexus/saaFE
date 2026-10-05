@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +12,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
@@ -18,7 +23,13 @@ import { ExportService } from '../../../../../shared/services/export.service';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
 import { ESTADOS_GENERA_ORDEN_PAGO, estadoEn } from '../../../model/estados-nomina';
-import { DetalleOrdenPagoNomina, OrdenPagoNomina } from '../../../model/orden-pago-nomina';
+import {
+  DetalleOrdenPagoNomina,
+  ESTADO_DETALLE_ORDEN_PAGO_LABELS,
+  EstadoDetalleOrdenPago,
+  EstadoOrdenPagoNomina,
+  OrdenPagoNomina,
+} from '../../../model/orden-pago-nomina';
 import { PeriodoNomina } from '../../../model/periodo-nomina';
 import { RubrosRrh } from '../../../model/rubros-rrh';
 import { DetalleOrdenPagoNominaService } from '../../../service/detalle-orden-pago.service';
@@ -117,6 +128,10 @@ export class OrdenesPagoComponent implements OnInit {
 
   rechazados = computed(() => this.detalle().filter((f) => f.rechazado === 'S').length);
 
+  /** `idDetalle` de la fila con un reenvío en curso — deshabilita solo su botón, no toda la tabla. */
+  reenviando = signal<number | null>(null);
+  sincronizando = signal<boolean>(false);
+
   constructor(
     private ordenService: OrdenPagoNominaService,
     private detalleService: DetalleOrdenPagoNominaService,
@@ -124,6 +139,7 @@ export class OrdenesPagoComponent implements OnInit {
     private cuentaService: CuentaBancariaService,
     private detalleRubroService: DetalleRubroService,
     private exportService: ExportService,
+    private dialog: MatDialog,
     private snackBar: MatSnackBar,
   ) {}
 
@@ -252,6 +268,30 @@ export class OrdenesPagoComponent implements OnInit {
     });
   }
 
+  /**
+   * «Actualizar pagos» — consulta en Tesorería el último pago de cada DRPG PENDIENTE (contrato
+   * §3.3). Sólo aplica a las órdenes nuevas (un pago por empleado); no se ofrece todavía desde la
+   * plantilla porque el contrato no da una forma de distinguir una orden nueva de una vieja antes
+   * de abrir su detalle (ver reporte BLOQUEADO al árbitro) — queda lista para conectar.
+   */
+  actualizarPagos(orden: OrdenPagoNomina): void {
+    if (this.sincronizando()) return;
+
+    this.sincronizando.set(true);
+    this.ordenService.sincronizarPagos(orden.codigo).subscribe({
+      next: () => {
+        this.sincronizando.set(false);
+        this.avisar('Pagos actualizados.');
+        this.onPeriodoChange(this.periodoSeleccionado());
+        if (this.ordenAbierta()?.codigo === orden.codigo) this.verDetalle(orden);
+      },
+      error: (err) => {
+        this.sincronizando.set(false);
+        this.avisar(this.mensajeDeError(err, 'No se pudieron actualizar los pagos.'), true);
+      },
+    });
+  }
+
   // ─── Detalle ───────────────────────────────────────────────────────────────
 
   verDetalle(orden: OrdenPagoNomina): void {
@@ -268,6 +308,57 @@ export class OrdenesPagoComponent implements OnInit {
   cerrarDetalle(): void {
     this.ordenAbierta.set(null);
     this.detalle.set([]);
+  }
+
+  puedeReenviar(fila: DetalleOrdenPagoNomina): boolean {
+    return Number(fila.estado) === EstadoDetalleOrdenPago.RECHAZADO;
+  }
+
+  /**
+   * «Reenviar» (contrato §3.4): sólo sobre un DRPG RECHAZADO. Relee la cuenta activa actual del
+   * empleado — por eso la confirmación recuerda corregirla primero en la ficha, no en esta
+   * pantalla, que sólo muestra el snapshot del pago anterior.
+   */
+  reenviar(fila: DetalleOrdenPagoNomina): void {
+    if (!this.puedeReenviar(fila) || this.reenviando() !== null) return;
+
+    const data: ConfirmDialogData = {
+      title: 'Reenviar pago',
+      message:
+        `Se registrará un pago nuevo para ${fila.nombreBeneficiario} por ${Number(fila.valor ?? 0).toFixed(2)}, ` +
+        'leyendo la cuenta bancaria activa del colaborador en este momento.\n\n' +
+        'Corrija primero la cuenta bancaria del colaborador en su ficha si el rechazo fue por un dato bancario incorrecto.',
+      type: 'warning',
+      confirmText: 'Sí, reenviar',
+      details: fila.motivoRechazo ? [{ label: 'Motivo del rechazo', value: fila.motivoRechazo }] : [],
+    };
+
+    this.dialog
+      .open(ConfirmDialogComponent, { width: '520px', data })
+      .afterClosed()
+      .subscribe((confirmado: boolean) => {
+        if (!confirmado) return;
+
+        const idUsuario = this.appState.getIdUsuario();
+        if (!idUsuario) {
+          this.avisar('No se pudo determinar el usuario de la sesión.', true);
+          return;
+        }
+
+        this.reenviando.set(fila.codigo);
+        this.detalleService.reenviar(fila.codigo, idUsuario).subscribe({
+          next: () => {
+            this.reenviando.set(null);
+            this.avisar('Pago reenviado.');
+            const orden = this.ordenAbierta();
+            if (orden) this.verDetalle(orden);
+          },
+          error: (err) => {
+            this.reenviando.set(null);
+            this.avisar(this.mensajeDeError(err, 'No se pudo reenviar el pago.'), true);
+          },
+        });
+      });
   }
 
   private criteriosDelPeriodo(idPeriodo: number): DatosBusqueda[] {
@@ -305,14 +396,38 @@ export class OrdenesPagoComponent implements OnInit {
   private formatearOrdenes(registros: OrdenPagoNomina[]): any[] {
     return registros.map((row) => ({
       ...row,
-      estadoLabel:
-        this.detalleRubroService.getDescripcionByParentAndAlterno(
-          RubrosRrh.ESTADO_ORDEN_PAGO,
-          row.estado,
-        ) || '—',
+      estadoLabel: this.estadoOrdenLabel(row.estado),
+      tonoEstado: this.tonoEstadoOrden(row.estado),
       cuentaLabel: this.etiquetaCuenta(row.cuentaBancaria),
       acreditada: !!row.fechaAcreditacion,
     }));
+  }
+
+  /**
+   * `pagoPorEmpleado` ausente se trata como `false` (contrato §4): así un backend viejo, que
+   * todavía no manda el campo, deja la pantalla exactamente como está hoy. Nunca `!orden.x`
+   * negado a mano — `=== true` explícito, mismo criterio que `tieneCuentaDestino` en cxp.
+   */
+  esOrdenNueva(orden: OrdenPagoNomina | null): boolean {
+    return orden?.pagoPorEmpleado === true;
+  }
+
+  /**
+   * «Pagada parcialmente» en vez del nombre de la constante (contrato §5) para
+   * `RECHAZADA_PARCIAL`; Generada y Confirmada siguen con el texto del rubro 208, sin cambios.
+   */
+  private estadoOrdenLabel(estado: number): string {
+    if (Number(estado) === EstadoOrdenPagoNomina.RECHAZADA_PARCIAL) return 'Pagada parcialmente';
+    return (
+      this.detalleRubroService.getDescripcionByParentAndAlterno(RubrosRrh.ESTADO_ORDEN_PAGO, estado) || '—'
+    );
+  }
+
+  private tonoEstadoOrden(estado: number): 'ok' | 'aviso' | 'neutro' {
+    const e = Number(estado);
+    if (e === EstadoOrdenPagoNomina.CONFIRMADA) return 'ok';
+    if (e === EstadoOrdenPagoNomina.RECHAZADA_PARCIAL) return 'aviso';
+    return 'neutro';
   }
 
   private formatearDetalle(registros: DetalleOrdenPagoNomina[]): any[] {
@@ -323,7 +438,16 @@ export class OrdenesPagoComponent implements OnInit {
           RubrosRrh.TIPO_CUENTA_BANCARIA,
           row.tipoCuenta,
         ) || '—',
+      estadoPagoLabel: ESTADO_DETALLE_ORDEN_PAGO_LABELS[Number(row.estado)] || `Estado ${row.estado}`,
+      tonoEstadoPago: this.tonoEstadoPago(row.estado),
     }));
+  }
+
+  private tonoEstadoPago(estado: number): 'ok' | 'error' | 'neutro' {
+    const e = Number(estado);
+    if (e === EstadoDetalleOrdenPago.PAGADO) return 'ok';
+    if (e === EstadoDetalleOrdenPago.RECHAZADO) return 'error';
+    return 'neutro';
   }
 
   /** Reusa el mismo catálogo que `PeriodosNominaComponent.estadoLabel` (rubro 182) — no duplica el switch de textos. */
