@@ -149,6 +149,7 @@ pago `RHH_NOMINA` por (origen, idOrigen = RDPG).
 
 | Método y ruta | Cuerpo | Respuesta 200 | Notas |
 |---|---|---|---|
+| `GET /rdpg/getAll`, `POST /rdpg/selectByCriteria`, `GET /rdpg/getId/{id}` | sin cambios | `OrdenPagoNomina` con el **transitorio nuevo `pagoPorEmpleado` (boolean)** | **Agregado 2026-10-05: el frontend lo pidió porque el contrato no le daba cómo distinguir una orden nueva de una vieja.** `pagoPorEmpleado = true` si la orden **no** tiene un pago consolidado `RHH_NOMINA` (en cualquier estado) por `(origen, idOrigen = RDPG)`; `false` si lo tiene (camino viejo, §3.5). Con `true` la pantalla muestra «Actualizar pagos»; con `false`, «Descargar archivo» y «Confirmar» como hoy |
 | `POST /rdpg/generar` | sin cambios | sin cambios | Ahora registra un pago por DRPG |
 | `POST /rdpg/sincronizarPagos/{idOrden}` | — | `OrdenPagoNomina` | §3.3 |
 | `GET /drpg/selectByOrden/{idOrden}` | — | `DetalleOrdenPagoNomina[]` con `estado`, `rechazado`, `motivoRechazo` y **`idPago`/`estadoPago` transitorios** (el último pago de ese DRPG) | Ver el nombre real del endpoint de detalle que ya usa `verDetalle` y reusarlo si existe |
