@@ -64,7 +64,15 @@
             @for (campo of seccion.campos; track campo.name) {
               <mat-form-field appearance="outline">
                 <mat-label>{{ campo.label }}</mat-label>
-                <input matInput type="number" [formControlName]="campo.name" />
+                @if (campo.tipo === 'combo') {
+                  <mat-select [formControlName]="campo.name">
+                    @for (opcion of campo.opciones; track opcion.value) {
+                      <mat-option [value]="opcion.value">{{ opcion.label }}</mat-option>
+                    }
+                  </mat-select>
+                } @else {
+                  <input matInput type="number" [formControlName]="campo.name" />
+                }
                 @if (campo.sufijo) {
                   <span matTextSuffix>{{ campo.sufijo }}</span>
                 }

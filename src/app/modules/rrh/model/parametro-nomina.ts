@@ -51,6 +51,8 @@ export interface ParametroNomina {
   anioVacacionAdicional: number | null; // PRNMANVC - año desde el que se suma un día
   maxDiasVacaciones: number | null; // PRNMMXVC - tope de días acreditables
   aniosCaducidadVacaciones: number | null; // PRNMCDVC - años tras los que caduca el saldo
+  /** PRNMMDVC - ModalidadVacaciones, no es rubro (CHECK IN (1,2)): 1 por aniversario, 2 devengo mensual. Nulo = 1. */
+  modalidadVacaciones?: number | null;
 
   // Indemnizaciones
   porcentajeDesahucio: number | null; // PRNMDSPR - % de la última remuneración por año

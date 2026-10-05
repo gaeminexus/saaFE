@@ -12,9 +12,13 @@
         <div class="form-grid">
           <mat-form-field appearance="outline">
             <mat-label>Fecha de corte</mat-label>
-            <input matInput type="date" [ngModel]="fechaCorte()" (ngModelChange)="fechaCorte.set($event)" />
+            <input matInput type="date" [ngModel]="fechaCorte()" (ngModelChange)="onFechaCorteChange($event)" />
           </mat-form-field>
         </div>
+
+        @if (ayudaModalidad()) {
+          <div class="aviso aviso-info">{{ ayudaModalidad() }}</div>
+        }
 
         @if (error()) {
           <div class="aviso aviso-error">{{ error() }}</div>

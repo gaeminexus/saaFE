@@ -1,3 +1,5 @@
+import { OPCIONES_MODALIDAD_VACACIONES } from '../../../model/modalidad-vacaciones';
+
 /** Un campo del formulario de parámetros anuales. */
 export interface CampoParametro {
   name: keyof CamposEditables;
@@ -7,6 +9,12 @@ export interface CampoParametro {
   requerido?: boolean;
   /** Pista bajo el campo, para los que tienen una base legal concreta. */
   ayuda?: string;
+  /**
+   * `'combo'` para un campo de opciones fijas (sin catálogo de base de datos), como
+   * `modalidadVacaciones` — requiere `opciones`. Por defecto (sin declarar) es un número libre.
+   */
+  tipo?: 'numero' | 'combo';
+  opciones?: { value: number; label: string }[];
 }
 
 export interface SeccionParametros {
@@ -43,6 +51,7 @@ export interface CamposEditables {
   anioVacacionAdicional: number | null;
   maxDiasVacaciones: number | null;
   aniosCaducidadVacaciones: number | null;
+  modalidadVacaciones: number | null;
   porcentajeDesahucio: number | null;
   indemnizacionMinima: number | null;
   indemnizacionMaxima: number | null;
@@ -142,6 +151,12 @@ export const SECCIONES_PARAMETROS: SeccionParametros[] = [
     icono: 'beach_access',
     campos: [
       { name: 'diasVacaciones', label: 'Días por año cumplido', sufijo: 'días' },
+      {
+        name: 'modalidadVacaciones',
+        label: 'Modalidad de vacaciones',
+        tipo: 'combo',
+        opciones: OPCIONES_MODALIDAD_VACACIONES,
+      },
       {
         name: 'anioVacacionAdicional',
         label: 'Año desde el que se suma un día',

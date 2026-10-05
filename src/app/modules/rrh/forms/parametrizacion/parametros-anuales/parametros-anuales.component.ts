@@ -12,9 +12,11 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { ModalidadVacaciones } from '../../../model/modalidad-vacaciones';
 import { ParametroNomina } from '../../../model/parametro-nomina';
 import { ParametroNominaService } from '../../../service/parametro-nomina.service';
 import {
@@ -50,6 +52,7 @@ import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/i
     MatIconModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
     InlineAutocompleteComponent,
   ],
   templateUrl: './parametros-anuales.component.html',
@@ -111,6 +114,10 @@ export class ParametrosAnualesComponent implements OnInit {
     this.formulario.reset();
     if (registro) {
       this.formulario.patchValue(registro as any);
+    } else {
+      // Un registro nuevo nace con la modalidad por aniversario — mismo DEFAULT que la columna
+      // en la base (contrato §3), aunque ASOPREP vaya a cambiarla a devengo mensual al guardar.
+      this.formulario.patchValue({ modalidadVacaciones: ModalidadVacaciones.POR_ANIVERSARIO });
     }
   }
 
@@ -144,8 +151,12 @@ export class ParametrosAnualesComponent implements OnInit {
       return;
     }
 
+    const modalidadVacaciones = this.formulario.value.modalidadVacaciones;
     const payload: any = {
       ...this.formulario.value,
+      // El combo de Material no debería mandar texto, pero se fuerza a número de todos modos:
+      // el backend espera `Long`, y un string ahí es el mismo 400 silencioso de siempre.
+      modalidadVacaciones: modalidadVacaciones === null || modalidadVacaciones === undefined ? null : Number(modalidadVacaciones),
       empresa: referenciaEmpresa(),
       anio: this.anio(),
       estado: this.registro?.estado ?? 1,

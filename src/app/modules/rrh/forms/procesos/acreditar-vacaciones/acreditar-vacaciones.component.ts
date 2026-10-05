@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { catchError, of } from 'rxjs';
 
 import {
   ConfirmDialogComponent,
@@ -18,7 +19,11 @@ import { AppStateService } from '../../../../../shared/services/app-state.servic
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { ayudaModalidadVacaciones } from '../../../model/modalidad-vacaciones';
+import { ParametroNomina } from '../../../model/parametro-nomina';
+import { ParametroNominaService } from '../../../service/parametro-nomina.service';
 import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.service';
+import { criteriosPorEmpresa, filtrarPorAnio } from '../../parametrizacion/utiles-parametrizacion';
 
 /**
  * Proceso anual de acreditación de vacaciones (POST /sldv/acreditar), ya en
@@ -42,8 +47,9 @@ import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.servic
   templateUrl: './acreditar-vacaciones.component.html',
   styleUrls: ['./acreditar-vacaciones.component.scss'],
 })
-export class AcreditarVacacionesComponent {
+export class AcreditarVacacionesComponent implements OnInit {
   private saldoS = inject(SaldoVacacionesService);
+  private parametroS = inject(ParametroNominaService);
   private appState = inject(AppStateService);
   private dialog = inject(MatDialog);
 
@@ -52,10 +58,43 @@ export class AcreditarVacacionesComponent {
   resultado = signal<number | null>(null);
   error = signal('');
 
+  /** Ayuda según la modalidad del año de `fechaCorte` (contrato §6). `null`: no se muestra nada. */
+  ayudaModalidad = signal<string | null>(null);
+
   anioRevertir = signal<number>(new Date().getFullYear());
   revirtiendo = signal(false);
   resultadoRevertir = signal<number | null>(null);
   errorRevertir = signal('');
+
+  ngOnInit(): void {
+    this.cargarAyudaModalidad();
+  }
+
+  onFechaCorteChange(valor: string): void {
+    this.fechaCorte.set(valor);
+    this.cargarAyudaModalidad();
+  }
+
+  /**
+   * Lee los parámetros anuales del año de `fechaCorte` para mostrar la ayuda de modalidad.
+   * Si no se pueden leer, no se muestra nada — no se inventa un valor (contrato §6).
+   */
+  private cargarAyudaModalidad(): void {
+    const anio = Number((this.fechaCorte() || '').slice(0, 4));
+    if (!anio) {
+      this.ayudaModalidad.set(null);
+      return;
+    }
+
+    this.parametroS
+      .selectByCriteria(criteriosPorEmpresa())
+      .pipe(catchError(() => of(null as ParametroNomina[] | null)))
+      .subscribe((data) => {
+        const delAnio = filtrarPorAnio(data, anio);
+        const parametro = delAnio.length > 0 ? delAnio[0] : null;
+        this.ayudaModalidad.set(ayudaModalidadVacaciones(parametro?.modalidadVacaciones ?? null));
+      });
+  }
 
   private ultimoDiaMesActual(): string {
     const hoy = new Date();
