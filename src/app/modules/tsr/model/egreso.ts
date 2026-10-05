@@ -52,6 +52,13 @@ export interface Egreso {
   numeroCheque?: number | null;
   /** Asiento del pago; nulo mientras el egreso está pendiente. */
   asiento?: Asiento | null;
+  /**
+   * Anticipo con el que se pagó este egreso — docs/tsr/DISENO-EGRESO-CON-SALDO-DE-ANTICIPO.md.
+   * `null` para los egresos de siempre (por banco). No pasa por `PagoProgramado`: nace PAGADO
+   * directo, sin movimiento bancario, y su "Anular" funciona distinto (repone el saldo del
+   * anticipo en vez de reversar un pago).
+   */
+  anticipo?: { id: number; numeroDoc?: string } | null;
   observacion?: string | null;
   usuario?: { codigo: number; nombre?: string } | null;
   fechaRegistro?: any;
@@ -83,24 +90,32 @@ export interface RegistrarEgresoRequest {
   idUsuario: number;
   /** Ver FormaPagoAplicacion (2 transferencia, 3 cheque, 4 débito automático). */
   formaPago?: number;
+  /**
+   * Paga el egreso con el saldo de este anticipo del mismo titular, en vez de por banco —
+   * docs/tsr/DISENO-EGRESO-CON-SALDO-DE-ANTICIPO.md. Con `idAnticipo`, el backend ignora
+   * `idCuentaBancariaOrigen`/`idCuentaDestinoTitular`/`formaPago`/`debitoAutomatico`: no hay
+   * banco ni pago programado, solo se descuenta el anticipo contra el gasto.
+   */
+  idAnticipo?: number;
 }
 
 /**
  * Respuesta 201 de POST /egrs/procesar. En una transferencia el egreso queda
- * Pendiente y su pago espera al archivo del banco; en un débito automático ya
- * viene Pagado, con `asiento` (número alterno) y movimiento bancario generados.
+ * Pendiente y su pago espera al archivo del banco; en un débito automático, o pagado con el
+ * saldo de un anticipo (`idAnticipo` en el request), ya viene Pagado, con `asiento` (número
+ * alterno) generado — el de anticipo sin movimiento bancario, el de débito con él.
  */
 export interface RegistrarEgresoResponse {
   exito: boolean;
   mensaje: string;
   /** Id del egreso creado. */
   egreso?: number;
-  /** Id del pago creado en /pgtr. */
+  /** Id del pago creado en /pgtr. Ausente cuando se pagó con un anticipo: ese camino no crea `PagoProgramado`. */
   pago?: number;
   debitoAutomatico?: boolean;
-  /** Solo en débito automático: número alterno del asiento contable. */
+  /** Con débito automático o pago con anticipo: número alterno del asiento contable. */
   asiento?: string;
-  /** Solo en débito automático: código (PK) del asiento, para imprimirlo con la plantilla oficial — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  /** Con débito automático o pago con anticipo: código (PK) del asiento, para imprimirlo con la plantilla oficial — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
   idAsiento?: number;
   /** Solo cuando se pagó con cheque: el número girado. */
   numeroCheque?: number | string;

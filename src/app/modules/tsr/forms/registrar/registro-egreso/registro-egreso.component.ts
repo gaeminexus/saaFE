@@ -34,6 +34,7 @@ import { CuentaBancariaTitularService } from '../../../service/cuenta-bancaria-t
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
 import { EgresoService } from '../../../service/egreso.service';
+import { AnticipoDisponible, AnticipoService } from '../../../service/anticipo.service';
 
 /**
  * Egresos de tesorería sin documento físico (comisiones, débitos por
@@ -67,6 +68,7 @@ export class RegistroEgresoComponent implements OnInit {
   private router = inject(Router);
   private permisosService = inject(PermisosService);
   private imprimirAsientoS = inject(ImprimirAsientoService);
+  private anticipoS = inject(AnticipoService);
 
   private readonly ROL_PROVEEDOR = 2;
   readonly FormaPagoAplicacion = FormaPagoAplicacion;
@@ -99,6 +101,16 @@ export class RegistroEgresoComponent implements OnInit {
    */
   cuentasDestinoError = signal('');
   regIdCuentaDestino: number | null = null;
+  /**
+   * Anticipos CONFIRMADOS con saldo del beneficiario — docs/tsr/DISENO-EGRESO-CON-SALDO-DE-ANTICIPO.md.
+   * Misma llamada que `cruce-anticipo-proveedor` (`anticipoS.disponiblesProveedor`), sin tocar ese
+   * componente. Vacío = no se ofrece el check.
+   */
+  anticiposDisponibles = signal<AnticipoDisponible[]>([]);
+  cargandoAnticipos = signal(false);
+  /** Check "Pagar con el saldo de un anticipo" — apagado al elegir un beneficiario nuevo. */
+  pagarConAnticipo = signal(false);
+  regIdAnticipo = signal<number | null>(null);
   regDescripcion = '';
   regValor = '';
   regFecha: Date | null = new Date();
@@ -107,7 +119,7 @@ export class RegistroEgresoComponent implements OnInit {
   registrando = signal(false);
   regError = signal('');
   regExito = signal('');
-  /** Asiento del último registro exitoso (solo con débito automático: el de transferencia no contabiliza aquí) — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
+  /** Asiento del último registro exitoso (con débito automático o pagando con anticipo: el de transferencia no contabiliza aquí) — docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md. */
   ultimoAsiento = signal<{ idAsiento: number; numeroAlterno?: string } | null>(null);
   imprimiendoAsientoExito = signal(false);
   /** Id del egreso cuya fila está generando el PDF en la pestaña de consulta. */
@@ -251,8 +263,49 @@ export class RegistroEgresoComponent implements OnInit {
     }).afterClosed().subscribe((titular: Titular | null) => {
       if (!titular) return;
       this.regBeneficiario.set(titular);
+      this.pagarConAnticipo.set(false);
+      this.regIdAnticipo.set(null);
       this.cargarCuentasDestino(titular.codigo);
+      this.cargarAnticipos(titular.codigo);
     });
+  }
+
+  /** Anticipos con saldo del beneficiario — misma llamada que cruce-anticipo-proveedor. */
+  private cargarAnticipos(codigoTitular: number): void {
+    this.cargandoAnticipos.set(true);
+    this.anticiposDisponibles.set([]);
+
+    this.anticipoS.disponiblesProveedor(codigoTitular, this.idEmpresaSesion()).subscribe({
+      next: (lista) => {
+        this.cargandoAnticipos.set(false);
+        this.anticiposDisponibles.set(lista ?? []);
+      },
+      error: () => {
+        this.cargandoAnticipos.set(false);
+        this.anticiposDisponibles.set([]);
+      },
+    });
+  }
+
+  /** El check "Pagar con el saldo de un anticipo" solo se ofrece si el beneficiario tiene alguno. */
+  puedeMostrarCheckAnticipo(): boolean {
+    return this.anticiposDisponibles().length > 0;
+  }
+
+  onTogglePagarConAnticipo(valor: boolean): void {
+    this.pagarConAnticipo.set(valor);
+    this.regIdAnticipo.set(null);
+  }
+
+  anticipoSeleccionado(): AnticipoDisponible | null {
+    const id = this.regIdAnticipo();
+    return id == null ? null : this.anticiposDisponibles().find((a) => a.id === id) ?? null;
+  }
+
+  /** El valor a pagar nunca puede superar el saldo del anticipo elegido. */
+  excedeAnticipo(): boolean {
+    const a = this.anticipoSeleccionado();
+    return !!a && this.regValorNumerico > Number(a.saldo ?? 0) + 0.001;
   }
 
   nombreBeneficiario(): string {
@@ -353,17 +406,23 @@ export class RegistroEgresoComponent implements OnInit {
   }
 
   get puedeRegistrar(): boolean {
-    // Titular con cuentas y ninguna elegida todavía: no dejar salir el pago sin cuenta por
-    // descuido (docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.3, arreglo B). Sin beneficiario, o
-    // uno sin cuentas, se registra igual que antes — se paga por cheque o débito.
-    if (this.cuentasDestino().length > 0 && this.regIdCuentaDestino == null) return false;
+    if (this.pagarConAnticipo()) {
+      // Pagando con anticipo no aplica la regla de "elegí la cuenta a la que se transfiere"
+      // (docs/tsr/DISENO-EGRESO-CON-SALDO-DE-ANTICIPO.md §4): no hay banco de por medio.
+      if (this.regIdAnticipo() == null || this.excedeAnticipo()) return false;
+    } else if (this.cuentasDestino().length > 0 && this.regIdCuentaDestino == null) {
+      // Titular con cuentas y ninguna elegida todavía: no dejar salir el pago sin cuenta por
+      // descuido (docs/pagos/API-ASIGNAR-CUENTA-DESTINO.md §4.3, arreglo B). Sin beneficiario, o
+      // uno sin cuentas, se registra igual que antes — se paga por cheque o débito.
+      return false;
+    }
 
     return this.regIdProducto != null
       && !!this.regDescripcion.trim()
       && this.regValorNumerico > 0
       && !this.registrando()
-      && !this.cargandoCuentasDestino()
-      && !this.cuentasDestinoError();
+      // La carga/error de cuentas de destino no aplica pagando con anticipo (§4 del diseño).
+      && (this.pagarConAnticipo() || (!this.cargandoCuentasDestino() && !this.cuentasDestinoError()));
   }
 
   /**
@@ -387,7 +446,8 @@ export class RegistroEgresoComponent implements OnInit {
       descripcion: this.regDescripcion.trim(),
       valor: this.regValorNumerico,
       fecha: this.fechaISO(this.regFecha),
-      idCuentaDestinoTitular: this.regIdCuentaDestino ?? undefined,
+      idCuentaDestinoTitular: this.pagarConAnticipo() ? undefined : (this.regIdCuentaDestino ?? undefined),
+      idAnticipo: this.pagarConAnticipo() ? (this.regIdAnticipo() ?? undefined) : undefined,
       observacion: this.regObservacion.trim() || undefined,
       idUsuario: this.idUsuarioSesion(),
     }).subscribe({
@@ -450,6 +510,9 @@ export class RegistroEgresoComponent implements OnInit {
     this.cuentasDestino.set([]);
     this.cuentasDestinoError.set('');
     this.regIdCuentaDestino = null;
+    this.anticiposDisponibles.set([]);
+    this.pagarConAnticipo.set(false);
+    this.regIdAnticipo.set(null);
     this.regDescripcion = '';
     this.regValor = '';
     this.regObservacion = '';
@@ -604,17 +667,32 @@ export class RegistroEgresoComponent implements OnInit {
     return egreso.formaPago != null ? (FORMA_PAGO_LABELS[egreso.formaPago] ?? `Forma ${egreso.formaPago}`) : '—';
   }
 
-  /** Un egreso ya pagado hay que revertirlo desde /pgtr antes de anularlo. */
+  /**
+   * Un egreso pagado por banco hay que revertirlo desde /pgtr antes de anularlo. Uno pagado con
+   * el saldo de un anticipo no tiene pago que reversar: su "Anular" funciona directo mientras
+   * esté PAGADO (docs/tsr/DISENO-EGRESO-CON-SALDO-DE-ANTICIPO.md §3.3/§4).
+   */
   puedeAnular(egreso: Egreso): boolean {
+    if (egreso.anticipo) {
+      return Number(egreso.estado) === EstadoEgresoTesoreria.PAGADO;
+    }
     return Number(egreso.estado) === EstadoEgresoTesoreria.PENDIENTE_PAGO;
+  }
+
+  /** Texto visible de la columna "Tipo" cuando el egreso se pagó con un anticipo. */
+  etiquetaAnticipoFila(egreso: Egreso): string {
+    const a = egreso.anticipo;
+    if (!a) return '';
+    return `Pagado con anticipo ${a.numeroDoc || ('#' + a.id)}`;
   }
 
   confirmarAnulacion(egreso: Egreso): void {
     const data: MotivoDialogData = {
       titulo: `Anular egreso N° ${egreso.id}`,
-      advertencia:
-        'Se anula el egreso y el pago que quedó pendiente en el circuito de pagos. Si el pago ya '
-        + 'salió en un archivo enviado al banco habrá que procesar la respuesta antes de anularlo.',
+      advertencia: egreso.anticipo
+        ? 'Se anula el egreso, se repone el saldo del anticipo que lo pagó y se anula el asiento contable generado.'
+        : 'Se anula el egreso y el pago que quedó pendiente en el circuito de pagos. Si el pago ya '
+          + 'salió en un archivo enviado al banco habrá que procesar la respuesta antes de anularlo.',
       textoConfirmar: 'Sí, anular',
     };
 
