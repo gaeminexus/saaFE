@@ -119,8 +119,9 @@ REST nuevo `DocumentoSeguroCxpRest`. Todos responden **400** con texto ante una 
    `UsuarioDaoService.selectByNombre`. Si no existe: `IncomeException`. El REST sigue recibiendo `idUsuario`.
 3. **Empresa.** `idEmpresa` es la **empresa contable de CxP**: el `PJRQCDGO` con el que se cargó el documento
    (`FCTC.EMPRESA`, el mismo de las pantallas de CxP). `Prestamo` no tiene empresa: crédito no la puede sacar
-   de ahí. Con otro valor, `porClave` no encuentra el documento. Queda pendiente que crédito diga de dónde
-   la saca.
+   de ahí. Con otro valor, `porClave` no encuentra el documento. **Confirmado por `omen-saa-1-arb` el
+   2026-10-05:** la pantalla de pólizas manda la **empresa de la sesión**, la misma de las pantallas de CxP.
+   El `e2-79` lo corre el usuario cuando este equipo avise que el backend está commiteado.
 
 ### 5.1 `GET /cxp-seguros/porClave/{claveAcceso}?idEmpresa=…` — buscar
 
