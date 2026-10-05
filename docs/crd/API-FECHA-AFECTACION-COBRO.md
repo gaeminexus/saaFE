@@ -37,6 +37,20 @@ se **rechaza**, y crédito lo **reenvía con otra fecha de afectación**.
 
 Los cobros viejos traen `fechaAfectacion = fecha` (los rellena el `309`).
 
+### 2bis. Precancelación pagada con aportes (`POST /prst/precancelar`), agregado 2026-10-05
+
+Pedido del usuario: una precancelación pagada **en todo o en parte con aportes** también puede registrarse tarde.
+Cuando hay depósito, va por CBCR y ya tiene las dos fechas (§2). Cuando es **100 % con aportes**, va directo por
+`/prst/precancelar`, sin bandeja.
+- El cuerpo gana **`fechaAfectacion`** (`yyyy-MM-dd`), **opcional**. Si no viene, vale `fecha`: así se conserva
+  el comportamiento de cualquier otro llamador.
+- `fecha` (la existente) sigue siendo la **fecha de pago**: la de corte de la simulación, la de los PGPR y la del
+  cálculo de mora.
+- Se aplican las mismas reglas del §1, con los mismos códigos **400**.
+- El asiento del pago con aportes (`contabilizarPagoConAportes`) y el reverso de la provisión se fechan con
+  `fechaAfectacion`.
+- Si `fecha` es anterior a hoy, se recalcula la mora a la fecha de pago, como en `procesar` (Fase 1).
+
 ---
 
 ## 3. Pantallas
@@ -49,8 +63,10 @@ Los cobros viejos traen `fechaAfectacion = fecha` (los rellena el `309`).
      del pago se eliminará y la contabilidad irá con la fecha de afectación».
 2. **Bandeja de contabilidad**, **Proceso de crédito**, **Seguimiento** y **Consulta de cobros:** las dos
    fechas, en columnas separadas y rotuladas igual (P6). En la bandeja, resaltar cuando difieren.
-3. **Reenviar (corregir):** permite cambiar la fecha de afectación.
-4. **Resultado de procesar:** si `moraEliminada > 0` o `provisionReversada > 0`, mostrarlos en el aviso de
+3. **Precancelación** (`precancelacion-dialog`): el campo «Fecha de corte» pasa a rotularse **«Fecha de pago»**, y
+   «Fecha de afectación contable» aparece **siempre**, con depósito o sin él (§2bis).
+4. **Reenviar (corregir):** permite cambiar la fecha de afectación.
+5. **Resultado de procesar:** si `moraEliminada > 0` o `provisionReversada > 0`, mostrarlos en el aviso de
    éxito.
 
 ---
