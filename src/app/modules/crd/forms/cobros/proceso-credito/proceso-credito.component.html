@@ -73,11 +73,18 @@
             }
           </mat-form-field>
           <mat-form-field appearance="outline">
-            <mat-label>Fecha</mat-label>
+            <mat-label>Fecha de pago</mat-label>
             <input matInput [matDatepicker]="pickerEd" [max]="hoy"
                    [ngModel]="editFecha()" (ngModelChange)="editFecha.set($event)" />
             <mat-datepicker-toggle matSuffix [for]="pickerEd"></mat-datepicker-toggle>
             <mat-datepicker #pickerEd></mat-datepicker>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de afectación contable</mat-label>
+            <input matInput [matDatepicker]="pickerEdAfectacion" [min]="editFecha()" [max]="hoy"
+                   [ngModel]="editFechaAfectacion()" (ngModelChange)="editFechaAfectacion.set($event)" />
+            <mat-datepicker-toggle matSuffix [for]="pickerEdAfectacion"></mat-datepicker-toggle>
+            <mat-datepicker #pickerEdAfectacion></mat-datepicker>
           </mat-form-field>
         </div>
 
@@ -145,8 +152,11 @@
               <div>
                 <div class="cc-titulo">{{ cobro.entidad?.razonSocial }}</div>
                 <div class="cc-meta">
-                  {{ nombreTipoOperacionCobro(cobro.tipoOperacion) }} &middot; {{ formatFecha(cobro.fecha) }}
-                  &middot; Ref. {{ cobro.referencia || 'No registrada' }}
+                  {{ nombreTipoOperacionCobro(cobro.tipoOperacion) }} &middot; Ref. {{ cobro.referencia || 'No registrada' }}
+                </div>
+                <div class="cc-fechas" [class.cc-fechas-difieren]="fechasDifieren(cobro)">
+                  <span>Fecha de pago: {{ formatFecha(cobro.fecha) }}</span>
+                  <span>Fecha de afectación contable: {{ formatFecha(cobro.fechaAfectacion) }}</span>
                 </div>
               </div>
               <div class="cc-valor">{{ formatMoneda(cobro.valor) }}</div>
@@ -182,7 +192,11 @@
             <div class="cc-head">
               <div>
                 <div class="cc-titulo">{{ cobro.entidad?.razonSocial }}</div>
-                <div class="cc-meta">{{ nombreTipoOperacionCobro(cobro.tipoOperacion) }} &middot; {{ formatFecha(cobro.fecha) }}</div>
+                <div class="cc-meta">{{ nombreTipoOperacionCobro(cobro.tipoOperacion) }}</div>
+                <div class="cc-fechas" [class.cc-fechas-difieren]="fechasDifieren(cobro)">
+                  <span>Fecha de pago: {{ formatFecha(cobro.fecha) }}</span>
+                  <span>Fecha de afectación contable: {{ formatFecha(cobro.fechaAfectacion) }}</span>
+                </div>
                 <div class="cc-motivo">{{ cobro.motivoRechazo }}</div>
               </div>
               <div class="cc-valor">{{ formatMoneda(cobro.valor) }}</div>

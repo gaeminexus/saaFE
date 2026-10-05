@@ -75,7 +75,7 @@ export class SeguimientoCobrosComponent implements AfterViewInit, AfterViewCheck
     EstadoCobro.ANULADO,
   ];
 
-  readonly displayedColumns = ['estado', 'participe', 'tipoOperacion', 'valor', 'fechaCobro', 'referencia', 'respaldo'];
+  readonly displayedColumns = ['estado', 'participe', 'tipoOperacion', 'valor', 'fechaCobro', 'fechaAfectacion', 'referencia', 'respaldo'];
 
   /** Primer día del mes en vista. Por defecto, el mes actual — verlo no debe costar un clic. */
   mes = signal(this.primerDiaMes(new Date()));
@@ -325,6 +325,18 @@ export class SeguimientoCobrosComponent implements AfterViewInit, AfterViewCheck
 
   formatFecha(fecha: unknown): string {
     return this.funcionesDatos.formatoFecha(fecha, FuncionesDatosService.SOLO_FECHA) || '—';
+  }
+
+  /** Resalta cuando la fecha de pago y la de afectación contable no coinciden (docs/crd/API-FECHA-AFECTACION-COBRO.md §3.2). */
+  fechasDifieren(fila: FilaSeguimientoCobro): boolean {
+    const pago = this.funcionesDatos.convertirFechaDesdeBackend(fila.fechaCobro as never);
+    const afectacion = this.funcionesDatos.convertirFechaDesdeBackend(fila.fechaAfectacion as never);
+    if (!pago || !afectacion) return false;
+    return (
+      pago.getFullYear() !== afectacion.getFullYear() ||
+      pago.getMonth() !== afectacion.getMonth() ||
+      pago.getDate() !== afectacion.getDate()
+    );
   }
 
   formatFechaHora(fecha: unknown): string {

@@ -139,8 +139,13 @@
           </ng-container>
 
           <ng-container matColumnDef="fechaCobro">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha de cobro</th>
-            <td mat-cell *matCellDef="let fila">{{ formatFecha(fila.fechaCobro) }}</td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha de pago</th>
+            <td mat-cell *matCellDef="let fila" [class.celda-resaltada]="fechasDifieren(fila)">{{ formatFecha(fila.fechaCobro) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="fechaAfectacion">
+            <th mat-header-cell *matHeaderCellDef>Fecha de afectación contable</th>
+            <td mat-cell *matCellDef="let fila" [class.celda-resaltada]="fechasDifieren(fila)">{{ formatFecha(fila.fechaAfectacion) }}</td>
           </ng-container>
 
           <ng-container matColumnDef="referencia">

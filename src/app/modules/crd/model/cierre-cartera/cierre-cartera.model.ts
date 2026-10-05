@@ -57,9 +57,13 @@ export interface LineaAsientoCierre {
   codigoLinea?: number | null;
 }
 
-/** Un sub-proceso del cierre (uno de seis). Cada uno genera un asiento propio. */
+/** Un sub-proceso del cierre. Cada uno genera un asiento propio. */
 export interface SubProcesoCierre {
-  /** 1..6 (com.saa.rubros.SubProcesoCierreCartera). */
+  /**
+   * `com.saa.rubros.SubProcesoCierreCartera`. Hasta 6; el 7 «Provisión de intereses» se sumó en
+   * docs/crd/API-FECHA-AFECTACION-COBRO.md §4 (2026-10-05), mismo formato que los demás — no hace
+   * falta ningún cambio de código acá, el `@for` de la pantalla ya lo pinta solo.
+   */
   subProceso: number;
   nombre: string;
   /** Etiqueta de referencia (①, ②, ①.1, ③, ④, ⑥). */

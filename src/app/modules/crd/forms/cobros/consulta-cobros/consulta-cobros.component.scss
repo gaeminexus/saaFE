@@ -141,6 +141,15 @@
     margin-bottom: 1rem;
 
     .dc-item { display: flex; flex-direction: column; gap: 1px; }
+    .dc-item-resaltado {
+      background: #fff4e5;
+      border-radius: 6px;
+      padding: 2px 6px;
+      margin: -2px -6px;
+
+      .l { color: #7a4a00; }
+      .v { color: #7a4a00; font-weight: 700; }
+    }
     .ancho-total { grid-column: 1 / -1; }
     .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #718096; font-weight: 700; }
     .v { font-size: 13.5px; color: #1a202c; }

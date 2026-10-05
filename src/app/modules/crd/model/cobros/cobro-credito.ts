@@ -48,8 +48,16 @@ export interface SolicitudRegistroCobro {
   referencia: string;
   rutaRespaldo: string;
   valor: number;
-  /** `yyyy-MM-dd`, `LocalDate`. */
+  /** Fecha de pago REAL del partícipe. `yyyy-MM-dd`, `LocalDate`. */
   fecha: string;
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md §1/§2, 2026-10-05):
+   * `CBCR.CBCRFCAF`, fecha de TODOS los asientos del cobro. Obligatoria, `yyyy-MM-dd`.
+   * ⛔ El backend valida `fechaAfectacion ≥ fecha`, no futura, y que el período esté abierto — el
+   * frontend valida los dos primeros antes de habilitar el envío, pero el período cerrado solo lo
+   * sabe el backend (400 `PERIODO_CERRADO`), que se muestra tal cual.
+   */
+  fechaAfectacion: string;
   observacion?: string | null;
   usuario: string;
   detalles: DetalleCobroCredito[];
@@ -87,6 +95,8 @@ export interface SolicitudEdicionCobro {
   rutaRespaldo: string;
   valor: number;
   fecha: string;
+  /** Opcional (docs/crd/API-FECHA-AFECTACION-COBRO.md §2): si cambia, el transitorio se rehace. */
+  fechaAfectacion?: string | null;
   observacion?: string | null;
   detalles: DetalleCobroCredito[];
   usuario: string;
@@ -104,6 +114,17 @@ export interface ResultadoProcesoCobro {
   estado: number;
   procesado: boolean;
   mensaje: string;
+  /** Ya existía. Mora eliminada por recálculo (pago reportado tarde), si hubo. */
+  moraEliminada?: number | null;
+  /**
+   * Interés + mora reversados de la provisión (docs/crd/API-FECHA-AFECTACION-COBRO.md §2, 2026-10-05).
+   * `null`/`undefined`/0 = no hubo nada que reversar.
+   */
+  provisionReversada?: number | null;
+  /** `numeroAlterno` o id del asiento de reverso de provisión. `null` si no se generó. */
+  idAsientoReversoProvision?: number | null;
+  /** `numeroAlterno` o id del asiento de cobro tardío. `null` si no se generó. */
+  idAsientoCobroTardio?: number | null;
 }
 
 // ══════════════ Lectura: GET /cbcr/getAll · getId · bandeja · porEntidad ══════════════
@@ -124,8 +145,13 @@ export interface CobroCredito {
   referencia: string;
   rutaRespaldo: string;
   valor: number;
-  /** `LocalDate` → string `yyyy-MM-dd` (o array `[y,m,d]` según cómo serialice Jackson este endpoint). */
+  /** Fecha de pago REAL. `LocalDate` → string `yyyy-MM-dd` (o array `[y,m,d]` según cómo serialice Jackson este endpoint). */
   fecha: string | number[] | Date;
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, 2026-10-05): `CBCR.CBCRFCAF`.
+   * Los cobros viejos (previos al `309`) traen `fechaAfectacion = fecha` — el backend los rellena.
+   */
+  fechaAfectacion: string | number[] | Date;
   observacion: string | null;
   /** ⚠️ Siempre `undefined` viniendo de `getAll`/`bandeja`/`porEntidad` — ver el comentario de la interfaz. */
   detalles?: DetalleCobroCredito[];

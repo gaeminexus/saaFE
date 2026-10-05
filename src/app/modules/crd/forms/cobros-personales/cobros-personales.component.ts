@@ -521,6 +521,12 @@ export class CobrosPersonalesComponent implements OnDestroy {
    */
   numeroReferencia = signal('');
   fechaPago = signal<Date | null>(new Date());
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, 2026-10-05), por defecto
+   * hoy. Solo aplica con `requiereComprobante()` (transferencia/depósito, vía CBCR): el débito de
+   * cuenta de aportes usa `pagarConAportes`, que no pasa por CBCR y no tiene este campo.
+   */
+  fechaAfectacion = signal<Date | null>(new Date());
   observacion = '';
   archivoComprobante = signal<File | null>(null);
   readonly hoy = new Date();
@@ -555,6 +561,14 @@ export class CobrosPersonalesComponent implements OnDestroy {
     limite.setHours(23, 59, 59, 999);
     return fecha.getTime() <= limite.getTime();
   });
+
+  /** Solo se exige con comprobante (transferencia/depósito, vía CBCR): el débito no tiene este campo. */
+  fechaAfectacionValida = computed(
+    () => !this.requiereComprobante() || this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fechaPago())
+  );
+
+  /** Aviso del §3.1: la mora que se generó después del pago real se elimina al recalcular. */
+  esPagoTardio = computed(() => this.requiereComprobante() && this.cobroCreditoService.esPagoTardio(this.fechaPago()));
 
   /** ¿El cobro incluye al menos un préstamo? Uno o varios, da igual: `prestamosIncluidos()` cubre ambos. */
   cobraPrestamo = computed(() => this.prestamosIncluidos().length > 0);
@@ -604,6 +618,10 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
     if (!this.fechaValida()) {
       motivos.push('Indique la fecha del pago: no puede quedar vacía ni ser posterior a hoy.');
+    }
+
+    if (this.fechaValida() && !this.fechaAfectacionValida()) {
+      motivos.push('La fecha de afectación contable no puede ser anterior a la fecha de pago ni posterior a hoy.');
     }
 
     if (this.requiereComprobante()) {
@@ -727,6 +745,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.numeroReferencia.set('');
     this.observacion = '';
     this.fechaPago.set(new Date());
+    this.fechaAfectacion.set(new Date());
     this.archivoComprobante.set(null);
   }
 
@@ -1436,7 +1455,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
       return;
     }
 
-    this.registrarCobroCreditoUnificado(entidad, prestamos, aportes, usuario, observacion, fecha, rutaDocumentoRespaldo);
+    const fechaAfectacion = this.operaciones.formatearFecha(this.fechaAfectacion());
+    this.registrarCobroCreditoUnificado(entidad, prestamos, aportes, usuario, observacion, fecha, fechaAfectacion, rutaDocumentoRespaldo);
   }
 
   /**
@@ -1455,12 +1475,13 @@ export class CobrosPersonalesComponent implements OnDestroy {
     usuario: string,
     observacion: string | null,
     fecha: string | null,
+    fechaAfectacion: string | null,
     rutaDocumentoRespaldo: string | null
   ): void {
     const cuenta = this.cuentaAsopropDestino();
     // Defensivo: `motivosNoConfirmar()` ya exige cuenta, referencia, comprobante y fecha antes de
     // habilitar el botón — no debería poder llegar acá sin ellos.
-    if (!cuenta || !fecha || !rutaDocumentoRespaldo) {
+    if (!cuenta || !fecha || !fechaAfectacion || !rutaDocumentoRespaldo) {
       this.registrando.set(false);
       this.errorOperacion.set('Faltan datos del respaldo del cobro. Intente nuevamente.');
       this.descartarComprobanteHuerfano(rutaDocumentoRespaldo);
@@ -1500,6 +1521,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
         rutaRespaldo: rutaDocumentoRespaldo,
         valor: valorTotal,
         fecha,
+        fechaAfectacion,
         observacion,
         usuario,
         detalles,

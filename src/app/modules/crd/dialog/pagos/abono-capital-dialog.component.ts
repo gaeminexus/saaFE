@@ -58,6 +58,8 @@ export class AbonoCapitalDialogComponent {
   valorTexto = signal('');
   modalidad = signal<number>(ModalidadAbono.REDUCIR_PLAZO);
   fecha = signal<Date>(new Date());
+  /** Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, 2026-10-05), por defecto hoy. */
+  fechaAfectacion = signal<Date>(new Date());
   observacion = '';
 
   simulacion = signal<SimulacionAbonoCapital | null>(null);
@@ -92,12 +94,18 @@ export class AbonoCapitalDialogComponent {
   /** El respaldo del dinero recibido (banco, referencia y comprobante) está completo. */
   respaldoListo = computed(() => this.respaldo()?.completo() ?? false);
 
+  fechaAfectacionValida = computed(() => this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fecha()));
+
+  /** Aviso del §3.1: la mora que se generó después del pago real se elimina al recalcular. */
+  esPagoTardio = computed(() => this.cobroCreditoService.esPagoTardio(this.fecha()));
+
   puedeAplicar = computed(
     () =>
       !!this.simulacion() &&
       !this.aplicando() &&
       !this.simulando() &&
       this.fechaValida() &&
+      this.fechaAfectacionValida() &&
       this.respaldoListo()
   );
 
@@ -272,12 +280,13 @@ export class AbonoCapitalDialogComponent {
    */
   private enviarAbono(sim: SimulacionAbonoCapital, rutaDocumentoRespaldo: string | null): void {
     const fecha = this.servicio.formatearFecha(this.fecha());
+    const fechaAfectacion = this.servicio.formatearFecha(this.fechaAfectacion());
     const respaldo = this.respaldo()?.datos();
     const cuenta = respaldo?.cuenta;
 
     // Defensivo: `respaldoListo()` ya exige cuenta, referencia y comprobante antes de habilitar el
     // botón — no debería poder llegar acá sin ellos.
-    if (!cuenta || !fecha || !rutaDocumentoRespaldo) {
+    if (!cuenta || !fecha || !fechaAfectacion || !rutaDocumentoRespaldo) {
       this.aplicando.set(false);
       this.errorMensaje.set('Faltan datos del respaldo del cobro. Intente nuevamente.');
       this.comprobantes.descartar(rutaDocumentoRespaldo);
@@ -293,6 +302,7 @@ export class AbonoCapitalDialogComponent {
         rutaRespaldo: rutaDocumentoRespaldo,
         valor: sim.valorAbono,
         fecha,
+        fechaAfectacion,
         observacion: this.observacion.trim() || null,
         usuario: usuarioSesion(),
         // Del resultado de la simulación, nunca del signal: es lo que el usuario acaba de ver.

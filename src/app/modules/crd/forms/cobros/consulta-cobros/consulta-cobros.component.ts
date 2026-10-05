@@ -189,4 +189,16 @@ export class ConsultaCobrosComponent {
   formatFecha(fecha: unknown): string {
     return this.funcionesDatos.formatoFecha(fecha, 2) || '—';
   }
+
+  /** Resalta cuando la fecha de pago y la de afectación contable no coinciden (docs/crd/API-FECHA-AFECTACION-COBRO.md §3.2). */
+  fechasDifieren(cabecera: CobroCredito): boolean {
+    const pago = this.funcionesDatos.convertirFechaDesdeBackend(cabecera.fecha as never);
+    const afectacion = this.funcionesDatos.convertirFechaDesdeBackend(cabecera.fechaAfectacion as never);
+    if (!pago || !afectacion) return false;
+    return (
+      pago.getFullYear() !== afectacion.getFullYear() ||
+      pago.getMonth() !== afectacion.getMonth() ||
+      pago.getDate() !== afectacion.getDate()
+    );
+  }
 }

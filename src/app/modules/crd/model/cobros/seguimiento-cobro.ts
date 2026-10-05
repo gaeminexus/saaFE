@@ -25,6 +25,8 @@ export interface FilaSeguimientoCobro {
   estado: number;
   nombreEstado: string;
   fechaCobro: string | number[] | Date;
+  /** Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, 2026-10-05): `CBCR.CBCRFCAF`. `LocalDate` → `yyyy-MM-dd`. */
+  fechaAfectacion: string | number[] | Date;
   referencia: string;
   valor: number;
 

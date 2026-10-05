@@ -173,6 +173,34 @@ export class CobroCreditoService {
   }
 
   /**
+   * `true` si la fecha de PAGO cae antes del mes calendario actual (docs/crd/API-FECHA-AFECTACION-COBRO.md
+   * §3.1) — dispara el aviso de «pago reportado tarde» en el registro. No depende de la fecha de
+   * afectación: es sobre cuándo ocurrió el pago real, no cuándo se contabiliza.
+   */
+  esPagoTardio(fechaPago: Date | null | undefined): boolean {
+    if (!fechaPago || isNaN(fechaPago.getTime())) return false;
+    const hoy = new Date();
+    return (
+      fechaPago.getFullYear() < hoy.getFullYear() ||
+      (fechaPago.getFullYear() === hoy.getFullYear() && fechaPago.getMonth() < hoy.getMonth())
+    );
+  }
+
+  /**
+   * Las dos validaciones de pantalla del §1 que SÍ se pueden anticipar sin ir al backend:
+   * `fechaAfectacion ≥ fecha` y no futura. El período contable cerrado (400 `PERIODO_CERRADO`) solo
+   * lo sabe el backend — eso se muestra tal cual cuando llega, nunca se intenta adivinar acá.
+   * Comparación por string `yyyy-MM-dd`: para fechas sin hora, lexicográfico = cronológico.
+   */
+  fechaAfectacionValida(fechaAfectacion: Date | null | undefined, fechaPago: Date | null | undefined): boolean {
+    const afectacion = this.formatearFecha(fechaAfectacion ?? null);
+    const pago = this.formatearFecha(fechaPago ?? null);
+    if (!afectacion || !pago) return false;
+    const hoy = this.formatearFecha(new Date())!;
+    return afectacion >= pago && afectacion <= hoy;
+  }
+
+  /**
    * Casi siempre HTTP 500 con `{mensaje}` — no hay 404 ni 409, el contrato es explícito en que no
    * los busquemos. La única excepción es el 400 de RESTEasy por una clave desconocida en el body
    * (bug de cliente, antes de entrar al método): se marca `errorCliente` para que la pantalla no lo

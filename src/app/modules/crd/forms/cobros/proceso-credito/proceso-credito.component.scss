@@ -51,6 +51,19 @@
 
   .cc-titulo { font-weight: 700; font-size: 0.95rem; }
   .cc-meta { font-size: 0.78rem; color: #718096; margin-top: 0.15rem; }
+  .cc-fechas {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 0.76rem;
+    color: #718096;
+    margin-top: 0.2rem;
+
+    &.cc-fechas-difieren {
+      color: #7a4a00;
+      font-weight: 600;
+    }
+  }
   .cc-motivo { font-size: 0.8rem; color: #b91c1c; margin-top: 0.3rem; }
   .cc-valor { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
 

@@ -66,6 +66,8 @@ export class ProcesoCreditoComponent {
   editReferencia = signal('');
   editValorTexto = signal('');
   editFecha = signal<Date | null>(new Date());
+  /** Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md §3.3, 2026-10-05). */
+  editFechaAfectacion = signal<Date | null>(new Date());
   editObservacion = '';
   editArchivoNuevo = signal<File | null>(null);
   guardandoEdicion = signal(false);
@@ -93,6 +95,7 @@ export class ProcesoCreditoComponent {
     if (this.editValor() <= 0.004) return false;
     const fecha = this.editFecha();
     if (!fecha || isNaN(fecha.getTime())) return false;
+    if (!this.cobros.fechaAfectacionValida(this.editFechaAfectacion(), fecha)) return false;
     // Comprobante: obligatorio en el registro original, así que si no hay uno nuevo tiene que
     // quedar el que ya tenía — nunca se manda vacío.
     if (!this.editArchivoNuevo() && !this.cobroEnEdicion()?.rutaRespaldo) return false;
@@ -155,7 +158,11 @@ export class ProcesoCreditoComponent {
 
       // ⚠️ HTTP 200 no es sinónimo de éxito acá: hay que mirar `procesado`, nunca el código HTTP.
       if (resp.resultado.procesado) {
-        this.snackBar.open(resp.resultado.mensaje || 'Cobro procesado.', 'Cerrar', { duration: 5000 });
+        const extras: string[] = [];
+        if ((resp.resultado.moraEliminada ?? 0) > 0) extras.push(`mora eliminada ${this.formatMoneda(resp.resultado.moraEliminada)}`);
+        if ((resp.resultado.provisionReversada ?? 0) > 0) extras.push(`provisión reversada ${this.formatMoneda(resp.resultado.provisionReversada)}`);
+        const sufijo = extras.length ? ` (${extras.join(', ')})` : '';
+        this.snackBar.open((resp.resultado.mensaje || 'Cobro procesado.') + sufijo, 'Cerrar', { duration: 7000 });
       } else {
         this.snackBar.open(
           `No se aplicó: ${resp.resultado.mensaje || 'el cobro quedó rechazado automáticamente (el monto ya no coincide con el préstamo).'}`,
@@ -205,6 +212,11 @@ export class ProcesoCreditoComponent {
     this.editReferencia.set(cobro.referencia ?? '');
     this.editValorTexto.set(this.formatMoneda(cobro.valor));
     this.editFecha.set(this.funcionesDatos.convertirFechaDesdeBackend(cobro.fecha as never) as Date | null);
+    this.editFechaAfectacion.set(
+      (this.funcionesDatos.convertirFechaDesdeBackend(cobro.fechaAfectacion as never) as Date | null) ??
+        (this.funcionesDatos.convertirFechaDesdeBackend(cobro.fecha as never) as Date | null) ??
+        new Date()
+    );
     this.editObservacion = cobro.observacion ?? '';
     this.editArchivoNuevo.set(null);
     this.editDetalleLineas.set([]);
@@ -291,6 +303,7 @@ export class ProcesoCreditoComponent {
         rutaRespaldo,
         valor: valorTotal,
         fecha: this.cobros.formatearFecha(this.editFecha()) ?? '',
+        fechaAfectacion: this.cobros.formatearFecha(this.editFechaAfectacion()),
         observacion: this.editObservacion.trim() || null,
         detalles,
         usuario: usuarioSesion(),
@@ -346,5 +359,17 @@ export class ProcesoCreditoComponent {
 
   formatFecha(fecha: unknown): string {
     return this.funcionesDatos.formatoFecha(fecha, 2) || '—';
+  }
+
+  /** Resalta cuando la fecha de pago y la de afectación contable no coinciden (docs/crd/API-FECHA-AFECTACION-COBRO.md §3.2). */
+  fechasDifieren(cobro: CobroCredito): boolean {
+    const pago = this.funcionesDatos.convertirFechaDesdeBackend(cobro.fecha as never);
+    const afectacion = this.funcionesDatos.convertirFechaDesdeBackend(cobro.fechaAfectacion as never);
+    if (!pago || !afectacion) return false;
+    return (
+      pago.getFullYear() !== afectacion.getFullYear() ||
+      pago.getMonth() !== afectacion.getMonth() ||
+      pago.getDate() !== afectacion.getDate()
+    );
   }
 }

@@ -96,14 +96,33 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Fecha del pago</mat-label>
+        <mat-label>Fecha de pago</mat-label>
         <input matInput [matDatepicker]="pickerPago" [max]="hoy"
                [ngModel]="fechaPago()" (ngModelChange)="cambiarFechaPago($event)" />
         <mat-datepicker-toggle matSuffix [for]="pickerPago"></mat-datepicker-toggle>
         <mat-datepicker #pickerPago></mat-datepicker>
         <mat-hint>No puede ser posterior a hoy</mat-hint>
       </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de afectación contable</mat-label>
+        <input matInput [matDatepicker]="pickerAfectacion" [min]="fechaPago()" [max]="hoy"
+               [ngModel]="fechaAfectacion()" (ngModelChange)="fechaAfectacion.set($event)" />
+        <mat-datepicker-toggle matSuffix [for]="pickerAfectacion"></mat-datepicker-toggle>
+        <mat-datepicker #pickerAfectacion></mat-datepicker>
+        <mat-hint>No puede ser anterior a la fecha de pago ni posterior a hoy</mat-hint>
+      </mat-form-field>
     </div>
+
+    @if (esPagoTardio()) {
+      <div class="pg-aviso alerta">
+        <mat-icon>schedule</mat-icon>
+        <span>
+          Pago reportado tarde: la mora generada después del pago se eliminará y la contabilidad irá
+          con la fecha de afectación.
+        </span>
+      </div>
+    }
 
     @if (sugerencias().length) {
       <div class="pg-chips">

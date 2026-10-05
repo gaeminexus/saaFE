@@ -74,6 +74,11 @@ export class PrecancelacionDialogComponent {
   cargandoSaldos = signal(false);
 
   fechaCorte = signal<Date>(new Date());
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, 2026-10-05), por defecto
+   * hoy. Solo aplica cuando hay depósito (`requiereRespaldo()`): el 100% aportes no pasa por CBCR.
+   */
+  fechaAfectacion = signal<Date>(new Date());
   observacion = '';
 
   simulacion = signal<SimulacionPrecancelacion | null>(null);
@@ -127,12 +132,21 @@ export class PrecancelacionDialogComponent {
 
   respaldoListo = computed(() => !this.requiereRespaldo() || (this.respaldo()?.completo() ?? false));
 
+  /** Solo se exige con depósito: el 100% aportes no pasa por CBCR y no tiene este campo. */
+  fechaAfectacionValida = computed(
+    () => !this.requiereRespaldo() || this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fechaCorte())
+  );
+
+  /** Aviso del §3.1: la mora que se generó después del pago real se elimina al recalcular. */
+  esPagoTardio = computed(() => this.requiereRespaldo() && this.cobroCreditoService.esPagoTardio(this.fechaCorte()));
+
   puedeConfirmar = computed(
     () =>
       this.cuadra() &&
       !this.hayExcesoEnAlgunAporte() &&
       !this.aplicando() &&
       this.total() > 0.004 &&
+      this.fechaAfectacionValida() &&
       this.respaldoListo()
   );
 
@@ -345,7 +359,8 @@ export class PrecancelacionDialogComponent {
     // depósito) se sigue aplicando en el acto con el endpoint directo de siempre: sin depósito no
     // hay nada que contabilidad pueda verificar.
     if (montoEfectivo > 0.004) {
-      this.registrarPrecancelacionEnContabilidad(montoEfectivo, aportes, fecha, rutaDocumentoRespaldo);
+      const fechaAfectacion = this.servicio.formatearFecha(this.fechaAfectacion());
+      this.registrarPrecancelacionEnContabilidad(montoEfectivo, aportes, fecha, fechaAfectacion, rutaDocumentoRespaldo);
       return;
     }
 
@@ -431,6 +446,7 @@ export class PrecancelacionDialogComponent {
     valorEfectivo: number,
     aportes: DesgloseAporte[],
     fecha: string | null,
+    fechaAfectacion: string | null,
     rutaDocumentoRespaldo: string | null
   ): void {
     const respaldo = this.respaldo()?.datos();
@@ -438,7 +454,7 @@ export class PrecancelacionDialogComponent {
 
     // Defensivo: `respaldoListo()` ya exige cuenta, referencia y comprobante antes de habilitar el
     // botón cuando hay parte en efectivo — no debería poder llegar acá sin ellos.
-    if (!cuenta || !fecha || !rutaDocumentoRespaldo) {
+    if (!cuenta || !fecha || !fechaAfectacion || !rutaDocumentoRespaldo) {
       this.aplicando.set(false);
       this.errorMensaje.set('Faltan datos del respaldo del cobro. Intente nuevamente.');
       this.comprobantes.descartar(rutaDocumentoRespaldo);
@@ -454,6 +470,7 @@ export class PrecancelacionDialogComponent {
         rutaRespaldo: rutaDocumentoRespaldo,
         valor: valorEfectivo,
         fecha,
+        fechaAfectacion,
         observacion: this.observacion.trim() || null,
         usuario: usuarioSesion(),
         detalles: [

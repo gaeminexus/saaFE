@@ -91,9 +91,13 @@
                 <span class="l">Valor</span>
                 <span class="v">{{ formatMoneda(resp.cabecera.valor) }}</span>
               </div>
-              <div class="dc-item">
-                <span class="l">Fecha</span>
+              <div class="dc-item" [class.dc-item-resaltado]="fechasDifieren(resp.cabecera)">
+                <span class="l">Fecha de pago</span>
                 <span class="v">{{ formatFecha(resp.cabecera.fecha) }}</span>
+              </div>
+              <div class="dc-item" [class.dc-item-resaltado]="fechasDifieren(resp.cabecera)">
+                <span class="l">Fecha de afectación contable</span>
+                <span class="v">{{ formatFecha(resp.cabecera.fechaAfectacion) }}</span>
               </div>
               <div class="dc-item">
                 <span class="l">Referencia</span>

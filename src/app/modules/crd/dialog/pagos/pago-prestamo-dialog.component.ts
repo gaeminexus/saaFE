@@ -67,6 +67,12 @@ export class PagoPrestamoDialogComponent {
 
   valorTexto = signal('');
   fechaPago = signal<Date>(new Date());
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, 2026-10-05), por defecto
+   * hoy. Solo aplica al modo `efectivo`: el modo `aportes` NO pasa por CBCR (usa
+   * `OperacionesPagoPrestamoService.pagarConAportes`, otro endpoint sin este campo).
+   */
+  fechaAfectacion = signal<Date>(new Date());
   observacion = '';
 
   saldos = signal<SaldoAporte[]>([]);
@@ -112,12 +118,21 @@ export class PagoPrestamoDialogComponent {
     return fecha.getTime() <= limite.getTime();
   });
 
+  /** Solo se exige en `efectivo`: `aportes` no pasa por CBCR y no tiene este campo. */
+  fechaAfectacionValida = computed(
+    () => this.modo() !== 'efectivo' || this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fechaPago())
+  );
+
+  /** Aviso del §3.1: la mora que se generó después del pago real se elimina al recalcular. */
+  esPagoTardio = computed(() => this.modo() === 'efectivo' && this.cobroCreditoService.esPagoTardio(this.fechaPago()));
+
   puedeConfirmar = computed(
     () =>
       this.montoAPagar() > 0.004 &&
       !this.registrando() &&
       !(this.modo() === 'aportes' && this.hayExcesoEnAlgunAporte()) &&
       this.fechaValida() &&
+      this.fechaAfectacionValida() &&
       this.respaldoListo()
   );
 
@@ -320,6 +335,7 @@ export class PagoPrestamoDialogComponent {
    */
   private enviarPagoEfectivo(rutaDocumentoRespaldo: string | null): void {
     const fechaPago = this.servicio.formatearFecha(this.fechaPago());
+    const fechaAfectacion = this.servicio.formatearFecha(this.fechaAfectacion());
     // Se redondea acá y no en el blur: confirmar con Enter no dispara el blur del campo.
     const valor = +this.valorEfectivo().toFixed(2);
     const respaldo = this.respaldo()?.datos();
@@ -327,7 +343,7 @@ export class PagoPrestamoDialogComponent {
 
     // Defensivo: `respaldoListo()` ya exige cuenta, referencia y comprobante antes de habilitar el
     // botón — no debería poder llegar acá sin ellos.
-    if (!cuenta || !fechaPago || !rutaDocumentoRespaldo) {
+    if (!cuenta || !fechaPago || !fechaAfectacion || !rutaDocumentoRespaldo) {
       this.registrando.set(false);
       this.manejarError(undefined, 'Faltan datos del respaldo del cobro. Intente nuevamente.');
       this.comprobantes.descartar(rutaDocumentoRespaldo);
@@ -343,6 +359,7 @@ export class PagoPrestamoDialogComponent {
         rutaRespaldo: rutaDocumentoRespaldo,
         valor,
         fecha: fechaPago,
+        fechaAfectacion,
         observacion: this.observacion.trim() || null,
         usuario: usuarioSesion(),
         detalles: [{ idPrestamo: this.data.idPrestamo, valor }],
