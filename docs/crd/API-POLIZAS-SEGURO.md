@@ -23,6 +23,8 @@ Espejo: `saaFE/docs/crd/API-POLIZAS-SEGURO.md`. Base: `/SaaBE/rest/posg`.
 - **3 prendario:** lo mismo, con tipo de préstamo `= 3`.
 
 Los préstamos DE PLAZO VENCIDO (8) **nunca** son elegibles.
+**Y tampoco un préstamo con el PLAZO TERMINADO** (S15, 2026-10-05): tiene que tener al menos una cuota no pagada ni
+cancelada anticipadamente con vencimiento posterior a la fecha de corte del listado.
 
 **Base de cada préstamo:**
 - **1 desgravamen:** el saldo de capital = Σ(capital − capital pagado de PGPR) de las cuotas no PAGADAS
