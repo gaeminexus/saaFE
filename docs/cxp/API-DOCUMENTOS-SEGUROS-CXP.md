@@ -107,6 +107,21 @@ REST nuevo `DocumentoSeguroCxpRest`. Todos responden **400** con texto ante una 
 `tipoDocumento` ∈ `FACTURA` | `NOTA_DEBITO` | `NOTA_CREDITO`. La nota de venta (FCTC `tipoComprobante
 02`) **no** es un tipo de seguros.
 
+### 5.0 Acordado con `omen-saa-1-arb` el 2026-10-05: llamada interna, usuario y empresa
+
+1. **Servicio `@Local`.** Las cinco operaciones (§5.1–§5.5) son métodos de `DocumentoSeguroCxpService`, y el
+   REST **delega** en ellos sin lógica propia. Crédito los llama **dentro de su propia transacción** (mismo
+   WAR), para que su cambio de estado y nuestro enlazar/liberar/desenlazar sean atómicos.
+   ⚠️ `IncomeException` es `@ApplicationException(rollback=true)`: si una validación nuestra la lanza, **la
+   transacción de crédito queda marcada para rollback** aunque la atrape (lección del §58.1). Eso es lo que se
+   busca. Crédito no debe atraparla para seguir.
+2. **Usuario.** Los métodos `@Local` reciben **`String usuario`** (nombre de usuario), y lo resolvemos con
+   `UsuarioDaoService.selectByNombre`. Si no existe: `IncomeException`. El REST sigue recibiendo `idUsuario`.
+3. **Empresa.** `idEmpresa` es la **empresa contable de CxP**: el `PJRQCDGO` con el que se cargó el documento
+   (`FCTC.EMPRESA`, el mismo de las pantallas de CxP). `Prestamo` no tiene empresa: crédito no la puede sacar
+   de ahí. Con otro valor, `porClave` no encuentra el documento. Queda pendiente que crédito diga de dónde
+   la saca.
+
 ### 5.1 `GET /cxp-seguros/porClave/{claveAcceso}?idEmpresa=…` — buscar
 
 Busca primero en FCTC, NTDC y NTCC por `CLAVE` (y empresa), y si no está, en `PGS.DCXP` por
