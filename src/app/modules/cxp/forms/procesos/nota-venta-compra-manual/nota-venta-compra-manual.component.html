@@ -195,12 +195,13 @@
   <mat-card class="nvcm-card">
     <h2 class="nvcm-seccion-titulo">Totales de la nota de venta</h2>
     <p class="nvcm-nota-servidor">
-      El servidor graba estos valores tal cual — no los recalcula desde el detalle.
+      El servidor graba estos valores; sin IVA, la base 0% se calcula desde el subtotal.
     </p>
     <div class="nvcm-grid nvcm-grid-totales">
       <mat-form-field appearance="outline">
-        <mat-label>Subtotal (grav.)</mat-label>
+        <mat-label>Subtotal sin impuestos *</mat-label>
         <input matInput type="number" step="0.01" [(ngModel)]="form.subtotal" />
+        <mat-hint>En una nota de venta sin IVA es igual al total</mat-hint>
       </mat-form-field>
       <mat-form-field appearance="outline">
         <mat-label>Subtotal (0%)</mat-label>
@@ -218,6 +219,16 @@
     <p class="nvcm-nota-servidor">
       Sin IVA — notas de venta de contribuyentes RISE. El campo sigue viajando en 0 al backend.
     </p>
+
+    @if (faltaSubtotal) {
+      <div class="nvcm-cuadre nvcm-cuadre-mal">
+        <mat-icon>warning</mat-icon>
+        <div class="nvcm-cuadre-texto">
+          <div>Falta el subtotal sin impuestos.</div>
+          <div class="nvcm-cuadre-diff">Use «Usar suma del detalle» (abajo) para completarlo, o tipéelo a mano — no se puede registrar con el subtotal en 0 y el total mayor.</div>
+        </div>
+      </div>
+    }
 
     <div class="nvcm-cuadre" [class.nvcm-cuadre-ok]="totalCuadra" [class.nvcm-cuadre-mal]="!totalCuadra">
       <mat-icon>{{ totalCuadra ? 'check_circle' : 'warning' }}</mat-icon>
@@ -307,7 +318,7 @@
   </mat-card>
 
   <div class="nvcm-acciones">
-    <button mat-raised-button color="primary" type="button" [disabled]="guardando()" (click)="guardar()">
+    <button mat-raised-button color="primary" type="button" [disabled]="guardando() || faltaSubtotal" (click)="guardar()">
       <mat-icon>save</mat-icon> {{ guardando() ? 'Guardando...' : 'Registrar nota de venta' }}
     </button>
   </div>

@@ -233,6 +233,16 @@ export class NotaVentaCompraManualComponent implements OnInit {
   get diferenciaTotal(): number { return round2((Number(this.form.total) || 0) - this.sumaDetalleTotal); }
   get totalCuadra(): boolean { return Math.abs(this.diferenciaTotal) < 0.01; }
 
+  /**
+   * `form.subtotal` es la base SIN IMPUESTOS (gravado + 0%): el backend recalcula la base 0%
+   * desde él y rechaza subtotal 0 con total > 0 (medido en e2-93: 10 notas de septiembre
+   * quedaron con subtotal y base 0% en 0 en el ATS porque el usuario lo dejaba en 0 pensando
+   * que era solo la parte gravada). En una nota sin IVA, subtotal = total.
+   */
+  get faltaSubtotal(): boolean {
+    return (Number(this.form.subtotal) || 0) === 0 && (Number(this.form.total) || 0) > 0;
+  }
+
   get diferenciaSubcero(): number { return round2((Number(this.form.subcero) || 0) - this.sumaDetalleBaseCero); }
   get subceroCuadra(): boolean { return Math.abs(this.diferenciaSubcero) < 0.01; }
 
