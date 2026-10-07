@@ -72,6 +72,12 @@ export interface SolicitudRegistroAcuerdo {
   idEmpresa: number;
   /** `yyyy-MM-dd`. MISMA fecha con la que se previsualizó — el backend valida los adeudados contra ella. */
   fecha: string;
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, agregado 2026-10-06).
+   * Opcional: si no viene, vale `fecha`. Con depósito se pasa tal cual al CBCR; con 100% aportes
+   * fecha el asiento de condonación y el del cruce. Mismas reglas que el cobro: ≥ `fecha`, no futura.
+   */
+  fechaAfectacion?: string | null;
   observacion?: string | null;
   usuario: string;
 

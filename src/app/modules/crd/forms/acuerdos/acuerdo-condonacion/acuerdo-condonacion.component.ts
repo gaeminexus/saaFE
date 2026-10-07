@@ -33,6 +33,7 @@ import { NOMBRE_ESTADO_PRESTAMO } from '../../../model/pagos/catalogos-pago';
 import { SaldoAporte } from '../../../model/pagos/operaciones-pago';
 import { Prestamo } from '../../../model/prestamo';
 import { AcuerdoCondonacionService } from '../../../service/acuerdo-condonacion.service';
+import { CobroCreditoService } from '../../../service/cobro-credito.service';
 import { ComprobanteCobroService } from '../../../service/comprobante-cobro.service';
 import { EntidadService } from '../../../service/entidad.service';
 import { OperacionesPagoPrestamoService } from '../../../service/operaciones-pago-prestamo.service';
@@ -85,6 +86,7 @@ export class AcuerdoCondonacionComponent {
   private prestamoService = inject(PrestamoService);
   private cuentaBancariaService = inject(CuentaBancariaService);
   private acuerdos = inject(AcuerdoCondonacionService);
+  private cobroCreditoService = inject(CobroCreditoService);
   private comprobantes = inject(ComprobanteCobroService);
   private operaciones = inject(OperacionesPagoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
@@ -114,6 +116,11 @@ export class AcuerdoCondonacionComponent {
 
   // ---- previsualización ----
   fecha = signal<Date>(new Date());
+  /**
+   * Fecha de afectación contable (docs/crd/API-FECHA-AFECTACION-COBRO.md, agregado 2026-10-06),
+   * por defecto hoy. Siempre visible, con depósito o sin él: §«fechaAfectacion» del contrato.
+   */
+  fechaAfectacion = signal<Date>(new Date());
   cargandoDesglose = signal(false);
   errorDesglose = signal<string | null>(null);
   /** `null` mientras no hay una previsualización vigente para la fecha actual — gatea "Confirmar". */
@@ -161,6 +168,11 @@ export class AcuerdoCondonacionComponent {
   /** ¿La fecha actual sigue siendo la que se usó para previsualizar? Si no, hay que previsualizar de nuevo. */
   desgloseVigente = computed(() => this.filas() !== null && this.fechaDesglose === this.acuerdos.formatearFecha(this.fecha()));
 
+  fechaAfectacionValida = computed(() => this.cobroCreditoService.fechaAfectacionValida(this.fechaAfectacion(), this.fecha()));
+
+  /** Aviso del §3.1 de cobros, reusado acá: la mora que se generó después del pago real se elimina al recalcular. */
+  esPagoTardio = computed(() => this.cobroCreditoService.esPagoTardio(this.fecha()));
+
   // ---- reparto: aportes (se consumen) + depósito, deben sumar exacto totalPagar() ----
 
   montoDeposito = computed(() => {
@@ -206,6 +218,7 @@ export class AcuerdoCondonacionComponent {
     }
     if (!this.prestamoSeleccionado()) motivos.push('elija un préstamo');
     if (!this.filas() || !this.desgloseVigente()) motivos.push('previsualice el desglose para la fecha elegida');
+    if (!this.fechaAfectacionValida()) motivos.push('la fecha de afectación contable no puede ser anterior a la fecha de pago ni posterior a hoy');
 
     if (!this.repartoCuadra()) {
       const dif = this.diferenciaReparto();
@@ -608,6 +621,7 @@ export class AcuerdoCondonacionComponent {
       idPrestamo: prestamo.codigo,
       idEmpresa,
       fecha: fechaTexto,
+      fechaAfectacion: this.acuerdos.formatearFecha(this.fechaAfectacion()),
       observacion: this.observacion.trim() || null,
       usuario: usuarioSesion(),
       valorPagarAportes: this.montoAportes(),
@@ -656,6 +670,7 @@ export class AcuerdoCondonacionComponent {
     this.fechaDesglose = null;
     this.errorDesglose.set(null);
     this.fecha.set(new Date());
+    this.fechaAfectacion.set(new Date());
     this.fondos = [];
     this.fondosVersion.update((v) => v + 1);
     this.cuentaBancaria.set(null);

@@ -144,12 +144,20 @@
 
             <div class="field-grid">
               <mat-form-field appearance="outline">
-                <mat-label>Fecha</mat-label>
+                <mat-label>Fecha de pago</mat-label>
                 <input matInput [matDatepicker]="pickerAcuerdo" [max]="hoy"
                        [ngModel]="fecha()" (ngModelChange)="onFechaCambio($event)" />
                 <mat-datepicker-toggle matSuffix [for]="pickerAcuerdo"></mat-datepicker-toggle>
                 <mat-datepicker #pickerAcuerdo></mat-datepicker>
                 <mat-hint>La mora se recalcula a esta fecha.</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Fecha de afectación contable</mat-label>
+                <input matInput [matDatepicker]="pickerAfectacionAcuerdo" [min]="fecha()" [max]="hoy"
+                       [ngModel]="fechaAfectacion()" (ngModelChange)="fechaAfectacion.set($event)" />
+                <mat-datepicker-toggle matSuffix [for]="pickerAfectacionAcuerdo"></mat-datepicker-toggle>
+                <mat-datepicker #pickerAfectacionAcuerdo></mat-datepicker>
+                <mat-hint>No puede ser anterior a la fecha de pago ni posterior a hoy</mat-hint>
               </mat-form-field>
               <button mat-stroked-button type="button" (click)="previsualizar()" [disabled]="cargandoDesglose()">
                 @if (cargandoDesglose()) {
@@ -159,6 +167,16 @@
                 }
               </button>
             </div>
+
+            @if (esPagoTardio()) {
+              <div class="aviso-pendiente">
+                <mat-icon>schedule</mat-icon>
+                <span>
+                  Pago reportado tarde: la mora generada después del pago se eliminará y la
+                  contabilidad irá con la fecha de afectación.
+                </span>
+              </div>
+            }
 
             @if (errorDesglose(); as error) {
               <div class="error-text"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
