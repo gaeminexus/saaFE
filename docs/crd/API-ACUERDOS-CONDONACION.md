@@ -106,7 +106,8 @@ cruzando saldos de aportes del socio, y lo que se cubre con depósito o transfer
 {
   "idPrestamo": 67830,
   "idEmpresa": 1236,               // OBLIGATORIO, siempre — ver abajo
-  "fecha": "2026-08-30",
+  "fecha": "2026-08-30",            // fecha de PAGO real
+  "fechaAfectacion": "2026-08-30",  // fecha de afectación contable — ver abajo
   "observacion": "",
   "usuario": "GROBAYO",
 
@@ -131,6 +132,18 @@ cruzando saldos de aportes del socio, y lo que se cubre con depósito o transfer
   ]
 }
 ```
+
+### ⛔ `fechaAfectacion` (agregado 2026-10-06, `API-FECHA-AFECTACION-COBRO.md`)
+
+Con depósito, el acuerdo registra un cobro de crédito (CBCR), y desde el 2026-10-05 ese cobro exige
+la fecha de afectación contable. Sin ella, `registrar` fallaba con `FECHA_AFECTACION_OBLIGATORIA`.
+- **Opcional** en el body. Si no viene, vale `fecha`.
+- Mismas reglas que en el cobro: no puede ser menor a `fecha` ni futura, y su período tiene que estar
+  abierto (400 con el mismo código).
+- Se pasa tal cual al CBCR del depósito. Con 100 % aportes no hay CBCR, y el asiento de condonación y el
+  del cruce se fechan con ella.
+- **Pantalla:** dos campos rotulados, «Fecha de pago» y «Fecha de afectación contable», siempre visibles,
+  con el mismo aviso de «pago reportado tarde» que en cobros.
 
 ### ⛔ `idEmpresa` es OBLIGATORIO, con y sin depósito
 
