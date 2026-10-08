@@ -58,7 +58,11 @@ function extraeMensaje(error: any): string | null {
   }
 
   if (typeof error === 'object') {
-    for (const candidato of [error.mensaje, error.message, error.error]) {
+    // `error.message` de un HttpErrorResponse es SIEMPRE el genérico de Angular ("Http failure
+    // response for …"): tiene que perder contra el cuerpo real (`error.error`) y contra `mensaje`,
+    // no ganarles por ir primero en la lista. Con un Error de JS común (sin `.error` ni `.mensaje`)
+    // los dos primeros dan `null` y se sigue cayendo en `.message`, como antes.
+    for (const candidato of [error.error, error.mensaje, error.message]) {
       const mensaje = extraeMensaje(candidato);
       if (mensaje) return mensaje;
     }
