@@ -76,7 +76,8 @@ socio con un depósito o transferencia. La línea lo representa así:
 
 - **`valor` es SOLO el depósito**, no el total de la precancelación. El total **nunca se guarda**:
   se recalcula fresco al registrar y al procesar.
-- **`aportes` es válido SOLO en `PRECANCELACION`.** Se rechaza en los otros seis tipos.
+- **`aportes` es válido SOLO en `PRECANCELACION` y, desde 2026-10-12, en `ABONO_CAPITAL`**
+  (`API-ABONO-CAPITAL-CON-APORTES.md`). Se rechaza en los demás tipos.
 - **El depósito es obligatorio y > 0.** Si el socio cubre **todo** con aportes, la operación **no
   va por este circuito**: usa el endpoint directo de precancelación de siempre. No entra plata de
   afuera, así que no hay nada que contabilidad pueda verificar — misma regla que deja fuera a
