@@ -93,10 +93,23 @@ Devuelve los elegibles con su base, **sin grabar**:
 consulta por préstamo.
 
 ### `POST /posg/listado`
-Cuerpo: `{ "tipoSeguro": 1, "fechaCorte": "2026-10-01", "usuario": "x", "observacion": "..." }`.
+Cuerpo: `{ "tipoSeguro": 2, "fechaCorte": "2026-10-01", "usuario": "x", "observacion": "...", "idsPrestamo": [4567, 4568] }`.
 - Crea un `POSG` (clase 1, estado 1) y un `PSPR` (novedad 1) por cada préstamo con su base congelada.
-- **409** `HAY_PRESTAMOS_SIN_SUMA_ASEGURADA`, con la lista, si algún préstamo de tipo 2 o 3 no tiene
-  suma asegurada. No se crea nada.
+- **`idsPrestamo` (NUEVO 2026-10-12, S16 del diseño), opcional.** Si viene, el documento lleva **solo**
+  esos préstamos. El servidor recalcula candidatos y base; la base que muestre el FE no viaja.
+  - Vacío (`[]`) → **400** `PARAMETRO_INVALIDO` («elija al menos un préstamo»).
+  - Un id que no es candidato de ese tipo y fecha de corte → **422** `PRESTAMO_NO_ELEGIBLE`, con la lista.
+    No se crea nada. Un id repetido se toma una vez.
+  - Un id elegido sin suma asegurada (tipo 2 o 3) → **409** `HAY_PRESTAMOS_SIN_SUMA_ASEGURADA`, con la
+    lista de **esos** ids.
+- **Sin `idsPrestamo`** se toman todos los candidatos, como antes. En ese caso hay **409**
+  `HAY_PRESTAMOS_SIN_SUMA_ASEGURADA`, con la lista, si algún préstamo de tipo 2 o 3 no tiene suma
+  asegurada, y no se crea nada. **El FE nuevo manda siempre `idsPrestamo`.**
+- **Pantalla:** la vista previa trae una casilla por fila. Los préstamos con base > 0 vienen marcados.
+  Los que tienen `sinSumaAsegurada: true` vienen desmarcados y no se pueden marcar. Hay un «marcar o
+  desmarcar todos» sobre los habilitados, y un contador «N de M seleccionados · base total $X». «Generar
+  listado» se habilita con al menos uno marcado. El aviso de los préstamos sin suma deja de bloquear:
+  ahora informa que quedan fuera del listado.
 - **201:** el documento completo (§8).
 
 ---
@@ -196,6 +209,10 @@ Contra una factura en estado 3 o 4, del mismo tipo:
 ```
 - Crea un `POSG` con la clase indicada, `padre = idFactura`, la **vigencia de la factura** y estado 2,
   más sus `PSPR` (novedad 2 si es ND, 3 si es NC).
+- **409** `HAY_PRESTAMOS_SIN_SUMA_ASEGURADA` (NUEVO 2026-10-12, S16.9) si es ND (clase 2) de tipo 2 o 3 y
+  algún préstamo no tiene suma asegurada. Antes se grababa con base 0. La NC no cambia.
+- Un préstamo dejado fuera del listado (S16) aparece después como **inclusión** en `novedades`. Así
+  entra cuando se regulariza.
 - **ND, al distribuir:** como el §5, entre los préstamos incluidos, con sus cuotas desde la emisión de
   la ND hasta el fin de la vigencia.
 - **NC, al distribuir:** **resta** el valor entre las cuotas **que todavía existan** de esos
