@@ -27,13 +27,13 @@ export interface DetalleCobroCredito {
   periodoDevengo?: string | null;
   observacion?: string | null;
   /**
-   * Aportes que se CONSUMEN (saldo baja) para cubrir parte de la precancelación, junto con `valor`
-   * (que en ese caso es SOLO la parte de depósito, nunca el total). Agregado 2026-08-30
-   * (`DetalleRegistroCobroDTO.aportes`, backend). Solo válido en `PRECANCELACION` — se rechaza en
-   * cualquier otro tipo, sobre todo `COBRO_MIXTO`, donde una línea con `idTipoAporte` significa lo
-   * OPUESTO (el socio ENTREGA plata, su saldo SUBE; acá se CONSUME, su saldo BAJA). Los valores
-   * siempre viajan positivos — el signo lo interpreta el backend según `tipoOperacion`, nunca el
-   * cliente.
+   * Aportes que se CONSUMEN (saldo baja) para cubrir parte de la operación, junto con `valor` (que
+   * en ese caso es SOLO la parte de depósito, nunca el total). Válido en PRECANCELACION y
+   * ABONO_CAPITAL; CONSUME saldo del socio (`DetalleRegistroCobroDTO.aportes`, backend;
+   * docs/crd/API-ABONO-CAPITAL-CON-APORTES.md). Se rechaza en cualquier otro tipo, sobre todo
+   * `COBRO_MIXTO`, donde una línea con `idTipoAporte` significa lo OPUESTO (el socio ENTREGA plata,
+   * su saldo SUBE; acá se CONSUME, su saldo BAJA). Los valores siempre viajan positivos — el signo
+   * lo interpreta el backend según `tipoOperacion`, nunca el cliente.
    */
   aportes?: DesgloseAporte[];
 }
@@ -213,6 +213,19 @@ export interface DetalleCobroCreditoLectura {
 export interface RespuestaCobroCreditoDetalle {
   cabecera: CobroCredito;
   detalle: DetalleCobroCreditoLectura[];
+  /**
+   * Aportes consumidos por las líneas del cobro (docs/crd/API-ABONO-CAPITAL-CON-APORTES.md §1.1).
+   * El backend devuelve `[]` si no hay; mientras no lo publique llega `undefined`, y
+   * `CobroCreditoService.getId` lo normaliza a `[]`.
+   */
+  aportesConsumidos?: AporteConsumidoCobro[];
+}
+
+export interface AporteConsumidoCobro {
+  idDetalleCobro: number;
+  idTipoAporte: number;
+  nombreTipoAporte: string;
+  valor: number;
 }
 
 // ══════════════ GET /cbcr/bandejaAprobacion ══════════════

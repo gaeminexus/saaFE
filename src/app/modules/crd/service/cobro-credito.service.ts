@@ -55,7 +55,11 @@ export class CobroCreditoService {
    */
   getId(id: number): Observable<RespuestaCobroCreditoDetalle | null> {
     const url = `${ServiciosCrd.RS_CBCR}/getId/${id}`;
-    return this.http.get<RespuestaCobroCreditoDetalle>(url).pipe(catchError(() => of(null)));
+    return this.http.get<RespuestaCobroCreditoDetalle>(url).pipe(
+      // `aportesConsumidos` llega `undefined` hasta que el backend lo publique: siempre una lista.
+      map((resp) => (resp ? { ...resp, aportesConsumidos: resp.aportesConsumidos ?? [] } : resp)),
+      catchError(() => of(null))
+    );
   }
 
   /** Cobros en un estado dado. `1` = bandeja de contabilidad, `2` = aprobados (proceso de crédito), `4` = rechazados. */

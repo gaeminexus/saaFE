@@ -258,21 +258,102 @@
         <span>{{ error }}</span>
       </div>
     }
+
+    <!-- ==================== Reparto ==================== -->
+    <div class="pg-seccion-label">Cómo se cubre el abono de {{ formatMoneda(total()) }}</div>
+
+    @if (cargandoSaldos()) {
+      <div class="pg-cargando">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Consultando saldos de aportes…</span>
+      </div>
+    }
+
+    <div class="pg-chips">
+      <button mat-stroked-button (click)="todoEnEfectivo()">
+        <mat-icon>payments</mat-icon> Todo en efectivo
+      </button>
+      @if (saldos().length) {
+        <button mat-stroked-button (click)="usarAportesPrimero()">
+          <mat-icon>savings</mat-icon> Usar aportes primero ({{ formatMoneda(saldoAportesTotal()) }} disponible)
+        </button>
+      }
+      <button mat-stroked-button (click)="limpiarReparto()">
+        <mat-icon>backspace</mat-icon> Limpiar
+      </button>
+    </div>
+
+    <div class="pg-fondos">
+      @for (f of fondos; track f.clave) {
+        <div class="pg-fondo"
+             [class.activo]="montoDe(f) > 0.004"
+             [class.agotado]="f.idTipoAporte !== null && f.disponible <= 0.004">
+          <mat-icon class="pg-fondo-icono">{{ f.idTipoAporte === null ? 'payments' : 'savings' }}</mat-icon>
+          <div class="pg-fondo-nombre">
+            {{ f.nombre }}
+            @if (f.idTipoAporte !== null) {
+              <div class="pg-fondo-saldo">Disponible {{ formatMoneda(f.disponible) }}</div>
+            }
+          </div>
+          <mat-form-field appearance="outline" class="pg-fondo-input" subscriptSizing="dynamic">
+            <span matTextPrefix>$&nbsp;</span>
+            <input matInput inputmode="decimal" [(ngModel)]="f.texto" (blur)="onFondoBlur(f)" placeholder="0.00" />
+          </mat-form-field>
+          <button mat-stroked-button class="pg-fondo-completar"
+                  [disabled]="!necesitaAjuste()"
+                  (click)="completarConEsteFondo(f)"
+                  matTooltip="Ajustar este renglón para que el reparto cuadre">
+            Ajustar
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="pg-cuadre"
+         [class.ok]="cuadra()"
+         [class.falta]="!cuadra() && diferencia() > 0"
+         [class.excede]="!cuadra() && diferencia() < 0">
+      <span>Repartido {{ formatMoneda(repartido()) }} de {{ formatMoneda(total()) }}</span>
+      @if (cuadra()) {
+        <span><mat-icon>check_circle</mat-icon> El reparto cuadra</span>
+      } @else if (diferencia() > 0) {
+        <span>Falta asignar {{ formatMoneda(diferencia()) }}</span>
+      } @else {
+        <span>Se asignó {{ formatMoneda(-diferencia()) }} de más</span>
+      }
+    </div>
+
+    @if (hayExcesoEnAlgunAporte()) {
+      <div class="pg-aviso error">
+        <mat-icon>warning</mat-icon>
+        <span>Uno de los aportes supera su saldo disponible. Ajuste el monto antes de confirmar.</span>
+      </div>
+    }
   }
 
   <!-- ============ Respaldo del cobro ============
        Se renderiza en los dos pasos a propósito: si viviera dentro del paso 1, pasar a la
        comparativa destruiría el bloque y se perdería el archivo ya seleccionado. -->
-  <app-respaldo-cobro [monto]="valor()" [inicial]="data.respaldoSugerido ?? null"></app-respaldo-cobro>
+  <app-respaldo-cobro [requerido]="requiereRespaldo()" [monto]="montoEfectivo()" [inicial]="data.respaldoSugerido ?? null"></app-respaldo-cobro>
 
   @if (paso() === 'comparativa') {
-    <div class="pg-aviso info">
-      <mat-icon>schedule</mat-icon>
-      <span>
-        Este abono se registra para aprobación de contabilidad: <b>el préstamo no se modifica todavía</b>
-        (la tabla de amortización no se regenera hasta que se procese).
-      </span>
-    </div>
+    @if (requiereRespaldo()) {
+      <div class="pg-aviso info">
+        <mat-icon>schedule</mat-icon>
+        <span>
+          Este abono se registra para aprobación de contabilidad: <b>el préstamo no se modifica todavía</b>
+          (la tabla de amortización no se regenera hasta que se procese).
+        </span>
+      </div>
+    } @else {
+      <div class="pg-aviso alerta">
+        <mat-icon>warning_amber</mat-icon>
+        <span>
+          Abono pagado <b>100% con aportes</b>: al confirmar se aplica en el acto, sin pasar por
+          contabilidad, y el saldo de aportes se descuenta.
+        </span>
+      </div>
+    }
   }
 
   @if (!fechaValida()) {
@@ -316,7 +397,7 @@
       @if (aplicando() || simulando()) {
         <mat-spinner diameter="18"></mat-spinner>
       } @else {
-        <ng-container><mat-icon>check_circle</mat-icon> Registrar abono</ng-container>
+        <ng-container><mat-icon>check_circle</mat-icon> {{ requiereRespaldo() ? 'Registrar abono' : 'Aplicar abono' }}</ng-container>
       }
     </button>
   }

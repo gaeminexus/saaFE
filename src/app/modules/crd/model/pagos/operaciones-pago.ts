@@ -218,6 +218,28 @@ export interface AbonoCapitalRequest {
   rutaDocumentoRespaldo?: string | null;
 }
 
+/**
+ * `POST /prst/abonarCapitalConAportes` (docs/crd/API-ABONO-CAPITAL-CON-APORTES.md §2): abono 100%
+ * con saldo de aportes, sin depósito. ⚠️ NO lleva `valor`: el abono es Σ `aportes[].valor`.
+ */
+export interface AbonoCapitalConAportesRequest {
+  /** Empresa contable (SCP.PJRQ) sobre la que se genera el asiento. Obligatorio. */
+  idEmpresa: number;
+  idPrestamo: number;
+  /** 1 = reduce plazo (mantiene cuota) · 2 = reduce cuota (mantiene plazo). */
+  modalidad: number;
+  /** No vacío. Cada renglón > 0, sin tipos repetidos. */
+  aportes: DesgloseAporte[];
+  usuario: string;
+  observacion?: string | null;
+  /** `yyyy-MM-dd`. */
+  fecha?: string | null;
+  /** `yyyy-MM-dd`. Obligatoria, no menor a `fecha`, no futura, en período abierto. */
+  fechaAfectacion?: string | null;
+  /** Opcional: no entra dinero de afuera, así que no hay comprobante bancario. */
+  rutaDocumentoRespaldo?: string | null;
+}
+
 export interface ResultadoAbonoCapital {
   idPrestamo: number;
   idEvento: number;

@@ -180,6 +180,21 @@
               </table>
             }
 
+            @if (resp.aportesConsumidos?.length) {
+              <div class="section-label">Aportes consumidos</div>
+              <table class="tabla-detalle">
+                <thead><tr><th>Tipo de aporte</th><th class="num">Valor</th></tr></thead>
+                <tbody>
+                  @for (aporte of resp.aportesConsumidos; track $index) {
+                    <tr>
+                      <td>{{ aporte.nombreTipoAporte }}</td>
+                      <td class="num">{{ formatMoneda(aporte.valor) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+
             <div class="section-label">Comprobante</div>
             <app-comprobante-viewer [ruta]="resp.cabecera.rutaRespaldo"></app-comprobante-viewer>
 

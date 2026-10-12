@@ -3,6 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
 
 import {
+  AbonoCapitalConAportesRequest,
   AbonoCapitalRequest,
   AnulacionRequest,
   PagoConAportesRequest,
@@ -164,6 +165,20 @@ export class OperacionesPagoPrestamoService {
    */
   abonarCapital(req: AbonoCapitalRequest): Observable<RespuestaPago<ResultadoAbonoCapital>> {
     const url = `${ServiciosCrd.RS_PRST}/abonarCapital`;
+    return this.http
+      .post<RespuestaPago<ResultadoAbonoCapital>>(url, this.limpiar(req), this.httpOptions)
+      .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  /**
+   * Abono a capital pagado 100% con saldo de aportes (docs/crd/API-ABONO-CAPITAL-CON-APORTES.md §2).
+   * Se aplica en el acto, sin pasar por contabilidad. El abono es Σ `aportes[].valor`: la petición
+   * no lleva `valor`. `movimientosAporte` viaja fuera de `resultado`, como en `pagarConAportes`.
+   */
+  abonarCapitalConAportes(
+    req: AbonoCapitalConAportesRequest
+  ): Observable<RespuestaPago<ResultadoAbonoCapital>> {
+    const url = `${ServiciosCrd.RS_PRST}/abonarCapitalConAportes`;
     return this.http
       .post<RespuestaPago<ResultadoAbonoCapital>>(url, this.limpiar(req), this.httpOptions)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
