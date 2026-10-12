@@ -31,6 +31,30 @@ interface CompraRow extends CompraAts {
   fechaRetencionDate: Date | null;
 }
 
+/** Tabla 4.1 del SRI para los códigos que aparecen en el detalle del ATS. */
+const NOMBRES_TIPO_COMPROBANTE: Record<string, string> = {
+  '01': 'Factura',
+  '02': 'Nota de venta',
+  '03': 'Liquidación de compra',
+  '04': 'Nota de crédito',
+  '05': 'Nota de débito',
+  '18': 'Factura (venta)',
+  '41': 'Comprobante de reembolso',
+};
+
+/**
+ * Nombre del tipo de comprobante a partir de su código. `origen` es la tabla de donde sale la fila
+ * (una nota de venta llega con origen FACTURA); el tipo real se lee siempre de `tipoComprobante`.
+ * Código desconocido → el código tal cual; null/vacío → ''.
+ */
+export function nombreTipoComprobante(codigo: string | number | null | undefined): string {
+  if (codigo === null || codigo === undefined) return '';
+  const texto = String(codigo).trim();
+  if (!texto) return '';
+  const normalizado = texto.padStart(2, '0');
+  return NOMBRES_TIPO_COMPROBANTE[normalizado] ?? texto;
+}
+
 /**
  * Detalle del ATS en pantalla, para comparar contra el archivo antes de generarlo —
  * docs/cxc/API-DETALLE-ATS.md. Muestra exactamente lo que arma `generarAts` (el mismo recorrido,
@@ -247,6 +271,18 @@ export class AtsDetalleComponent implements OnInit {
     this.filaExpandida.set(this.filaExpandida() === row ? null : row);
   }
 
+  /** Para el html: la función pura vive fuera de la clase. */
+  nombreTipoComprobante(codigo: string | null | undefined): string {
+    return nombreTipoComprobante(codigo);
+  }
+
+  /** «02 — Nota de venta»; si el código no está en la tabla, solo el código. */
+  tipoConNombre(codigo: string | null | undefined): string {
+    const nombre = nombreTipoComprobante(codigo);
+    if (!nombre) return '';
+    return nombre === String(codigo).trim() ? nombre : `${codigo} — ${nombre}`;
+  }
+
   etiquetaFormasPago(row: CompraAts): string {
     return row.formasPago && row.formasPago.length > 0 ? row.formasPago.join(', ') : '—';
   }
@@ -267,7 +303,7 @@ export class AtsDetalleComponent implements OnInit {
     if (!rows.length) return;
 
     const headers = [
-      'Origen', 'ID documento', 'Tipo comprobante (tipoComprobante)', 'Cod. sustento (codSustento)',
+      'Origen', 'ID documento', 'Tipo comprobante (tipoComprobante)', 'Tipo (nombre)', 'Cod. sustento (codSustento)',
       'Tipo ID prov. (tpIdProv)', 'ID proveedor (idProv)', 'Proveedor', 'N° documento',
       'Establecimiento', 'Punto emisión', 'Secuencial', 'Autorización (autorizacion)',
       'F. emisión (fechaEmision)', 'F. registro (fechaRegistro)', 'F. registro capturada',
@@ -281,7 +317,7 @@ export class AtsDetalleComponent implements OnInit {
       'Formas de pago (formasPago)', 'Formas de pago declaradas',
     ];
     const keys = [
-      'origen', 'idDocumento', 'tipoComprobante', 'codSustento', 'tpIdProv', 'idProv', 'proveedor',
+      'origen', 'idDocumento', 'tipoComprobante', 'tipoComprobanteNombre', 'codSustento', 'tpIdProv', 'idProv', 'proveedor',
       'numeroDocumento', 'establecimiento', 'puntoEmision', 'secuencial', 'autorizacion',
       'fechaEmision', 'fechaRegistro', 'fechaRegistroCapturada', 'baseNoGraIva', 'baseImponible',
       'baseImpGrav', 'baseImpExe', 'montoIce', 'montoIva', 'total', 'valRetBien10', 'valRetServ20',
@@ -293,6 +329,7 @@ export class AtsDetalleComponent implements OnInit {
       origen: r.origen,
       idDocumento: r.idDocumento,
       tipoComprobante: r.tipoComprobante,
+      tipoComprobanteNombre: nombreTipoComprobante(r.tipoComprobante),
       codSustento: r.codSustento,
       tpIdProv: r.tpIdProv,
       idProv: r.idProv,
@@ -334,38 +371,41 @@ export class AtsDetalleComponent implements OnInit {
     if (!ventas.length) return;
     const headers = [
       'Tipo ID cliente (tpIdCliente)', 'ID cliente (idCliente)', 'Cliente',
-      'Tipo comprobante (tipoComprobante)', 'N° comprobantes (numeroComprobantes)',
+      'Tipo comprobante (tipoComprobante)', 'Tipo (nombre)', 'N° comprobantes (numeroComprobantes)',
       'No objeto (baseNoGraIva)', 'Base imponible (baseImponible)', 'Base gravada (baseImpGrav)',
       'IVA (montoIva)', 'ICE (montoIce)', 'Ret. IVA (valorRetIva)', 'Ret. renta (valorRetRenta)',
     ];
     const keys = [
-      'tpIdCliente', 'idCliente', 'cliente', 'tipoComprobante', 'numeroComprobantes',
+      'tpIdCliente', 'idCliente', 'cliente', 'tipoComprobante', 'tipoComprobanteNombre', 'numeroComprobantes',
       'baseNoGraIva', 'baseImponible', 'baseImpGrav', 'montoIva', 'montoIce', 'valorRetIva', 'valorRetRenta',
     ];
-    this.exportService.exportToCSV(ventas, `ATS-ventas-${this.periodoMes()}`, headers, keys);
+    const plano = ventas.map((v) => ({ ...v, tipoComprobanteNombre: nombreTipoComprobante(v.tipoComprobante) }));
+    this.exportService.exportToCSV(plano, `ATS-ventas-${this.periodoMes()}`, headers, keys);
   }
 
   exportarAnuladosCSV(): void {
     const anulados = this.detalle()?.anulados ?? [];
     if (!anulados.length) return;
-    const headers = ['Tipo comprobante', 'Establecimiento', 'Punto emisión', 'Secuencial', 'Autorización'];
-    const keys = ['tipoComprobante', 'establecimiento', 'puntoEmision', 'secuencial', 'autorizacion'];
-    this.exportService.exportToCSV(anulados, `ATS-anulados-${this.periodoMes()}`, headers, keys);
+    const headers = ['Tipo comprobante', 'Tipo (nombre)', 'Establecimiento', 'Punto emisión', 'Secuencial', 'Autorización'];
+    const keys = ['tipoComprobante', 'tipoComprobanteNombre', 'establecimiento', 'puntoEmision', 'secuencial', 'autorizacion'];
+    const plano = anulados.map((a) => ({ ...a, tipoComprobanteNombre: nombreTipoComprobante(a.tipoComprobante) }));
+    this.exportService.exportToCSV(plano, `ATS-anulados-${this.periodoMes()}`, headers, keys);
   }
 
   exportarExcluidasCSV(): void {
     const excluidas = this.detalle()?.excluidas ?? [];
     if (!excluidas.length) return;
     const headers = [
-      'ID documento', 'Tipo comprobante', 'ID proveedor', 'Proveedor', 'N° documento',
+      'ID documento', 'Tipo comprobante', 'Tipo (nombre)', 'ID proveedor', 'Proveedor', 'N° documento',
       'F. emisión', 'Subtotal', 'IVA', 'Total', 'Motivo', 'N° retención',
     ];
     const keys = [
-      'idDocumento', 'tipoComprobante', 'idProv', 'proveedor', 'numeroDocumento',
+      'idDocumento', 'tipoComprobante', 'tipoComprobanteNombre', 'idProv', 'proveedor', 'numeroDocumento',
       'fechaEmisionCsv', 'subtotal', 'montoIva', 'total', 'motivo', 'numeroRetencionCsv',
     ];
     const plano = excluidas.map((e) => ({
       ...e,
+      tipoComprobanteNombre: nombreTipoComprobante(e.tipoComprobante),
       fechaEmisionCsv: fechaCsv(this.funcionesDatos.convertirFechaDesdeBackend(e.fechaEmision)),
       numeroRetencionCsv: e.numeroRetencion || '',
     }));

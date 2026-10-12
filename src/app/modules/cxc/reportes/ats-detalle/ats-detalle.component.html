@@ -101,7 +101,7 @@
 
                 <ng-container matColumnDef="tipoComprobante">
                   <th mat-header-cell *matHeaderCellDef mat-sort-header>Tipo</th>
-                  <td mat-cell *matCellDef="let row">{{ row.tipoComprobante }}</td>
+                  <td mat-cell *matCellDef="let row">{{ tipoConNombre(row.tipoComprobante) }}</td>
                 </ng-container>
 
                 <ng-container matColumnDef="numeroDocumento">
@@ -191,7 +191,7 @@
                   <td mat-cell *matCellDef="let row" [attr.colspan]="columnasCompras.length">
                     <div class="detalle-expandido">
                       <div class="detalle-grid">
-                        <div><span class="label">Origen</span><span class="value">{{ row.origen }} (ID {{ row.idDocumento }})</span></div>
+                        <div><span class="label">Origen</span><span class="value">{{ nombreTipoComprobante(row.tipoComprobante) }} (ID {{ row.idDocumento }})</span></div>
                         <div><span class="label">Cod. sustento</span><span class="value">{{ row.codSustento }}</span></div>
                         <div><span class="label">Tipo ID prov.</span><span class="value">{{ row.tpIdProv }}</span></div>
                         <div><span class="label">Estab-PtoEmi-Secuencial</span><span class="value">{{ row.establecimiento }}-{{ row.puntoEmision }}-{{ row.secuencial }}</span></div>
@@ -301,7 +301,7 @@
                     <tr>
                       <td>{{ v.cliente }}</td>
                       <td>{{ v.idCliente }}</td>
-                      <td>{{ v.tipoComprobante }}</td>
+                      <td>{{ tipoConNombre(v.tipoComprobante) }}</td>
                       <td class="num">{{ v.numeroComprobantes }}</td>
                       <td class="num">{{ v.baseImponible | number: '1.2-2' }}</td>
                       <td class="num">{{ v.baseImpGrav | number: '1.2-2' }}</td>
@@ -342,7 +342,7 @@
                 <tbody>
                   @for (a of resp.anulados; track a.autorizacion) {
                     <tr>
-                      <td>{{ a.tipoComprobante }}</td>
+                      <td>{{ tipoConNombre(a.tipoComprobante) }}</td>
                       <td>{{ a.establecimiento }}</td>
                       <td>{{ a.puntoEmision }}</td>
                       <td>{{ a.secuencial }}</td>
@@ -386,7 +386,7 @@
                 <tbody>
                   @for (e of resp.excluidas; track e.idDocumento) {
                     <tr>
-                      <td>{{ e.tipoComprobante }}</td>
+                      <td>{{ tipoConNombre(e.tipoComprobante) }}</td>
                       <td>{{ e.proveedor }}</td>
                       <td>{{ e.idProv }}</td>
                       <td>{{ e.numeroDocumento }}</td>
