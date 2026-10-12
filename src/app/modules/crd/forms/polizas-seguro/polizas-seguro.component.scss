@@ -69,10 +69,17 @@
   font-size: 0.9rem;
 
   &.alerta { background: #fff4e5; color: #7a4a00; }
+  &.info { background: #e8f1fb; color: #1a4a7a; }
   &.error { background: #fdecea; color: #a52a1e; }
   &.ok { background: #e8f5e9; color: #1b5e20; }
 
   mat-icon { flex-shrink: 0; }
+}
+
+.ps-contador {
+  margin: 0.6rem 0 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .ps-vacio, .ps-cargando {

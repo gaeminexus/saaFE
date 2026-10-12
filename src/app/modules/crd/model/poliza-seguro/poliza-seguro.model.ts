@@ -120,6 +120,11 @@ export interface SolicitudGenerarListadoSeguro {
   fechaCorte: string; // yyyy-MM-dd
   usuario: string;
   observacion?: string | null;
+  /**
+   * Préstamos que entran al listado (S16, docs/crd/API-POLIZAS-SEGURO.md §3). El servidor recalcula
+   * candidatos y base: la base que se ve en pantalla no viaja. Vacío → 400; el FE siempre lo manda.
+   */
+  idsPrestamo: number[];
 }
 
 // ===================== §4. Registrar documento =====================

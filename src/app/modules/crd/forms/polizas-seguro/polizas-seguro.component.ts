@@ -232,7 +232,46 @@ export class PolizasSeguroComponent {
   generandoListado = signal(false);
   exportandoPreviewExcel = signal(false);
 
-  hayPrestamosSinSumaAsegurada = computed(() => (this.previewListadoFilas() ?? []).some((f) => f.sinSumaAsegurada));
+  /** Cuántos préstamos del preview quedan fuera por no tener suma asegurada (solo informativo). */
+  cantidadSinSumaAsegurada = computed(() => (this.previewListadoFilas() ?? []).filter((f) => f.sinSumaAsegurada).length);
+
+  /** Ids marcados para el listado (S16). */
+  idsSeleccionados = signal<ReadonlySet<number>>(new Set());
+
+  /** Una fila se puede marcar si tiene suma asegurada y base > 0. */
+  filaSeleccionable(f: CandidatoListadoSeguro): boolean {
+    return !f.sinSumaAsegurada && f.base > 0;
+  }
+
+  private filasSeleccionables = computed(() => (this.previewListadoFilas() ?? []).filter((f) => this.filaSeleccionable(f)));
+
+  cantidadSeleccionados = computed(() => this.idsSeleccionados().size);
+
+  baseSeleccionada = computed(() =>
+    +(this.previewListadoFilas() ?? [])
+      .filter((f) => this.idsSeleccionados().has(f.idPrestamo))
+      .reduce((s, f) => s + f.base, 0)
+      .toFixed(2)
+  );
+
+  todosSeleccionados = computed(
+    () => this.filasSeleccionables().length > 0 && this.filasSeleccionables().every((f) => this.idsSeleccionados().has(f.idPrestamo))
+  );
+
+  algunoSeleccionado = computed(() => this.cantidadSeleccionados() > 0 && !this.todosSeleccionados());
+
+  alternarFila(f: CandidatoListadoSeguro, marcado: boolean): void {
+    if (!this.filaSeleccionable(f)) return;
+    const nuevo = new Set(this.idsSeleccionados());
+    if (marcado) nuevo.add(f.idPrestamo);
+    else nuevo.delete(f.idPrestamo);
+    this.idsSeleccionados.set(nuevo);
+  }
+
+  /** Marca o desmarca todos los habilitados. */
+  alternarTodos(marcado: boolean): void {
+    this.idsSeleccionados.set(new Set(marcado ? this.filasSeleccionables().map((f) => f.idPrestamo) : []));
+  }
 
   consultarPreviewListado(): void {
     const fecha = this.servicio.formatearFecha(this.fechaCortePoliza());
@@ -247,10 +286,13 @@ export class PolizasSeguroComponent {
       next: (filas) => {
         this.consultandoPreviewListado.set(false);
         this.previewListadoFilas.set(filas);
+        // Vienen marcados todos los que tienen base > 0 y suma asegurada.
+        this.idsSeleccionados.set(new Set(filas.filter((f) => this.filaSeleccionable(f)).map((f) => f.idPrestamo)));
       },
       error: (e: Error) => {
         this.consultandoPreviewListado.set(false);
         this.previewListadoFilas.set(null);
+        this.idsSeleccionados.set(new Set());
         this.errorPreviewListado.set(e.message);
       },
     });
@@ -258,7 +300,7 @@ export class PolizasSeguroComponent {
 
   generarListado(): void {
     const fecha = this.servicio.formatearFecha(this.fechaCortePoliza());
-    if (!fecha) return;
+    if (!fecha || !this.cantidadSeleccionados()) return;
 
     this.generandoListado.set(true);
     this.servicio
@@ -267,12 +309,14 @@ export class PolizasSeguroComponent {
         fechaCorte: fecha,
         usuario: usuarioSesion(),
         observacion: this.observacionListado().trim() || null,
+        idsPrestamo: [...this.idsSeleccionados()],
       })
       .subscribe({
         next: (doc) => {
           this.generandoListado.set(false);
           this.snackBar.open(`Listado generado: ${doc.cantidadPrestamos} préstamo(s).`, 'Cerrar', { duration: 5000 });
           this.previewListadoFilas.set(null);
+          this.idsSeleccionados.set(new Set());
           this.observacionListado.set('');
           this.buscarDocumentos();
         },

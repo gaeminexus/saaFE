@@ -203,17 +203,30 @@
 
         @if (previewListadoFilas(); as filas) {
 
-          @if (hayPrestamosSinSumaAsegurada()) {
-            <div class="ps-aviso alerta">
-              <mat-icon>warning_amber</mat-icon>
-              <span>Hay préstamos sin suma asegurada — no se puede generar el listado hasta cargarla (pestaña «Suma asegurada»).</span>
+          @if (cantidadSinSumaAsegurada(); as sinSuma) {
+            <div class="ps-aviso info">
+              <mat-icon>info</mat-icon>
+              <span>
+                {{ sinSuma }} {{ sinSuma === 1 ? 'préstamo sin suma asegurada queda fuera' : 'préstamos sin suma asegurada quedan fuera' }}
+                del listado; podrán incluirse luego por nota de débito cuando se regularicen.
+              </span>
             </div>
           }
+
+          <div class="ps-contador">
+            {{ cantidadSeleccionados() }} de {{ filas.length }} seleccionados · base total {{ formatMoneda(baseSeleccionada()) }}
+          </div>
 
           <div class="ps-tabla-scroll">
             <table class="ps-tabla">
               <thead>
                 <tr>
+                  <th>
+                    <mat-checkbox [checked]="todosSeleccionados()" [indeterminate]="algunoSeleccionado()"
+                                  [disabled]="!filas.length"
+                                  (change)="alternarTodos($event.checked)"
+                                  aria-label="Marcar o desmarcar todos"></mat-checkbox>
+                  </th>
                   <th>Préstamo</th>
                   <th>Partícipe</th>
                   <th>Cédula</th>
@@ -224,6 +237,11 @@
               <tbody>
                 @for (f of filas; track f.idPrestamo) {
                   <tr [class.ps-fila-sin-suma]="f.sinSumaAsegurada">
+                    <td>
+                      <mat-checkbox [checked]="idsSeleccionados().has(f.idPrestamo)"
+                                    [disabled]="!filaSeleccionable(f)"
+                                    (change)="alternarFila(f, $event.checked)"></mat-checkbox>
+                    </td>
                     <td>{{ f.numeroPrestamo }}</td>
                     <td>{{ f.nombreParticipe }}</td>
                     <td>{{ f.cedula }}</td>
@@ -236,7 +254,7 @@
                     </td>
                   </tr>
                 } @empty {
-                  <tr><td colspan="5" class="ps-vacio">Ningún préstamo elegible a esta fecha.</td></tr>
+                  <tr><td colspan="6" class="ps-vacio">Ningún préstamo elegible a esta fecha.</td></tr>
                 }
               </tbody>
             </table>
@@ -257,7 +275,7 @@
                 <ng-container><mat-icon>file_download</mat-icon> Exportar a Excel</ng-container>
               }
             </button>
-            <button mat-raised-button color="accent" [disabled]="!filas.length || hayPrestamosSinSumaAsegurada() || generandoListado()"
+            <button mat-raised-button color="accent" [disabled]="!cantidadSeleccionados() || generandoListado()"
                     (click)="generarListado()">
               @if (generandoListado()) {
                 <mat-spinner diameter="18"></mat-spinner>
