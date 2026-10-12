@@ -286,8 +286,6 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       const registro: any = {
         cuentaContable: row.cuentaContable ?? '',
         nombreCuenta: row.nombreCuenta ?? '',
-        nivel: row.nivel ?? '',
-        saldoCuenta: this.formatearMontoCsv(row.saldoCuenta),
         valorActual: this.formatearMontoCsv(row.valorActual),
       };
 
@@ -302,8 +300,6 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
     const filaTotales: any = {
       cuentaContable: 'TOTALES',
       nombreCuenta: '',
-      nivel: '',
-      saldoCuenta: this.formatearMontoCsv(this.totalSaldoAnterior()),
       valorActual: this.formatearMontoCsv(this.totalSaldoActual()),
     };
 
@@ -314,8 +310,8 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
 
     rows.push(filaTotales);
 
-    const headers = ['N° Cuenta', 'Nombre', 'Nivel', 'Saldo Anterior'];
-    const dataKeys = ['cuentaContable', 'nombreCuenta', 'nivel', 'saldoCuenta'];
+    const headers = ['N° Cuenta', 'Nombre'];
+    const dataKeys = ['cuentaContable', 'nombreCuenta'];
 
     if (incluyeDebeHaber) {
       headers.push('Debe', 'Haber');
@@ -325,19 +321,28 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
     headers.push('Saldo Actual');
     dataKeys.push('valorActual');
 
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    const hh = String(now.getHours()).padStart(2, '0');
-    const min = String(now.getMinutes()).padStart(2, '0');
+    this.exportService.exportToCSV(rows, this.nombreArchivoCsv(), headers, dataKeys);
+  }
 
-    this.exportService.exportToCSV(
-      rows,
-      `balance_general_${yyyy}${mm}${dd}_${hh}${min}`,
-      headers,
-      dataKeys
-    );
+  /**
+   * Nombre del CSV: el `nombreReporte` del tipo elegido en «Tipo de Reporte» (el `codigoAlterno`
+   * del form es el `value` de cada opción, ver el html), en minúsculas, sin tildes y con `_`, más
+   * el período AAAA-MM de la fecha fin — p. ej. `estado_de_resultados_2026-09`. No es
+   * `nombreReporte()` (privado, más abajo): ese es el nombre del .jasper.
+   */
+  private nombreArchivoCsv(): string {
+    const raw = this.form.getRawValue();
+    const tipo = this.reportes().find((r) => r.codigoAlterno != null && r.codigoAlterno === Number(raw.codigoAlterno));
+    const base = (tipo?.nombreReporte ?? 'balance general')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    const fin = raw.fechaFin instanceof Date ? raw.fechaFin : null;
+    const periodo = fin ? `${fin.getFullYear()}-${String(fin.getMonth() + 1).padStart(2, '0')}` : '';
+    return periodo ? `${base}_${periodo}` : base;
   }
 
   /**
