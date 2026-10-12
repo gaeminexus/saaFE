@@ -2,10 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { catchError, of } from 'rxjs';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../shared/services/app-state.service';
+import { Facturador } from '../../../cxc/model/facturador';
 import { TemporalReporte } from '../../model/temporal-reporte';
 import { ReporteContable } from '../../model/reporte-contable';
+import { FacturadorService } from '../../../cxc/service/facturador.service';
 import { ReporteBalanceService } from '../../service/reporte-balance.service';
 import { ReporteContableService } from '../../service/reporte-contable.service';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
@@ -36,6 +39,7 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   private appState              = inject(AppStateService);
   private funcionesDatos        = inject(FuncionesDatosService);
   private exportService         = inject(ExportService);
+  private facturadorService     = inject(FacturadorService);
   private jasperService         = inject(JasperReportesService);
 
   // ── Catálogos ────────────────────────────────────────────────
@@ -46,6 +50,9 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   errorMsg      = signal('');
   generado      = signal(false);
   mostrarDebeHaber = signal(false);
+
+  /** Si el balance que está en pantalla se generó con centros de costo (cambia el signo, ver `resultadoEjercicio`). */
+  private generadoConCentrosCosto = false;
 
   idEjecucion   = signal<number | null>(null);
   totalRegistros = signal<number | null>(null);
@@ -245,6 +252,7 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
           this.errorMsg.set(res?.mensaje || 'Error al generar el balance');
           return;
         }
+        this.generadoConCentrosCosto = !!v.incluyeCentrosCosto;
         this.idEjecucion.set(res.idEjecucion);
         this.totalRegistros.set(res.totalRegistros);
         this.fechaProceso.set(res.fechaProceso);
@@ -297,18 +305,22 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       return registro;
     });
 
-    const filaTotales: any = {
-      cuentaContable: 'TOTALES',
-      nombreCuenta: '',
-      valorActual: this.formatearMontoCsv(this.totalSaldoActual()),
-    };
-
-    if (incluyeDebeHaber) {
-      filaTotales.valorDebe = this.formatearMontoCsv(this.totalDebe());
-      filaTotales.valorHaber = this.formatearMontoCsv(this.totalHaber());
+    const resultado = this.resultadoEjercicio(data);
+    if (resultado !== null) {
+      const filaVacia: any = { cuentaContable: '', nombreCuenta: '', valorActual: '' };
+      const filaResultado: any = {
+        cuentaContable: resultado >= 0 ? 'UTILIDAD DEL EJERCICIO' : 'PÉRDIDA DEL EJERCICIO',
+        nombreCuenta: '',
+        valorActual: this.formatearMontoCsv(Math.abs(resultado)),
+      };
+      if (incluyeDebeHaber) {
+        filaVacia.valorDebe = '';
+        filaVacia.valorHaber = '';
+        filaResultado.valorDebe = '';
+        filaResultado.valorHaber = '';
+      }
+      rows.push(filaVacia, filaResultado);
     }
-
-    rows.push(filaTotales);
 
     const headers = ['N° Cuenta', 'Nombre'];
     const dataKeys = ['cuentaContable', 'nombreCuenta'];
@@ -321,7 +333,69 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
     headers.push('Saldo Actual');
     dataKeys.push('valorActual');
 
-    this.exportService.exportToCSV(rows, this.nombreArchivoCsv(), headers, dataKeys);
+    const nombreArchivo = this.nombreArchivoCsv();
+    const descargar = (facturadores: Facturador[] | null) => {
+      this.exportService.exportToCSV(rows, nombreArchivo, headers, dataKeys, {
+        filasPrevias: this.encabezadoCsv(facturadores),
+      });
+    };
+    // El encabezado nunca impide la descarga: si el servicio falla se exporta sin la fila de RUC.
+    this.facturadorService.getAll().pipe(catchError(() => of(null))).subscribe({
+      next: (facturadores) => descargar(facturadores),
+      error: () => descargar(null),
+    });
+  }
+
+  /**
+   * Resultado del ejercicio = ingresos (grupo 5) − gastos (grupo 4), con el «Saldo Actual» de las
+   * filas de nivel 1 de `balanceData()` completo. `null` si no viene ninguna de las dos cuentas;
+   * si falta una, vale 0.
+   *
+   * Signo (`TempReportesServiceImpl`): sin centros de costo, `actualizaDebeHaberMovimiento`
+   * (l.166-169) deja `valorActual` positivo en el lado natural → ingresos positivos, resultado
+   * = v5 − v4. Con centros de costo, `actualizaDebeHaberMovimientoCentro` / `…PlanByCentro`
+   * (l.430, l.650) calculan siempre saldo + debe − haber → los ingresos llegan negativos,
+   * resultado = (−v5) − v4. Spec: PEDIDOS-CONTABILIDAD-2026-10-12 §P4.
+   */
+  private resultadoEjercicio(data: TemporalReporte[]): number | null {
+    const nivel1 = (cuenta: string) =>
+      data.find((r) => Number(r.nivel) === 1 && (r.cuentaContable ?? '').trim() === cuenta);
+    const f5 = nivel1('5');
+    const f4 = nivel1('4');
+    if (!f5 && !f4) return null;
+    const v5 = Number(f5?.valorActual ?? 0);
+    const v4 = Number(f4?.valorActual ?? 0);
+    return (this.generadoConCentrosCosto ? -v5 : v5) - v4;
+  }
+
+  /**
+   * Filas previas al título del CSV: razón social, RUC (solo si hay un único `numDoc` entre los
+   * facturadores de la empresa), «<reporte> — del … al …» (o «— al …» a fecha de corte) y una
+   * fila en blanco. La fuente es el Facturador (cxc): la `Empresa` de la sesión solo trae `nombre`.
+   */
+  private encabezadoCsv(facturadores: Facturador[] | null): string[][] {
+    const empresa = this.appState.getEmpresa();
+    const delaEmpresa = (facturadores ?? []).filter((f) => empresa != null && f.empresa?.codigo === empresa.codigo);
+    const razonSocial = delaEmpresa[0]?.razonSocial || delaEmpresa[0]?.nombre || empresa?.nombre || '';
+    const numDocs = Array.from(new Set(delaEmpresa.map((f) => (f.numDoc ?? '').trim()).filter((n) => n)));
+
+    const raw = this.form.getRawValue();
+    const tipo = this.reportes().find((r) => r.codigoAlterno != null && r.codigoAlterno === Number(raw.codigoAlterno));
+    const nombre = tipo?.nombreReporte ?? 'Balance General';
+    const fin = this.fechaCsv(raw.fechaFin);
+    const periodo = raw.acumulacion === '2' ? `al ${fin}` : `del ${this.fechaCsv(raw.fechaInicio)} al ${fin}`;
+
+    const filas: string[][] = [[razonSocial]];
+    if (numDocs.length === 1) filas.push([`RUC: ${numDocs[0]}`]);
+    filas.push([`${nombre} — ${periodo}`], ['']);
+    return filas;
+  }
+
+  private fechaCsv(fecha: unknown): string {
+    if (!(fecha instanceof Date)) return '';
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${fecha.getFullYear()}`;
   }
 
   /**

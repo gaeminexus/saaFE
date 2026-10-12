@@ -17,14 +17,23 @@ export class ExportService {
     filename: string,
     headers: string[],
     dataKeys?: string[],
-    options?: { delimiter?: string; includeBom?: boolean },
+    options?: { delimiter?: string; includeBom?: boolean; filasPrevias?: string[][] },
   ): void {
     const delimiter = options?.delimiter ?? this.detectCsvDelimiter();
     const includeBom = options?.includeBom ?? true;
 
-    const csvContent = dataKeys
+    let csvContent = dataKeys
       ? this.convertToCSVWithKeys(data, headers, dataKeys, delimiter)
       : this.convertToCSV(data, headers, delimiter);
+
+    // Opcional y aditivo: filas (p. ej. el encabezado de la entidad) antes de la fila de títulos.
+    // Sin `filasPrevias` la salida es idéntica a la de siempre.
+    if (options?.filasPrevias?.length) {
+      const previas = options.filasPrevias.map((fila) =>
+        this.joinCsvRow(fila.map((c) => this.escapeForCSV(this.formatCSVValue(c), delimiter)), delimiter),
+      );
+      csvContent = previas.join('\n') + '\n' + csvContent;
+    }
 
     const prefix = includeBom ? '\ufeff' : '';
     const blob = new Blob([prefix + csvContent], { type: 'text/csv;charset=utf-8;' });
