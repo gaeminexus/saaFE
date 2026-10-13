@@ -161,7 +161,7 @@ o EN_MORA (11), y se **habilita** con `puede = true`. Con `puede = false`, el `m
 
 ### 7.3 Impresos — `POST /rprt/generar`
 ```json
-{ "modulo": "crd", "nombreReporte": "RPRT_PRST_TBLA", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
+{ "modulo": "crd", "nombreReporte": "RPRT_TBLA_ACML", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
 { "modulo": "crd", "nombreReporte": "RPRT_PRST_PGRE", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
 ```
 - **Tabla de amortización**: desde que el préstamo tiene tabla (GENERADO en adelante), incluido
