@@ -133,3 +133,39 @@ Esta misma pantalla es la que se usa hoy para registrar los préstamos **migrado
   como hasta ahora, solo que sin poder regenerar la tabla.
 - Los botones de aprobar y rechazar **no aparecen** en un préstamo `VIGENTE` o `RECHAZADO`: no hay
   transición válida desde ahí.
+
+---
+
+## 7. Anular un préstamo otorgado, e imprimir pagaré y tabla (NUEVO 2026-10-13)
+
+Diseño: `docs/logica-negocio/crd/DISENO-ANULACION-PRESTAMO-E-IMPRESOS.md` (AN1–AN11), solo en saaBE.
+
+### 7.1 `GET /prst/{id}/puedeAnular`
+`{ "puede": true|false, "motivo": "texto o null" }`. El botón «Anular» se muestra solo en VIGENTE (2)
+o EN_MORA (11), y se **habilita** con `puede = true`. Con `puede = false`, el `motivo` va como tooltip.
+
+### 7.2 `POST /prst/anular/{id}`
+```json
+{ "usuario": "jperez", "motivo": "texto obligatorio", "idEmpresa": 1236, "idUsuario": 15 }
+```
+- Anula la orden de desembolso en tesorería, **reversa** el asiento de entrega con la fecha de hoy y
+  deja el préstamo en **ANULADO (12)**. El idAsoprep se conserva.
+- **200:** el `Prestamo` actualizado (`idEstado: 12`, `usuarioAnulacion`, `fechaAnulacion`, `motivoAnulacion`,
+  `idAsientoEntrega`, `idAsientoReverso`).
+- **400** sin `motivo`, `usuario`, `idEmpresa` o `idUsuario`. **404** si el préstamo no existe.
+- **422** si no se puede, con `{ "mensaje": "..." }`: estado no anulable, tiene pagos o cobros (el mensaje
+  dice cuáles), la orden ya fue pagada o está en archivo del banco (el texto de CXP), un cierre de
+  cartera o una provisión ya lo procesó, está en una póliza de seguro viva, falta el asiento de
+  entrega, o el período de hoy está cerrado.
+- Todo o nada: con un 422 no cambió nada.
+
+### 7.3 Impresos — `POST /rprt/generar`
+```json
+{ "modulo": "crd", "nombreReporte": "RPRT_PRST_TBLA", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
+{ "modulo": "crd", "nombreReporte": "RPRT_PRST_PGRE", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
+```
+- **Tabla de amortización**: desde que el préstamo tiene tabla (GENERADO en adelante), incluido
+  ANULADO, que sale marcado así.
+- **Pagaré**: desde que tiene tabla y mientras no esté RECHAZADO ni ANULADO. ⚠️ El texto es
+  **provisional** hasta recibir el modelo del cliente.
+- Botones «Imprimir tabla» e «Imprimir pagaré» en Créditos → Préstamos → Ingreso, con el préstamo cargado.
