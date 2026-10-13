@@ -159,13 +159,41 @@ o EN_MORA (11), y se **habilita** con `puede = true`. Con `puede = false`, el `m
   entrega, o el período de hoy está cerrado.
 - Todo o nada: con un 422 no cambió nada.
 
-### 7.3 Impresos — `POST /rprt/generar`
+### 7.3 Impresos — `POST /rprt/generar` (ACTUALIZADO 2026-10-13: modelos del cliente)
+
+Diseño: `docs/logica-negocio/crd/DISENO-IMPRESOS-OTORGAMIENTO.md` (IM1–IM17), solo en saaBE.
+
 ```json
-{ "modulo": "crd", "nombreReporte": "RPRT_TBLA_ACML", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
+{ "modulo": "crd", "nombreReporte": "RPRT_PRST_SLCT", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555, "P_USUARIO": "jperez" } }
 { "modulo": "crd", "nombreReporte": "RPRT_PRST_PGRE", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555 } }
+{ "modulo": "crd", "nombreReporte": "RPRT_TBLA_ACML", "formato": "PDF", "parametros": { "P_PRSTCDGO": 5555, "P_USUARIO": "jperez" } }
 ```
-- **Tabla de amortización**: desde que el préstamo tiene tabla (GENERADO en adelante), incluido
-  ANULADO, que sale marcado así.
-- **Pagaré**: desde que tiene tabla y mientras no esté RECHAZADO ni ANULADO. ⚠️ El texto es
-  **provisional** hasta recibir el modelo del cliente.
-- Botones «Imprimir tabla» e «Imprimir pagaré» en Créditos → Préstamos → Ingreso, con el préstamo cargado.
+- **Solicitud de crédito** (`RPRT_PRST_SLCT`, nueva): desde GENERADO (1) o PENDIENTE (6), y en
+  adelante, salvo RECHAZADO (7).
+- **Pagaré** (`RPRT_PRST_PGRE`, ahora con el **modelo V2 del cliente**): mismos estados que la solicitud.
+  Antes de aprobar sale marcado **BORRADOR** y sin número, porque el número es el idAsoprep.
+- **Tabla de amortización** (`RPRT_TBLA_ACML`): igual que antes. Sale desde GENERADO, incluido ANULADO,
+  que se imprime marcado así.
+- Botones en Créditos → Préstamos → Ingreso, con el préstamo cargado: «Imprimir solicitud»,
+  «Imprimir pagaré», «Imprimir tabla» y «Imprimir documentos» (§7.4).
+
+### 7.4 Los tres juntos — `POST /rprt/generarLote` (NUEVO 2026-10-13)
+```json
+{ "modulo": "crd", "formato": "PDF",
+  "reportes": [
+    { "nombreReporte": "RPRT_PRST_SLCT", "parametros": { "P_PRSTCDGO": 5555, "P_USUARIO": "jperez" } },
+    { "nombreReporte": "RPRT_PRST_PGRE", "parametros": { "P_PRSTCDGO": 5555 } },
+    { "nombreReporte": "RPRT_TBLA_ACML", "parametros": { "P_PRSTCDGO": 5555, "P_USUARIO": "jperez" } }
+  ] }
+```
+- **200:** `application/pdf`, un solo documento con los reportes en el orden pedido. Mismo manejo de
+  la respuesta binaria que `/rprt/generar`.
+- **400:** `formato` distinto de PDF o `reportes` vacío. **500:** falló uno de los reportes. El
+  mensaje dice cuál, y no se entrega un PDF a medias.
+- **Al aprobar con éxito** (§3), la pantalla llama a este endpoint **automáticamente**, en ese orden
+  (solicitud, pagaré, tabla), y abre el PDF para imprimir. El préstamo ya tiene idAsoprep, así que el
+  pagaré sale numerado.
+- «Imprimir documentos» hace lo mismo bajo demanda, y solo se habilita con idAsoprep, es decir, ya
+  aprobado.
+- Si el lote falla después de aprobar, **la aprobación ya quedó hecha**: se muestra el error del
+  impreso como aviso, no como fallo de la aprobación, y los botones siguen disponibles para reintentar.
