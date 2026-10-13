@@ -194,6 +194,32 @@
                 Rechazar
               </button>
             }
+            @if (mostrarAnular) {
+              <span [matTooltip]="tooltipAnular">
+                <button
+                  mat-raised-button
+                  color="warn"
+                  type="button"
+                  (click)="anularPrestamo()"
+                  [disabled]="!habilitarAnular"
+                >
+                  @if (anulando()) {
+                    <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+                  } @else {
+                    <mat-icon>block</mat-icon>
+                  }
+                  Anular préstamo
+                </button>
+              </span>
+            }
+            <button mat-raised-button type="button" (click)="imprimir('RPRT_TBLA_ACML')" [disabled]="!puedeImprimirTabla">
+              <mat-icon>print</mat-icon>
+              Imprimir tabla
+            </button>
+            <button mat-raised-button type="button" (click)="imprimir('RPRT_PRST_PGRE')" [disabled]="!puedeImprimirPagare">
+              <mat-icon>description</mat-icon>
+              Imprimir pagaré
+            </button>
             <button mat-raised-button type="button" (click)="limpiar()">
               <mat-icon>clear</mat-icon>
               Limpiar

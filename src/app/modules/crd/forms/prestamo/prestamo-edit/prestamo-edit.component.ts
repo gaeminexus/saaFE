@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,9 +14,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { finalize, forkJoin } from 'rxjs';
 
+import { MotivoAnularPrestamoDialogComponent } from './motivo-anular-prestamo-dialog.component';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -41,6 +43,8 @@ import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
+import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
+import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { idUsuarioSesion, usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 
@@ -62,6 +66,8 @@ enum CodigoEstadoPrestamo {
   GENERADO = 1,
   VIGENTE = 2,
   RECHAZADO = 7,
+  EN_MORA = 11,
+  ANULADO = 12,
 }
 
 const NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
@@ -69,6 +75,8 @@ const NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.GENERADO]: 'Generado',
   [CodigoEstadoPrestamo.VIGENTE]: 'Vigente',
   [CodigoEstadoPrestamo.RECHAZADO]: 'Rechazado',
+  [CodigoEstadoPrestamo.EN_MORA]: 'En mora',
+  [CodigoEstadoPrestamo.ANULADO]: 'Anulado',
 };
 
 const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
@@ -76,6 +84,8 @@ const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.GENERADO]: 'prestamo-generado',
   [CodigoEstadoPrestamo.VIGENTE]: 'prestamo-vigente',
   [CodigoEstadoPrestamo.RECHAZADO]: 'prestamo-rechazado',
+  [CodigoEstadoPrestamo.EN_MORA]: 'prestamo-en-mora',
+  [CodigoEstadoPrestamo.ANULADO]: 'prestamo-anulado',
 };
 
 @Component({
@@ -96,6 +106,7 @@ const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
     MatProgressSpinnerModule,
     MatTableModule,
     MatDialogModule,
+    MatTooltipModule,
   ],
   templateUrl: './prestamo-edit.component.html',
   styleUrl: './prestamo-edit.component.scss',
@@ -107,6 +118,7 @@ export class PrestamoEditComponent implements OnInit {
   private fb = inject(FormBuilder);
   private funcionesDatosS = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
+  private jasperReportes = inject(JasperReportesService);
 
   loading = signal<boolean>(false);
 
@@ -126,6 +138,10 @@ export class PrestamoEditComponent implements OnInit {
   idEstadoPrestamo = signal<number | null>(null);
   aprobando = signal<boolean>(false);
   rechazando = signal<boolean>(false);
+  anulando = signal<boolean>(false);
+  imprimiendo = signal<boolean>(false);
+  /** Respuesta de `GET prst/{id}/puedeAnular`; `null` mientras carga o si no aplica al estado. */
+  puedeAnularInfo = signal<{ puede: boolean; motivo: string | null } | null>(null);
   private codigoEntidadFija: number | null = null;
   private prestamoDesdeConsulta: Prestamo | null = null;
   private enfocarGenerarTabla = false;
@@ -166,6 +182,37 @@ export class PrestamoEditComponent implements OnInit {
 
   get puedeRechazar(): boolean {
     return this.mostrarAprobarRechazar;
+  }
+
+  /** Anular solo se ofrece en VIGENTE o EN_MORA (§7.1); habilitarlo depende de `puedeAnular`. */
+  get mostrarAnular(): boolean {
+    const estado = this.idEstadoPrestamo();
+    return estado === CodigoEstadoPrestamo.VIGENTE || estado === CodigoEstadoPrestamo.EN_MORA;
+  }
+
+  get habilitarAnular(): boolean {
+    return this.puedeAnularInfo()?.puede === true && !this.anulando();
+  }
+
+  get tooltipAnular(): string {
+    const info = this.puedeAnularInfo();
+    if (!info) return 'Verificando si se puede anular…';
+    return info.puede ? '' : (info.motivo ?? 'No se puede anular este préstamo.');
+  }
+
+  /** La tabla se imprime desde que existe, incluido ANULADO (sale marcado así). */
+  get puedeImprimirTabla(): boolean {
+    return !!this.ultimoPrestamoId() && this.detallePrestamoRaw().length > 0 && !this.imprimiendo();
+  }
+
+  /** El pagaré necesita tabla y que el préstamo no esté RECHAZADO ni ANULADO. */
+  get puedeImprimirPagare(): boolean {
+    const estado = this.idEstadoPrestamo();
+    return (
+      this.puedeImprimirTabla &&
+      estado !== CodigoEstadoPrestamo.RECHAZADO &&
+      estado !== CodigoEstadoPrestamo.ANULADO
+    );
   }
 
   get guardarDeshabilitado(): boolean {
@@ -282,7 +329,30 @@ export class PrestamoEditComponent implements OnInit {
     private participeService: ParticipeService,
     private productoService: ProductoService,
     private estadoCuotaPrestamoService: EstadoCuotaPrestamoService,
-  ) {}
+  ) {
+    // Consulta `puedeAnular` cada vez que cambia el préstamo o su estado, solo si el botón se ofrece.
+    effect(() => {
+      const id = this.ultimoPrestamoId();
+      const estado = this.idEstadoPrestamo();
+      untracked(() => {
+        this.puedeAnularInfo.set(null);
+        if (!id || (estado !== CodigoEstadoPrestamo.VIGENTE && estado !== CodigoEstadoPrestamo.EN_MORA)) return;
+        this.prestamoService.puedeAnular(id).subscribe({
+          next: (r) => {
+            if (this.ultimoPrestamoId() === id) this.puedeAnularInfo.set(r);
+          },
+          error: (err) => {
+            if (this.ultimoPrestamoId() === id) {
+              this.puedeAnularInfo.set({
+                puede: false,
+                motivo: this.extraerMensajeError(err, 'No se pudo verificar si el préstamo se puede anular.'),
+              });
+            }
+          },
+        });
+      });
+    });
+  }
 
   ngOnInit(): void {
     this.prestamoDesdeConsulta = (history.state?.prestamo as Prestamo) || null;
@@ -778,6 +848,84 @@ export class PrestamoEditComponent implements OnInit {
               });
             },
           });
+      });
+  }
+
+  anularPrestamo(): void {
+    const idPrestamo = this.ultimoPrestamoId();
+    if (!idPrestamo || !this.mostrarAnular || !this.habilitarAnular) {
+      return;
+    }
+
+    const numero = this.form.controls.idasoprep.value ?? idPrestamo;
+    this.dialog
+      .open(MotivoAnularPrestamoDialogComponent, { data: { numeroPrestamo: numero }, width: '520px' })
+      .afterClosed()
+      .subscribe((motivo?: string) => {
+        if (!motivo) {
+          return;
+        }
+
+        const idEmpresa = empresaSesionCodigo();
+        const idUsuario = idUsuarioSesion();
+        if (idEmpresa == null || idUsuario == null) {
+          this.snackBar.open('No se pudo identificar la empresa/usuario de la sesión', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar'],
+          });
+          return;
+        }
+
+        this.anulando.set(true);
+        this.prestamoService
+          .anular(idPrestamo, usuarioSesion(), motivo, idEmpresa, idUsuario)
+          .pipe(finalize(() => this.anulando.set(false)))
+          .subscribe({
+            next: (res) => {
+              this.idEstadoPrestamo.set(res?.idEstado ?? CodigoEstadoPrestamo.ANULADO);
+              this.cargarDetallePrestamo(idPrestamo);
+              this.snackBar.open('Préstamo anulado', 'Cerrar', { duration: 5000 });
+            },
+            error: (err) => {
+              this.snackBar.open(this.extraerMensajeError(err, 'Error al anular el préstamo'), 'Cerrar', {
+                duration: 8000,
+                panelClass: ['error-snackbar'],
+              });
+            },
+          });
+      });
+  }
+
+  /** Tabla de amortización (`RPRT_TBLA_ACML`) o pagaré (`RPRT_PRST_PGRE`), §7.3. */
+  imprimir(nombreReporte: 'RPRT_TBLA_ACML' | 'RPRT_PRST_PGRE'): void {
+    const idPrestamo = this.ultimoPrestamoId();
+    const esTabla = nombreReporte === 'RPRT_TBLA_ACML';
+    if (!idPrestamo || !(esTabla ? this.puedeImprimirTabla : this.puedeImprimirPagare)) {
+      return;
+    }
+
+    // La tabla es el reporte que ya usan plazo-vencido y participe-dash: mismos parámetros.
+    const parametros = esTabla
+      ? {
+          P_PRSTCDGO: idPrestamo,
+          P_IMAGEN: null,
+          P_USUARIO: localStorage.getItem('username') || localStorage.getItem('userName') || '',
+        }
+      : { P_PRSTCDGO: idPrestamo };
+
+    this.imprimiendo.set(true);
+    this.snackBar.open('Generando reporte...', '', { duration: 2000 });
+    this.jasperReportes
+      .generar('crd', nombreReporte, parametros, 'PDF')
+      .pipe(finalize(() => this.imprimiendo.set(false)))
+      .subscribe({
+        next: (blob) => guardarArchivo(blob, `${esTabla ? 'tabla-amortizacion' : 'pagare'}-${idPrestamo}.pdf`),
+        error: () =>
+          this.snackBar.open(
+            esTabla ? 'No se pudo generar la tabla de amortización.' : 'No se pudo generar el pagaré.',
+            'Cerrar',
+            { duration: 6000, panelClass: ['error-snackbar'] }
+          ),
       });
   }
 

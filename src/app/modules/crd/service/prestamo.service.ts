@@ -109,6 +109,20 @@ export class PrestamoService {
       .pipe(catchError(this.handleError));
   }
 
+  /** `GET prst/{id}/puedeAnular` (docs/crd/API-CICLO-OTORGAMIENTO.md §7.1). `motivo` explica el `false`. */
+  puedeAnular(id: number): Observable<{ puede: boolean; motivo: string | null } | null> {
+    const url = `${ServiciosCrd.RS_PRST}/${id}/puedeAnular`;
+    return this.http.get<{ puede: boolean; motivo: string | null }>(url).pipe(catchError(this.handleError));
+  }
+
+  /** `POST prst/anular/{id}` (§7.2). `motivo` obligatorio; `idUsuario` es el código numérico, no el login. */
+  anular(id: number, usuario: string, motivo: string, idEmpresa: number, idUsuario: number): Observable<Prestamo | null> {
+    const url = `${ServiciosCrd.RS_PRST}/anular/${id}`;
+    return this.http
+      .post<Prestamo>(url, { usuario, motivo, idEmpresa, idUsuario }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
   rechazar(id: number, usuario: string, observacion: string = ''): Observable<Prestamo | null> {
     const url = `${ServiciosCrd.RS_PRST}/rechazar/${id}`;
     return this.http

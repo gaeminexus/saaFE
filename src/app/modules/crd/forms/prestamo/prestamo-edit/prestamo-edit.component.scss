@@ -167,6 +167,8 @@
   &.prestamo-generado   { background: rgba(29, 78,216,.12);  color: #1d4ed8;  border: 1px solid rgba(29, 78,216,.3);   }
   &.prestamo-vigente    { background: rgba(22,163, 74,.15);  color: #15803d;  border: 1px solid rgba(22,163, 74,.3);   }
   &.prestamo-rechazado  { background: rgba(220, 38, 38,.12); color: #b91c1c;  border: 1px solid rgba(220, 38, 38,.3);  }
+  &.prestamo-en-mora    { background: rgba(234, 88, 12,.12); color: #c2410c;  border: 1px solid rgba(234, 88, 12,.3);  }
+  &.prestamo-anulado    { background: rgba(107,114,128,.15); color: #4b5563;  border: 1px solid rgba(107,114,128,.3); }
 }
 
 @media (max-width: 768px) {
