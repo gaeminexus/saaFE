@@ -32,3 +32,16 @@ function leerNombreDeJson(bruto: string | null): string | null {
     return null;
   }
 }
+
+/**
+ * Código NUMÉRICO del usuario de la sesión (no el login): lo escribe
+ * `AppStateService.inicializarApp()` bajo `idUsuario`. Es el que exigen, p. ej., la aprobación de
+ * un préstamo y varias pantallas de devoluciones.
+ *
+ * @returns el código, o `null` si no hay sesión con usuario establecido (nunca 0).
+ */
+export function idUsuarioSesion(): number | null {
+  const bruto = sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario');
+  const codigo = bruto ? parseInt(bruto, 10) : NaN;
+  return Number.isNaN(codigo) || codigo <= 0 ? null : codigo;
+}

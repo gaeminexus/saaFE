@@ -41,7 +41,8 @@ import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
+import { idUsuarioSesion, usuarioSesion } from '../../../../../shared/services/usuario-sesion';
 
 interface ParticipeOption {
   codigoParticipe: number;
@@ -736,9 +737,19 @@ export class PrestamoEditComponent implements OnInit {
           return;
         }
 
+        const idEmpresa = empresaSesionCodigo();
+        const idUsuario = idUsuarioSesion();
+        if (idEmpresa == null || idUsuario == null) {
+          this.snackBar.open('No se pudo identificar la empresa/usuario de la sesión', 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar'],
+          });
+          return;
+        }
+
         this.aprobando.set(true);
         this.prestamoService
-          .aprobar(idPrestamo, usuarioSesion())
+          .aprobar(idPrestamo, usuarioSesion(), '', idEmpresa, idUsuario)
           .pipe(finalize(() => this.aprobando.set(false)))
           .subscribe({
             next: (res) => {

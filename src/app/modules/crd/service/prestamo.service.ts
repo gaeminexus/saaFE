@@ -95,10 +95,17 @@ export class PrestamoService {
     return this.http.post<Prestamo>(url, null, this.httpOptions).pipe(catchError(this.handleError));
   }
 
-  aprobar(id: number, usuario: string, observacion: string = ''): Observable<Prestamo | null> {
+  /** Contrato: docs/crd/API-CICLO-OTORGAMIENTO.md §3. `idEmpresa` e `idUsuario` (código numérico, no el login) son obligatorios. */
+  aprobar(
+    id: number,
+    usuario: string,
+    observacion: string,
+    idEmpresa: number,
+    idUsuario: number
+  ): Observable<Prestamo | null> {
     const url = `${ServiciosCrd.RS_PRST}/aprobar/${id}`;
     return this.http
-      .post<Prestamo>(url, { usuario, observacion }, this.httpOptions)
+      .post<Prestamo>(url, { usuario, observacion, idEmpresa, idUsuario }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
