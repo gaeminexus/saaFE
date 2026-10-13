@@ -61,8 +61,10 @@
           <mat-form-field appearance="fill" class="field">
             <mat-label>ID Asoprep</mat-label>
             <mat-icon matPrefix>badge</mat-icon>
-            <input matInput type="number" formControlName="idasoprep" min="0" step="1" placeholder="0" />
-            <mat-error>El ID Asoprep es obligatorio</mat-error>
+            <input matInput type="number" formControlName="idasoprep" readonly />
+            @if (form.controls.idasoprep.value == null) {
+              <mat-hint>Se asigna al aprobar</mat-hint>
+            }
           </mat-form-field>
 
           <mat-form-field appearance="fill" class="field">

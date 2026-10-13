@@ -264,7 +264,9 @@ export class PrestamoEditComponent implements OnInit {
   form = this.fb.group({
     participe: [null as number | null, Validators.required],
     producto: [null as number | null, Validators.required],
-    idasoprep: [null as number | null, [Validators.required, Validators.min(0)]],
+    // Solo lectura: lo asigna el backend al aprobar (docs/crd/API-CICLO-OTORGAMIENTO.md §3, U6). Deshabilitado
+    // no entra en `form.value`, pero acá se lee siempre con `getRawValue()`.
+    idasoprep: [{ value: null as number | null, disabled: true }],
     fechaInicio: [null as Date | null, Validators.required],
     tipoAmortizacion: [1 as number | null, Validators.required],
     tasa: [0 as number | null, [Validators.required, Validators.min(0)]],
@@ -475,7 +477,8 @@ export class PrestamoEditComponent implements OnInit {
     const payload: any = {
       // For insert, backend must receive null id (sending 0 can be treated as detached entity on merge).
       codigo: null,
-      idAsoprep: v.idasoprep ?? 0,
+      // Nunca 0: el backend lo ignora y lo asigna al aprobar.
+      idAsoprep: null,
       entidad: { codigo: codigoEntidad },
       producto: { codigo: v.producto },
       tipoAmortizacion: v.tipoAmortizacion || 1,
@@ -588,7 +591,8 @@ export class PrestamoEditComponent implements OnInit {
 
         const payload: any = {
           ...prestamoActual,
-          idAsoprep: v.idasoprep ?? 0,
+          // Nunca 0: el backend lo ignora y lo asigna al aprobar.
+          idAsoprep: null,
           producto: { codigo: v.producto },
           filial: { codigo: producto.filial?.codigo || prestamoActual.filial?.codigo || 1 },
           tipoAmortizacion: v.tipoAmortizacion || 1,
@@ -756,7 +760,16 @@ export class PrestamoEditComponent implements OnInit {
               if (res?.idEstado != null) {
                 this.idEstadoPrestamo.set(res.idEstado);
               }
-              this.snackBar.open('Préstamo aprobado correctamente', 'Cerrar', { duration: 3000 });
+              // El número lo asigna el backend al aprobar; si no viene, no se inventa uno.
+              const idAsoprep = res?.idAsoprep ?? null;
+              if (idAsoprep != null) {
+                this.form.controls.idasoprep.setValue(idAsoprep);
+              }
+              this.snackBar.open(
+                idAsoprep != null ? `Préstamo aprobado con N° Asoprep ${idAsoprep}` : 'Préstamo aprobado correctamente',
+                'Cerrar',
+                { duration: 5000 }
+              );
             },
             error: (err) => {
               this.snackBar.open(this.extraerMensajeError(err, 'Error al aprobar el préstamo'), 'Cerrar', {
