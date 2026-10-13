@@ -48,6 +48,9 @@ interface FilaFormaPago {
 
 const round2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
 
+/** `rubroTipoGrupoH` del grupo POR CLASIFICAR (mismo valor que usa clasificar-productos-dialog; no hay constante compartida en el FE). */
+const RUBRO_POR_CLASIFICAR = 3;
+
 @Component({
   selector: 'app-nota-venta-compra-manual',
   standalone: true,
@@ -169,8 +172,28 @@ export class NotaVentaCompraManualComponent implements OnInit {
     const q = (fila._busqueda || '').toLowerCase().trim();
     if (!q) { fila._filtrados = this.productos.slice(0, 50); return; }
     fila._filtrados = this.productos
-      .filter((p) => p.nombre?.toLowerCase().includes(q) || p.codigo?.toLowerCase().includes(q))
+      .filter((p) => {
+        const cuenta = p.grupoProducto?.planCuenta;
+        return p.nombre?.toLowerCase().includes(q)
+          || p.codigo?.toLowerCase().includes(q)
+          || cuenta?.cuentaContable?.toLowerCase().includes(q)
+          || cuenta?.nombre?.toLowerCase().includes(q);
+      })
       .slice(0, 50);
+  }
+
+  /**
+   * Cuenta contable con la que el backend registraría el producto: `grupoProducto.planCuenta`
+   * (`FacturaCompraServiceImpl.registrarManual`). Sin grupo, con grupo POR CLASIFICAR o sin cuenta,
+   * la nota se rechaza: se muestra el motivo en vez de ocultar el producto.
+   */
+  cuentaDeProducto(p: ProductoPago): { ok: boolean; etiqueta: string } {
+    const grupo = p.grupoProducto;
+    const cuenta = grupo?.planCuenta;
+    if (!grupo || Number(grupo.rubroTipoGrupoH) === RUBRO_POR_CLASIFICAR || !cuenta) {
+      return { ok: false, etiqueta: 'Sin cuenta contable: no se podrá registrar' };
+    }
+    return { ok: true, etiqueta: `Cta. ${cuenta.cuentaContable} — ${cuenta.nombre}` };
   }
 
   seleccionarProducto(fila: FilaDetalle, p: ProductoPago): void {

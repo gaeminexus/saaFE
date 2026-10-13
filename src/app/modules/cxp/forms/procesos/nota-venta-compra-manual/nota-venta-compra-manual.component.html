@@ -141,14 +141,20 @@
                     [matAutocomplete]="autoProd"
                     placeholder="Nombre o código..."
                   />
-                  <mat-autocomplete #autoProd="matAutocomplete">
+                  <mat-autocomplete #autoProd="matAutocomplete" class="nvcm-panel-productos" panelWidth="560px">
                     @for (p of fila._filtrados; track p.id) {
                       <mat-option [value]="p.nombre + ' (' + p.codigo + ')'" (onSelectionChange)="$event.source.selected && seleccionarProducto(fila, p)">
-                        {{ p.nombre }} <span class="prod-cod">({{ p.codigo }})</span>
+                        @let cta = cuentaDeProducto(p);
+                        <span class="prod-opt-nombre">{{ p.nombre }} <span class="prod-cod">({{ p.codigo }})</span></span>
+                        <span class="prod-opt-cuenta" [class.prod-opt-sin-cuenta]="!cta.ok">{{ cta.etiqueta }}</span>
                       </mat-option>
                     }
                   </mat-autocomplete>
                 </mat-form-field>
+                @if (productoDeFila(fila); as prod) {
+                  @let ctaSel = cuentaDeProducto(prod);
+                  <div class="prod-cuenta-sel" [class.prod-opt-sin-cuenta]="!ctaSel.ok">{{ ctaSel.etiqueta }}</div>
+                }
               </td>
               <td class="col-desc">
                 <mat-form-field appearance="outline" class="celda-campo">

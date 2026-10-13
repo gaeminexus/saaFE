@@ -102,7 +102,7 @@
 
   .col-num { min-width: 90px; }
   .col-acc { width: 40px; }
-  .col-producto { min-width: 220px; }
+  .col-producto { min-width: 280px; }
   .col-desc { min-width: 200px; }
 }
 
@@ -115,6 +115,54 @@
 
 .celda-num input {
   text-align: right;
+}
+
+.prod-cuenta-sel {
+  margin-top: 2px;
+  padding-left: 6px;
+  font-size: 0.78rem;
+  color: #666;
+  line-height: 1.3;
+}
+
+.prod-opt-sin-cuenta {
+  color: #e65100 !important;
+}
+
+// El panel del autocomplete es un overlay fuera del componente: mismo idiom que el resto del repo
+// (`::ng-deep` en el scss del componente, ver asientos-contables-dinamico), acotado con una clase propia.
+::ng-deep .nvcm-panel-productos {
+  max-width: 95vw;
+  max-height: 440px !important; // ~8 opciones de dos líneas
+
+  .mat-mdc-option {
+    min-height: 0;
+    padding: 8px 16px;
+
+    .mdc-list-item__primary-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      white-space: normal;
+      width: 100%;
+    }
+  }
+
+  .prod-opt-nombre {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
+
+  .prod-opt-cuenta {
+    font-size: 0.8rem;
+    color: #757575;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+
+    &.prod-opt-sin-cuenta { color: #e65100; }
+  }
 }
 
 .prod-cod {
