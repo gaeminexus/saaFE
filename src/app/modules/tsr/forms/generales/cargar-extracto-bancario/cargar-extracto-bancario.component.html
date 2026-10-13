@@ -101,6 +101,12 @@
         Esta cuenta y período ya tienen un extracto cargado. Use "Recargar Extracto" para
         eliminarlo junto con todos sus movimientos y reemplazarlo por este archivo.
       </div>
+      } @else if (extractoDeOtroPeriodo) {
+      <div class="alerta alerta-info">
+        <mat-icon>info</mat-icon>
+        Hay un extracto de otro período que cubre estas fechas. Este archivo se cargará como el
+        extracto de este período.
+      </div>
       }
 
       <div class="stat-grid">

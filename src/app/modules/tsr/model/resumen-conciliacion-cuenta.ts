@@ -19,4 +19,10 @@ export interface ResumenConciliacionCuenta {
   usuarioVerifica: string | null;
   fechaVerificacion: string | null;
   extractoCargado: boolean;
+  /**
+   * Código del extracto activo de esa cuenta registrado en ESE período, o null. A diferencia de
+   * `extractoCargado` (cobertura de fechas, sin mirar el período), es el mismo criterio que usa
+   * `/exbc/recargar`. Opcional: el backend viejo no lo manda.
+   */
+  idExtractoPeriodo?: number | null;
 }

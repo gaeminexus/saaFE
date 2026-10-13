@@ -50,8 +50,14 @@ export class CargarExtractoBancarioComponent implements OnInit {
   isConfirmando: boolean = false;
 
   // ── Recarga de un extracto existente (2026-09-09) ──
-  /** La cuenta/período elegidos ya tienen un extracto cargado — viene de `extractoCargado` del resumen de conciliación contable, no de un endpoint nuevo. */
+  /**
+   * La cuenta/período elegidos ya tienen un extracto cargado — criterio POR PERÍODO, el mismo de
+   * `/exbc/recargar`: viene de `idExtractoPeriodo` del resumen de conciliación contable, no de un
+   * endpoint nuevo. NO de `extractoCargado` (cobertura de fechas, sin mirar el período).
+   */
   existeExtractoPrevio: boolean = false;
+  /** Hay un extracto activo de OTRO período que cubre estas fechas: la carga normal sigue disponible (aviso informativo). */
+  extractoDeOtroPeriodo: boolean = false;
   isVerificandoExtractoPrevio: boolean = false;
   isRecargando: boolean = false;
 
@@ -175,8 +181,9 @@ export class CargarExtractoBancarioComponent implements OnInit {
   }
 
   /**
-   * ¿La cuenta/período elegidos ya tienen un extracto cargado? Reusa `resumenPorPeriodo` — el
-   * mismo endpoint del que `conciliacion-contable` saca `extractoCargado` por cuenta — en vez de
+   * ¿La cuenta/período elegidos ya tienen un extracto cargado, POR PERÍODO (igual que
+   * `/exbc/recargar`)? Reusa `resumenPorPeriodo` — el mismo endpoint del que
+   * `conciliacion-contable` saca `extractoCargado` por cuenta — en vez de
    * pedirle un endpoint nuevo al backend. Sin esto, la pantalla sólo se entera de que ya existe
    * un extracto cuando el HASH del archivo coincide (`resumen.archivoYaCargado`, que valida
    * `/importar/validar` DESPUÉS de elegir el archivo); esta verificación corre apenas se elige
@@ -184,6 +191,7 @@ export class CargarExtractoBancarioComponent implements OnInit {
    */
   private verificarExtractoExistente(): void {
     this.existeExtractoPrevio = false;
+    this.extractoDeOtroPeriodo = false;
     const empresa = this.appStateService.getEmpresa();
     if (!empresa?.codigo || !this.cuentaSeleccionada || !this.periodoSeleccionado) {
       return;
@@ -196,13 +204,15 @@ export class CargarExtractoBancarioComponent implements OnInit {
         const fila = (Array.isArray(resumen) ? resumen : []).find(
           (f) => f.cuentaBancaria?.codigo === this.cuentaSeleccionada
         );
-        this.existeExtractoPrevio = !!fila?.extractoCargado;
+        this.existeExtractoPrevio = fila?.idExtractoPeriodo != null;
+        this.extractoDeOtroPeriodo = !!fila?.extractoCargado && fila?.idExtractoPeriodo == null;
       },
       error: () => {
         this.isVerificandoExtractoPrevio = false;
         // No se sabe con certeza si ya hay un extracto: se deja el botón normal de "Confirmar
         // carga" (comportamiento de hoy) en vez de asumir que hay que recargar.
         this.existeExtractoPrevio = false;
+        this.extractoDeOtroPeriodo = false;
       },
     });
   }
