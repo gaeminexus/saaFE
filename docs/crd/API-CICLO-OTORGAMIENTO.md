@@ -51,11 +51,24 @@ POST /SaaBE/rest/prst/aprobar/{id}
 POST /SaaBE/rest/prst/rechazar/{id}
 ```
 
-Cuerpo, los dos iguales:
+Cuerpo de `rechazar`:
 
 ```json
 { "usuario": "jperez", "observacion": "texto libre, opcional" }
 ```
+
+Cuerpo de `aprobar` (**corregido 2026-10-13**: desde el desembolso, `7bca1713`, el backend exige
+además `idEmpresa` e `idUsuario`; sin ellos responde *«falta idEmpresa»* / *«falta idUsuario»*):
+
+```json
+{ "usuario": "jperez", "observacion": "texto libre, opcional", "idEmpresa": 1236, "idUsuario": 15 }
+```
+
+- `idEmpresa`: la empresa de la sesión (la misma que mandan las demás pantallas que generan órdenes
+  de pago). `idUsuario`: el **código numérico** del usuario de la sesión, no el login.
+- Aprobar pasa el préstamo a VIGENTE, escribe el asiento de entrega y deja la **orden de desembolso**
+  en tesorería con el producto de pago **976** «Desembolso de prestamo a socio» (grupo 79, cuenta
+  `2.3.90.90.10 SOCIOS POR PAGAR`, creado con `crd/sql/322` el 2026-10-13).
 
 Devuelven el `Prestamo` actualizado, con `idEstado` ya movido y los campos de auditoría llenos
 (`usuarioAprobacion`/`fechaAprobacion`, o `usuarioRechazo`/`fechaRechazo`).
