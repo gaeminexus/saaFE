@@ -44,7 +44,7 @@ import { ParticipeService } from '../../../service/participe.service';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
-import { guardarArchivo } from '../../../../../shared/services/descarga-reporte';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../../shared/services/descarga-reporte';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
 import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
 import { idUsuarioSesion, usuarioSesion } from '../../../../../shared/services/usuario-sesion';
@@ -72,6 +72,14 @@ enum CodigoEstadoPrestamo {
   EN_MORA = 11,
   ANULADO = 12,
 }
+
+type NombreImpreso = 'RPRT_PRST_SLCT' | 'RPRT_PRST_PGRE' | 'RPRT_TBLA_ACML';
+
+const ETIQUETA_IMPRESO: Record<NombreImpreso, { archivo: string }> = {
+  RPRT_PRST_SLCT: { archivo: 'solicitud-credito' },
+  RPRT_PRST_PGRE: { archivo: 'pagare' },
+  RPRT_TBLA_ACML: { archivo: 'tabla-amortizacion' },
+};
 
 const NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.PENDIENTE_DE_APROBACION]: 'Pendiente de aprobación',
@@ -170,6 +178,8 @@ export class PrestamoEditComponent implements OnInit {
     () => this.tipoOperacion() === 'NOVACION' && !!this.originalSeleccionado() && this.desembolsoNeto() <= 0
   );
   imprimiendo = signal<boolean>(false);
+  /** Espejo del control `idasoprep` (deshabilitado, no reactivo): habilita «Imprimir documentos». */
+  idAsoprepActual = signal<number | null>(null);
   /** Respuesta de `GET prst/{id}/puedeAnular`; `null` mientras carga o si no aplica al estado. */
   puedeAnularInfo = signal<{ puede: boolean; motivo: string | null } | null>(null);
   private codigoEntidadFija: number | null = null;
@@ -235,14 +245,26 @@ export class PrestamoEditComponent implements OnInit {
     return !!this.ultimoPrestamoId() && this.detallePrestamoRaw().length > 0 && !this.imprimiendo();
   }
 
+  /** Solicitud y pagaré (§7.3): desde GENERADO o PENDIENTE en adelante, salvo RECHAZADO. */
+  private get puedeImprimirDocumento(): boolean {
+    const estado = this.idEstadoPrestamo();
+    return !!this.ultimoPrestamoId() && estado != null && estado !== CodigoEstadoPrestamo.RECHAZADO && !this.imprimiendo();
+  }
+
+  get puedeImprimirSolicitud(): boolean {
+    return this.puedeImprimirDocumento;
+  }
+
   /** El pagaré necesita tabla y que el préstamo no esté RECHAZADO ni ANULADO. */
   get puedeImprimirPagare(): boolean {
-    const estado = this.idEstadoPrestamo();
     return (
-      this.puedeImprimirTabla &&
-      estado !== CodigoEstadoPrestamo.RECHAZADO &&
-      estado !== CodigoEstadoPrestamo.ANULADO
+      this.puedeImprimirTabla && this.puedeImprimirDocumento && this.idEstadoPrestamo() !== CodigoEstadoPrestamo.ANULADO
     );
+  }
+
+  /** El lote (§7.4) solo sale con el préstamo aprobado, es decir, con idAsoprep. */
+  get puedeImprimirLote(): boolean {
+    return this.puedeImprimirDocumento && this.idAsoprepActual() != null;
   }
 
   get guardarDeshabilitado(): boolean {
@@ -460,6 +482,7 @@ export class PrestamoEditComponent implements OnInit {
       prestamo.entidad?.razonSocial || prestamo.entidad?.nombreComercial || 'Sin nombre'
     }`;
 
+    this.idAsoprepActual.set((prestamo as any).idAsoprep ?? null);
     this.form.patchValue({
       participe: this.modoEdicionPrestamo() ? null : (participeSeleccionado?.codigoParticipe ?? null),
       producto: prestamo.producto?.codigo ?? null,
@@ -850,6 +873,7 @@ export class PrestamoEditComponent implements OnInit {
     this.sustituyeA.set(null);
     this.errorSustituibles.set(null);
     this.form.controls.monto.enable();
+    this.idAsoprepActual.set(null);
     this.form.reset({
       idasoprep: null,
       fechaInicio: null,
@@ -975,6 +999,7 @@ export class PrestamoEditComponent implements OnInit {
               const idAsoprep = res?.idAsoprep ?? null;
               if (idAsoprep != null) {
                 this.form.controls.idasoprep.setValue(idAsoprep);
+                this.idAsoprepActual.set(idAsoprep);
               }
               this.snackBar.open(
                 (idAsoprep != null ? `Préstamo aprobado con N° Asoprep ${idAsoprep}` : 'Préstamo aprobado correctamente') +
@@ -982,6 +1007,8 @@ export class PrestamoEditComponent implements OnInit {
                 'Cerrar',
                 { duration: 5000 }
               );
+              // §7.4: los tres documentos juntos. El préstamo ya quedó aprobado: si falla es un aviso.
+              this.imprimirLote(true);
             },
             error: (err) => {
               this.snackBar.open(this.extraerMensajeError(err, 'Error al aprobar el préstamo'), 'Cerrar', {
@@ -1038,37 +1065,86 @@ export class PrestamoEditComponent implements OnInit {
       });
   }
 
-  /** Tabla de amortización (`RPRT_TBLA_ACML`) o pagaré (`RPRT_PRST_PGRE`), §7.3. */
-  imprimir(nombreReporte: 'RPRT_TBLA_ACML' | 'RPRT_PRST_PGRE'): void {
+  /** Parámetros de cada impreso (§7.3): solicitud y tabla llevan el usuario de la sesión; el pagaré no. */
+  private parametrosImpreso(nombreReporte: NombreImpreso, idPrestamo: number): Record<string, any> {
+    return nombreReporte === 'RPRT_PRST_PGRE'
+      ? { P_PRSTCDGO: idPrestamo }
+      : { P_PRSTCDGO: idPrestamo, P_USUARIO: usuarioSesion() };
+  }
+
+  /** Solicitud (`RPRT_PRST_SLCT`), pagaré (`RPRT_PRST_PGRE`) o tabla (`RPRT_TBLA_ACML`), §7.3. */
+  imprimir(nombreReporte: NombreImpreso): void {
     const idPrestamo = this.ultimoPrestamoId();
-    const esTabla = nombreReporte === 'RPRT_TBLA_ACML';
-    if (!idPrestamo || !(esTabla ? this.puedeImprimirTabla : this.puedeImprimirPagare)) {
+    const habilitado =
+      nombreReporte === 'RPRT_TBLA_ACML'
+        ? this.puedeImprimirTabla
+        : nombreReporte === 'RPRT_PRST_SLCT'
+          ? this.puedeImprimirSolicitud
+          : this.puedeImprimirPagare;
+    if (!idPrestamo || !habilitado) {
       return;
     }
 
-    // La tabla es el reporte que ya usan plazo-vencido y participe-dash: mismos parámetros.
-    const parametros = esTabla
-      ? {
-          P_PRSTCDGO: idPrestamo,
-          P_IMAGEN: null,
-          P_USUARIO: localStorage.getItem('username') || localStorage.getItem('userName') || '',
-        }
-      : { P_PRSTCDGO: idPrestamo };
-
+    const etiqueta = ETIQUETA_IMPRESO[nombreReporte];
     this.imprimiendo.set(true);
     this.snackBar.open('Generando reporte...', '', { duration: 2000 });
     this.jasperReportes
-      .generar('crd', nombreReporte, parametros, 'PDF')
+      .generar('crd', nombreReporte, this.parametrosImpreso(nombreReporte, idPrestamo), 'PDF')
       .pipe(finalize(() => this.imprimiendo.set(false)))
       .subscribe({
-        next: (blob) => guardarArchivo(blob, `${esTabla ? 'tabla-amortizacion' : 'pagare'}-${idPrestamo}.pdf`),
-        error: () =>
-          this.snackBar.open(
-            esTabla ? 'No se pudo generar la tabla de amortización.' : 'No se pudo generar el pagaré.',
-            'Cerrar',
-            { duration: 6000, panelClass: ['error-snackbar'] }
-          ),
+        next: (blob) => guardarArchivo(blob, `${etiqueta.archivo}-${idPrestamo}.pdf`),
+        error: async (err) =>
+          this.snackBar.open(await mensajeReporteFallido(err), 'Cerrar', {
+            duration: 6000,
+            panelClass: ['error-snackbar'],
+          }),
       });
+  }
+
+  /**
+   * Solicitud + pagaré + tabla en un solo PDF (§7.4), en ese orden. Lo llama el botón «Imprimir
+   * documentos» y, de forma automática, la aprobación exitosa: en ese caso un fallo es solo un
+   * aviso, porque el préstamo ya quedó aprobado.
+   */
+  imprimirLote(trasAprobar = false): void {
+    const idPrestamo = this.ultimoPrestamoId();
+    if (!idPrestamo || (!trasAprobar && !this.puedeImprimirLote)) {
+      return;
+    }
+
+    const reportes = (['RPRT_PRST_SLCT', 'RPRT_PRST_PGRE', 'RPRT_TBLA_ACML'] as NombreImpreso[]).map((nombre) => ({
+      nombreReporte: nombre,
+      parametros: this.parametrosImpreso(nombre, idPrestamo),
+    }));
+
+    this.imprimiendo.set(true);
+    this.snackBar.open('Generando documentos...', '', { duration: 2000 });
+    this.jasperReportes
+      .generarLote('crd', reportes, 'PDF')
+      .pipe(finalize(() => this.imprimiendo.set(false)))
+      .subscribe({
+        next: (blob) => this.abrirPdf(blob, `documentos-prestamo-${idPrestamo}.pdf`),
+        error: async (err) => {
+          const motivo = await mensajeReporteFallido(err);
+          this.snackBar.open(
+            trasAprobar
+              ? `El préstamo quedó aprobado, pero no se pudieron generar los documentos: ${motivo} Use «Imprimir documentos» para reintentar.`
+              : motivo,
+            'Cerrar',
+            { duration: 10000, panelClass: trasAprobar ? ['warning-snackbar'] : ['error-snackbar'] }
+          );
+        },
+      });
+  }
+
+  /** Abre el PDF en otra pestaña para imprimir; si el navegador bloquea la ventana, lo descarga. */
+  private abrirPdf(blob: Blob, nombreArchivo: string): void {
+    const url = URL.createObjectURL(blob);
+    const ventana = window.open(url, '_blank');
+    if (!ventana) {
+      guardarArchivo(blob, nombreArchivo);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   rechazarPrestamo(): void {

@@ -170,7 +170,7 @@ Diseño: `docs/logica-negocio/crd/DISENO-IMPRESOS-OTORGAMIENTO.md` (IM1–IM17),
 ```
 - **Solicitud de crédito** (`RPRT_PRST_SLCT`, nueva): desde GENERADO (1) o PENDIENTE (6), y en
   adelante, salvo RECHAZADO (7).
-- **Pagaré** (`RPRT_PRST_PGRE`, ahora con el **modelo V2 del cliente**): mismos estados que la solicitud.
+- **Pagaré** (`RPRT_PRST_PGRE`, ahora con el **modelo V2 del cliente**): necesita la tabla (lleva la cuota) y se bloquea en RECHAZADO (7) y en **ANULADO (12)**: un pagaré de un préstamo anulado no se imprime.
   Antes de aprobar sale marcado **BORRADOR** y sin número, porque el número es el idAsoprep.
 - **Tabla de amortización** (`RPRT_TBLA_ACML`): igual que antes. Sale desde GENERADO, incluido ANULADO,
   que se imprime marcado así.

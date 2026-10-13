@@ -41,4 +41,20 @@ export class JasperReportesService {
       responseType: 'blob'
     });
   }
+
+  /**
+   * Varios reportes en un solo PDF (`POST /rprt/generarLote`), en el orden pedido.
+   * Si falla uno, el servidor responde 500 y no entrega un PDF a medias.
+   */
+  generarLote(
+    modulo: string,
+    reportes: { nombreReporte: string; parametros?: Record<string, any> }[],
+    formato: string = 'PDF'
+  ): Observable<Blob> {
+    return this.http.post(
+      `${this.api}/generarLote`,
+      { modulo, formato, reportes: reportes.map(r => ({ nombreReporte: r.nombreReporte, parametros: r.parametros || {} })) },
+      { responseType: 'blob' }
+    );
+  }
 }
