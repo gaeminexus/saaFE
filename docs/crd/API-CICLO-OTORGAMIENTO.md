@@ -70,6 +70,19 @@ además `idEmpresa` e `idUsuario`; sin ellos responde *«falta idEmpresa»* / *�
   en tesorería con el producto de pago **976** «Desembolso de prestamo a socio» (grupo 79, cuenta
   `2.3.90.90.10 SOCIOS POR PAGAR`, creado con `crd/sql/322` el 2026-10-13).
 
+### idAsoprep — lo asigna «Aprobar» (U6, 2026-10-13)
+
+Diseño: `PLAN-CICLO-OTORGAMIENTO.md` §7.
+- `aprobar` asigna `idAsoprep = MAX(PRSTIDAS) + 1` y lo devuelve en el `Prestamo` de la respuesta.
+  La pantalla lo muestra en el mensaje de éxito («Préstamo aprobado con N° Asoprep 60124») y en el campo.
+- Si dos aprobaciones chocan, la segunda responde con el error *«Otro préstamo se aprobó al mismo
+  tiempo y tomó el número N; vuelva a aprobar»*. No se graba nada; reintentar.
+- **`POST`/`PUT /prst` (saveSingle) ignoran el `idAsoprep` que mande el cliente.** Nuevo o no
+  aprobado → `null`. Aprobado → el valor que ya tiene la base. El FE manda `idAsoprep: null`,
+  **nunca 0**.
+- En «Ingreso» el campo es de **solo lectura** y no obligatorio. Sin número muestra «Se asigna al
+  aprobar».
+
 Devuelven el `Prestamo` actualizado, con `idEstado` ya movido y los campos de auditoría llenos
 (`usuarioAprobacion`/`fechaAprobacion`, o `usuarioRechazo`/`fechaRechazo`).
 
