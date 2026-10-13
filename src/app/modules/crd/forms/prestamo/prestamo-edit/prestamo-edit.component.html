@@ -46,6 +46,82 @@
             <mat-error>El participe es obligatorio</mat-error>
           </mat-form-field>
 
+          @if (!ultimoPrestamoId() && !modoEdicionPrestamo()) {
+            <mat-form-field appearance="fill" class="field field-top">
+              <mat-label>Tipo de operación</mat-label>
+              <mat-icon matPrefix>swap_horiz</mat-icon>
+              <mat-select [value]="tipoOperacion()" (selectionChange)="onTipoOperacionChange($event.value)">
+                <mat-option value="NUEVO">Nuevo</mat-option>
+                <mat-option value="REESTRUCTURACION">Reestructuración</mat-option>
+                <mat-option value="NOVACION">Novación</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            @if (esReestructuracionONovacion()) {
+              <mat-form-field appearance="fill" class="field field-top">
+                <mat-label>Préstamo original</mat-label>
+                <mat-icon matPrefix>history</mat-icon>
+                <mat-select
+                  [value]="originalSeleccionado()?.idPrestamo ?? null"
+                  (selectionChange)="seleccionarOriginal($event.value)"
+                  [disabled]="cargandoSustituibles() || !sustituibles().length"
+                >
+                  @for (s of sustituibles(); track s.idPrestamo) {
+                    <mat-option [value]="s.idPrestamo" [disabled]="!s.puede">
+                      {{ etiquetaSustituible(s) }}
+                      @if (!s.puede) {
+                        — {{ s.motivo || 'No disponible' }}
+                      }
+                    </mat-option>
+                  }
+                </mat-select>
+                @if (cargandoSustituibles()) {
+                  <mat-hint>Cargando préstamos del partícipe…</mat-hint>
+                } @else if (!form.controls.participe.value) {
+                  <mat-hint>Elija primero el partícipe</mat-hint>
+                } @else if (!sustituibles().length && !errorSustituibles()) {
+                  <mat-hint>El partícipe no tiene préstamos para esta operación</mat-hint>
+                }
+                @if (errorSustituibles(); as error) {
+                  <mat-error>{{ error }}</mat-error>
+                }
+              </mat-form-field>
+
+              @if (originalSeleccionado(); as original) {
+                <div class="field field-full">
+                  <p>
+                    <strong>Valor de sustitución:</strong> {{ original.valorSustitucion | number: '1.2-2' }}
+                    (capital {{ original.desglose.capital | number: '1.2-2' }} · interés
+                    {{ original.desglose.interes | number: '1.2-2' }} · mora
+                    {{ original.desglose.mora | number: '1.2-2' }} · seguros
+                    {{ original.desglose.seguros | number: '1.2-2' }})
+                  </p>
+                  @if (tipoOperacion() === 'REESTRUCTURACION') {
+                    <p>El monto del nuevo préstamo es igual al valor de sustitución y no se edita.</p>
+                  } @else {
+                    <p>
+                      <strong>Desembolso neto = monto − VS:</strong> {{ desembolsoNeto() | number: '1.2-2' }}
+                    </p>
+                    @if (novacionMontoInvalido()) {
+                      <p class="error-text">El monto debe ser mayor que el valor de sustitución.</p>
+                    }
+                  }
+                </div>
+              }
+            }
+          }
+
+          @if (sustituyeA(); as sustituye) {
+            <div class="field field-full">
+              <p>
+                <strong>Sustituye al préstamo N° {{ sustituye.numero }}</strong> ({{ sustituye.tipo }})
+                @if (sustituye.vs != null) {
+                  · valor de sustitución {{ sustituye.vs | number: '1.2-2' }}
+                }
+              </p>
+            </div>
+          }
+
           <mat-form-field appearance="fill" class="field field-top">
             <mat-label>Producto</mat-label>
             <mat-icon matPrefix>category</mat-icon>

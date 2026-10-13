@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Prestamo } from '../model/prestamo';
+import { PrestamoSustituible, TipoOperacionPrestamo } from '../model/prestamo-sustituible';
 import { SaldoPrestamoResumen } from '../model/saldo-prestamo-resumen';
 import { ServiciosCrd } from './ws-crd';
 
@@ -107,6 +108,12 @@ export class PrestamoService {
     return this.http
       .post<Prestamo>(url, { usuario, observacion, idEmpresa, idUsuario }, this.httpOptions)
       .pipe(catchError(this.handleError));
+  }
+
+  /** `GET prst/sustituibles/{idEntidad}?tipo=` (docs/crd/API-REESTRUCTURACION-NOVACION.md §2): préstamos del partícipe que se pueden reestructurar o novar, con su VS. */
+  sustituibles(idEntidad: number, tipo: Exclude<TipoOperacionPrestamo, 'NUEVO'>): Observable<PrestamoSustituible[] | null> {
+    const url = `${ServiciosCrd.RS_PRST}/sustituibles/${idEntidad}?tipo=${tipo}`;
+    return this.http.get<PrestamoSustituible[]>(url).pipe(catchError(this.handleError));
   }
 
   /** `GET prst/{id}/puedeAnular` (docs/crd/API-CICLO-OTORGAMIENTO.md §7.1). `motivo` explica el `false`. */

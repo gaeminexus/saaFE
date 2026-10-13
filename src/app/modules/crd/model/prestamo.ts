@@ -69,4 +69,6 @@ export interface Prestamo {
     valorAsegurado: number;     // PRSTVLAS - Valor asegurado del préstamo
     tasaSeguroIncendio: number; // PRSTTSIN - Tasa de seguro de incendio
     primaSeguroIncendio: number; // PRSTPRIN - Prima de seguro de incendio
+    idPrestamoOriginal?: number | null; // PRSTPROR - Préstamo que este sustituye (reestructuración/novación). Lo escribe el FE solo en el alta.
+    valorSustitucion?: number | null;   // PRSTVLSS - Lo escribe el servidor al aprobar; lo que mande el cliente se ignora.
 }

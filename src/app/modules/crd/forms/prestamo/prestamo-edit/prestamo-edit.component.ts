@@ -36,6 +36,7 @@ import {
 } from '../../../model/estado-cuota-prestamo';
 import { Participe } from '../../../model/participe';
 import { Prestamo } from '../../../model/prestamo';
+import { PrestamoSustituible, TipoOperacionPrestamo } from '../../../model/prestamo-sustituible';
 import { Producto } from '../../../model/producto';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-prestamo.service';
@@ -66,6 +67,8 @@ enum CodigoEstadoPrestamo {
   GENERADO = 1,
   VIGENTE = 2,
   RECHAZADO = 7,
+  CANCELADO_POR_NOVACION = 5,
+  CANCELADO_POR_REESTRUCTURACION = 13,
   EN_MORA = 11,
   ANULADO = 12,
 }
@@ -76,6 +79,8 @@ const NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.VIGENTE]: 'Vigente',
   [CodigoEstadoPrestamo.RECHAZADO]: 'Rechazado',
   [CodigoEstadoPrestamo.EN_MORA]: 'En mora',
+  [CodigoEstadoPrestamo.CANCELADO_POR_NOVACION]: 'Cancelado por novación',
+  [CodigoEstadoPrestamo.CANCELADO_POR_REESTRUCTURACION]: 'Cancelado por reestructuración',
   [CodigoEstadoPrestamo.ANULADO]: 'Anulado',
 };
 
@@ -85,6 +90,8 @@ const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.VIGENTE]: 'prestamo-vigente',
   [CodigoEstadoPrestamo.RECHAZADO]: 'prestamo-rechazado',
   [CodigoEstadoPrestamo.EN_MORA]: 'prestamo-en-mora',
+  [CodigoEstadoPrestamo.CANCELADO_POR_NOVACION]: 'prestamo-anulado',
+  [CodigoEstadoPrestamo.CANCELADO_POR_REESTRUCTURACION]: 'prestamo-anulado',
   [CodigoEstadoPrestamo.ANULADO]: 'prestamo-anulado',
 };
 
@@ -139,6 +146,29 @@ export class PrestamoEditComponent implements OnInit {
   aprobando = signal<boolean>(false);
   rechazando = signal<boolean>(false);
   anulando = signal<boolean>(false);
+
+  // ---- Reestructuración / novación (docs/crd/API-REESTRUCTURACION-NOVACION.md) ----
+  /** Solo en el alta. NUEVO es el comportamiento de siempre. */
+  tipoOperacion = signal<TipoOperacionPrestamo>('NUEVO');
+  sustituibles = signal<PrestamoSustituible[]>([]);
+  cargandoSustituibles = signal<boolean>(false);
+  errorSustituibles = signal<string | null>(null);
+  originalSeleccionado = signal<PrestamoSustituible | null>(null);
+  /** Espejo del control `monto` para los cálculos en vivo del desembolso neto. */
+  montoActual = signal<number>(0);
+  /** Préstamo existente que sustituye a otro: solo lectura (§3). */
+  sustituyeA = signal<{ numero: string | number; tipo: string; vs: number | null } | null>(null);
+
+  readonly esReestructuracionONovacion = computed(() => this.tipoOperacion() !== 'NUEVO');
+  /** Desembolso neto de una novación = monto − VS. */
+  readonly desembolsoNeto = computed(() => {
+    const vs = this.originalSeleccionado()?.valorSustitucion ?? 0;
+    return +(this.montoActual() - vs).toFixed(2);
+  });
+  /** La novación exige monto > VS (RN8). */
+  readonly novacionMontoInvalido = computed(
+    () => this.tipoOperacion() === 'NOVACION' && !!this.originalSeleccionado() && this.desembolsoNeto() <= 0
+  );
   imprimiendo = signal<boolean>(false);
   /** Respuesta de `GET prst/{id}/puedeAnular`; `null` mientras carga o si no aplica al estado. */
   puedeAnularInfo = signal<{ puede: boolean; motivo: string | null } | null>(null);
@@ -330,6 +360,8 @@ export class PrestamoEditComponent implements OnInit {
     private productoService: ProductoService,
     private estadoCuotaPrestamoService: EstadoCuotaPrestamoService,
   ) {
+    this.form.controls.monto.valueChanges.subscribe((m) => this.montoActual.set(Number(m) || 0));
+
     // Consulta `puedeAnular` cada vez que cambia el préstamo o su estado, solo si el botón se ofrece.
     effect(() => {
       const id = this.ultimoPrestamoId();
@@ -445,6 +477,7 @@ export class PrestamoEditComponent implements OnInit {
 
     this.ultimoPrestamoId.set(prestamo.codigo || null);
     this.idEstadoPrestamo.set(prestamo.idEstado ?? null);
+    this.registrarSustitucion(prestamo);
     if (prestamo.codigo) {
       this.cargarDetallePrestamo(prestamo.codigo);
     }
@@ -496,6 +529,73 @@ export class PrestamoEditComponent implements OnInit {
 
     this.form.patchValue({ participe: codigoParticipe }, { emitEvent: false });
     this.participeQuery.set(participante.label);
+    this.cargarSustituibles();
+  }
+
+  /** Cambiar el tipo reinicia el original elegido; con R o N recarga la lista del partícipe. */
+  onTipoOperacionChange(tipo: TipoOperacionPrestamo): void {
+    this.tipoOperacion.set(tipo);
+    this.cargarSustituibles();
+  }
+
+  private codigoEntidadSeleccionada(): number | null {
+    const codigo = this.form.controls.participe.value;
+    return this.participesOptions().find((p) => p.codigoParticipe === codigo)?.codigoEntidad ?? null;
+  }
+
+  private cargarSustituibles(): void {
+    this.seleccionarOriginal(null);
+    this.sustituibles.set([]);
+    this.errorSustituibles.set(null);
+
+    const tipo = this.tipoOperacion();
+    const idEntidad = this.codigoEntidadSeleccionada();
+    if (tipo === 'NUEVO' || !idEntidad) {
+      return;
+    }
+
+    this.cargandoSustituibles.set(true);
+    this.prestamoService
+      .sustituibles(idEntidad, tipo)
+      .pipe(finalize(() => this.cargandoSustituibles.set(false)))
+      .subscribe({
+        next: (lista) => this.sustituibles.set(lista ?? []),
+        error: (err) =>
+          this.errorSustituibles.set(this.extraerMensajeError(err, 'No se pudieron cargar los préstamos del partícipe')),
+      });
+  }
+
+  /** Etiqueta de una fila de la lista de originales. */
+  etiquetaSustituible(s: PrestamoSustituible): string {
+    return `N° ${s.idAsoprep ?? s.idPrestamo} · ${s.producto} · VS $${s.valorSustitucion.toFixed(2)}`;
+  }
+
+  /**
+   * Al elegir el original: R fija monto = VS (solo lectura) y N lo deja editable (> VS); en ambos se
+   * propone el producto sugerido si existe en el catálogo cargado. `null` deja el monto editable.
+   */
+  seleccionarOriginal(idPrestamo: number | null): void {
+    const monto = this.form.controls.monto;
+    const original = idPrestamo == null ? null : (this.sustituibles().find((s) => s.idPrestamo === idPrestamo) ?? null);
+    const elegido = original && original.puede ? original : null;
+    this.originalSeleccionado.set(elegido);
+
+    if (monto.disabled) {
+      monto.enable();
+      monto.setValue(null);
+    }
+    if (!elegido) {
+      return;
+    }
+
+    const sugerido = elegido.productoSugerido?.idProducto;
+    if (sugerido != null && this.productosOptions().some((p) => p.codigo === sugerido)) {
+      this.form.controls.producto.setValue(sugerido);
+    }
+    if (this.tipoOperacion() === 'REESTRUCTURACION') {
+      monto.setValue(elegido.valorSustitucion);
+      monto.disable();
+    }
   }
 
   guardar(): void {
@@ -525,6 +625,17 @@ export class PrestamoEditComponent implements OnInit {
     if (!producto) {
       this.snackBar.open('Seleccione un producto válido', 'Cerrar', { duration: 3000 });
       return;
+    }
+
+    if (!this.ultimoPrestamoId() && this.esReestructuracionONovacion()) {
+      if (!this.originalSeleccionado()) {
+        this.snackBar.open('Elija el préstamo original que se va a sustituir', 'Cerrar', { duration: 4000 });
+        return;
+      }
+      if (this.novacionMontoInvalido()) {
+        this.snackBar.open('En una novación el monto debe ser mayor que el valor de sustitución', 'Cerrar', { duration: 5000 });
+        return;
+      }
     }
 
     const idPrestamoExistente = this.ultimoPrestamoId();
@@ -597,6 +708,10 @@ export class PrestamoEditComponent implements OnInit {
       ajusteAportes: 0,
       mesesACobrar: 0,
       firmadoTitular: 0,
+      // Solo en el alta con R o N. VS, reestructurado/esNovacion/montoNovacion los escribe el servidor.
+      ...(this.esReestructuracionONovacion() && this.originalSeleccionado()
+        ? { idPrestamoOriginal: this.originalSeleccionado()!.idPrestamo }
+        : {}),
       // idEstado: NO se manda. El backend lo fuerza a PENDIENTE_DE_APROBACION en el alta
       // (PrestamoServiceImpl.saveSingle, cuando codigo == null) sin mirar lo que llegue acá.
       // La pantalla nunca decide el estado — ver docs/crd/API-CICLO-OTORGAMIENTO.md.
@@ -617,6 +732,7 @@ export class PrestamoEditComponent implements OnInit {
         this.idEstadoPrestamo.set(res?.idEstado ?? null);
         this.detallePrestamo.set([]);
         this.detallePrestamoRaw.set([]);
+        this.registrarSustitucion(res);
 
         this.snackBar.open('Préstamo guardado correctamente', 'Cerrar', { duration: 3000 });
       },
@@ -711,7 +827,29 @@ export class PrestamoEditComponent implements OnInit {
     });
   }
 
+  /** Deja a la vista de solo lectura a qué préstamo sustituye este (si lo hace). */
+  private registrarSustitucion(prestamo: Prestamo | null | undefined): void {
+    const idOriginal = prestamo?.idPrestamoOriginal;
+    if (!prestamo || !idOriginal) {
+      this.sustituyeA.set(null);
+      return;
+    }
+    const elegido = this.originalSeleccionado();
+    const esNovacion = prestamo.esNovacion === 1 || (prestamo.reestructurado !== 1 && this.tipoOperacion() === 'NOVACION');
+    this.sustituyeA.set({
+      numero: elegido && elegido.idPrestamo === idOriginal ? (elegido.idAsoprep ?? idOriginal) : idOriginal,
+      tipo: esNovacion ? 'novación' : 'reestructuración',
+      vs: prestamo.valorSustitucion ?? elegido?.valorSustitucion ?? null,
+    });
+  }
+
   limpiar(): void {
+    this.tipoOperacion.set('NUEVO');
+    this.sustituibles.set([]);
+    this.originalSeleccionado.set(null);
+    this.sustituyeA.set(null);
+    this.errorSustituibles.set(null);
+    this.form.controls.monto.enable();
     this.form.reset({
       idasoprep: null,
       fechaInicio: null,
@@ -830,13 +968,17 @@ export class PrestamoEditComponent implements OnInit {
               if (res?.idEstado != null) {
                 this.idEstadoPrestamo.set(res.idEstado);
               }
+              // Tras aprobar el servidor ya escribió el VS: se refresca la vista de solo lectura.
+              if (res?.idPrestamoOriginal) this.registrarSustitucion(res);
+              const original = this.sustituyeA();
               // El número lo asigna el backend al aprobar; si no viene, no se inventa uno.
               const idAsoprep = res?.idAsoprep ?? null;
               if (idAsoprep != null) {
                 this.form.controls.idasoprep.setValue(idAsoprep);
               }
               this.snackBar.open(
-                idAsoprep != null ? `Préstamo aprobado con N° Asoprep ${idAsoprep}` : 'Préstamo aprobado correctamente',
+                (idAsoprep != null ? `Préstamo aprobado con N° Asoprep ${idAsoprep}` : 'Préstamo aprobado correctamente') +
+                  (original ? `. Préstamo original N° ${original.numero} cancelado` : ''),
                 'Cerrar',
                 { duration: 5000 }
               );

@@ -51,6 +51,8 @@ export enum EstadoPrestamoOperativo {
   CANCELADO = 3,
   CANCELADO_ANTICIPADO = 4,
   CANCELADO_POR_NOVACION = 5,
+  ANULADO = 12,
+  CANCELADO_POR_REESTRUCTURACION = 13,
   DE_PLAZO_VENCIDO = 8,
   EN_MORA = 11,
 }
@@ -61,6 +63,8 @@ export const NOMBRE_ESTADO_PRESTAMO: Record<number, string> = {
   [EstadoPrestamoOperativo.CANCELADO]: 'Cancelado',
   [EstadoPrestamoOperativo.CANCELADO_ANTICIPADO]: 'Cancelado anticipado',
   [EstadoPrestamoOperativo.CANCELADO_POR_NOVACION]: 'Cancelado por novación',
+  [EstadoPrestamoOperativo.ANULADO]: 'Anulado',
+  [EstadoPrestamoOperativo.CANCELADO_POR_REESTRUCTURACION]: 'Cancelado por reestructuración',
   [EstadoPrestamoOperativo.DE_PLAZO_VENCIDO]: 'De plazo vencido',
   [EstadoPrestamoOperativo.EN_MORA]: 'En mora',
 };
@@ -70,6 +74,8 @@ export const ESTADOS_PRESTAMO_TERMINALES: readonly number[] = [
   EstadoPrestamoOperativo.CANCELADO,
   EstadoPrestamoOperativo.CANCELADO_ANTICIPADO,
   EstadoPrestamoOperativo.CANCELADO_POR_NOVACION,
+  EstadoPrestamoOperativo.ANULADO,
+  EstadoPrestamoOperativo.CANCELADO_POR_REESTRUCTURACION,
 ];
 
 /** ¿El préstamo admite operaciones de pago? */
