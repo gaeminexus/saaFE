@@ -197,3 +197,18 @@ Diseño: `docs/logica-negocio/crd/DISENO-IMPRESOS-OTORGAMIENTO.md` (IM1–IM17),
   aprobado.
 - Si el lote falla después de aprobar, **la aprobación ya quedó hecha**: se muestra el error del
   impreso como aviso, no como fallo de la aprobación, y los botones siguen disponibles para reintentar.
+
+## 8. Suma asegurada del bien en garantía (NUEVO 2026-10-13)
+
+Diseño: `docs/logica-negocio/crd/DISENO-GARANTIA-BIEN-Y-PROVISION-CARTERA.md` (GA1–GA6), solo en saaBE.
+
+- **Campo:** `valorAsegurado` (número > 0, dos decimales) en el `Prestamo` que se envía con `POST/PUT /prst`.
+- **Cuándo se muestra:** solo si el producto es de familia **PRENDARIO o HIPOTECARIO**, es decir, si el
+  tipo de préstamo del producto se llama así. En ese caso es **obligatorio**. En un quirografario no se
+  muestra y no se envía.
+- **Etiqueta:** «Suma asegurada del bien». Va con un texto de ayuda: «Valor por el que se registra la
+  garantía en cuentas de orden».
+- **Al editar** un préstamo cargado, se muestra el valor que ya tiene.
+- **Aprobar** (§3) un prendario o hipotecario sin `valorAsegurado > 0` devuelve **422**, con
+  `{ "mensaje": "Falta la suma asegurada del bien: sin ella no se registra la garantía en cuentas de orden" }`.
+  No se numera ni se contabiliza nada.
