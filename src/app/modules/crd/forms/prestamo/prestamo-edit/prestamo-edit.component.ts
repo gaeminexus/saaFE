@@ -371,7 +371,12 @@ export class PrestamoEditComponent implements OnInit {
     tasa: [0 as number | null, [Validators.required, Validators.min(0)]],
     monto: [null as number | null, [Validators.required, Validators.min(0.01)]],
     plazo: [null as number | null, Validators.required],
+    // Solo PRENDARIO/HIPOTECARIO (§8): el validador se pone y se quita en `sincronizarGarantia()`.
+    valorAsegurado: [null as number | null],
   });
+
+  /** El producto elegido es de familia PRENDARIO o HIPOTECARIO (por el nombre de su tipo de préstamo). */
+  requiereValorAsegurado = signal<boolean>(false);
 
   constructor(
     private router: Router,
@@ -383,6 +388,7 @@ export class PrestamoEditComponent implements OnInit {
     private estadoCuotaPrestamoService: EstadoCuotaPrestamoService,
   ) {
     this.form.controls.monto.valueChanges.subscribe((m) => this.montoActual.set(Number(m) || 0));
+    this.form.controls.producto.valueChanges.subscribe(() => this.sincronizarGarantia());
 
     // Consulta `puedeAnular` cada vez que cambia el préstamo o su estado, solo si el botón se ofrece.
     effect(() => {
@@ -441,6 +447,7 @@ export class PrestamoEditComponent implements OnInit {
     this.productoService.getAll().subscribe({
       next: (productos) => {
         this.productosOptions.set(productos || []);
+        this.sincronizarGarantia();
         if (this.modoEdicionPrestamo()) {
           this.loading.set(false);
         }
@@ -458,6 +465,26 @@ export class PrestamoEditComponent implements OnInit {
       next: (estados) => this.estadosCuota.set(estados || []),
       error: () => {},
     });
+  }
+
+  /**
+   * §8: la suma asegurada solo aplica a productos cuyo tipo de préstamo es PRENDARIO o HIPOTECARIO.
+   * Ahí es obligatoria y mayor que 0; en cualquier otro producto se oculta y se limpia.
+   */
+  private sincronizarGarantia(): void {
+    const control = this.form.controls.valorAsegurado;
+    const producto = this.productosOptions().find((p) => p.codigo === this.form.controls.producto.value);
+    const nombreTipo = (producto?.tipoPrestamo?.nombre ?? '').toUpperCase();
+    const requiere = nombreTipo.includes('PRENDARIO') || nombreTipo.includes('HIPOTECARIO');
+
+    this.requiereValorAsegurado.set(requiere);
+    if (requiere) {
+      control.setValidators([Validators.required, Validators.min(0.01)]);
+    } else {
+      control.clearValidators();
+      control.setValue(null, { emitEvent: false });
+    }
+    control.updateValueAndValidity({ emitEvent: false });
   }
 
   private intentarCargarPrestamoDesdeConsulta(): void {
@@ -492,7 +519,9 @@ export class PrestamoEditComponent implements OnInit {
       tasa: prestamo.tasa ?? prestamo.tasaNominal ?? 0,
       monto: prestamo.montoSolicitado ?? 0,
       plazo: prestamo.plazo ?? null,
+      valorAsegurado: prestamo.valorAsegurado ?? null,
     });
+    this.sincronizarGarantia();
 
     this.participeQuery.set(
       this.modoEdicionPrestamo() ? etiquetaEntidadFija : (participeSeleccionado?.label || ''),
@@ -731,6 +760,8 @@ export class PrestamoEditComponent implements OnInit {
       ajusteAportes: 0,
       mesesACobrar: 0,
       firmadoTitular: 0,
+      // §8: solo prendario/hipotecario; en un quirografario no se envía.
+      ...(this.requiereValorAsegurado() ? { valorAsegurado: v.valorAsegurado } : {}),
       // Solo en el alta con R o N. VS, reestructurado/esNovacion/montoNovacion los escribe el servidor.
       ...(this.esReestructuracionONovacion() && this.originalSeleccionado()
         ? { idPrestamoOriginal: this.originalSeleccionado()!.idPrestamo }
@@ -817,6 +848,8 @@ export class PrestamoEditComponent implements OnInit {
           plazo: v.plazo || 0,
           fechaModificacion: now,
           usuarioModificacion: username,
+          // §8: se limpia si el producto ya no es prendario/hipotecario.
+          valorAsegurado: this.requiereValorAsegurado() ? v.valorAsegurado : null,
         };
 
         if ('estado' in payload) {
@@ -874,6 +907,7 @@ export class PrestamoEditComponent implements OnInit {
     this.errorSustituibles.set(null);
     this.form.controls.monto.enable();
     this.idAsoprepActual.set(null);
+    this.requiereValorAsegurado.set(false);
     this.form.reset({
       idasoprep: null,
       fechaInicio: null,

@@ -86,7 +86,7 @@ Diseño: `PLAN-CICLO-OTORGAMIENTO.md` §7.
 Devuelven el `Prestamo` actualizado, con `idEstado` ya movido y los campos de auditoría llenos
 (`usuarioAprobacion`/`fechaAprobacion`, o `usuarioRechazo`/`fechaRechazo`).
 
-**Errores:** `HTTP 500`. ⚠️ **El cuerpo NO es texto plano, aunque el REST lo escriba así:** hay un `@Provider` global (`com.saa.ws.rest.MensajeErrorJsonFilter`) que envuelve toda respuesta ≥400 cuya entidad sea un `String` y cuyo tipo sea JSON, y la entrega como `{"mensaje": "..."}`. Leé `error.mensaje` primero, con el texto crudo como respaldo — que es lo que ya hace `extraerMensajeError`. Si la transición no
+**Errores (aprobar, desde 2026-10-13):** los rechazos de negocio (estado, sin tabla, sin suma asegurada, orden de pago rechazada…) salen con **`HTTP 422`** y `{ "mensaje": "..." }`; un error técnico sigue siendo `HTTP 500`. Rechazar sigue con `HTTP 500`. ⚠️ **El cuerpo NO es texto plano, aunque el REST lo escriba así:** hay un `@Provider` global (`com.saa.ws.rest.MensajeErrorJsonFilter`) que envuelve toda respuesta ≥400 cuya entidad sea un `String` y cuyo tipo sea JSON, y la entrega como `{"mensaje": "..."}`. Leé `error.mensaje` primero, con el texto crudo como respaldo — que es lo que ya hace `extraerMensajeError`. Si la transición no
 aplica —por ejemplo aprobar un préstamo que todavía no tiene tabla— el mensaje **nombra el estado
 actual**. Mostralo tal cual con `extraerMensajeError`; no lo reemplaces por un texto genérico.
 
