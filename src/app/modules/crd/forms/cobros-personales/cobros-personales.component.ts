@@ -57,13 +57,26 @@ import { ComponentesPagados, SaldoPrestamoService } from '../../service/saldo-pr
 import { TipoAporteService } from '../../service/tipo-aporte.service';
 import { VigenciaContratoService } from '../../service/vigencia-contrato.service';
 
-type CuentaKey = 'prestamo' | 'cesantia' | 'jubilacion' | 'pension';
 /**
- * Los tres tipos de aporte del socio que esta pantalla puede cobrar (docs/crd/
- * API-COBRO-APORTE-PENSION-COMPLEMENTARIA.md §5). NO incluye `'prestamo'`: eso es `CuentaKey`,
- * que además cubre la fila de préstamo de la tabla de cuentas.
+ * Los tipos de aporte del socio que esta pantalla puede cobrar (docs/crd/
+ * API-COBRO-APORTE-PENSION-COMPLEMENTARIA.md §5 y API-COBROS-APORTES-RETIRO-VOLUNTARIO.md §3). NO
+ * incluye `'prestamo'`: eso es `CuentaKey`, que además cubre la fila de préstamo de la tabla.
  */
-type ClaveAporteSocio = 'cesantia' | 'jubilacion' | 'pension';
+type ClaveAporteSocio = 'cesantia' | 'jubilacion' | 'cesantiaRV' | 'jubilacionRV' | 'pension';
+type CuentaKey = 'prestamo' | ClaveAporteSocio;
+/** Cuentas de las que se puede debitar el pago de un préstamo (la pensión no). */
+type ClaveOrigenAporte = Exclude<ClaveAporteSocio, 'pension'>;
+
+const CLAVES_APORTE_SOCIO: ClaveAporteSocio[] = ['cesantia', 'jubilacion', 'cesantiaRV', 'jubilacionRV', 'pension'];
+const CLAVES_CUENTA: CuentaKey[] = ['prestamo', ...CLAVES_APORTE_SOCIO];
+const CLAVES_ORIGEN_APORTE: ClaveOrigenAporte[] = ['cesantia', 'jubilacion', 'cesantiaRV', 'jubilacionRV'];
+/** Se resuelven por id, nunca por nombre: «jubila» agarraba el 22 y «cesant» el 12 RENDIMIENTO CESANTIA. */
+const ID_TIPO_POR_CLAVE: Record<ClaveOrigenAporte, number> = {
+  cesantia: ID_TIPO_APORTE.CESANTIA,
+  jubilacion: ID_TIPO_APORTE.JUBILACION,
+  cesantiaRV: ID_TIPO_APORTE.CESANTIA_RETIRO_VOLUNTARIO,
+  jubilacionRV: ID_TIPO_APORTE.JUBILACION_RETIRO_VOLUNTARIO,
+};
 type MetodoPago = 'debito' | 'transferencia' | 'deposito';
 
 /** §4 de `docs/crd/API-VALOR-MENSUAL-APORTE-COBROS-PERSONALES.md`: "no se sabe" no puede verse igual que "0". */
@@ -306,8 +319,13 @@ export class CobrosPersonalesComponent implements OnDestroy {
   saldosAporte = signal<SaldoAporte[]>([]);
   cargandoSaldos = signal(false);
 
-  saldoCesantia = computed(() => this.saldoPorNombre('cesant'));
-  saldoJubilacion = computed(() => this.saldoPorNombre('jubila'));
+  saldoCesantia = computed(() => this.saldoPorTipo(ID_TIPO_APORTE.CESANTIA));
+  saldoJubilacion = computed(() => this.saldoPorTipo(ID_TIPO_APORTE.JUBILACION));
+  saldoCesantiaRV = computed(() => this.saldoPorTipo(ID_TIPO_APORTE.CESANTIA_RETIRO_VOLUNTARIO));
+  saldoJubilacionRV = computed(() => this.saldoPorTipo(ID_TIPO_APORTE.JUBILACION_RETIRO_VOLUNTARIO));
+  /** Las filas de retiro voluntario solo existen si el socio tiene ese tipo, aunque su saldo sea 0. */
+  tieneCesantiaRV = computed(() => this.tieneTipoAporte(ID_TIPO_APORTE.CESANTIA_RETIRO_VOLUNTARIO));
+  tieneJubilacionRV = computed(() => this.tieneTipoAporte(ID_TIPO_APORTE.JUBILACION_RETIRO_VOLUNTARIO));
   /**
    * `'pension'` no matchea ningún otro nombre del catálogo de 25 tipos de aporte (verificado
    * contra `docs/crd/MAPEO-CUENTAS-TIPO-APORTE.md` §3: el único con "pensión" en el nombre es el
@@ -445,8 +463,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
   montoTotalTexto = signal('$0.00');
   montoTotal = computed(() => this.parseMoneda(this.montoTotalTexto()));
 
-  cuentaChecked: Record<CuentaKey, boolean> = { prestamo: false, cesantia: false, jubilacion: false, pension: false };
-  cuentaMontoTexto: Record<CuentaKey, string> = { prestamo: '', cesantia: '', jubilacion: '', pension: '' };
+  cuentaChecked: Record<CuentaKey, boolean> = this.cuentasChecked();
+  cuentaMontoTexto: Record<CuentaKey, string> = this.cuentasMontoTexto();
   cuentaMontoVersion = signal(0); // se incrementa para forzar recomputo de los `computed` de abajo
 
   detallePrestamoAbierto = signal(false);
@@ -462,12 +480,12 @@ export class CobrosPersonalesComponent implements OnDestroy {
   });
 
   /**
-   * Total asignado a cesantía/jubilación: un aporte del socio a sus propias cuentas, que se registra
+   * Total asignado a las cuentas de aportes del socio (cesantía, jubilación, retiro voluntario, pensión): un aporte del socio a sus propias cuentas, que se registra
    * con `POST /aprt/registrarAporte` (una llamada por tipo). No es un pago de préstamo.
    */
   montoAportesSocio = computed(() => {
     this.cuentaMontoVersion();
-    return +(['cesantia', 'jubilacion', 'pension'] as CuentaKey[])
+    return +CLAVES_APORTE_SOCIO
       .filter((k) => this.cuentaChecked[k])
       .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0)
       .toFixed(2);
@@ -512,7 +530,22 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
   // ---- método de pago ----
   metodoPago = signal<MetodoPago>('transferencia');
-  cuentaOrigenAporte = signal<'cesantia' | 'jubilacion'>('cesantia');
+  cuentaOrigenAporte = signal<ClaveOrigenAporte>('cesantia');
+
+  /** Cuentas de las que se puede debitar: solo las que el socio tiene con saldo mayor a cero. */
+  opcionesOrigenAporte = computed(() =>
+    CLAVES_ORIGEN_APORTE.map((clave) => ({
+      clave,
+      nombre: this.nombreAporte(ID_TIPO_POR_CLAVE[clave], clave),
+      saldo: this.saldoDeClave(clave),
+    })).filter((o) => o.saldo > 0.004)
+  );
+  /** La elegida si sigue ofrecida; si no (cambió el socio o su saldo), la primera disponible. */
+  cuentaOrigenEfectiva = computed<ClaveOrigenAporte | null>(() => {
+    const opciones = this.opcionesOrigenAporte();
+    const elegida = this.cuentaOrigenAporte();
+    return opciones.some((o) => o.clave === elegida) ? elegida : (opciones[0]?.clave ?? null);
+  });
   cuentaAsopropDestino = signal<CuentaBancaria | null>(null);
   /**
    * Referencia y fecha son signals —y no campos planos como la observación— porque `puedeConfirmar`
@@ -536,8 +569,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
   errorCodigo = signal<string | null>(null);
 
   saldoAporteOrigen = computed(() => {
-    const c = this.cuentaOrigenAporte();
-    return c === 'cesantia' ? this.saldoCesantia() : this.saldoJubilacion();
+    const c = this.cuentaOrigenEfectiva();
+    return c ? this.saldoDeClave(c) : 0;
   });
   /** En débito solo sale de aportes la parte destinada al préstamo. */
   saldoDebitoInsuficiente = computed(
@@ -634,7 +667,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
       if (!this.archivoComprobante()) {
         motivos.push('Adjunte el comprobante de respaldo (PDF o imagen).');
       }
-    } else if (!this.cuentaOrigenAporte()) {
+    } else if (!this.cuentaOrigenEfectiva()) {
       motivos.push('Seleccione la cuenta de aportes de la que se debita el pago.');
     }
 
@@ -1143,6 +1176,33 @@ export class CobrosPersonalesComponent implements OnDestroy {
     return estado != null ? (CLASES_ESTADO_CUOTA[estado] ?? 'pendiente') : 'pendiente';
   }
 
+  /** Saldo del tipo de aporte con ese id (0 si el socio no lo tiene). */
+  private saldoPorTipo(idTipoAporte: number): number {
+    const encontrado = this.saldosAporte().find((a) => a.idTipoAporte === idTipoAporte);
+    return Math.max(encontrado?.saldo ?? 0, 0);
+  }
+
+  private tieneTipoAporte(idTipoAporte: number): boolean {
+    return this.saldosAporte().some((a) => a.idTipoAporte === idTipoAporte);
+  }
+
+  private saldoDeClave(clave: ClaveOrigenAporte): number {
+    return this.saldoPorTipo(ID_TIPO_POR_CLAVE[clave]);
+  }
+
+  private cuentasChecked(): Record<CuentaKey, boolean> {
+    return { prestamo: false, cesantia: false, jubilacion: false, cesantiaRV: false, jubilacionRV: false, pension: false };
+  }
+
+  private cuentasMontoTexto(): Record<CuentaKey, string> {
+    return { prestamo: '', cesantia: '', jubilacion: '', cesantiaRV: '', jubilacionRV: '', pension: '' };
+  }
+
+  /** Hay alguna cuenta de aportes del socio marcada (para la plantilla). */
+  hayAporteMarcado(): boolean {
+    return CLAVES_APORTE_SOCIO.some((k) => this.cuentaChecked[k]);
+  }
+
   /** Busca el saldo del tipo de aporte cuyo nombre contiene el fragmento (sin tildes, minúsculas). */
   private saldoPorNombre(fragmento: string): number {
     const encontrado = this.saldosAporte().find((a) =>
@@ -1152,11 +1212,17 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   /**
-   * `idTipoAporte` del tipo correspondiente, resuelto por nombre — nunca un literal 23 en el
-   * frontend (§5.2 del contrato de pensión complementaria).
+   * `idTipoAporte` del tipo correspondiente. Cesantía, jubilación y sus cuentas de retiro voluntario
+   * se resuelven por id (API-COBROS-APORTES-RETIRO-VOLUNTARIO.md §3, F1) y solo si el socio las
+   * tiene en `saldosAporte()`. La pensión sigue por nombre — nunca un literal 23 en el frontend
+   * (§5.2 del contrato de pensión complementaria).
    */
   private idTipoAportePara(clave: ClaveAporteSocio): number | null {
-    const fragmento = clave === 'cesantia' ? 'cesant' : clave === 'jubilacion' ? 'jubila' : 'pension';
+    if (clave !== 'pension') {
+      const id = ID_TIPO_POR_CLAVE[clave];
+      return this.tieneTipoAporte(id) ? id : null;
+    }
+    const fragmento = 'pension';
     const encontrado = this.saldosAporte().find((a) =>
       (a.nombre ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().includes(fragmento)
     );
@@ -1168,7 +1234,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   toggleCuenta(key: CuentaKey, checked: boolean): void {
     this.cuentaChecked[key] = checked;
     if (checked) {
-      const otras = (['prestamo', 'cesantia', 'jubilacion', 'pension'] as CuentaKey[])
+      const otras = CLAVES_CUENTA
         .filter((k) => k !== key && this.cuentaChecked[k])
         .reduce((s, k) => s + this.parseMoneda(this.cuentaMontoTexto[k]), 0);
       const restante = Math.max(this.montoTotal() - otras, 0);
@@ -1215,7 +1281,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
    * usuario y no hay forma de adivinarlo.
    */
   private sincronizarCuentaUnica(): void {
-    const marcadas = (['prestamo', 'cesantia', 'jubilacion', 'pension'] as CuentaKey[]).filter((k) => this.cuentaChecked[k]);
+    const marcadas = CLAVES_CUENTA.filter((k) => this.cuentaChecked[k]);
     if (marcadas.length !== 1) return;
     this.cuentaMontoTexto[marcadas[0]] = this.formatMoneda(Math.max(this.montoTotal(), 0));
   }
@@ -1225,8 +1291,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
   }
 
   private resetAsignacion(): void {
-    this.cuentaChecked = { prestamo: false, cesantia: false, jubilacion: false, pension: false };
-    this.cuentaMontoTexto = { prestamo: '', cesantia: '', jubilacion: '', pension: '' };
+    this.cuentaChecked = this.cuentasChecked();
+    this.cuentaMontoTexto = this.cuentasMontoTexto();
     this.prestamoAsignacionGuardada = {};
     this.detallePrestamoAbierto.set(false);
     this.metodoPago.set('transferencia');
@@ -1357,7 +1423,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
     this.resolverAportes((aportes, avisoPension) => {
       if (aportes === null) {
         this.errorOperacion.set(
-          'No se encontró el tipo de aporte de cesantía o jubilación entre los tipos vigentes del partícipe. Actualice los saldos e intente nuevamente.'
+          'No se encontró el tipo de aporte (cesantía, jubilación o retiro voluntario) entre los tipos vigentes del partícipe. Actualice los saldos e intente nuevamente.'
         );
         return;
       }
@@ -1416,7 +1482,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
 
       const prestamo = prestamos[0].prestamo;
       const monto = +prestamos[0].monto.toFixed(2);
-      const idTipoAporte = this.idTipoAportePara(this.cuentaOrigenAporte());
+      const origen = this.cuentaOrigenEfectiva();
+      const idTipoAporte = origen ? this.idTipoAportePara(origen) : null;
       if (idTipoAporte == null) {
         this.registrando.set(false);
         this.errorOperacion.set(
@@ -1590,6 +1657,8 @@ export class CobrosPersonalesComponent implements OnDestroy {
     switch (clave) {
       case 'cesantia': return 'Cesantía';
       case 'jubilacion': return 'Jubilación';
+      case 'cesantiaRV': return 'Cesantía retiro voluntario';
+      case 'jubilacionRV': return 'Jubilación retiro voluntario';
       case 'pension': return 'Pensión complementaria';
     }
   }
@@ -1703,7 +1772,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   /**
    * Renglones de aporte del socio a registrar, ya resueltos a su `idTipoAporte`.
    *
-   * Cesantía y jubilación NO cambiaron: si alguna de las dos está marcada y no se puede resolver
+   * Cesantía, jubilación y sus cuentas de retiro voluntario: si alguna está marcada y no se puede resolver
    * contra `saldosAporte()`, `callback(null, ...)` — se bloquea el cobro ENTERO, igual que antes.
    *
    * Pensión es distinta a propósito (§5.6 del contrato, corregido 2026-09-16): un jubilado sin
@@ -1721,7 +1790,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
   ): void {
     const renglones: { clave: ClaveAporteSocio; idTipoAporte: number; valor: number }[] = [];
 
-    for (const clave of ['cesantia', 'jubilacion'] as const) {
+    for (const clave of CLAVES_ORIGEN_APORTE) {
       if (!this.cuentaChecked[clave]) continue;
       const valor = +this.parseMoneda(this.cuentaMontoTexto[clave]).toFixed(2);
       if (valor <= 0.004) continue;
@@ -1806,7 +1875,7 @@ export class CobrosPersonalesComponent implements OnDestroy {
         if (resp.exito && resp.resultado) {
           registrados.push(resp.resultado);
         } else {
-          fallidos.push(`${this.etiquetaClaveAporte(renglones[i].clave)} (${this.formatMoneda(renglones[i].valor)}): ${mensajeDeRespuesta(resp)}`);
+          fallidos.push(`${this.nombreAporte(renglones[i].idTipoAporte, renglones[i].clave)} (${this.formatMoneda(renglones[i].valor)}): ${mensajeDeRespuesta(resp)}`);
         }
       });
 

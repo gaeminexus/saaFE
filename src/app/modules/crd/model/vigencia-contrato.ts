@@ -16,10 +16,16 @@ export const MODO_VIGENCIA_TEXTO: Record<number, string> = {
   [MODO_VIGENCIA.FIJO]: 'Fijo',
 };
 
-/** `CRD.APRT.idTipoAporte`: 9 jubilación, 11 cesantía — no son consecutivos, son del catálogo. */
+/**
+ * `CRD.APRT.idTipoAporte`: 9 jubilación, 11 cesantía — no son consecutivos, son del catálogo.
+ * 21 y 22 son las cuentas de retiro voluntario (docs/crd/API-COBROS-APORTES-RETIRO-VOLUNTARIO.md §3):
+ * no tienen contrato ni vigencia, así que `contrato-edit` no las usa.
+ */
 export const ID_TIPO_APORTE = {
   JUBILACION: 9,
   CESANTIA: 11,
+  CESANTIA_RETIRO_VOLUNTARIO: 21,
+  JUBILACION_RETIRO_VOLUNTARIO: 22,
 } as const;
 
 export interface VigenciaDTO {

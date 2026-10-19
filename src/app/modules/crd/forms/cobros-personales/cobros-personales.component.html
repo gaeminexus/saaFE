@@ -387,6 +387,34 @@
               @if (cuentaChecked.jubilacion && coberturaJubilacion(); as cobertura) {
                 <tr class="fila-cobertura"><td></td><td colspan="4" [innerHTML]="cobertura.mensajeHtml"></td></tr>
               }
+              @if (tieneCesantiaRV()) {
+                <tr>
+                  <td><mat-checkbox [checked]="cuentaChecked.cesantiaRV" (change)="toggleCuenta('cesantiaRV', $event.checked)"></mat-checkbox></td>
+                  <td>Cesantía retiro voluntario</td>
+                  <td class="num">{{ formatMoneda(saldoCesantiaRV()) }}</td>
+                  <td class="num valor-vacio">—</td>
+                  <td>
+                    <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                      <input matInput [(ngModel)]="cuentaMontoTexto.cesantiaRV" [disabled]="!cuentaChecked.cesantiaRV"
+                             (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoCuentaBlur('cesantiaRV')" />
+                    </mat-form-field>
+                  </td>
+                </tr>
+              }
+              @if (tieneJubilacionRV()) {
+                <tr>
+                  <td><mat-checkbox [checked]="cuentaChecked.jubilacionRV" (change)="toggleCuenta('jubilacionRV', $event.checked)"></mat-checkbox></td>
+                  <td>Jubilación retiro voluntario</td>
+                  <td class="num">{{ formatMoneda(saldoJubilacionRV()) }}</td>
+                  <td class="num valor-vacio">—</td>
+                  <td>
+                    <mat-form-field appearance="outline" class="monto-cuenta-field" subscriptSizing="dynamic">
+                      <input matInput [(ngModel)]="cuentaMontoTexto.jubilacionRV" [disabled]="!cuentaChecked.jubilacionRV"
+                             (ngModelChange)="onMontoCuentaCambio()" (blur)="onMontoCuentaBlur('jubilacionRV')" />
+                    </mat-form-field>
+                  </td>
+                </tr>
+              }
               @if (puedeCobrarPension()) {
                 <tr>
                   <td><mat-checkbox [checked]="cuentaChecked.pension" (change)="toggleCuenta('pension', $event.checked)"></mat-checkbox></td>
@@ -410,7 +438,7 @@
           <mat-card-header><mat-card-title>Confirmar Pago</mat-card-title></mat-card-header>
 
           <mat-card-content>
-            @if (!cobraPrestamo() && !cuentaChecked.cesantia && !cuentaChecked.jubilacion && !cuentaChecked.pension) {
+            @if (!cobraPrestamo() && !hayAporteMarcado()) {
               <p class="texto-vacio">Selecciona al menos un préstamo o una cuenta de aportes para continuar.</p>
             }
 
@@ -460,7 +488,7 @@
                 <div class="ot-linea"><span>Total en préstamos</span><b>{{ formatMoneda(montoTotalPrestamosIncluidos()) }}</b></div>
               }
               @if (montoAportesSocio() > 0.004) {
-                <div class="ot-linea"><span>Aportes del socio (cesantía/jubilación)</span><b>{{ formatMoneda(montoAportesSocio()) }}</b></div>
+                <div class="ot-linea"><span>Aportes del socio a sus cuentas</span><b>{{ formatMoneda(montoAportesSocio()) }}</b></div>
               }
               <div class="ot-linea ot-total"><span>Total de la operación</span><b>{{ formatMoneda(asignado()) }}</b></div>
             </div>
@@ -470,7 +498,7 @@
               @if (cobraPrestamo() && prestamosIncluidos().length <= 1) {
                 <mat-radio-button value="debito" class="metodo-option">
                   <div class="m-title">Débito de Cuenta de Aportes</div>
-                  <div class="m-desc">Descuenta del saldo acumulado de cesantía o jubilación del socio.</div>
+                  <div class="m-desc">Descuenta del saldo acumulado de una cuenta de aportes del socio (cesantía, jubilación o retiro voluntario).</div>
                 </mat-radio-button>
               }
               <mat-radio-button value="transferencia" class="metodo-option">
@@ -525,9 +553,10 @@
               <div class="campos-grupo">
                 <mat-form-field appearance="outline" class="full">
                   <mat-label>Cuenta de origen (saldo de aportes)</mat-label>
-                  <mat-select [ngModel]="cuentaOrigenAporte()" (ngModelChange)="cuentaOrigenAporte.set($event)">
-                    <mat-option value="cesantia">Cesantía — saldo disponible {{ formatMoneda(saldoCesantia()) }}</mat-option>
-                    <mat-option value="jubilacion">Jubilación — saldo disponible {{ formatMoneda(saldoJubilacion()) }}</mat-option>
+                  <mat-select [ngModel]="cuentaOrigenEfectiva()" (ngModelChange)="cuentaOrigenAporte.set($event)">
+                    @for (o of opcionesOrigenAporte(); track o.clave) {
+                      <mat-option [value]="o.clave">{{ o.nombre }} — saldo disponible {{ formatMoneda(o.saldo) }}</mat-option>
+                    }
                   </mat-select>
                   <mat-hint>Se debitan {{ formatMoneda(montoTotalPrestamosIncluidos()) }}: solo la parte destinada al préstamo</mat-hint>
                 </mat-form-field>
