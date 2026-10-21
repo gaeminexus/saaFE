@@ -1,0 +1,133 @@
+<div class="aam-container">
+  <h2 class="aam-titulo">
+    <mat-icon>phone_android</mat-icon>
+    Acceso App Móvil
+  </h2>
+
+  <div class="aam-consulta">
+    <mat-form-field appearance="outline">
+      <mat-label>Cédula del partícipe</mat-label>
+      <input
+        matInput
+        maxlength="20"
+        autocomplete="off"
+        [ngModel]="cedula()"
+        (ngModelChange)="cedula.set($event)"
+        (keydown.enter)="consultar()" />
+    </mat-form-field>
+    <button mat-flat-button color="primary" type="button" [disabled]="!puedeConsultar()" (click)="consultar()">
+      <mat-icon>search</mat-icon>
+      Consultar
+    </button>
+    @if (consultando()) {
+      <mat-spinner diameter="24"></mat-spinner>
+    }
+  </div>
+
+  @if (errorConsulta()) {
+    <div class="aam-aviso error">
+      <mat-icon>error_outline</mat-icon>
+      <span>No se pudo consultar: {{ errorConsulta() }}</span>
+    </div>
+  }
+
+  @if (entrega(); as e) {
+    <div class="aam-entrega">
+      <div class="aam-entrega-titulo">
+        <mat-icon>check_circle</mat-icon>
+        <span>{{ textoAccion[e.accion] }}: hecho para la cédula {{ e.identificacion }}</span>
+      </div>
+      <div class="aam-entrega-clave-etiqueta">Clave temporal (se muestra solo esta vez)</div>
+      <div class="aam-entrega-clave">{{ e.clave }}</div>
+      <p class="aam-recordatorio">
+        Entregue la clave solo al partícipe, en persona. La app le va a pedir cambiarla al entrar.
+      </p>
+      <button mat-stroked-button type="button" (click)="cerrarEntrega()">Ya la entregué, ocultar</button>
+    </div>
+  }
+
+  @if (cedulaConsultada() !== null) {
+    <div class="aam-estado">
+      <h3>Cédula {{ cedulaConsultada() }}</h3>
+      @if (cuenta(); as c) {
+        <div class="aam-estado-badge estado-{{ c.estado }}">{{ textoEstado[c.estado] ?? 'Estado ' + c.estado }}</div>
+        <dl class="aam-datos">
+          <dt>Intentos fallidos</dt>
+          <dd>{{ c.intentosFallidos ?? 0 }}</dd>
+          <dt>Bloqueada hasta</dt>
+          <dd>{{ c.bloqueadoHasta ? (c.bloqueadoHasta | date: 'dd/MM/yyyy HH:mm') : '—' }}</dd>
+          <dt>Debe cambiar la clave</dt>
+          <dd>{{ c.debeCambiarClave ? 'Sí' : 'No' }}</dd>
+          <dt>Último acceso</dt>
+          <dd>{{ c.fechaUltimoAcceso ? (c.fechaUltimoAcceso | date: 'dd/MM/yyyy HH:mm') : 'Nunca' }}</dd>
+          <dt>Registrado por</dt>
+          <dd>{{ c.usuarioRegistro || '—' }}</dd>
+        </dl>
+        @if (c.estado === 3) {
+          <div class="aam-aviso alerta">
+            <mat-icon>warning_amber</mat-icon>
+            <span>El partícipe borró su cuenta desde la app. Solo se puede reactivar.</span>
+          </div>
+        }
+      } @else {
+        <div class="aam-aviso info">
+          <mat-icon>info</mat-icon>
+          <span>Este partícipe no tiene acceso a la app.</span>
+        </div>
+      }
+    </div>
+
+    @if (accion(); as acc) {
+      <div class="aam-accion">
+        <h3>{{ textoAccion[acc] }}</h3>
+        <div class="aam-clave">
+          <mat-form-field appearance="outline">
+            <mat-label>Clave temporal</mat-label>
+            <input
+              matInput
+              [type]="verClave() ? 'text' : 'password'"
+              autocomplete="new-password"
+              spellcheck="false"
+              [ngModel]="claveTemporal()"
+              (ngModelChange)="claveTemporal.set($event)" />
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              [attr.aria-label]="verClave() ? 'Ocultar clave' : 'Ver clave'"
+              (click)="verClave.set(!verClave())">
+              <mat-icon>{{ verClave() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            <mat-hint>Mínimo 8 caracteres; distinta de la cédula.</mat-hint>
+          </mat-form-field>
+          <button mat-stroked-button type="button" (click)="generarClave()">
+            <mat-icon>autorenew</mat-icon>
+            Generar
+          </button>
+        </div>
+
+        @if (errorClave()) {
+          <div class="aam-aviso error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorClave() }}</span>
+          </div>
+        }
+        @if (errorAccion()) {
+          <div class="aam-aviso error">
+            <mat-icon>error_outline</mat-icon>
+            <span>{{ errorAccion() }}</span>
+          </div>
+        }
+
+        <p class="aam-recordatorio">
+          Entregue la clave solo al partícipe, en persona. La app le va a pedir cambiarla al entrar.
+        </p>
+
+        <button mat-flat-button color="primary" type="button" [disabled]="!puedeEjecutar()" (click)="ejecutar()">
+          <mat-icon>{{ acc === 'crear' ? 'person_add' : acc === 'resetear' ? 'lock_reset' : 'restore' }}</mat-icon>
+          {{ textoAccion[acc] }}
+        </button>
+      </div>
+    }
+  }
+</div>

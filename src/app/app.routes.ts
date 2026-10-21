@@ -1176,6 +1176,7 @@ export const routes: Routes = [
       { path: 'seguimiento-cobros', loadComponent: () => import('./modules/crd/forms/cobros/seguimiento-cobros/seguimiento-cobros.component').then((m) => m.SeguimientoCobrosComponent) },
       { path: 'acuerdo-condonacion', loadComponent: () => import('./modules/crd/forms/acuerdos/acuerdo-condonacion/acuerdo-condonacion.component').then((m) => m.AcuerdoCondonacionComponent) },
       { path: 'plazo-vencido', loadComponent: () => import('./modules/crd/forms/plazo-vencido/plazo-vencido.component').then((m) => m.PlazoVencidoComponent) },
+      { path: 'acceso-app-movil', loadComponent: () => import('./modules/crd/forms/acceso-app-movil/acceso-app-movil.component').then((m) => m.AccesoAppMovilComponent) },
       { path: 'polizas-seguro', loadComponent: () => import('./modules/crd/forms/polizas-seguro/polizas-seguro.component').then((m) => m.PolizasSeguroComponent) },
       {
         path: 'entidad-edit',

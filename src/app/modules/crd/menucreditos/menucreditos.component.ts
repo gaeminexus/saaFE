@@ -343,6 +343,13 @@ export class MenucreditosComponent {
           iconName: 'gavel',
           route: '/menucreditos/plazo-vencido',
         },
+        // Sin `idPermiso` (mismo caso que Plazo Vencido, D24): el nodo de permiso no existe todavía, lo
+        // crea el frente de seguridad. Nombre corto a propósito (H71): uno largo desaparece entero.
+        {
+          displayName: 'Acceso App Móvil',
+          iconName: 'phone_android',
+          route: '/menucreditos/acceso-app-movil',
+        },
         // "Dash" comentado el 2026-09-10: sin `route` activa (estaba comentada) y por lo tanto sin
         // opción de menú real — ver docs/seguridad/INVENTARIO-PANTALLAS-SAA.md, ÍTEM 2(a). El
         // destino `/menucreditos/participe-dash` (ParticipeDashComponent) sigue vivo y alcanzable
