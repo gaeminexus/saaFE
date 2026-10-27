@@ -120,6 +120,15 @@ de la NC «contra la ND» es cruzarlo contra **su factura**.
 - **FE (Cruce de Nota de Crédito):** el destino se elige entre **Factura** o **Nota de débito** (toggle). Con ND, la
   tabla de destino es `ntdc/pendientes`; el valor por defecto es `min(saldo NC, total ND, saldo de su factura)`.
 
+### 4.2 Las aplicaciones de una NC — agregado 2026-10-27 (faltaba en el contrato; lo detectó el FE)
+
+**`GET /rest/aplp/porNotaCredito/{idNotaCredito}`** — todas las `APLP` **activas** de la NC (`APLPNTCC`), la más
+antigua primero, como proyección: `{ idAplicacion, fechaAplicacion, montoAplicado, idFacturaCompra,
+numeroFactura, observacion, conAsiento }`. `conAsiento = true` es la aplicación **original** del registro (lleva el
+asiento de la NC); `false` es un cruce hecho después. La pantalla de cruce lista las dos, pero **solo ofrece
+Revertir en las de `conAsiento = false`**: la original se deshace anulando la NC, no desde aquí.
+NC sin aplicaciones → `[]` con 200, no 404 ni 500.
+
 Fuera de alcance: cruzar contra una **liquidación de compra** o contra la factura de **otro proveedor**.
 
 ## 5. Devolución del saldo: el proveedor nos paga por transferencia o cheque
