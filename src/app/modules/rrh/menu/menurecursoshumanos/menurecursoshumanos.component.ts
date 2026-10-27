@@ -188,23 +188,33 @@ export class MenurecursoshumanosComponent implements OnInit {
           idPermiso: PermisosRrh.MARCACIONES,
           route: '/menurecursoshumanos/asistencia/marcaciones',
         },
+        // Grupo y no hoja: `menu-list` expande todo ítem con `children` y no navega a su `route`, así
+        // que la pantalla de importación pasa a ser el primer hijo. Horas extra cuelga de acá porque
+        // hoy es solo la bandeja de aprobación y la alimentan las marcaciones importadas.
         {
           displayName: 'Importación de marcaciones',
           iconName: 'upload_file',
           idPermiso: PermisosRrh.IMPORTACION_MARCACIONES,
-          route: '/menurecursoshumanos/asistencia/importacion',
+          children: [
+            {
+              displayName: 'Importar',
+              iconName: 'upload_file',
+              idPermiso: PermisosRrh.IMPORTACION_MARCACIONES,
+              route: '/menurecursoshumanos/asistencia/importacion',
+            },
+            {
+              displayName: 'Horas extra',
+              iconName: 'more_time',
+              idPermiso: PermisosRrh.HORAS_EXTRA,
+              route: '/menurecursoshumanos/procesos/horas-extra',
+            },
+          ],
         },
         {
           displayName: 'Resumen diario',
           iconName: 'today',
           idPermiso: PermisosRrh.RESUMEN_DIARIO,
           route: '/menurecursoshumanos/asistencia/resumen-diario',
-        },
-        {
-          displayName: 'Horas extra',
-          iconName: 'more_time',
-          idPermiso: PermisosRrh.HORAS_EXTRA,
-          route: '/menurecursoshumanos/procesos/horas-extra',
         },
       ],
     },
@@ -261,12 +271,6 @@ export class MenurecursoshumanosComponent implements OnInit {
           iconName: 'receipt_long',
           idPermiso: PermisosRrh.PLANILLAS_IESS,
           route: '/menurecursoshumanos/procesos/planillas-iess',
-        },
-        {
-          displayName: 'Horas extra',
-          iconName: 'more_time',
-          idPermiso: PermisosRrh.HORAS_EXTRA_PROCESOS,
-          route: '/menurecursoshumanos/procesos/horas-extra',
         },
         {
           displayName: 'Proyección de impuesto a la renta',

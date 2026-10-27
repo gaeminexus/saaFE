@@ -73,9 +73,9 @@ export class PermisosRrh {
   public static readonly DESCUENTOS_RECURRENTES = 1540;    // RRH_DESCUENTOS_RECURRENTES
   public static readonly PERIODOS_NOMINA = 1531;            // RRH_PERIODOS_DE_NOMINA
   public static readonly NOVEDADES_NOMINA = 1534;           // RRH_NOVEDADES_DEL_PERIODO
-  /** Horas extra — nodo de Asistencia. Distinto de `HORAS_EXTRA_PROCESOS`: el árbol espeja el menú, y una pantalla que aparece dos veces puede necesitar ocultarse de un lugar sin ocultarse del otro. */
+  /** Horas extra — único nodo de menú de la pantalla: cuelga de «Importación de marcaciones» (Asistencia) desde 2026-10-27. En el árbol de BD sigue colgando de ASISTENCIA (1522) hasta que se reubique bajo 1524. */
   public static readonly HORAS_EXTRA = 1526;                // RRH_HORAS_EXTRA
-  /** Horas extra — nodo de Procesos (misma pantalla que `HORAS_EXTRA`, permiso independiente). Confirmado por el árbitro 2026-09-10: no es fusionable con el de Asistencia. */
+  /** Horas extra — nodo de Procesos. YA NO HAY NODO DE MENÚ (quitado 2026-10-27, el usuario pidió dejar la pantalla solo bajo Importación de marcaciones). Sin uso en el menú; queda la constante por el nodo 1538 del árbol de BD. */
   public static readonly HORAS_EXTRA_PROCESOS = 1538;        // RRH_PROCESOS_HORAS_EXTRA
   public static readonly PROYECCION_IR = 1539;               // RRH_PROYECCION_DE_IMPUESTO_A_LA_RENTA
   public static readonly REPORTES_NOMINA = 1547;             // RRH_REPORTES_DE_NOMINA
