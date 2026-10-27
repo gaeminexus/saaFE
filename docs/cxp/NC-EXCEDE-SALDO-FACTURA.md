@@ -22,6 +22,8 @@ La factura ya está pagada; la NC genera un saldo a favor con el proveedor.
    o que se pague ese saldo con un pago en transferencia o cheque.»*
    → Lectura del árbitro: **el proveedor nos devuelve** el saldo (nos transfiere o nos da un cheque que se
    deposita). Es el mismo caso que la Devolución de Anticipo (`API-DEVOLUCION-ANTICIPO-PROVEEDOR.md`).
+   **Confirmado por el usuario el 2026-10-27:** el proveedor nos devuelve el dinero, y se registra **a qué cuenta
+   bancaria propia** hizo el pago (`DVPR.DVPRCNBC`, ya obligatorio en la devolución) para cruzar ese saldo.
 
 ## 2. Lo medido en el código (2026-10-27)
 
