@@ -16,10 +16,14 @@ import { AnticipoDisponible, AnticipoService } from '../../../../tsr/service/ant
 import {
   DevolucionAnticipoListado,
   EstadoDevolucionAnticipoProveedor,
+  FormaDevolucionProveedor,
   LineaDevolucionAnticipo,
+  LineaDevolucionNotaCredito,
   RegistrarDevolucionAnticipoRequest,
 } from '../../../model/devolucion-anticipo';
 import { DevolucionAnticipoService } from '../../../service/devolucion-anticipo.service';
+import { NotaCreditoSaldoService } from '../../../service/nota-credito-saldo.service';
+import { NotaCreditoDisponible } from '../../../model/nota-credito-saldo';
 
 /**
  * Devolución del saldo de anticipos de un proveedor: el proveedor deposita en nuestro banco el
@@ -38,6 +42,7 @@ import { DevolucionAnticipoService } from '../../../service/devolucion-anticipo.
 export class DevolucionAnticipoComponent implements OnInit {
   private devolucionS = inject(DevolucionAnticipoService);
   private anticipoS = inject(AnticipoService);
+  private notaCreditoS = inject(NotaCreditoSaldoService);
   private cuentaS = inject(CuentaBancariaService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
@@ -46,6 +51,7 @@ export class DevolucionAnticipoComponent implements OnInit {
 
   private readonly ROL_PROVEEDOR = 2;
   readonly EstadoDevolucionAnticipoProveedor = EstadoDevolucionAnticipoProveedor;
+  readonly FormaDevolucionProveedor = FormaDevolucionProveedor;
 
   proveedor = signal<Titular | null>(null);
 
@@ -59,7 +65,15 @@ export class DevolucionAnticipoComponent implements OnInit {
   /** Valor a devolver por anticipo, indexado por id. Vacío por defecto. */
   montos: Record<number, string> = {};
 
+  // ── Notas de crédito con saldo a favor ───────────────────────────────────
+  notasCredito = signal<NotaCreditoDisponible[]>([]);
+  cargandoNotas = signal(false);
+  /** Valor a devolver por nota de crédito, indexado por id. Vacío por defecto. */
+  montosNc: Record<number, string> = {};
+
   // ── Datos del depósito ───────────────────────────────────────────────────
+  /** Transferencia por defecto — NC-EXCEDE-SALDO-FACTURA.md §5.2. */
+  formForma: number = FormaDevolucionProveedor.TRANSFERENCIA;
   formFecha: Date | null = new Date();
   formReferencia = '';
   formObservacion = '';
@@ -105,6 +119,7 @@ export class DevolucionAnticipoComponent implements OnInit {
       this.limpiarFormulario();
       this.error.set('');
       this.cargarAnticipos();
+      this.cargarNotasCredito();
       this.cargarHistorial();
     });
   }
@@ -136,6 +151,49 @@ export class DevolucionAnticipoComponent implements OnInit {
     });
   }
 
+  private cargarNotasCredito(): void {
+    const titular = this.proveedor();
+    if (!titular?.codigo) return;
+
+    this.cargandoNotas.set(true);
+    this.notasCredito.set([]);
+    this.montosNc = {};
+
+    this.notaCreditoS.disponibles(titular.codigo, this.idEmpresaSesion()).subscribe({
+      next: (lista) => {
+        this.notasCredito.set(lista ?? []);
+        this.cargandoNotas.set(false);
+      },
+      error: (err: Error) => {
+        this.cargandoNotas.set(false);
+        this.notasCredito.set([]);
+        this.error.set(mensajeDeError(err, 'No se pudieron cargar las notas de crédito'));
+      },
+    });
+  }
+
+  montoNcDe(nota: NotaCreditoDisponible): number {
+    const v = parseFloat(String(this.montosNc[nota.idNotaCredito] ?? '').replace(',', '.'));
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  }
+
+  /** El valor a devolver nunca puede superar el saldo de ESA nota de crédito. */
+  excedeNota(nota: NotaCreditoDisponible): boolean {
+    return this.montoNcDe(nota) > Number(nota.saldo ?? 0) + 0.001;
+  }
+
+  get totalNotas(): number {
+    return this.notasCredito().reduce((suma, n) => suma + this.montoNcDe(n), 0);
+  }
+
+  get algunaNotaExcedida(): boolean {
+    return this.notasCredito().some((n) => this.excedeNota(n));
+  }
+
+  aplicarTodoNota(nota: NotaCreditoDisponible): void {
+    this.montosNc[nota.idNotaCredito] = String(Number(nota.saldo ?? 0).toFixed(2));
+  }
+
   montoDe(anticipo: AnticipoDisponible): number {
     const v = parseFloat(String(this.montos[anticipo.id] ?? '').replace(',', '.'));
     return Number.isFinite(v) && v > 0 ? v : 0;
@@ -146,8 +204,13 @@ export class DevolucionAnticipoComponent implements OnInit {
     return this.montoDe(anticipo) > Number(anticipo.saldo ?? 0) + 0.001;
   }
 
-  get totalADevolver(): number {
+  get totalAnticipos(): number {
     return this.anticipos().reduce((suma, a) => suma + this.montoDe(a), 0);
+  }
+
+  /** Total del depósito: suma de las dos tablas — NC-EXCEDE-SALDO-FACTURA.md §7.3. */
+  get totalADevolver(): number {
+    return this.totalAnticipos + this.totalNotas;
   }
 
   get haySeleccion(): boolean {
@@ -165,13 +228,14 @@ export class DevolucionAnticipoComponent implements OnInit {
 
   limpiarSeleccion(): void {
     this.montos = {};
+    this.montosNc = {};
   }
 
   get puedeRegistrar(): boolean {
     if (!this.proveedor() || !this.cuentaSeleccionada() || !this.formFecha) return false;
     if (this.registrando()) return false;
     if (!this.haySeleccion) return false;
-    if (this.algunAnticipoExcedido) return false;
+    if (this.algunAnticipoExcedido || this.algunaNotaExcedida) return false;
     return true;
   }
 
@@ -185,6 +249,10 @@ export class DevolucionAnticipoComponent implements OnInit {
       .filter((a) => this.montoDe(a) > 0)
       .map((a) => ({ idAnticipo: a.id, valor: this.montoDe(a) }));
 
+    const lineasNc: LineaDevolucionNotaCredito[] = this.notasCredito()
+      .filter((n) => this.montoNcDe(n) > 0)
+      .map((n) => ({ idNotaCredito: n.idNotaCredito, valor: this.montoNcDe(n) }));
+
     const payload: RegistrarDevolucionAnticipoRequest = {
       idEmpresa: this.idEmpresaSesion(),
       idTitular: titular.codigo,
@@ -193,7 +261,9 @@ export class DevolucionAnticipoComponent implements OnInit {
       referencia: this.formReferencia.trim() || undefined,
       observacion: this.formObservacion.trim() || undefined,
       idUsuario: this.idUsuarioSesion(),
+      formaPago: this.formForma,
       anticipos: lineas,
+      notasCredito: lineasNc,
     };
 
     this.registrando.set(true);
@@ -212,6 +282,7 @@ export class DevolucionAnticipoComponent implements OnInit {
         this.snackBar.open(mensaje, 'Cerrar', { duration: 6000, panelClass: ['snackbar-success'] });
         this.limpiarFormulario();
         this.cargarAnticipos();
+        this.cargarNotasCredito();
         this.cargarHistorial();
       },
       error: (err: Error) => {
@@ -223,6 +294,8 @@ export class DevolucionAnticipoComponent implements OnInit {
 
   private limpiarFormulario(): void {
     this.montos = {};
+    this.montosNc = {};
+    this.formForma = FormaDevolucionProveedor.TRANSFERENCIA;
     this.formReferencia = '';
     this.formObservacion = '';
     this.formFecha = new Date();
@@ -241,6 +314,16 @@ export class DevolucionAnticipoComponent implements OnInit {
         this.snackBar.open(err.message, 'Cerrar', { duration: 6000 });
       },
     });
+  }
+
+  etiquetaForma(forma?: number): string {
+    if (forma === FormaDevolucionProveedor.CHEQUE) return 'Cheque';
+    if (forma === FormaDevolucionProveedor.TRANSFERENCIA) return 'Transferencia';
+    return '—';
+  }
+
+  etiquetaTipoLinea(det: { tipo?: string }): string {
+    return det.tipo === 'NOTA_CREDITO' ? 'Nota de crédito' : 'Anticipo';
   }
 
   /** Solo con `idAsiento` en la proyección de /dvpr/listar la fila tiene asiento imprimible. */
@@ -315,6 +398,7 @@ export class DevolucionAnticipoComponent implements OnInit {
           this.anulando.set(null);
           this.snackBar.open(resp.mensaje || 'Devolución anulada.', 'Cerrar', { duration: 5000, panelClass: ['snackbar-success'] });
           this.cargarAnticipos();
+          this.cargarNotasCredito();
           this.cargarHistorial();
         },
         error: (err: Error) => {

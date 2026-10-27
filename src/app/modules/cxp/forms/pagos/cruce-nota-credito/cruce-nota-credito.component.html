@@ -1,0 +1,321 @@
+<div class="pagina-cruce">
+
+  <div class="titulo-barra">
+    <div class="titulo">
+      <mat-icon>receipt_long</mat-icon>
+      <span>Cruce de Nota de Crédito — Proveedor</span>
+    </div>
+  </div>
+
+  <mat-card class="panel">
+    <mat-card-content>
+
+      <!-- Destino del cruce: factura o nota de débito -->
+      <div class="fila-campos">
+        <mat-button-toggle-group [value]="destino()" (change)="cambiarDestino($event.value)" aria-label="Destino del cruce">
+          <mat-button-toggle value="FACTURA">Factura</mat-button-toggle>
+          <mat-button-toggle value="NOTA_DEBITO">Nota de débito</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <!-- Proveedor y factura destino -->
+      <div class="fila-campos">
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Proveedor</mat-label>
+          <input matInput readonly [value]="nombreProveedor()" placeholder="Busque un proveedor" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar proveedor" (click)="buscarProveedor()">
+            <mat-icon>search</mat-icon>
+          </button>
+        </mat-form-field>
+
+        @if (destino() === 'FACTURA') {
+        <mat-form-field appearance="outline" class="campo-selector">
+          <mat-label>Factura a cruzar</mat-label>
+          <input matInput readonly [value]="facturaElegida()?.numero || ''" placeholder="Seleccione una factura pendiente" />
+          <button mat-icon-button matSuffix type="button" matTooltip="Buscar factura pendiente"
+                  [disabled]="!proveedor()" (click)="buscarFactura()">
+            <mat-icon>receipt_long</mat-icon>
+          </button>
+          @if (!proveedor()) {
+            <mat-hint>Elija primero el proveedor</mat-hint>
+          }
+        </mat-form-field>
+        }
+      </div>
+
+      @if (destino() === 'NOTA_DEBITO') {
+        <div class="bloque-anticipos">
+          <div class="cabecera-anticipos">
+            <h3>
+              <mat-icon>note_add</mat-icon>
+              Notas de débito pendientes
+            </h3>
+          </div>
+          @if (cargandoNotasDebito()) {
+            <div class="cargando"><mat-spinner diameter="24"></mat-spinner></div>
+          } @else if (notasDebito().length === 0) {
+            <div class="mensaje-advertencia">
+              <mat-icon>info</mat-icon>
+              <span>
+                @if (proveedor()) {
+                  El proveedor no tiene notas de débito cuya factura tenga saldo pendiente.
+                } @else {
+                  Seleccione un proveedor para ver sus notas de débito.
+                }
+              </span>
+            </div>
+          } @else {
+            <div class="tabla-anticipos">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>N° Nota de débito</th>
+                    <th class="num">Total ND</th>
+                    <th>Factura</th>
+                    <th class="num">Saldo factura</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (nd of notasDebito(); track nd.idNotaDebito) {
+                    <tr class="fila-seleccionable" [class.fila-elegida]="notaDebitoElegida()?.idNotaDebito === nd.idNotaDebito"
+                        (click)="elegirNotaDebito(nd)">
+                      <td>{{ formatearFecha(nd.fecha) }}</td>
+                      <td>{{ nd.numero }}</td>
+                      <td class="num">{{ nd.total | number: '1.2-2' }}</td>
+                      <td>{{ nd.numeroFactura }}</td>
+                      <td class="num saldo-disp">{{ nd.saldoFactura | number: '1.2-2' }}</td>
+                      <td>
+                        @if (notaDebitoElegida()?.idNotaDebito === nd.idNotaDebito) {
+                          <mat-icon>check_circle</mat-icon>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+      @if (cargandoSaldo()) {
+        <div class="estado-linea">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Consultando saldo de la factura...</span>
+        </div>
+      }
+
+      @if (saldoFactura(); as s) {
+        <div class="resumen-saldo">
+          <div class="item">
+            <span class="etiqueta">Factura</span>
+            <span class="valor">{{ s.numeroFactura }}</span>
+          </div>
+          <div class="item">
+            <span class="etiqueta">Total</span>
+            <span class="valor">{{ s.total | number: '1.2-2' }}</span>
+          </div>
+          <div class="item">
+            <span class="etiqueta">Aplicado</span>
+            <span class="valor aplicado">{{ s.totalAplicado | number: '1.2-2' }}</span>
+          </div>
+          <div class="item">
+            <span class="etiqueta">Saldo pendiente</span>
+            <span class="valor pendiente">{{ s.saldoPendiente | number: '1.2-2' }}</span>
+          </div>
+        </div>
+      }
+
+      <!-- Notas de crédito con saldo: de aquí sale el valor del cruce -->
+      <div class="bloque-anticipos">
+        <div class="cabecera-anticipos">
+          <h3>
+            <mat-icon>request_quote</mat-icon>
+            Notas de crédito con saldo
+          </h3>
+        </div>
+
+        @if (cargandoNotas()) {
+          <div class="cargando"><mat-spinner diameter="24"></mat-spinner></div>
+        } @else if (notas().length === 0) {
+          <div class="mensaje-advertencia">
+            <mat-icon>info</mat-icon>
+            <span>
+              @if (proveedor()) {
+                El proveedor no tiene notas de crédito con saldo para cruzar.
+              } @else {
+                Seleccione un proveedor para ver sus notas de crédito.
+              }
+            </span>
+          </div>
+        } @else {
+          <div class="tabla-anticipos">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>N° Nota de crédito</th>
+                  <th>Factura modificada</th>
+                  <th class="num">Total</th>
+                  <th class="num">Aplicado</th>
+                  <th class="num">Devuelto</th>
+                  <th class="num">Saldo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of notas(); track n.idNotaCredito) {
+                  <tr class="fila-seleccionable" [class.fila-elegida]="notaElegida()?.idNotaCredito === n.idNotaCredito"
+                      (click)="elegirNota(n)">
+                    <td>{{ formatearFecha(n.fecha) }}</td>
+                    <td>{{ n.numero }}</td>
+                    <td>{{ n.numDocModificado || '—' }}</td>
+                    <td class="num">{{ n.total | number: '1.2-2' }}</td>
+                    <td class="num">{{ n.aplicado | number: '1.2-2' }}</td>
+                    <td class="num">{{ n.devuelto | number: '1.2-2' }}</td>
+                    <td class="num saldo-disp">{{ n.saldo | number: '1.2-2' }}</td>
+                    <td>
+                      @if (notaElegida()?.idNotaCredito === n.idNotaCredito) {
+                        <mat-icon>check_circle</mat-icon>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+
+      <!-- Datos del cruce -->
+      <div class="fila-campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Valor a cruzar</mat-label>
+          <input matInput type="number" min="0" step="0.01" [(ngModel)]="formValor" name="valor" placeholder="0.00" />
+          @if (notaElegida() && (saldoFactura() || notaDebitoElegida())) {
+            <mat-hint>
+              {{ destino() === 'NOTA_DEBITO'
+                ? 'Por defecto, el menor entre el saldo de la nota de crédito, el total de la nota de débito y el saldo de su factura'
+                : 'Por defecto, el menor entre el saldo de la nota y el de la factura' }}
+            </mat-hint>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha de aplicación</mat-label>
+          <input matInput [matDatepicker]="pickerFecha" [(ngModel)]="formFecha" name="fecha" />
+          <mat-datepicker-toggle matSuffix [for]="pickerFecha"></mat-datepicker-toggle>
+          <mat-datepicker #pickerFecha></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="campo-ancho">
+        <mat-label>Observación</mat-label>
+        <textarea matInput rows="2" [(ngModel)]="formObservacion" name="observacion"></textarea>
+      </mat-form-field>
+
+      @if (excedeNota) {
+        <div class="mensaje-advertencia">
+          <mat-icon>warning</mat-icon>
+          <span>El valor no puede superar el saldo de la nota de crédito.</span>
+        </div>
+      }
+      @if (excedeFactura) {
+        <div class="mensaje-advertencia">
+          <mat-icon>warning</mat-icon>
+          <span>El valor no puede superar el saldo pendiente de la factura.</span>
+        </div>
+      }
+
+      @if (excedeNotaDebito) {
+        <div class="mensaje-advertencia">
+          <mat-icon>warning</mat-icon>
+          <span>El valor no puede superar el total de la nota de débito.</span>
+        </div>
+      }
+
+      @if (error()) {
+        <div class="mensaje-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error() }}</span>
+        </div>
+      }
+
+      @if (resultado(); as r) {
+        <div class="mensaje-exito">
+          <mat-icon>check_circle</mat-icon>
+          <div>
+            <div>{{ r.mensaje }}</div>
+            <div class="detalle-exito">
+              <span>Saldo de la nota de crédito: {{ r.saldoNotaCredito | number: '1.2-2' }}</span>
+              <span>Saldo de la factura: {{ r.saldoFactura | number: '1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <div class="acciones">
+        <button mat-raised-button class="btn-confirmar" [disabled]="!puedeCruzar" (click)="cruzar()">
+          @if (procesando()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>check</mat-icon>
+          }
+          Cruzar
+        </button>
+      </div>
+
+      <!-- Cruces de la nota de crédito elegida -->
+      @if (notaElegida(); as nc) {
+        <div class="bloque-anticipos">
+          <div class="cabecera-anticipos">
+            <h3>
+              <mat-icon>history</mat-icon>
+              Cruces de la nota de crédito {{ nc.numero }} hechos en esta sesión
+            </h3>
+          </div>
+          @if (crucesDeLaNota().length === 0) {
+            <div class="mensaje-advertencia">
+              <mat-icon>info</mat-icon>
+              <span>Todavía no se ha cruzado esta nota de crédito desde esta pantalla.</span>
+            </div>
+          } @else {
+            <div class="tabla-anticipos">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Factura</th>
+                    <th class="num">Valor</th>
+                    <th>Estado</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of crucesDeLaNota(); track c.idAplicacion) {
+                    <tr [class.fila-reversada]="c.reversado">
+                      <td>{{ c.numeroFactura }}</td>
+                      <td class="num">{{ c.valor | number: '1.2-2' }}</td>
+                      <td>{{ c.reversado ? 'Revertido' : 'Activo' }}</td>
+                      <td>
+                        @if (!c.reversado) {
+                          <button mat-stroked-button type="button" color="warn"
+                                  [disabled]="revirtiendo() != null" (click)="revertir(c)">
+                            <mat-icon>undo</mat-icon>
+                            Revertir
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
+    </mat-card-content>
+  </mat-card>
+</div>

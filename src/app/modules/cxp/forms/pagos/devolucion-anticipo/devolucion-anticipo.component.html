@@ -3,7 +3,7 @@
   <div class="titulo-barra">
     <div class="titulo">
       <mat-icon>undo</mat-icon>
-      <span>Devolución de Anticipo — Proveedor</span>
+      <span>Devolución Saldo a Favor — Proveedor</span>
     </div>
   </div>
 
@@ -30,6 +30,14 @@
           @if (cuentas().length === 0) {
             <mat-hint>No hay cuentas bancarias activas</mat-hint>
           }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Forma</mat-label>
+          <mat-select [(ngModel)]="formForma" name="forma">
+            <mat-option [value]="FormaDevolucionProveedor.TRANSFERENCIA">Transferencia</mat-option>
+            <mat-option [value]="FormaDevolucionProveedor.CHEQUE">Cheque</mat-option>
+          </mat-select>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
@@ -117,8 +125,8 @@
               </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="4">Total a devolver</td>
-                  <td class="num total-cruce">{{ totalADevolver | number: '1.2-2' }}</td>
+                  <td colspan="4">Subtotal anticipos</td>
+                  <td class="num total-cruce">{{ totalAnticipos | number: '1.2-2' }}</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -132,6 +140,89 @@
             </div>
           }
         }
+      </div>
+
+      <!-- Notas de crédito con saldo a favor -->
+      <div class="bloque-anticipos">
+        <div class="cabecera-anticipos">
+          <h3>
+            <mat-icon>request_quote</mat-icon>
+            Notas de crédito con saldo
+          </h3>
+        </div>
+
+        @if (cargandoNotas()) {
+          <div class="cargando"><mat-spinner diameter="24"></mat-spinner></div>
+        } @else if (notasCredito().length === 0) {
+          <div class="mensaje-advertencia">
+            <mat-icon>info</mat-icon>
+            <span>
+              @if (proveedor()) {
+                El proveedor no tiene notas de crédito con saldo a favor.
+              } @else {
+                Seleccione un proveedor para ver sus notas de crédito.
+              }
+            </span>
+          </div>
+        } @else {
+          <div class="tabla-anticipos">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>N° Nota de crédito</th>
+                  <th class="num">Total</th>
+                  <th class="num">Saldo</th>
+                  <th class="num">A devolver</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (n of notasCredito(); track n.idNotaCredito) {
+                  <tr [class.fila-usada]="montoNcDe(n) > 0">
+                    <td>{{ formatearFecha(n.fecha) }}</td>
+                    <td>{{ n.numero }}</td>
+                    <td class="num">{{ n.total | number: '1.2-2' }}</td>
+                    <td class="num saldo-disp">{{ n.saldo | number: '1.2-2' }}</td>
+                    <td class="num">
+                      <input type="number" min="0" step="0.01" class="input-monto"
+                             [class.input-error]="excedeNota(n)"
+                             [(ngModel)]="montosNc[n.idNotaCredito]" [name]="'monto_nc_' + n.idNotaCredito"
+                             placeholder="0.00" />
+                    </td>
+                    <td>
+                      <button mat-icon-button type="button" matTooltip="Devolver todo el saldo"
+                              (click)="aplicarTodoNota(n)">
+                        <mat-icon>keyboard_double_arrow_left</mat-icon>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="4">Subtotal notas de crédito</td>
+                  <td class="num total-cruce">{{ totalNotas | number: '1.2-2' }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          @if (algunaNotaExcedida) {
+            <div class="mensaje-advertencia">
+              <mat-icon>warning</mat-icon>
+              <span>Hay líneas que superan el saldo de esa nota de crédito.</span>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="resumen-saldo">
+        <div class="item">
+          <span class="etiqueta">Total a devolver</span>
+          <span class="valor pendiente">{{ totalADevolver | number: '1.2-2' }}</span>
+        </div>
       </div>
 
       @if (error()) {
@@ -201,6 +292,7 @@
                   <th></th>
                   <th>Fecha</th>
                   <th class="num">Valor</th>
+                  <th>Forma</th>
                   <th>Referencia</th>
                   <th>Cuenta</th>
                   <th>Asiento</th>
@@ -218,6 +310,7 @@
                     </td>
                     <td>{{ formatearFecha(d.fecha) }}</td>
                     <td class="num">{{ d.valor | number: '1.2-2' }}</td>
+                    <td>{{ etiquetaForma(d.formaPago) }}</td>
                     <td>{{ d.referencia || '—' }}</td>
                     <td>{{ d.cuentaBancaria }}</td>
                     <td>{{ d.numeroAsiento || '—' }}</td>
@@ -259,18 +352,20 @@
                   </tr>
                   @if (filaExpandida() === d.id) {
                     <tr class="fila-detalle">
-                      <td colspan="8">
+                      <td colspan="9">
                         <table class="tabla-detalle-devolucion">
                           <thead>
                             <tr>
-                              <th>Anticipo</th>
+                              <th>Tipo</th>
+                              <th>Documento</th>
                               <th class="num">Valor devuelto</th>
                             </tr>
                           </thead>
                           <tbody>
-                            @for (det of d.detalle; track det.idAnticipo) {
+                            @for (det of d.detalle; track $index) {
                               <tr>
-                                <td>{{ det.numeroDocAnticipo || ('#' + det.idAnticipo) }}</td>
+                                <td>{{ etiquetaTipoLinea(det) }}</td>
+                                <td>{{ det.tipo === 'NOTA_CREDITO' ? (det.numeroNotaCredito || ('#' + det.idNotaCredito)) : (det.numeroDocAnticipo || ('#' + det.idAnticipo)) }}</td>
                                 <td class="num">{{ det.valor | number: '1.2-2' }}</td>
                               </tr>
                             }

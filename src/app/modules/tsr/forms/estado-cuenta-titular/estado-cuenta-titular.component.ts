@@ -29,6 +29,7 @@ import {
   TipoDocumentoEstadoCuenta,
 } from '../../model/estado-cuenta-titular';
 import { Titular } from '../../model/titular';
+import { NotaCreditoSaldoService } from '../../../cxp/service/nota-credito-saldo.service';
 import { EstadoCuentaTitularService } from '../../service/estado-cuenta-titular.service';
 
 /** Filtro de estado de pago; agrupa varios estadoPago en una sola opción. */
@@ -51,6 +52,7 @@ type FiltroEstado = 'TODOS' | 'PENDIENTE' | 'PARCIAL' | 'PAGADA';
 })
 export class EstadoCuentaTitularComponent implements OnInit {
   private estadoCuentaS = inject(EstadoCuentaTitularService);
+  private notaCreditoS = inject(NotaCreditoSaldoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private exportS = inject(ExportService);
   private dialog = inject(MatDialog);
@@ -69,6 +71,11 @@ export class EstadoCuentaTitularComponent implements OnInit {
   consultado = signal(false);
   advertencias = signal<string[]>([]);
   private documentos = signal<DocumentoEstadoCuenta[]>([]);
+
+  // ─── Saldo a favor de las notas de crédito (solo rol Proveedor) ───
+  // docs/cxp/NC-EXCEDE-SALDO-FACTURA.md §7.4. `null` = no consultado o falló; el aviso distingue los dos.
+  private saldosNotaCredito = signal<Map<number, number> | null>(null);
+  avisoSaldoNotaCredito = signal('');
 
   // ─── Filtros (signals para que la grilla reaccione sola) ──
   fDesde = signal<Date | null>(null);
@@ -124,6 +131,7 @@ export class EstadoCuentaTitularComponent implements OnInit {
         case TipoDocumentoEstadoCuenta.NOTA_CREDITO:
           if (!this.documentoAutorizado(d)) break;
           resumen.totalNotasCredito += d.total;
+          resumen.saldoNotasCredito += this.saldoNotaCredito(d) ?? 0;
           break;
         case TipoDocumentoEstadoCuenta.NOTA_DEBITO:
           if (!this.documentoAutorizado(d)) break;
@@ -202,6 +210,7 @@ export class EstadoCuentaTitularComponent implements OnInit {
     this.documentos.set([]);
     this.consultado.set(false);
     this.advertencias.set([]);
+    this.limpiarSaldoNotaCredito();
     this.expandido.set(null);
     if (this.titular()) {
       this.consultar();
@@ -218,6 +227,7 @@ export class EstadoCuentaTitularComponent implements OnInit {
     this.cargando.set(true);
     this.advertencias.set([]);
     this.expandido.set(null);
+    this.cargarSaldoNotaCredito(titular.codigo);
 
     this.estadoCuentaS.consultar(titular.codigo, this.rol()).subscribe({
       next: (resultado) => {
@@ -233,6 +243,67 @@ export class EstadoCuentaTitularComponent implements OnInit {
         this.snackBar.open('No se pudo consultar el estado de cuenta', 'Cerrar', { duration: 5000 });
       },
     });
+  }
+
+  // ═══ SALDO A FAVOR DE LAS NOTAS DE CRÉDITO ══════════════
+
+  private limpiarSaldoNotaCredito(): void {
+    this.saldosNotaCredito.set(null);
+    this.avisoSaldoNotaCredito.set('');
+  }
+
+  /**
+   * UNA llamada por titular (no una por NC: la pantalla ya hace N+1 con las facturas). Corre en
+   * paralelo con la consulta principal; si falla, el estado de cuenta carga igual y la tarjeta
+   * muestra «—» con un aviso — nunca se confunde con "sin saldo".
+   */
+  private cargarSaldoNotaCredito(codigoTitular: number): void {
+    this.limpiarSaldoNotaCredito();
+    if (this.rol() !== RolTitular.PROVEEDOR) return;
+
+    const rolConsultado = this.rol();
+    this.notaCreditoS.disponibles(codigoTitular, this.idEmpresaSesion()).subscribe({
+      next: (lista) => {
+        // Si mientras tanto cambió el rol o el titular, la respuesta ya no corresponde.
+        if (this.rol() !== rolConsultado || this.titular()?.codigo !== codigoTitular) return;
+        const mapa = new Map<number, number>();
+        for (const n of lista ?? []) mapa.set(Number(n.idNotaCredito), Number(n.saldo ?? 0));
+        this.saldosNotaCredito.set(mapa);
+      },
+      error: () => {
+        if (this.rol() !== rolConsultado || this.titular()?.codigo !== codigoTitular) return;
+        this.saldosNotaCredito.set(null);
+        this.avisoSaldoNotaCredito.set('No se pudo consultar el saldo a favor de las notas de crédito; se muestra «—».');
+      },
+    });
+  }
+
+  /** Cargado solo en rol Proveedor y con respuesta válida; la tarjeta muestra «—» en cualquier otro caso. */
+  get saldoNotaCreditoDisponible(): boolean {
+    return this.rol() === RolTitular.PROVEEDOR && this.saldosNotaCredito() !== null;
+  }
+
+  /**
+   * Saldo de una NC RECIBIDA según el endpoint, buscada por id; una NC que no viene en la respuesta
+   * tiene saldo 0. `null` si no aplica (otro tipo/origen, rol Cliente) o si el endpoint no respondió.
+   */
+  saldoNotaCredito(d: DocumentoEstadoCuenta): number | null {
+    if (d.tipo !== TipoDocumentoEstadoCuenta.NOTA_CREDITO || d.origen !== 'RECIBIDO') return null;
+    const mapa = this.saldosNotaCredito();
+    if (this.rol() !== RolTitular.PROVEEDOR || !mapa) return null;
+    return mapa.get(Number(d.id)) ?? 0;
+  }
+
+  /** Saldo que muestra la columna: el de la NC recibida si aplica; si no, el propio de la fila. */
+  saldoDeFila(d: DocumentoEstadoCuenta): number | null {
+    if (d.tipo === TipoDocumentoEstadoCuenta.NOTA_CREDITO && d.origen === 'RECIBIDO' && this.rol() === RolTitular.PROVEEDOR) {
+      return this.saldoNotaCredito(d);
+    }
+    return d.saldoPendiente ?? null;
+  }
+
+  private idEmpresaSesion(): number {
+    return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
   // ═══ FILTROS ════════════════════════════════════════════

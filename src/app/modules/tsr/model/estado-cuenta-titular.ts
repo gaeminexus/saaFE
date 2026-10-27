@@ -124,6 +124,8 @@ export interface ResumenEstadoCuenta {
   totalAbonado: number;
   saldoPendiente: number;
   saldoAnticipos: number;
+  /** Solo rol Proveedor: suma del saldo a favor de las NC recibidas que pasan los filtros. */
+  saldoNotasCredito: number;
   documentosPendientes: number;
 }
 
@@ -136,6 +138,7 @@ export const RESUMEN_VACIO: ResumenEstadoCuenta = {
   totalAbonado: 0,
   saldoPendiente: 0,
   saldoAnticipos: 0,
+  saldoNotasCredito: 0,
   documentosPendientes: 0,
 };
 

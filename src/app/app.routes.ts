@@ -1096,10 +1096,16 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'pagos/cruce-nota-credito',
+        loadComponent: () => import('./modules/cxp/forms/pagos/cruce-nota-credito/cruce-nota-credito.component').then((m) => m.CruceNotaCreditoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Cruce de Nota de Crédito' },
+      },
+      {
         path: 'pagos/devolucion-anticipo',
         loadComponent: () => import('./modules/cxp/forms/pagos/devolucion-anticipo/devolucion-anticipo.component').then((m) => m.DevolucionAnticipoComponent),
         canActivate: [authGuard],
-        data: { title: 'Devolución de Anticipo' },
+        data: { title: 'Devolución Saldo a Favor' },
       },
       {
         path: 'pagos/solicitud',

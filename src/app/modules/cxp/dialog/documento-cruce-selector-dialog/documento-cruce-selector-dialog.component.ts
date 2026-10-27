@@ -75,6 +75,11 @@ export interface DocumentoCruceSelectorDialogData {
    * caja chica (`gastos-caja-chica.component.ts`): ese llamador no cambia de comportamiento.
    */
   permitirOtrosProveedores?: boolean;
+  /**
+   * Opt-in: deja solo facturas de compra (sin liquidaciones). Lo usa el cruce de nota de crédito
+   * (docs/cxp/NC-EXCEDE-SALDO-FACTURA.md §4: no se cruza contra liquidaciones). Ausente = lo de siempre.
+   */
+  soloFacturas?: boolean;
 }
 
 /**
@@ -181,6 +186,9 @@ export class DocumentoCruceSelectorDialogComponent implements OnInit {
       }));
 
       let lista = [...filasFactura, ...filasLiquidacion].sort((a, b) => (b.id || 0) - (a.id || 0));
+      if (this.data.soloFacturas) {
+        lista = lista.filter((d) => d.tipo === 'FACTURA');
+      }
       if (this.data.soloPendientes) {
         // Si no informa estadoPago se conserva la fila: no se puede afirmar que esté pagada
         // (mismo criterio que FacturaCompraSelectorDialogComponent).

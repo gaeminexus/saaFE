@@ -123,7 +123,13 @@ export class MenucuentaxpagarComponent {
           route: '/menucuentaxpagar/pagos/cruce-anticipo',
         },
         {
-          displayName: 'Devolución de Anticipo',
+          displayName: 'Cruce de Nota de Crédito',
+          iconName: 'receipt_long',
+          idPermiso: Permisos.CXP_PAGOS,
+          route: '/menucuentaxpagar/pagos/cruce-nota-credito',
+        },
+        {
+          displayName: 'Devolución Saldo a Favor',
           iconName: 'undo',
           idPermiso: Permisos.CXP_PAGOS,
           route: '/menucuentaxpagar/pagos/devolucion-anticipo',

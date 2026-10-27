@@ -1059,7 +1059,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
           this.mostrarAdvertencia(resp.mensaje);
           this.cargar();
         } else {
-          this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
+          if (resp?.advertenciaAplicacion) {
+            // Se registró bien; el snack de éxito quedaría tapado por este, así que solo sale la advertencia.
+            this.snackBar.open(resp.advertenciaAplicacion, 'Cerrar', { duration: 10000, panelClass: ['warning-snackbar'] });
+          } else {
+            this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
+          }
           this.cargar();
         }
       },
