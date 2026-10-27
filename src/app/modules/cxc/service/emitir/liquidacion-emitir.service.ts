@@ -46,6 +46,8 @@ export interface ResultadoProcesoLiquidacion {
   /** Presente cuando `crearDocumentoCxp` falló dentro de procesarCompleta (etapa queda COMPLETADO_CON_PENDIENTES). */
   advertenciaAsiento?: string;
   advertenciaEmail?: string;
+  /** Código (PK) del asiento, para «Imprimir asiento». Puede venir null. */
+  idAsiento?: number | null;
   liquidacion?: LiquidacionEmitir;
   [key: string]: unknown;
 }

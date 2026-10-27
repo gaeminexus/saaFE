@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../../shared/services/funciones-datos.service';
@@ -41,7 +42,7 @@ const TABLA_FORMA_PAGO = '610';        // Formas de pago SRI (LSRI 610)
 @Component({
   selector: 'app-retencionesv2',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './retencionesv2.component.html',
   styleUrl: './retencionesv2.component.scss',
 })
@@ -523,6 +524,7 @@ export class Retencionesv2Component implements OnInit {
           this.deshabilitado = true;
           this.fechaControl.disable(); this.fechaEmiDocControl.disable();
           this.mostrarExito(resp.mensaje || 'Retención autorizada correctamente');
+          this.asientoEmitido.set({ idAsiento: (resp as any)?.idAsiento ?? null, numeroAlterno: (resp as any)?.asiento });
           return;
         }
 
@@ -563,7 +565,11 @@ export class Retencionesv2Component implements OnInit {
     });
   }
 
+  /** Asiento de la última emisión (resp.idAsiento, puede venir null), para «Imprimir asiento». */
+  asientoEmitido = signal<{ idAsiento: number | null; numeroAlterno?: string } | null>(null);
+
   nueva(): void {
+    this.asientoEmitido.set(null);
     this.documentoActual.set(null);
     this.deshabilitado = false;
     this.fechaControl.enable(); this.fechaEmiDocControl.enable();

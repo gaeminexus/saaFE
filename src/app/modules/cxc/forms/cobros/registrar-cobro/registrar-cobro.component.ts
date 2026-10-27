@@ -8,6 +8,7 @@ import { FacturaSelectorDialogComponent } from '../../../../../shared/components
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { CuentaBancaria } from '../../../../tsr/model/cuenta-bancaria';
 import { Titular } from '../../../../tsr/model/titular';
 import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.service';
@@ -23,7 +24,7 @@ import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.s
 @Component({
   selector: 'app-registrar-cobro',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './registrar-cobro.component.html',
   styleUrl: './registrar-cobro.component.scss',
 })

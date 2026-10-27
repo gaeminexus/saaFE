@@ -203,6 +203,7 @@
                     <strong>{{ l.montoAplicado | number: '1.2-2' }}</strong>
                     · asiento {{ l.asiento }}
                     · saldo restante {{ l.saldoAnticipo | number: '1.2-2' }}
+                    <app-boton-imprimir-asiento [idAsiento]="l.idAsiento" [numeroAlterno]="l.asiento" />
                   </li>
                 }
               </ul>

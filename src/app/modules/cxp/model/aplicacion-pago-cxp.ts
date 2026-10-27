@@ -60,6 +60,8 @@ export interface LineaResultadoCruce {
   montoAplicado: number;
   saldoAnticipo: number;
   asiento?: string;
+  /** Código (PK) del asiento, para «Imprimir asiento». Puede venir null. */
+  idAsiento?: number | null;
 }
 
 /**
@@ -71,6 +73,8 @@ export interface ResultadoAplicacionCxp extends SaldoFactura {
   mensaje: string;
   aplicacion?: number;
   asiento?: string;
+  /** Código (PK) del asiento, para «Imprimir asiento». Puede venir null. */
+  idAsiento?: number | null;
   /** Saldo de anticipos que le queda al proveedor tras el cruce. */
   saldoAnticipos?: number;
   /** Una línea por anticipo consumido; presente en el cruce multi-anticipo. */

@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { ProductoSelectorDialogComponent } from '../../../../../shared/components/producto-selector-dialog/producto-selector-dialog.component';
 import { FacturaSelectorDialogComponent } from '../../../../../shared/components/factura-selector-dialog/factura-selector-dialog.component';
@@ -41,7 +42,7 @@ const SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO = '01';
 @Component({
   selector: 'app-notas-credito',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './notas-credito.component.html',
   styleUrl: './notas-credito.component.scss',
 })
@@ -404,6 +405,7 @@ export class NotasCreditoComponent implements OnInit {
         this.deshabilitado = true;
         this.fechaControl.disable(); this.fechaDMControl.disable();
         this.mostrarExito('Nota de crédito generada correctamente');
+        this.asientoEmitido.set({ idAsiento: (resp as any)?.idAsiento ?? null, numeroAlterno: (resp as any)?.asiento });
         const idNc = resp.id;
         if (idNc) {
           this.documentoActual.set(resp);
@@ -442,7 +444,11 @@ export class NotasCreditoComponent implements OnInit {
     });
   }
 
+  /** Asiento de la última emisión (resp.idAsiento, puede venir null), para «Imprimir asiento». */
+  asientoEmitido = signal<{ idAsiento: number | null; numeroAlterno?: string } | null>(null);
+
   nueva(): void {
+    this.asientoEmitido.set(null);
     this.documentoActual.set(null); this.registroId = null; this.deshabilitado = false;
     this.fechaControl.enable(); this.fechaDMControl.enable();
     this.listaDetalles = []; this.dataSourceDetalle.data = [];

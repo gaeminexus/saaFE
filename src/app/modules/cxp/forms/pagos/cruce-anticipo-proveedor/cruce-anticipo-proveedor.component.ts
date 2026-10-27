@@ -6,6 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { Titular } from '../../../../tsr/model/titular';
 import {
@@ -28,7 +29,7 @@ import { AnticipoDisponible, AnticipoService } from '../../../../tsr/service/ant
 @Component({
   selector: 'app-cruce-anticipo-proveedor',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './cruce-anticipo-proveedor.component.html',
   styleUrl: './cruce-anticipo-proveedor.component.scss',
 })

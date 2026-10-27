@@ -147,6 +147,7 @@
               @if (r.asiento) { <span>Asiento: {{ r.asiento }}</span> }
               @if (r.aplicacion) { <span>Abono N° {{ r.aplicacion }}</span> }
             </div>
+            <app-boton-imprimir-asiento [idAsiento]="r.idAsiento" [numeroAlterno]="r.asiento" />
           </div>
         </div>
       }

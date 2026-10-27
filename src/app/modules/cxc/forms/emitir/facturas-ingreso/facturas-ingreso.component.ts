@@ -5,6 +5,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { DetalleFacturaEmitir } from '../../../model/detalle-factura-emitir';
 import { Facturador } from '../../../model/facturador';
@@ -38,7 +39,7 @@ const EFECTIVO = '1';
 @Component({
   selector: 'app-facturas-ingreso',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './facturas-ingreso.component.html',
   styleUrl: './facturas-ingreso.component.scss',
 })
@@ -382,7 +383,11 @@ export class FacturasIngresoComponent implements OnInit {
       this.tablaSRIFormasPagoInternas[0];
   }
 
+  /** Asiento de la última emisión (resp.idAsiento, puede venir null), para «Imprimir asiento». */
+  asientoEmitido = signal<{ idAsiento: number | null; numeroAlterno?: string } | null>(null);
+
   nueva(): void {
+    this.asientoEmitido.set(null);
     this.vFactura = null;
     this.deshabilitado = false;
     this.listaDetFactura = [];
@@ -728,6 +733,7 @@ export class FacturasIngresoComponent implements OnInit {
         this.deshabilitado = true;
         this.guardando.set(false);
         this.mostrarExito('Factura autorizada correctamente');
+        this.asientoEmitido.set({ idAsiento: (resp as any)?.idAsiento ?? null, numeroAlterno: (resp as any)?.asiento });
 
         const idFactura = resp?.id;
         if (idFactura) {

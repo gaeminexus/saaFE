@@ -13,6 +13,7 @@
         <mat-icon>print</mat-icon>
         Imprimir Retención
       </button>
+      <app-boton-imprimir-asiento [idAsiento]="asientoEmitido()?.idAsiento" [numeroAlterno]="asientoEmitido()?.numeroAlterno" />
     </div>
   </div>
 

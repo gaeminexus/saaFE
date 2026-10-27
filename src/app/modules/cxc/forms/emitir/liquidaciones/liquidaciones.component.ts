@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { ExportService } from '../../../../../shared/services/export.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -66,7 +67,7 @@ const ESTADO_ANULADO = 0;
 @Component({
   selector: 'app-liquidaciones',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './liquidaciones.component.html',
   styleUrl: './liquidaciones.component.scss',
 })
@@ -444,7 +445,11 @@ export class LiquidacionesComponent implements OnInit {
     return `${persona.identificacion || ''} - ${persona.razonSocial || persona.nombre || ''}`.trim();
   }
 
+  /** Asiento de la última emisión (resp.idAsiento, puede venir null), para «Imprimir asiento». */
+  asientoEmitido = signal<{ idAsiento: number | null; numeroAlterno?: string } | null>(null);
+
   nuevo(): void {
+    this.asientoEmitido.set(null);
     this.registroId = null;
     this.documentoActual.set(null);
     this.resultadoProceso.set(null);
@@ -721,6 +726,7 @@ export class LiquidacionesComponent implements OnInit {
       .subscribe({
         next: (resultado) => {
           this.resultadoProceso.set(resultado);
+          this.asientoEmitido.set({ idAsiento: resultado.idAsiento ?? null });
           this.registroId = resultado.idLiquidacion || this.registroId;
 
           if (resultado.etapa === 'COMPLETADO_CON_PENDIENTES') {

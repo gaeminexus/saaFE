@@ -8,6 +8,7 @@ import { FacturaSelectorDialogComponent } from '../../../../../shared/components
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { SaldoFactura } from '../../../../../shared/model/pagos-cobros/catalogos-aplicacion-pago';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { BotonImprimirAsientoComponent } from '../../../../../shared/components/boton-imprimir-asiento/boton-imprimir-asiento.component';
 import { Titular } from '../../../../tsr/model/titular';
 import { ResultadoAplicacionCxc } from '../../../model/aplicacion-pago-cxc';
 import { FacturaEmitir } from '../../../model/factura-emitir';
@@ -24,7 +25,7 @@ import { FuncionesDatosService } from '../../../../../shared/services/funciones-
 @Component({
   selector: 'app-cruce-anticipo-cliente',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [CommonModule, FormsModule, MaterialFormModule, BotonImprimirAsientoComponent],
   templateUrl: './cruce-anticipo-cliente.component.html',
   styleUrl: './cruce-anticipo-cliente.component.scss',
 })

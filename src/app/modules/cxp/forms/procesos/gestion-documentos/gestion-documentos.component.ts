@@ -34,6 +34,7 @@ import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-fac
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { ImprimirAsientoService } from '../../../../../shared/services/imprimir-asiento.service';
 
 // Estados que aún no están registrados en BD (pendientes de proceso)
 const ESTADOS_PENDIENTES = [1, 2, 4, 5, 6];
@@ -399,6 +400,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   private cargaTxtService = inject(CargaArchivoTxtService);
   private dialog = inject(MatDialog);
   private permisosService = inject(PermisosService);
+  private imprimirAsientoS = inject(ImprimirAsientoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private periodoService = inject(PeriodoService);
   private destroyRef = inject(DestroyRef);
@@ -1060,11 +1062,18 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
           this.mostrarAdvertencia(resp.mensaje);
           this.cargar();
         } else {
-          if (resp?.advertenciaAplicacion) {
-            // Se registró bien; el snack de éxito quedaría tapado por este, así que solo sale la advertencia.
-            this.snackBar.open(resp.advertenciaAplicacion, 'Cerrar', { duration: 10000, panelClass: ['warning-snackbar'] });
-          } else {
-            this.mostrarExito(`Registrado: ${resp?.mensaje || 'OK'}`);
+          // `idAsiento` (PK) puede venir null: sin él no hay botón y no es un error. La grilla se
+          // recarga, así que el botón va como acción del snackbar de éxito.
+          const idAsiento = Number(resp?.idAsiento);
+          const hayAsiento = Number.isFinite(idAsiento) && idAsiento > 0;
+          const accion = hayAsiento ? 'Imprimir asiento' : 'Cerrar';
+          // Se registró bien; un segundo snack taparía al primero, así que sale uno solo: la
+          // advertencia si hay (que ya implica el registro) o el éxito.
+          const snackRef = resp?.advertenciaAplicacion
+            ? this.snackBar.open(resp.advertenciaAplicacion, accion, { duration: 10000, panelClass: ['warning-snackbar'] })
+            : this.snackBar.open(`Registrado: ${resp?.mensaje || 'OK'}`, accion, { duration: hayAsiento ? 10000 : 4000, panelClass: ['snack-success'] });
+          if (hayAsiento) {
+            snackRef.onAction().subscribe(() => this.imprimirAsiento(idAsiento, resp?.asiento));
           }
           this.cargar();
         }
@@ -1418,6 +1427,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
     if (!err) return 'Error desconocido';
     if (typeof err === 'string') return err;
     return err?.mensaje || err?.message || err?.error || JSON.stringify(err);
+  }
+
+  private imprimirAsiento(idAsiento: number, numeroAlterno?: string): void {
+    this.imprimirAsientoS.imprimir(idAsiento, numeroAlterno).subscribe({
+      error: (err: Error) => this.mostrarError(err.message),
+    });
   }
 
   private mostrarExito(msg: string): void { this.snackBar.open(msg, 'Cerrar', { duration: 4000, panelClass: ['snack-success'] }); }

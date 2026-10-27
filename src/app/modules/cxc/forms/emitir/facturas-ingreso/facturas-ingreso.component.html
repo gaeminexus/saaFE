@@ -373,6 +373,7 @@
         <mat-icon>print</mat-icon>
         Imprimir
       </button>
+      <app-boton-imprimir-asiento [idAsiento]="asientoEmitido()?.idAsiento" [numeroAlterno]="asientoEmitido()?.numeroAlterno" />
       <button mat-raised-button class="btn-nueva" matTooltip="Nueva Factura" aria-label="Nueva Factura" (click)="nueva()" [disabled]="guardando()">
         <mat-icon>add</mat-icon>
         Nueva
