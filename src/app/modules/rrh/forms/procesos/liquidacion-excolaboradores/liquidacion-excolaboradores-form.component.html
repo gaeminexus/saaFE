@@ -184,18 +184,18 @@
               @for (fila of detalles(); track $index) {
                 <tr>
                   <td>
-                    <mat-form-field appearance="outline" class="celda-select">
-                      <mat-select
-                        [ngModel]="fila.tipoConcepto"
-                        (ngModelChange)="actualizarTipoConcepto($index, $event)"
-                        [ngModelOptions]="{ standalone: true }"
-                        placeholder="Elija un tipo"
-                      >
-                        @for (tipo of tiposConcepto; track tipo.codigo) {
-                          <mat-option [value]="tipo.codigo">{{ tipo.texto }}</mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
+                    <app-inline-autocomplete
+                      modo="campo"
+                      etiquetaCampo="Tipo"
+                      class="celda-select"
+                      [opciones]="tiposConcepto"
+                      [etiqueta]="etiquetaOpcionTipo"
+                      [valorPor]="valorOpcionTipo"
+                      [ngModel]="fila.tipoConcepto"
+                      (ngModelChange)="actualizarTipoConcepto($index, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      placeholder="Escriba para buscar"
+                    />
                   </td>
                   <td>
                     <mat-form-field appearance="outline" class="celda-texto">

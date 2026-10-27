@@ -55,6 +55,7 @@ import {
   esIngresoLiquidacionExterna,
 } from '../../../model/liquidacion-externa';
 import { criteriosPorEmpresa, extraerCodigo, referenciaEmpresa } from '../../parametrizacion/utiles-parametrizacion';
+import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-formulario.component';
 import { referencia, referenciaSinResolver } from '../../comunes/cuerpo-entidad';
 import { mensajeDeError } from '../../comunes/mensajes';
@@ -117,6 +118,7 @@ function validadorFechaSalida(control: AbstractControl): ValidationErrors | null
     MatProgressSpinnerModule,
     MatTooltipModule,
     CampoFormularioComponent,
+    InlineAutocompleteComponent,
   ],
   templateUrl: './liquidacion-excolaboradores-form.component.html',
   styleUrls: ['./liquidacion-excolaboradores-form.component.scss'],
@@ -294,8 +296,18 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
     this.detalles.update((filas) => filas.filter((_, i) => i !== indice));
   }
 
+  readonly etiquetaOpcionTipo = (tipo: { texto: string }): string => tipo.texto;
+  readonly valorOpcionTipo = (tipo: { codigo: number }): number => tipo.codigo;
+
+  /**
+   * Al elegir el tipo, si `cuentasSugeridasPara` resuelve EXACTAMENTE una cuenta se asigna sola.
+   * Con 0 o 2+ no se toca la cuenta de la fila: quedan los chips de sugeridas para que el
+   * contador elija (los tipos 1 a 4 tienen dos cuentas y está pendiente que diga cuál va).
+   */
   actualizarTipoConcepto(indice: number, tipoConcepto: number | null): void {
     this.detalles.update((filas) => filas.map((f, i) => (i === indice ? { ...f, tipoConcepto } : f)));
+    const sugeridas = this.cuentasSugeridasPara(tipoConcepto);
+    if (sugeridas.length === 1) this.asignarCuenta(indice, sugeridas[0]);
   }
 
   actualizarDescripcionConcepto(indice: number, descripcion: string): void {
