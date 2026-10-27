@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { ImprimirAsientoService } from '../../../../../shared/services/imprimir-asiento.service';
 import { SRI_TIPO_DOC_SUSTENTO } from '../../../model/catalogos-sri-reembolso';
 import { ProductoPago } from '../../../model/producto_pago';
 import { CuadraturaReembolso, ReembolsoFacturaCompra } from '../../../model/reembolso-factura-compra';
@@ -29,6 +30,7 @@ export class ReembolsosFacturaComponent implements OnInit, OnChanges {
 
   private reembolsoService = inject(ReembolsoFacturaCompraService);
   private cargaDocumentosService = inject(CargaDocumentosService);
+  private imprimirAsientoS = inject(ImprimirAsientoService);
   private productoService = inject(ProductoPagoService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -153,9 +155,18 @@ export class ReembolsosFacturaComponent implements OnInit, OnChanges {
     this.bloqueantes.set([]);
     this.procesando.set(true);
     this.cargaDocumentosService.contabilizarReembolso(this.idFacturaCompra, this.idEmpresa, this.idUsuario).subscribe({
-      next: () => {
+      next: (resp) => {
         this.procesando.set(false);
-        this.snackBar.open('Factura contabilizada', 'Cerrar', { duration: 4000, panelClass: ['snack-success'] });
+        // En esta respuesta la clave `asiento` es el CÓDIGO (PK) del asiento, no el número alterno
+        // (ProcesoCargaDocumentosServiceImpl.contabilizarReembolso). El diálogo padre se cierra al
+        // emitir `contabilizado`, así que el botón va en el snackbar, que sobrevive al cierre.
+        const idAsiento = Number(resp?.asiento);
+        if (Number.isFinite(idAsiento) && idAsiento > 0) {
+          this.snackBar.open('Factura contabilizada', 'Imprimir asiento', { duration: 12000, panelClass: ['snack-success'] })
+            .onAction().subscribe(() => this.imprimirAsiento(idAsiento));
+        } else {
+          this.snackBar.open('Factura contabilizada', 'Cerrar', { duration: 4000, panelClass: ['snack-success'] });
+        }
         this.contabilizado.emit();
       },
       error: (err) => {
@@ -166,6 +177,12 @@ export class ReembolsosFacturaComponent implements OnInit, OnChanges {
         this.bloqueantes.set(bloq);
         this.snackBar.open(this.extraerMensajeError(err), 'Cerrar', { duration: 6000, panelClass: ['snack-error'] });
       },
+    });
+  }
+
+  private imprimirAsiento(idAsiento: number): void {
+    this.imprimirAsientoS.imprimir(idAsiento).subscribe({
+      error: (err: Error) => this.snackBar.open(err.message, 'Cerrar', { duration: 6000 }),
     });
   }
 
