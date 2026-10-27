@@ -92,6 +92,34 @@ Respuesta 200: `{ exito, mensaje, aplicacion: id, saldoNotaCredito, saldoFactura
 `NOTA_CREDITO` **sin asiento** se reverse sin intentar anular asiento ni movimiento bancario, y que el saldo de la
 NC vuelva (sale solo, porque se calcula). Si no es así, **reporta y se detiene**.
 
+### 4.1 Cruzar contra una NOTA DE DÉBITO del proveedor — decidido por el usuario el 2026-10-27
+
+**Lo medido:** una ND de compra **no tiene saldo propio**. Al registrarse, `aplicarNotaDebito` crea en `APLP` una
+aplicación **negativa** (`tipoDocPago = NOTA_DEBITO (5)`, `APLPNTDC`) sobre **la factura que modifica**: el valor
+de la ND pasa a ser saldo de esa factura. Ningún pago se aplica a la ND directamente. Por eso cruzar el saldo
+de la NC «contra la ND» es cruzarlo contra **su factura**.
+
+- `POST /rest/aplp/cruzarNotaCredito` acepta, **en lugar de** `idFacturaCompra`, **`idNotaDebito`** (exactamente
+  uno de los dos; si vienen ambos o ninguno → 400).
+- Con `idNotaDebito`: la ND existe, es de la empresa y **del mismo titular** que la NC, está registrada y vigente
+  (mismo criterio que la NC: asiento, estado activo, no anulada), y **no** está BLOQUEADA por seguros
+  (`EstadoSeguroDocumentoCxp.BLOQUEADO`: no subió el saldo de su factura, así que no hay nada que cruzar) → si lo
+  está, 400 *«La nota de débito N° X está bloqueada hasta que crédito la libere.»*
+- La factura se resuelve **igual que al registrar la ND**: `resolverFacturaCompraPorNumero(nd.numDocModificado,
+  idTitular, idEmpresa)`. Desde ahí, mismas validaciones y misma fila de `APLP` que el cruce contra factura
+  (`facturaCompra` = la de la ND, `notaCredito` = la NC), con observación
+  `«Cruce de saldo de la NC N° {nc} contra la ND N° {nd}»`.
+- ⛔ **No** se llena `APLPNTDC` en la fila del cruce: esa FK identifica la aplicación negativa **propia** de la ND,
+  y `selectActivasByDocumento("NOTA_DEBITO")` la usa para reversarla al anular la ND. Una fila de cruce con esa
+  FK se reversaría junto con ella y confundiría las dos cosas.
+- `valor <= saldoFactura`: si la factura ya está cubierta por otros pagos, el cruce contra la ND no tiene nada que
+  cubrir y se rechaza con el mismo mensaje del cruce contra factura.
+- **Disponibles:** `GET /rest/ntdc/pendientes/{idTitular}/{idEmpresa}` — ND registradas y vigentes, no bloqueadas,
+  cuya factura tiene saldo > 0,01. Proyección `{ idNotaDebito, numero, fecha, total, idFacturaCompra,
+  numeroFactura, saldoFactura }`. Consulta agregada, sin N+1.
+- **FE (Cruce de Nota de Crédito):** el destino se elige entre **Factura** o **Nota de débito** (toggle). Con ND, la
+  tabla de destino es `ntdc/pendientes`; el valor por defecto es `min(saldo NC, total ND, saldo de su factura)`.
+
 Fuera de alcance: cruzar contra una **liquidación de compra** o contra la factura de **otro proveedor**.
 
 ## 5. Devolución del saldo: el proveedor nos paga por transferencia o cheque
