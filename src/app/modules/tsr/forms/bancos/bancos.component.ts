@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -41,6 +42,7 @@ const RUBRO_TIPO_BANCO = 24;
     FormsModule,
     ReactiveFormsModule,
     MatButtonModule,
+    MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
@@ -195,6 +197,7 @@ export class BancosComponent implements OnInit {
       nombre: ['', Validators.required],
       tipo: [null as number | null, Validators.required],
       concilia: [0],
+      bancoReal: [true],
       estado: [1],
     });
   }
@@ -223,6 +226,7 @@ export class BancosComponent implements OnInit {
       nombre: (v.nombre as string).trim().toUpperCase(),
       rubroTipoBancoH: this.extraerCodigo(v.tipo),
       conciliaDescuadre: this.extraerCodigo(v.concilia),
+      bancoReal: v.bancoReal ? 1 : 0,
       // POST /bnco deserializa la entidad Banco completa: `empresa` es un objeto Empresa, no
       // un número — mandar el código pelado rompe la deserialización de Jackson (ver el error
       // real: "Cannot construct instance of ... Empresa ... from Number value"). Mismo patrón
@@ -262,6 +266,8 @@ export class BancosComponent implements OnInit {
       nombre: [banco.nombre, Validators.required],
       tipo: [banco.rubroTipoBancoH ?? null, Validators.required],
       concilia: [banco.conciliaDescuadre ?? 0],
+      // Un backend sin el campo no lo manda: se asume real (default 1 de la columna).
+      bancoReal: [banco.bancoReal !== 0],
       estado: [banco.estado],
     });
   }
@@ -295,6 +301,7 @@ export class BancosComponent implements OnInit {
       nombre: (v.nombre as string).trim().toUpperCase(),
       rubroTipoBancoH: this.extraerCodigo(v.tipo),
       conciliaDescuadre: this.extraerCodigo(v.concilia),
+      bancoReal: v.bancoReal ? 1 : 0,
       estado: this.extraerCodigo(v.estado),
     };
     // Mismo paso que ServiceLocatorTsrService (BANCO/EDIT): si cambió el tipo, repone el rubro
@@ -318,14 +325,15 @@ export class BancosComponent implements OnInit {
     });
   }
 
-  private readonly encabezadosExportacion = ['Descripción', 'Tipo', 'Permite Descuadre', 'Estado'];
-  private readonly clavesExportacion = ['nombre', 'tipoDesc', 'conciliaLabel', 'estadoLabel'];
+  private readonly encabezadosExportacion = ['Descripción', 'Tipo', 'Permite Descuadre', 'Banco real', 'Estado'];
+  private readonly clavesExportacion = ['nombre', 'tipoDesc', 'conciliaLabel', 'bancoRealLabel', 'estadoLabel'];
 
   private datosExportacion(): any[] {
     return this.bancos().map((b) => ({
       nombre: b.nombre ?? '',
       tipoDesc: this.tipoLabel(b.rubroTipoBancoH),
       conciliaLabel: b.conciliaDescuadre ? 'Sí' : 'No',
+      bancoRealLabel: b.bancoReal === 0 ? 'No' : 'Sí',
       estadoLabel: b.estado === 1 ? 'Activo' : 'Inactivo',
     }));
   }

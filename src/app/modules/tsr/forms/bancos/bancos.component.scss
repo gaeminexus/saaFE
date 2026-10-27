@@ -231,3 +231,15 @@ $banco-acento: #667eea;
     height: $font-size-base;
   }
 }
+
+.banco-real {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 12px;
+}
+
+.ayuda-banco-real {
+  opacity: 0.7;
+  font-size: 12px;
+}

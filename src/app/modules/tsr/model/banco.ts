@@ -12,4 +12,10 @@ export interface Banco {
   empresa?: Empresa;
   rubroTipoBancoP?: number;
   rubroTipoBancoH?: number;
+  /**
+   * 1 = banco real, 0 = no (TSR.BNCO.BNCOREAL, default 1; script e2-111). Decide el tipo de los asientos
+   * automáticos que mueven una cuenta de este banco: Ingreso/Egreso (IN-A/EG-A) si es real, Diario (DI-A)
+   * si no. Opcional: un backend anterior al script no lo manda y se asume 1.
+   */
+  bancoReal?: number;
 }

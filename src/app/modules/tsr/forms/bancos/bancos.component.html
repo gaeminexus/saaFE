@@ -59,6 +59,10 @@
           </mat-select>
         </mat-form-field>
       </div>
+      <div class="banco-real">
+        <mat-checkbox formControlName="bancoReal">Banco real</mat-checkbox>
+        <small class="ayuda-banco-real">Si está marcado, los asientos automáticos que muevan una cuenta bancaria de este banco salen como Ingreso (IN-A) o Egreso (EG-A); si no, como Diario (DI-A)</small>
+      </div>
 
       @if (errorCreacion(); as error) {
         <div class="fila-error">
@@ -97,6 +101,7 @@
             <th>Descripción</th>
             <th>Tipo</th>
             <th>Permite descuadre</th>
+            <th>Banco real</th>
             <th>Estado</th>
             <th></th>
           </tr>
@@ -121,6 +126,9 @@
                   </mat-select>
                 </td>
                 <td>
+                  <mat-checkbox formControlName="bancoReal" aria-label="Banco real"></mat-checkbox>
+                </td>
+                <td>
                   <mat-select class="celda-select" formControlName="estado">
                     @for (e of estados; track e.codigo) {
                       <mat-option [value]="e.codigo">{{ e.descripcion }}</mat-option>
@@ -136,9 +144,12 @@
                   </button>
                 </td>
               </tr>
+              <tr class="fila-ayuda-banco-real">
+                <td colspan="6"><small class="ayuda-banco-real">Banco real: Si está marcado, los asientos automáticos que muevan una cuenta bancaria de este banco salen como Ingreso (IN-A) o Egreso (EG-A); si no, como Diario (DI-A)</small></td>
+              </tr>
               @if (errorEdicion(); as error) {
                 <tr class="fila-error">
-                  <td colspan="5">
+                  <td colspan="6">
                     <mat-icon>error</mat-icon>
                     {{ error }}
                   </td>
@@ -149,6 +160,7 @@
                 <td>{{ b.nombre }}</td>
                 <td>{{ tipoLabel(b.rubroTipoBancoH) }}</td>
                 <td>{{ b.conciliaDescuadre ? 'Sí' : 'No' }}</td>
+                <td>{{ b.bancoReal === 0 ? 'No' : 'Sí' }}</td>
                 <td>
                   <span class="pill" [class.pill-ok]="b.estado === 1">
                     {{ b.estado === 1 ? 'Activo' : 'Inactivo' }}
