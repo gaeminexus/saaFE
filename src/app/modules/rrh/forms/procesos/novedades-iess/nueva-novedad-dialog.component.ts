@@ -4,8 +4,9 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { DetalleRubroService } from '../../../../../shared/services/detalle-rubro.service';
-import { TipoNovedadIess } from '../../../model/estados-novedad-iess';
+import { EstadoNovedadIess, TipoNovedadIess } from '../../../model/estados-novedad-iess';
 import { RubrosRrh } from '../../../model/rubros-rrh';
 import { CampoFormularioComponent } from '../../comunes/campo-formulario/campo-formulario.component';
 import { referenciaSinResolver } from '../../comunes/cuerpo-entidad';
@@ -14,7 +15,21 @@ import { CampoFormulario } from '../../comunes/modelo-formulario';
 export interface NuevaNovedadData {
   empleados: any[];
   contratos: any[];
+  /** Todas las novedades registradas (no solo las del período): sirven para saber quién ya tiene su aviso de salida. */
+  novedades?: any[];
 }
+
+/** MPLDESTD, rubro 185: 4 CESANTE, 5 JUBILADO. El resto (activo, con licencia, suspendido) sigue siendo personal. */
+const EMPLEADO_CESANTE = 4;
+const EMPLEADO_JUBILADO = 5;
+/**
+ * Días, contados desde hoy, durante los que un cesante sigue ofreciéndose para su aviso de salida.
+ * Si el aviso se hizo en el portal del IESS y no en el SAA, el sistema no se entera: sin esta
+ * ventana el cesante seguiría saliendo como «(salida pendiente)» para siempre. El plazo legal
+ * del aviso es corto, así que pasados 60 días de la terminación ya no se ofrece.
+ */
+const DIAS_VENTANA_SALIDA_PENDIENTE = 60;
+const MARCA_SALIDA_PENDIENTE = '(salida pendiente)';
 
 /**
  * Alta manual de una novedad ante el IESS.
@@ -150,11 +165,59 @@ export class NuevaNovedadDialogComponent {
   constructor(
     private fb: FormBuilder,
     private detalleRubroService: DetalleRubroService,
+    private funcionesDatosS: FuncionesDatosService,
     public dialogRef: MatDialogRef<NuevaNovedadDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: NuevaNovedadData,
   ) {
     this.formulario = this.fb.group({});
     this.construir();
+  }
+
+  /**
+   * Colaboradores que se ofrecen: todos menos cesantes y jubilados, y al final los cesantes a los que
+   * todavía les falta el aviso de salida. El aviso de salida es justamente para quien ya se fue: si se ocultara al
+   * cesante, ya no se podría registrar.
+   *
+   * Un cesante sigue apareciendo si la terminación más reciente de sus contratos cae dentro de los
+   * últimos `DIAS_VENTANA_SALIDA_PENDIENTE` días y NO tiene una novedad AVISO_DE_SALIDA en estado
+   * distinto de ANULADA. Con licencia o suspendido se muestran: se les registran novedades. Sin `estado` conocido se muestra: no
+   * se esconde a nadie por un dato que falta.
+   */
+  private colaboradoresOfrecidos(): any[] {
+    const activos: any[] = [];
+    const salidaPendiente: any[] = [];
+    for (const empleado of this.data.empleados ?? []) {
+      const estado = empleado?.estado;
+      if (estado === null || estado === undefined) {
+        activos.push(empleado);
+      } else if (Number(estado) === EMPLEADO_CESANTE) {
+        if (this.tieneSalidaPendiente(empleado)) {
+          salidaPendiente.push({ ...empleado, marcaSalida: MARCA_SALIDA_PENDIENTE });
+        }
+      } else if (Number(estado) !== EMPLEADO_JUBILADO) {
+        activos.push(empleado);
+      }
+    }
+    return [...activos, ...salidaPendiente];
+  }
+
+  private tieneSalidaPendiente(empleado: any): boolean {
+    const terminaciones = (this.contratosPorEmpleado.get(empleado.codigo) ?? [])
+      .map((c) => this.funcionesDatosS.convertirFechaDesdeBackend(c?.fechaTerminacion))
+      .filter((f): f is Date => !!f && !Number.isNaN(f.getTime()));
+    if (terminaciones.length === 0) return false;
+    const ultima = Math.max(...terminaciones.map((f) => f.getTime()));
+    const limite = new Date();
+    limite.setHours(0, 0, 0, 0);
+    limite.setDate(limite.getDate() - DIAS_VENTANA_SALIDA_PENDIENTE);
+    if (ultima < limite.getTime()) return false;
+    const yaAvisado = (this.data.novedades ?? []).some(
+      (n) =>
+        n?.empleado?.codigo === empleado.codigo &&
+        Number(n.tipoNovedad) === TipoNovedadIess.AVISO_DE_SALIDA &&
+        Number(n.estado) !== EstadoNovedadIess.ANULADA,
+    );
+    return !yaAvisado;
   }
 
   private construir(): void {
@@ -165,8 +228,12 @@ export class NuevaNovedadDialogComponent {
         name: 'empleado',
         label: 'Colaborador',
         tipo: 'referencia',
-        coleccion: this.data.empleados,
+        coleccion: this.colaboradoresOfrecidos(),
         buscarPor: ['apellidos', 'nombres', 'identificacion'],
+        etiquetaOpcion: (e: any) =>
+          `${e.apellidos ?? ''} ${e.nombres ?? ''}${e.marcaSalida ? ` ${e.marcaSalida}` : ''}`.trim(),
+        detalleOpcion: (e: any) => e.identificacion ?? '',
+        anchoPanel: 520,
         requerido: true,
       },
       {

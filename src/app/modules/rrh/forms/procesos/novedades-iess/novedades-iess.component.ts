@@ -95,6 +95,8 @@ export class NovedadesIessComponent implements OnInit {
   readonly contratos = signal<any[]>([]);
 
   readonly novedades = signal<NovedadIess[]>([]);
+  /** Todas las novedades traídas por `getAll`, sin filtrar por período: el alta las necesita para saber quién ya tiene aviso de salida. */
+  private todasLasNovedades: NovedadIess[] = [];
   readonly filas = signal<any[]>([]);
   readonly cargando = signal<boolean>(false);
   readonly ocupado = signal<boolean>(false);
@@ -283,6 +285,7 @@ export class NovedadesIessComponent implements OnInit {
     this.cargando.set(true);
     this.novedadService.getAll().subscribe({
       next: (filas) => {
+        this.todasLasNovedades = filas ?? [];
         const delPeriodo = (filas ?? [])
           .map((n) => this.normalizar(n))
           .filter((n) => this.caeEnElPeriodo(n, periodo));
@@ -474,7 +477,7 @@ export class NovedadesIessComponent implements OnInit {
   nueva(): void {
     this.dialog
       .open(NuevaNovedadDialogComponent, {
-        data: { empleados: this.empleados(), contratos: this.contratos() },
+        data: { empleados: this.empleados(), contratos: this.contratos(), novedades: this.todasLasNovedades },
         autoFocus: 'dialog',
       })
       .afterClosed()

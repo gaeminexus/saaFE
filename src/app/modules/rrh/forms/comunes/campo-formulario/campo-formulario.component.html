@@ -43,9 +43,18 @@
         <input matInput [formControlName]="campo.name" [matAutocomplete]="auto"
                [attr.aria-label]="campo.label" placeholder="Escriba para buscar"
                (input)="alTeclear($any($event.target).value)" />
-        <mat-autocomplete #auto="matAutocomplete" [displayWith]="etiquetaDe">
+        <mat-autocomplete #auto="matAutocomplete" [displayWith]="etiquetaDe" [panelWidth]="$any(campo.anchoPanel)">
           @for (fila of sugerencias(); track fila.codigo) {
-            <mat-option [value]="fila">{{ etiquetaDe(fila) }}</mat-option>
+            @if (campo.detalleOpcion) {
+              <mat-option [value]="fila">
+                <span class="opcion-linea">
+                  <span class="opcion-principal">{{ etiquetaDe(fila) }}</span>
+                  <small class="opcion-detalle">{{ campo.detalleOpcion(fila) }}</small>
+                </span>
+              </mat-option>
+            } @else {
+              <mat-option [value]="fila">{{ etiquetaDe(fila) }}</mat-option>
+            }
           }
         </mat-autocomplete>
       }

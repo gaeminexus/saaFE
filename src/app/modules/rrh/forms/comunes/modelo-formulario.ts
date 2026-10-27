@@ -25,6 +25,15 @@ export interface CampoFormulario {
    * (`departamento.nombre`).
    */
   buscarPor?: string[];
+  /**
+   * Opcional, solo `referencia`. Texto principal de cada opción (y lo que queda en el campo al
+   * elegir); si falta, se usa la unión de `buscarPor` como siempre.
+   */
+  etiquetaOpcion?: (fila: any) => string;
+  /** Opcional, solo `referencia`. Texto secundario de la opción, en gris y más pequeño, en la misma línea. */
+  detalleOpcion?: (fila: any) => string;
+  /** Opcional, solo `referencia`. Ancho en px del panel de sugerencias; si falta, mide lo mismo que el campo. */
+  anchoPanel?: number;
   requerido?: boolean;
   mayusculas?: boolean;
   ayuda?: string;

@@ -207,6 +207,7 @@ export class CampoFormularioComponent implements OnInit, DoCheck {
   etiquetaDe = (fila: any): string => {
     if (fila === null || fila === undefined) return '';
     if (typeof fila !== 'object') return String(fila);
+    if (this.campo?.etiquetaOpcion) return this.campo.etiquetaOpcion(fila);
     return this.partesBuscables(fila).join(' · ');
   };
 
