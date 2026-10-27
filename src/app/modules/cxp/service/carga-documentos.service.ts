@@ -140,6 +140,16 @@ export class CargaDocumentosService {
   }
 
   /**
+   * Anula el documento de la bandeja cuando el emisor lo anuló ante el SRI — docs/cxp/ANULAR-DOCUMENTO-DESDE-BANDEJA.md.
+   * Definitivo. 409 si el documento tiene la contabilidad activa o no está en un estado anulable;
+   * el mensaje del backend se muestra tal cual.
+   */
+  anularDocumento(idDocumentoCxp: number, payload: { motivo: string; idUsuario: number }): Observable<any> {
+    return this.http.post<any>(`${PROCESS_URL}/anularDocumento/${idDocumentoCxp}`, payload, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
    * Regenera el asiento de un documento XML_CARGADO(2) que viene de `anularContabilidad`. 409 si
    * no está en ese estado, si no es FACTURA_COMPRA, o si el asiento no se puede generar — en ese
    * caso el documento NO vuelve solo a REGISTRADO_BD, queda en XML_CARGADO para reintentar.

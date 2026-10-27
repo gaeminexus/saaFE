@@ -33,6 +33,7 @@ import { SubirXmlDialogComponent, SubirXmlDialogResult } from '../dialogs/subir-
 import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-factura.component';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 // Estados que aún no están registrados en BD (pendientes de proceso)
 const ESTADOS_PENDIENTES = [1, 2, 4, 5, 6];
@@ -1082,6 +1083,40 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   // ─── ANULAR CONTABILIDAD / RECONTABILIZAR ───────────────
   // docs/cxp/API-ANULAR-RECONTABILIZAR-DOCUMENTO-CXP.md. No confundir con
   // `revertir()`: esos dos endpoints no borran la factura, solo su asiento.
+
+  /**
+   * Anula un documento de la bandeja (NOVEDAD 5, XML_CARGADO 2 o REVERTIDO 6) cuyo emisor lo anuló ante el
+   * SRI — docs/cxp/ANULAR-DOCUMENTO-DESDE-BANDEJA.md §3.2. No se ofrece en REGISTRADO_BD(3), que primero
+   * anula la contabilidad. El 409 del backend (p. ej. contabilidad activa) se muestra tal cual.
+   */
+  anularDocumento(doc: DocumentoCxp): void {
+    const data: MotivoDialogData = {
+      titulo: `Anular ${doc.serieComprobante}`,
+      advertencia: 'Use esta opción solo si el emisor anuló el comprobante ante el SRI. Es definitivo.',
+      textoConfirmar: 'Anular documento',
+    };
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CXP_MOTIVO,
+      () => {
+        this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
+          if (!motivo) return;
+          this.procesando.set(true);
+          this.processService.anularDocumento(doc.id, { motivo, idUsuario: this.idUsuario }).subscribe({
+            next: (resp) => {
+              this.procesando.set(false);
+              this.mostrarExito(resp?.mensaje || 'Documento anulado');
+              this.cargar();
+            },
+            error: (err) => {
+              this.procesando.set(false);
+              this.mostrarErrorDialog('No se pudo anular el documento', mensajeDeError(err, 'No se pudo anular el documento'));
+            },
+          });
+        });
+      },
+      (mensaje) => this.mostrarError(mensaje.toUpperCase()),
+    );
+  }
 
   /**
    * Un documento REGISTRADO_BD(3) muestra "Anular contabilidad" en la pestaña de registrados —

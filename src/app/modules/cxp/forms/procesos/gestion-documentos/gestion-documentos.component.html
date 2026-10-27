@@ -353,6 +353,12 @@
                         <mat-icon>swap_horiz</mat-icon> Reemplazar
                       </button>
                     }
+                    @if (d.estadoDocumento === 2 || d.estadoDocumento === 5 || d.estadoDocumento === 6) {
+                      <button mat-stroked-button color="warn" (click)="anularDocumento(d)" [disabled]="procesando()"
+                              matTooltip="Anular el documento (el emisor lo anuló ante el SRI). Es definitivo.">
+                        <mat-icon>block</mat-icon> Anular
+                      </button>
+                    }
                     @if (d.estadoDocumento === 4) {
                       <span class="badge badge-error" [matTooltip]="d.novedad">ERROR</span>
                     }
