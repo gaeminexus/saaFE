@@ -104,11 +104,16 @@ export class NovedadIessService {
    * publique, el alta falla con su mensaje a la vista en vez de crear novedades sin plazo, que
    * sería peor que no crearlas.
    */
+  /**
+   * Ojo con el nombre: el cuerpo se deserializa directo a la entidad `NovedadIess`, que tiene
+   * `usuarioRegistro` y no `usuario` — con `usuario` Jackson rechaza el cuerpo («Not able to
+   * deserialize data provided») y el alta nunca llega al servicio.
+   */
   registrar(datos: any): Observable<NovedadIess | null> {
     return this.http
       .post<NovedadIess>(
         `${ServiciosRhh.RS_NVIS}/registrar`,
-        { ...datos, usuario: usuarioSesion() },
+        { ...datos, usuarioRegistro: usuarioSesion() },
         this.httpOptions,
       )
       .pipe(catchError((error) => throwError(() => error.error || error)));
