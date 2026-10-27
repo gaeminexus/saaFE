@@ -55,3 +55,25 @@ export interface RevertirAcreditacionVacacionesRequest {
   anio: number;
   usuarioRegistro: string;
 }
+
+/**
+ * Respuesta de GET /sldv/estadoAcreditacion/{idEmpresa}. Las fechas llegan de Jackson como arreglo
+ * `[2026,9,30]` o como `yyyy-MM-dd` (`fechaEjecucion`, además, puede traer hora): normalizarlas
+ * siempre con `FuncionesDatosService.convertirFechaDesdeBackend()`.
+ */
+export interface EstadoAcreditacionVacaciones {
+  ultimaCorrida: {
+    fechaCorte: any;
+    fechaEjecucion: any;
+    usuario: string;
+    origen: 'MANUAL' | 'CIERRE_NOMINA';
+    estado: 'OK' | 'ERROR';
+    mensaje: string | null;
+    empleadosAcreditados: number;
+  } | null;
+  ultimoPeriodoCerrado: { anio: number; mes: number; fechaFin: any } | null;
+  cortePropuesto: any;
+  activosSinSaldo: number;
+  empleadosSinSaldo: { codigo: number; identificacion: string; nombre: string }[];
+  desactualizada: boolean;
+}

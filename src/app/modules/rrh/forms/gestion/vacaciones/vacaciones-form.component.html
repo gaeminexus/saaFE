@@ -105,6 +105,29 @@
     </mat-form-field>
   </div>
 
+  @if (!isView() && (alertaAcreditacion() || puedeAcreditar())) {
+    <div class="acreditacion-panel" [class.con-alerta]="alertaAcreditacion()">
+      @if (alertaAcreditacion()) {
+        <div class="acreditacion-alerta">
+          <mat-icon>warning</mat-icon>
+          <span>{{ alertaAcreditacion() }}</span>
+        </div>
+      }
+      @if (puedeAcreditar()) {
+        <div class="acreditacion-accion">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha de corte</mat-label>
+            <input matInput type="date" [ngModel]="corteAcreditacion()" (ngModelChange)="corteAcreditacion.set($event)" />
+          </mat-form-field>
+          <button mat-stroked-button color="primary" (click)="confirmarYAcreditar()" [disabled]="acreditando() || !corteAcreditacion()">
+            <mat-icon>event_repeat</mat-icon>
+            Acreditar ahora
+          </button>
+        </div>
+      }
+    </div>
+  }
+
   <div class="saldo-panel">
     <div class="saldo-title">
       Saldo disponible <strong>{{ saldoDisponibleTotal() }}</strong> días

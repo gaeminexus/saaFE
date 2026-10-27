@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, ElementRef, Inject, OnInit, signal, ViewChild } from '@angular/core';
 import { UntypedFormControl } from '@angular/forms';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, map, of, switchMap } from 'rxjs';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -18,6 +18,12 @@ import { SaldoVacacionesService } from '../../../service/saldo-vacaciones.servic
 import { SolicitudVacacionesService } from '../../../service/solicitud-vacaciones.service';
 import { criteriosPorEmpresa } from '../../parametrizacion/utiles-parametrizacion';
 import { usuarioSesion } from '../../../../../shared/services/usuario-sesion';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { AppStateService } from '../../../../../shared/services/app-state.service';
+import { empresaSesionCodigo } from '../../../../../shared/services/empresa-sesion';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { PermisosRrh } from '../../../model/permisos-rrh';
+import { textoAlertaAcreditacion } from '../../comunes/alerta-acreditacion-vacaciones';
 import { opcionesAviso } from '../../comunes/avisos';
 import { InlineAutocompleteComponent } from '../../comunes/inline-autocomplete/inline-autocomplete.component';
 
@@ -59,6 +65,13 @@ export class VacacionesFormComponent implements OnInit {
   /** Desglose por año (todas las filas de selectByCriteria), ascendente: se consume el más antiguo primero. */
   saldoDesglose = signal<SaldoVacaciones[]>([]);
 
+  /** Aviso de acreditación desactualizada (GET /sldv/estadoAcreditacion). `null`: no hay nada que avisar. */
+  alertaAcreditacion = signal<string | null>(null);
+  /** Corte (yyyy-MM-dd) con que se acredita desde esta pantalla; arranca en `cortePropuesto` y es editable. */
+  corteAcreditacion = signal<string>('');
+  puedeAcreditar = signal<boolean>(false);
+  acreditando = signal<boolean>(false);
+
   loading = signal<boolean>(false);
   errorMsg = signal<string>('');
 
@@ -83,6 +96,9 @@ export class VacacionesFormComponent implements OnInit {
     private saldoService: SaldoVacacionesService,
     private snackBar: MatSnackBar,
     private funcionesDatosS: FuncionesDatosService,
+    private dialog: MatDialog,
+    private appState: AppStateService,
+    private permisosService: PermisosService,
   ) {}
 
   ngOnInit(): void {
@@ -107,6 +123,9 @@ export class VacacionesFormComponent implements OnInit {
       this.loadSaldo(this.formEmpleado()!.codigo);
     }
 
+    this.permisosService.verificar(PermisosRrh.ACREDITAR_VACACIONES).subscribe((r) => this.puedeAcreditar.set(r.permitido));
+    this.cargarEstadoAcreditacion(true);
+
     // Combo de empleados: cargar la lista de activos de la empresa al abrir, no esperar a que se teclee algo.
     this.cargarEmpleados();
 
@@ -114,6 +133,75 @@ export class VacacionesFormComponent implements OnInit {
       this.formFechaInicioControl.disable({ emitEvent: false });
       this.formFechaFinControl.disable({ emitEvent: false });
     }
+  }
+
+  private idEmpresaSesion(): number | undefined {
+    return empresaSesionCodigo() ?? this.appState.getEmpresa()?.codigo;
+  }
+
+  /** El aviso es secundario: si el endpoint falla, la pantalla sigue funcionando sin él. */
+  private cargarEstadoAcreditacion(iniciarCorte: boolean): void {
+    const idEmpresa = this.idEmpresaSesion();
+    if (!idEmpresa) return;
+    this.saldoService.estadoAcreditacion(idEmpresa).subscribe({
+      next: (estado) => {
+        this.alertaAcreditacion.set(textoAlertaAcreditacion(estado, this.funcionesDatosS));
+        if (iniciarCorte || !this.corteAcreditacion()) {
+          const corte = this.funcionesDatosS.convertirFechaDesdeBackend(estado?.cortePropuesto);
+          this.corteAcreditacion.set(corte ? this.toISODate(corte) : '');
+        }
+      },
+      error: () => this.alertaAcreditacion.set(null),
+    });
+  }
+
+  /** Acredita a TODOS los empleados activos (POST /sldv/acreditar, igual que el proceso): exige confirmación explícita. */
+  confirmarYAcreditar(): void {
+    const corte = this.corteAcreditacion();
+    if (!corte || this.acreditando()) return;
+
+    this.permisosService.ejecutarSiPermitido(
+      PermisosRrh.ACREDITAR_VACACIONES,
+      () => {
+        const data: ConfirmDialogData = {
+          title: 'Acreditar vacaciones',
+          message:
+            'Esto acredita a TODOS los empleados activos, no solo a este.\n\n'
+            + 'Se acreditará el período anual a quienes hayan cumplido un año de servicio hasta la fecha de corte, '
+            + 'arrastrando los días no gozados.',
+          confirmText: 'Sí, acreditar a todos',
+          cancelText: 'Cancelar',
+          type: 'warning',
+          details: [{ label: 'Fecha de corte', value: this.funcionesDatosS.formatoFecha(corte, FuncionesDatosService.SOLO_FECHA) || corte }],
+        };
+        this.dialog.open(ConfirmDialogComponent, { width: '520px', data }).afterClosed().subscribe((ok: boolean) => {
+          if (ok) this.acreditar(corte);
+        });
+      },
+      (mensaje) => this.showError(mensaje || 'No tiene permiso para acreditar vacaciones'),
+    );
+  }
+
+  private acreditar(fechaCorte: string): void {
+    const idEmpresa = this.idEmpresaSesion();
+    if (!idEmpresa) {
+      this.showError('No se pudo determinar la empresa de la sesión');
+      return;
+    }
+    this.acreditando.set(true);
+    this.saldoService.acreditar({ idEmpresa, fechaCorte, usuarioRegistro: usuarioSesion() }).subscribe({
+      next: (cantidad) => {
+        this.acreditando.set(false);
+        this.snackBar.open(`Vacaciones acreditadas: ${cantidad} empleados`, 'Cerrar', { duration: 4000 });
+        this.cargarEstadoAcreditacion(false);
+        const empleado = this.formEmpleado();
+        if (empleado?.codigo) this.loadSaldo(empleado.codigo);
+      },
+      error: (err) => {
+        this.acreditando.set(false);
+        this.showError(mensajeDeError(err, 'No se pudo acreditar el período de vacaciones'));
+      },
+    });
   }
 
   onCancelar(): void {

@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { ServiciosRhh } from './ws-rrh';
 import {
   AcreditarVacacionesRequest,
+  EstadoAcreditacionVacaciones,
   RevertirAcreditacionVacacionesRequest,
   SaldoVacaciones,
 } from '../model/saldo-vacaciones';
@@ -83,6 +84,15 @@ export class SaldoVacacionesService {
   acreditar(datos: AcreditarVacacionesRequest): Observable<number> {
     const url = `${ServiciosRhh.RS_SLDV}/acreditar`;
     return this.http.post<number>(url, datos, this.httpOptions);
+  }
+
+  /**
+   * GET /sldv/estadoAcreditacion/{idEmpresa}: última corrida de acreditación, corte propuesto y
+   * empleados activos sin saldo del año. Sin `handleError`: quien lo llama decide qué hacer si falla.
+   */
+  estadoAcreditacion(idEmpresa: number): Observable<EstadoAcreditacionVacaciones> {
+    const url = `${ServiciosRhh.RS_SLDV}/estadoAcreditacion/${idEmpresa}`;
+    return this.http.get<EstadoAcreditacionVacaciones>(url);
   }
 
   /**

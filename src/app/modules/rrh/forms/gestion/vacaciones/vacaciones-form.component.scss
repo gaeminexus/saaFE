@@ -108,3 +108,32 @@
   background: linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%) !important;
   color: #fff !important;
 }
+
+.acreditacion-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+
+  &.con-alerta {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+  }
+}
+
+.acreditacion-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #9a3412;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.acreditacion-accion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}

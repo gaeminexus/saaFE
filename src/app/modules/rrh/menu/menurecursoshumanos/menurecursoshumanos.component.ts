@@ -9,8 +9,10 @@ import { NavItem } from '../../../../shared/basics/menu/model/nav-item';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../shared/services/app-state.service';
 import { empresaSesionCodigo } from '../../../../shared/services/empresa-sesion';
+import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { PermisosService } from '../../../../shared/services/permisos.service';
 import { PermisosRrh } from '../../model/permisos-rrh';
+import { textoAlertaAcreditacion } from '../../forms/comunes/alerta-acreditacion-vacaciones';
 import { SaldoVacacionesService } from '../../service/saldo-vacaciones.service';
 
 @Component({
@@ -28,17 +30,17 @@ export class MenurecursoshumanosComponent implements OnInit {
   private router = inject(Router);
   private permisosService = inject(PermisosService);
   private snackBar = inject(MatSnackBar);
+  private funcionesDatosS = inject(FuncionesDatosService);
   private horizontalPosition: MatSnackBarHorizontalPosition = 'center';
   private verticalPosition: MatSnackBarVerticalPosition = 'top';
 
   /**
-   * true cuando no existe ningún saldo de vacaciones del año en curso — el
-   * proceso POST /sldv/acreditar no se corrió todavía. Sin este aviso el
-   * hueco es invisible hasta que alguien intenta registrar unas vacaciones
-   * y falla sin explicación (ver el incidente que motivó esta pantalla).
+   * Texto del aviso cuando la acreditación de vacaciones está desactualizada o su última corrida
+   * terminó en error (GET /sldv/estadoAcreditacion). `null`: no se muestra el banner. Antes se
+   * revisaba solo si existía ALGÚN saldo del año, y un saldo suelto lo apagaba aunque faltaran
+   * empleados.
    */
-  faltaAcreditarAnioActual = signal(false);
-  anioActual = new Date().getFullYear();
+  alertaAcreditacion = signal<string | null>(null);
 
   ngOnInit(): void {
     const idEmpresa = empresaSesionCodigo() ?? this.appState.getEmpresa()?.codigo;
@@ -46,15 +48,9 @@ export class MenurecursoshumanosComponent implements OnInit {
 
     // El banner es un aviso secundario del shell: si falla, no debe romper
     // la navegación de todo el módulo.
-    this.saldoS.getAll().subscribe({
-      next: (data) => {
-        const saldos = data ?? [];
-        const hayDelAnioActual = saldos.some(
-          (s) => Number(s.anio) === this.anioActual && s.empleado?.empresa?.codigo === idEmpresa,
-        );
-        this.faltaAcreditarAnioActual.set(!hayDelAnioActual);
-      },
-      error: () => this.faltaAcreditarAnioActual.set(false),
+    this.saldoS.estadoAcreditacion(idEmpresa).subscribe({
+      next: (estado) => this.alertaAcreditacion.set(textoAlertaAcreditacion(estado, this.funcionesDatosS)),
+      error: () => this.alertaAcreditacion.set(null),
     });
   }
 
