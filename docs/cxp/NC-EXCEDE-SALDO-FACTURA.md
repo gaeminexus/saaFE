@@ -172,8 +172,20 @@ Consulta agregada en la base, sin `in :ids` ni N+1 (los antecedentes de caída d
 3. **Devolución de Anticipo** (`cxp/forms/pagos/devolucion-anticipo/`): una segunda tabla «Notas de crédito con
    saldo» (`GET /ntcc/disponibles`) con su input de valor, igual que la de anticipos; un combo **Forma**
    (Transferencia / Cheque, default Transferencia); el total suma las dos tablas; el payload manda `formaPago` y
-   `notasCredito`. En el historial, la forma y el tipo de cada línea. El menú puede pasar a
-   `'Devolución Saldo a Favor'` (24) — **decisión del usuario**, por defecto queda el nombre actual.
+   `notasCredito`. En el historial, la forma y el tipo de cada línea. **Decidido por el usuario (2026-10-27):** la pantalla y su entrada de menú pasan a llamarse
+   `'Devolución Saldo a Favor'` (24 caracteres), porque desde ahí se devuelven anticipos y notas de crédito. La
+   ruta no cambia.
+
+4. **Estado de cuenta del proveedor** (`tsr/forms/estado-cuenta-titular/`) — **decidido por el usuario el 2026-10-27**:
+   el saldo de la NC se muestra ahí.
+   - En rol **Proveedor**, al cargar el titular se llama **una vez** a `GET /ntcc/disponibles/{idTitular}/{idEmpresa}`
+     (nada de una llamada por NC: la pantalla ya hace N+1 con las facturas, §50).
+   - Las filas de tipo NOTA_CREDITO (origen RECIBIDO) muestran en la columna **Saldo** el `saldo` del endpoint,
+     buscado por `idNotaCredito`; una NC que no viene en la respuesta tiene saldo 0.
+   - Tarjeta nueva **«Saldo a favor (notas de crédito)»**, al lado de la de anticipos, con la suma de esos saldos de
+     las NC que pasan los filtros, y el pie «Disponible para cruzar o devolver».
+   - El «Saldo por pagar» **no cambia**: sigue siendo la suma de las facturas (que ya no quedan en negativo).
+   - En rol Cliente no cambia nada. Si el endpoint falla, la pantalla carga igual y la tarjeta muestra «—» con aviso.
 
 ## 8. Trampas
 
@@ -187,8 +199,7 @@ Consulta agregada en la base, sin `in :ids` ni N+1 (los antecedentes de caída d
 
 ## 9. Fuera de alcance (decidible, sin prisa)
 
-- Mostrar el saldo de las NC en el **estado de cuenta** del proveedor y en la **cartera por pagar**. Hoy solo
-  muestran el saldo de anticipos.
+- Mostrar el saldo de las NC en la **cartera por pagar** (el estado de cuenta ya entra, §7.4).
 - Lo mismo en `cxc` (`AplicacionPagoCxcServiceImpl:1030`).
 
 ## 10. Verificación
