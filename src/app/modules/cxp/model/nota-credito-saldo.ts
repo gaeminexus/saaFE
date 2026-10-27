@@ -47,6 +47,22 @@ export interface CruzarNotaCreditoRequest {
   observacion?: string;
 }
 
+/**
+ * Fila de GET /aplp/porNotaCredito/{idNotaCredito} — §4.2. Aplicaciones ACTIVAS de la NC, la más antigua primero.
+ * `conAsiento = true` es la aplicación original del registro (lleva el asiento de la NC y se deshace anulando la NC);
+ * `false` es un cruce hecho después, el único que se puede revertir desde la pantalla.
+ */
+export interface AplicacionNotaCredito {
+  idAplicacion: number;
+  /** Llega como arreglo [y,m,d] del backend — normalizar con `FuncionesDatosService.convertirFechaDesdeBackend()`. */
+  fechaAplicacion: any;
+  montoAplicado: number;
+  idFacturaCompra: number;
+  numeroFactura: string;
+  observacion?: string | null;
+  conAsiento: boolean;
+}
+
 /** Respuesta 200 de POST /aplp/cruzarNotaCredito — §4. */
 export interface CruzarNotaCreditoResponse {
   exito: boolean;

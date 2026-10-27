@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
 import {
+  AplicacionNotaCredito,
   CruzarNotaCreditoRequest,
   CruzarNotaCreditoResponse,
   NotaCreditoDisponible,
@@ -28,6 +29,13 @@ export class NotaCreditoSaldoService {
   notasDebitoPendientes(idTitular: number, idEmpresa: number): Observable<NotaDebitoPendiente[]> {
     return this.http.get<NotaDebitoPendiente[]>(
       `${ServiciosCxp.RS_NTDC}/pendientes/${idTitular}/${idEmpresa}`
+    ).pipe(catchError(this.handleError));
+  }
+
+  /** Aplicaciones activas de la NC (la original y los cruces), la más antigua primero — §4.2. */
+  aplicaciones(idNotaCredito: number): Observable<AplicacionNotaCredito[]> {
+    return this.http.get<AplicacionNotaCredito[]>(
+      `${ServiciosCxp.RS_APLP}/porNotaCredito/${idNotaCredito}`
     ).pipe(catchError(this.handleError));
   }
 

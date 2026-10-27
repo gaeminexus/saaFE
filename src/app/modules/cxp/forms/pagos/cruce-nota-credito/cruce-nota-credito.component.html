@@ -268,38 +268,49 @@
       </div>
 
       <!-- Cruces de la nota de crédito elegida -->
-      @if (notaElegida(); as nc) {
+      @if (notaDeCruces(); as nc) {
         <div class="bloque-anticipos">
           <div class="cabecera-anticipos">
             <h3>
               <mat-icon>history</mat-icon>
-              Cruces de la nota de crédito {{ nc.numero }} hechos en esta sesión
+              Aplicaciones de la nota de crédito {{ nc.numero }}
             </h3>
           </div>
-          @if (crucesDeLaNota().length === 0) {
+          @if (cargandoCruces()) {
+            <div class="cargando"><mat-spinner diameter="24"></mat-spinner></div>
+          } @else if (errorCruces()) {
+            <div class="mensaje-error">
+              <mat-icon>error_outline</mat-icon>
+              <span>{{ errorCruces() }}</span>
+            </div>
+          } @else if (crucesDeLaNota().length === 0) {
             <div class="mensaje-advertencia">
               <mat-icon>info</mat-icon>
-              <span>Todavía no se ha cruzado esta nota de crédito desde esta pantalla.</span>
+              <span>Esta nota de crédito no tiene aplicaciones activas.</span>
             </div>
           } @else {
             <div class="tabla-anticipos">
               <table>
                 <thead>
                   <tr>
+                    <th>Fecha</th>
                     <th>Factura</th>
                     <th class="num">Valor</th>
-                    <th>Estado</th>
+                    <th>Tipo</th>
+                    <th>Observación</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (c of crucesDeLaNota(); track c.idAplicacion) {
-                    <tr [class.fila-reversada]="c.reversado">
+                    <tr>
+                      <td>{{ formatearFecha(c.fechaAplicacion) }}</td>
                       <td>{{ c.numeroFactura }}</td>
-                      <td class="num">{{ c.valor | number: '1.2-2' }}</td>
-                      <td>{{ c.reversado ? 'Revertido' : 'Activo' }}</td>
+                      <td class="num">{{ c.montoAplicado | number: '1.2-2' }}</td>
+                      <td>{{ c.conAsiento ? 'Original (registro de la NC)' : 'Cruce' }}</td>
+                      <td>{{ c.observacion || '—' }}</td>
                       <td>
-                        @if (!c.reversado) {
+                        @if (!c.conAsiento) {
                           <button mat-stroked-button type="button" color="warn"
                                   [disabled]="revirtiendo() != null" (click)="revertir(c)">
                             <mat-icon>undo</mat-icon>

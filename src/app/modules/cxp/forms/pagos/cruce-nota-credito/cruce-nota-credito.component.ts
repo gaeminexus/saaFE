@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialog } from '@angular/material/dialog';
@@ -15,18 +15,9 @@ import {
   DocumentoCruceProveedor,
   DocumentoCruceSelectorDialogComponent,
 } from '../../../dialog/documento-cruce-selector-dialog/documento-cruce-selector-dialog.component';
-import { CruzarNotaCreditoResponse, NotaCreditoDisponible, NotaDebitoPendiente } from '../../../model/nota-credito-saldo';
+import { AplicacionNotaCredito, CruzarNotaCreditoResponse, NotaCreditoDisponible, NotaDebitoPendiente } from '../../../model/nota-credito-saldo';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { NotaCreditoSaldoService } from '../../../service/nota-credito-saldo.service';
-
-/** Cruce hecho desde esta pantalla, con lo que hace falta para mostrarlo y revertirlo. */
-interface CruceHecho {
-  idAplicacion: number;
-  idNotaCredito: number;
-  numeroFactura: string;
-  valor: number;
-  reversado: boolean;
-}
 
 /**
  * Cruce del saldo a favor de una nota de crédito de compra contra OTRA factura pendiente del
@@ -77,12 +68,15 @@ export class CruceNotaCreditoComponent {
   resultado = signal<CruzarNotaCreditoResponse | null>(null);
   revirtiendo = signal<number | null>(null);
 
-  /** Cruces hechos en esta sesión; solo se muestran los de la NC elegida. */
-  private cruces = signal<CruceHecho[]>([]);
-  crucesDeLaNota = computed(() => {
-    const nc = this.notaElegida();
-    return nc ? this.cruces().filter((c) => c.idNotaCredito === nc.idNotaCredito) : [];
-  });
+  /**
+   * Aplicaciones de la NC elegida (la original y los cruces), de GET aplp/porNotaCredito — §4.2.
+   * `notaDeCruces` se queda aunque la NC llegue a saldo 0 y salga de la tabla de disponibles, para que
+   * el usuario siga viendo y pueda revertir lo que acaba de cruzar.
+   */
+  notaDeCruces = signal<{ id: number; numero: string } | null>(null);
+  crucesDeLaNota = signal<AplicacionNotaCredito[]>([]);
+  cargandoCruces = signal(false);
+  errorCruces = signal('');
 
   /** Paso 1: elegir el proveedor. Al elegirlo se cargan sus notas de crédito con saldo. */
   buscarProveedor(): void {
@@ -95,6 +89,8 @@ export class CruceNotaCreditoComponent {
       this.proveedor.set(titular);
       this.limpiarFactura();
       this.notaElegida.set(null);
+      this.notaDeCruces.set(null);
+      this.crucesDeLaNota.set([]);
       this.resultado.set(null);
       this.error.set('');
       this.cargarNotas();
@@ -192,8 +188,32 @@ export class CruceNotaCreditoComponent {
 
   elegirNota(nota: NotaCreditoDisponible): void {
     this.notaElegida.set(nota);
+    this.notaDeCruces.set({ id: nota.idNotaCredito, numero: nota.numero });
     this.resultado.set(null);
     this.sugerirValor();
+    this.cargarCruces();
+  }
+
+  /** Lee del backend las aplicaciones de la NC elegida; se llama al elegirla y tras cruzar o revertir. */
+  private cargarCruces(): void {
+    const nc = this.notaDeCruces();
+    if (!nc) return;
+
+    this.cargandoCruces.set(true);
+    this.errorCruces.set('');
+    this.notaCreditoS.aplicaciones(nc.id).subscribe({
+      next: (lista) => {
+        if (this.notaDeCruces()?.id !== nc.id) return;
+        this.crucesDeLaNota.set(lista ?? []);
+        this.cargandoCruces.set(false);
+      },
+      error: (err: Error) => {
+        if (this.notaDeCruces()?.id !== nc.id) return;
+        this.crucesDeLaNota.set([]);
+        this.cargandoCruces.set(false);
+        this.errorCruces.set(mensajeDeError(err, 'No se pudieron cargar los cruces de la nota de crédito'));
+      },
+    });
   }
 
   /** Paso 2: elegir una factura pendiente del MISMO proveedor (sin liquidaciones ni otros proveedores). */
@@ -292,7 +312,6 @@ export class CruceNotaCreditoComponent {
     const esNd = this.destino() === 'NOTA_DEBITO';
     const fecha = this.fechaISO(this.formFecha);
     if (!this.puedeCruzar || !nc || (esNd ? !nd : !factura) || !fecha) return;
-    const numeroFactura = esNd ? nd!.numeroFactura : factura!.numero;
     const idFacturaRecarga = esNd ? nd!.idFacturaCompra : factura!.id;
 
     const valor = this.valor;
@@ -313,11 +332,8 @@ export class CruceNotaCreditoComponent {
       next: (resp) => {
         this.procesando.set(false);
         this.resultado.set(resp);
-        this.cruces.update((l) => [
-          ...l,
-          { idAplicacion: resp.aplicacion, idNotaCredito: nc.idNotaCredito, numeroFactura, valor, reversado: false },
-        ]);
         this.formObservacion = '';
+        this.cargarCruces();
         this.recargarTrasCambio(idFacturaRecarga);
         this.snackBar.open(resp.mensaje || 'Cruce registrado.', 'Cerrar', { duration: 5000 });
       },
@@ -329,11 +345,12 @@ export class CruceNotaCreditoComponent {
   }
 
   /** Revierte un cruce con el endpoint de reverso de aplicación; el saldo de la NC vuelve solo (se calcula). */
-  revertir(cruce: CruceHecho): void {
-    if (cruce.reversado || this.revirtiendo() != null) return;
+  revertir(cruce: AplicacionNotaCredito): void {
+    // La aplicación original lleva el asiento de la NC: se deshace anulando la NC, no desde aquí (§4.2).
+    if (cruce.conAsiento || this.revirtiendo() != null) return;
 
     const data: MotivoDialogData = {
-      titulo: `Revertir cruce de ${cruce.valor.toFixed(2)} contra la factura ${cruce.numeroFactura}`,
+      titulo: `Revertir cruce de ${Number(cruce.montoAplicado).toFixed(2)} contra la factura ${cruce.numeroFactura}`,
       advertencia: 'El valor vuelve al saldo de la nota de crédito y a la factura como pendiente.',
       textoConfirmar: 'Sí, revertir',
     };
@@ -345,8 +362,8 @@ export class CruceNotaCreditoComponent {
       this.aplicacionPagoS.revertir(cruce.idAplicacion, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
         next: (resp) => {
           this.revirtiendo.set(null);
-          this.cruces.update((l) => l.map((c) => (c.idAplicacion === cruce.idAplicacion ? { ...c, reversado: true } : c)));
           this.resultado.set(null);
+          this.cargarCruces();
           this.snackBar.open(resp?.mensaje || 'Cruce revertido.', 'Cerrar', { duration: 5000 });
           this.recargarTrasCambio(this.destino() === 'NOTA_DEBITO'
             ? this.notaDebitoElegida()?.idFacturaCompra ?? null
