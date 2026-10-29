@@ -62,6 +62,25 @@ export class CierreCarteraService {
       .pipe(catchError(this.handleError));
   }
 
+  /**
+   * POST /reabrir?idEmpresa&anio&mes&usuario&ip&motivo — C17: reabre la cartera del mes reversando su
+   * corrida EJECUTADA (anula sus asientos y movimientos). Solo el último mes cerrado y con la contabilidad
+   * del mes y del siguiente abierta; motivo obligatorio (queda en CNT.HCPR). Errores 400 con el mensaje del
+   * backend (`PERIODO_CERRADO`, `CIERRE_FUERA_DE_ORDEN`...). saaBE CIERRES-BLOQUEANTES.md §4.
+   */
+  reabrir(idEmpresa: number, anio: number, mes: number, datos: DatosReverso): Observable<CierreCartera> {
+    let params = new HttpParams()
+      .set('idEmpresa', idEmpresa)
+      .set('anio', anio)
+      .set('mes', mes);
+    if (datos.usuario) params = params.set('usuario', datos.usuario);
+    if (datos.ip) params = params.set('ip', datos.ip);
+    if (datos.motivo) params = params.set('motivo', datos.motivo);
+    return this.http
+      .post<CierreCartera>(`${this.base}/reabrir`, null, { params })
+      .pipe(catchError(this.handleError));
+  }
+
   /** GET /corridas — histórico de corridas de una empresa. §2.5 */
   corridas(idEmpresa: number): Observable<CorridaCierreCartera[]> {
     const params = new HttpParams().set('idEmpresa', idEmpresa);

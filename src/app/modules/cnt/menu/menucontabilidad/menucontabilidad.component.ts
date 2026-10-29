@@ -154,6 +154,12 @@ export class MenuContabilidadComponent {
           idPermiso: Permisos.CNT_DETALLE_MAYORIZACION,
           route: '/menucontabilidad/procesos/detalle-mayorizacion',
         },
+        {
+          displayName: 'Cierre de Períodos',
+          iconName: 'lock_clock',
+          idPermiso: Permisos.CNT_CIERRE_DE_PERIODOS,
+          route: '/menucontabilidad/procesos/cierre-periodo',
+        },
       ],
     },
     {

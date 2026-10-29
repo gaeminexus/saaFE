@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, of } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
 import { TemporalReporte } from '../model/temporal-reporte';
 import { ParametrosBalance, RespuestaBalance } from '../model/reporte-contable.model';
 import { ServiciosCnt } from './ws-cnt';
@@ -49,8 +49,13 @@ export class ReporteBalanceService {
 
   // ── Manejo de errores ──────────────────────────────────────────────────────
 
+  /**
+   * Pase a producción §2: el error ya no se traga. El backend responde 400 con `{mensaje}` (por
+   * ejemplo `REPORTE_MES_NO_CERRADO`) y la pantalla lo muestra con `mensajeDeError`.
+   */
   private handleError<T>() {
-    return (_error: HttpErrorResponse): Observable<null> => of(null);
+    return (error: HttpErrorResponse): Observable<null> =>
+      +error?.status === 200 ? of(null) : throwError(() => error);
   }
 
   private handleErrorLista<T>() {

@@ -69,6 +69,14 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_LISTADOS,
           route: '/menucreditos/listadosCrd',
         },
+        // Pase a producción (I-4): visible para todos, protegida por el permiso 1412 del árbol
+        // (mismo mecanismo que Contabilidad > Procesos > Cierre de Períodos, 1558). Reabrir pide 1561.
+        {
+          displayName: 'Cierre de Cartera',
+          iconName: 'event_available',
+          idPermiso: Permisos.CRD_CIERRE_DE_CARTERA,
+          route: '/menucreditos/cierre-cartera',
+        },
       ],
     },
     // La opción "Bandas de Cartera" se agrega en el constructor solo para el USUARIO 1
@@ -401,12 +409,6 @@ export class MenucreditosComponent {
         iconName: 'rule',
         idPermiso: Permisos.CRD_ESCALA_DE_CALIFICACION_DE_RIESGO,
         route: '/menucreditos/escala-calificacion-riesgo',
-      });
-      paramNode?.children?.push({
-        displayName: 'Cierre de Cartera',
-        iconName: 'event_available',
-        idPermiso: Permisos.CRD_CIERRE_DE_CARTERA,
-        route: '/menucreditos/cierre-cartera',
       });
       paramNode?.children?.push({
         displayName: 'Parámetros de CRD',

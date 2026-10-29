@@ -592,7 +592,7 @@ export class ConciliacionContableComponent implements OnInit {
           fallidas.length === 0
             ? `${exitosas} coincidencia(s) confirmada(s)`
             : `${exitosas} confirmada(s), ${fallidas.length} fallaron: ${fallidas.join('; ')}`;
-        this.snackBar.open(resumen, 'Cerrar', { duration: 8000 });
+        this.snackBar.open(resumen, 'Cerrar', { duration: fallidas.length === 0 ? 8000 : 20000 });
         return;
       }
       const sugerencia = pendientes[indice];
@@ -610,7 +610,9 @@ export class ConciliacionContableComponent implements OnInit {
             procesarSiguiente(indice + 1);
           },
           error: (error) => {
-            fallidas.push(sugerencia.descripcionResumen || `#${indice + 1}`);
+            // Pase a producción §2: el motivo del backend por partida (montos que no cuadran,
+            // período cerrado…), no solo la etiqueta de la sugerencia.
+            fallidas.push(`${sugerencia.descripcionResumen || `#${indice + 1}`} (${textoDeError(error)})`);
             console.error('Error al confirmar sugerencia', error);
             procesarSiguiente(indice + 1);
           },

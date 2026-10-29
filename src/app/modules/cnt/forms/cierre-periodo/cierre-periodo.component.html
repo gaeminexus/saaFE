@@ -1,0 +1,280 @@
+<div class="cierre-periodo-container">
+  <div class="page-header">
+    <h1 class="page-title">
+      <mat-icon>lock_clock</mat-icon>
+      Cierre de Períodos
+    </h1>
+    <p class="page-subtitle">
+      Cierre y reapertura del período contable. Se cierra en orden, del más antiguo al más reciente, con el
+      período <strong>mayorizado</strong> y la <strong>cartera del mes cerrada</strong>; solo se reabre el último
+      cerrado. Un período cerrado no admite asientos de ningún módulo y sus estados financieros son DEFINITIVOS.
+    </p>
+  </div>
+
+  @if (error()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+  @if (avisoCartera()) {
+    <div class="aviso-banner">
+      <mat-icon>warning</mat-icon>
+      <span>{{ avisoCartera() }}</span>
+    </div>
+  }
+
+  <mat-card class="periodos-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon>calendar_month</mat-icon> Estado de los períodos</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="toolbar">
+        <mat-form-field appearance="outline" class="anio-field">
+          <mat-label>Año</mat-label>
+          <mat-select [value]="anioFiltro()" (selectionChange)="anioFiltro.set($event.value)">
+            <mat-option value="">Todos</mat-option>
+            @for (a of anios(); track a) {
+              <mat-option [value]="a">{{ a }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <span class="resumen">
+          Último cerrado:
+          <strong>{{ textoUltimoCerrado() }}</strong>
+          · Siguiente a cerrar:
+          <strong>{{ candidatoCierre() ? etiqueta(candidatoCierre()!) : '—' }}</strong>
+        </span>
+        <button mat-stroked-button (click)="cargar()" [disabled]="cargando() || procesando()">
+          <mat-icon>refresh</mat-icon> Actualizar
+        </button>
+      </div>
+
+      @if (cargando()) {
+        <div class="loading-inline"><mat-spinner diameter="28"></mat-spinner><span>Cargando períodos…</span></div>
+      } @else if (filasVisibles().length === 0) {
+        <p class="vacio">No hay períodos contables para la empresa.</p>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="periodos-table">
+            <thead>
+              <tr>
+                <th>Período</th>
+                <th>Contable</th>
+                <th>Mayorización</th>
+                <th>Cerrado el</th>
+                <th>Cerrado por</th>
+                <th>Cartera</th>
+                <th class="c-acciones">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of filasVisibles(); track f.clave) {
+                <tr [class.fila-candidata]="candidatoCierre()?.clave === f.clave">
+                  <td class="c-periodo">{{ etiqueta(f) }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="f.cerrado ? 'b-cerrado' : 'b-abierto'">
+                      <mat-icon>{{ f.cerrado ? 'lock' : 'lock_open' }}</mat-icon>
+                      {{ f.cerrado ? 'CERRADO' : 'ABIERTO' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="f.mayorizado ? 'b-mayorizado' : 'b-neutro'">{{ textoMayorizacion(f.periodo) }}</span>
+                  </td>
+                  <td>{{ f.cerrado ? formatoFecha(f.periodo.fechaCierreContable, true) : '—' }}</td>
+                  <td>{{ f.cerrado ? (f.periodo.usuarioCierreContable || '—') : '—' }}</td>
+                  <td>
+                    <span
+                      class="badge"
+                      [ngClass]="f.carteraCerrada ? 'b-cerrado' : 'b-abierto'"
+                      [matTooltip]="f.corrida ? 'Corrida ' + f.corrida.codigo + ' ejecutada por ' + (f.corrida.usuarioRegistro || '—') : 'Sin corrida de cierre de cartera ejecutada'"
+                    >
+                      {{ f.carteraCerrada ? 'CERRADA' : 'ABIERTA' }}
+                      @if (f.corrida) { <small>#{{ f.corrida.codigo }}</small> }
+                    </span>
+                  </td>
+                  <td class="c-acciones">
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      (click)="consultarControles(f)"
+                      [disabled]="cargandoControles() || procesando()"
+                      matTooltip="Controles de cierre del mes (semáforo)"
+                    >
+                      <mat-icon>traffic</mat-icon>
+                    </button>
+                    @if (!f.cerrado) {
+                      <span [matTooltip]="razonNoCierre(f)">
+                        <button
+                          mat-raised-button
+                          color="primary"
+                          (click)="cerrar(f)"
+                          [disabled]="!puedeCerrar(f) || procesando()"
+                        >
+                          <mat-icon>lock</mat-icon> Cerrar período
+                        </button>
+                      </span>
+                    } @else {
+                      <span [matTooltip]="puedeReabrir(f) ? 'Reabrir el período contable' : 'Solo se reabre el último período cerrado (cascada desde el más reciente).'">
+                        <button
+                          mat-stroked-button
+                          color="warn"
+                          (click)="reabrir(f)"
+                          [disabled]="!puedeReabrir(f) || procesando()"
+                        >
+                          <mat-icon>lock_open</mat-icon> Reabrir período
+                        </button>
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      @if (procesando()) {
+        <div class="loading-inline"><mat-spinner diameter="22"></mat-spinner><span>Procesando…</span></div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Pase a producción B-1..B-3: semáforo de controles de cierre (GET /prdo/controlCierre). Solo lectura. -->
+  <mat-card class="controles-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>traffic</mat-icon> Controles de cierre
+        @if (filaControles()) { <span class="ctl-periodo">· {{ etiqueta(filaControles()!) }}</span> }
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="toolbar">
+        <span class="resumen">
+          Cuentas puente, ecuación contable, cartera vs contabilidad, bancos vs extracto, asientos y cuadratura
+          B17 ↔ G. Se consultan solos al pulsar <strong>Cerrar período</strong>; con algún ERROR el cierre pide
+          confirmación.
+        </span>
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="consultarControles(filaControles() ?? candidatoCierre()!)"
+          [disabled]="cargandoControles() || (!filaControles() && !candidatoCierre())"
+        >
+          <mat-icon>fact_check</mat-icon>
+          Consultar {{ filaControles() ? etiqueta(filaControles()!) : (candidatoCierre() ? etiqueta(candidatoCierre()!) : '') }}
+        </button>
+      </div>
+
+      @if (cargandoControles()) {
+        <div class="loading-inline"><mat-spinner diameter="24"></mat-spinner><span>Consultando controles…</span></div>
+      } @else if (errorControles()) {
+        <div class="aviso-banner">
+          <mat-icon>warning</mat-icon>
+          <span>No se pudieron consultar los controles: {{ errorControles() }}</span>
+        </div>
+      } @else if (controles().length > 0) {
+        <div class="semaforo" [ngClass]="'sem-' + estadoGeneral()">
+          <mat-icon>{{ iconoEstado(estadoGeneral()) }}</mat-icon>
+          <strong>{{ estadoGeneral() }}</strong>
+          <span>{{ conteoControles().ok }} OK · {{ conteoControles().advertencia }} advertencia(s) · {{ conteoControles().error }} error(es)</span>
+        </div>
+        <div class="tabla-scroll">
+          <table class="periodos-table controles-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Grupo</th>
+                <th>Control</th>
+                <th class="num">Valor</th>
+                <th class="num">Esperado</th>
+                <th class="num">Diferencia</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of controles(); track c.codigo) {
+                <tr [ngClass]="'ctl-' + c.estado">
+                  <td><mat-icon class="ctl-icono" [matTooltip]="c.estado">{{ iconoEstado(c.estado) }}</mat-icon></td>
+                  <td class="nowrap">{{ nombreGrupoControl[c.grupo] ?? c.grupo }}</td>
+                  <td>{{ c.descripcion }}</td>
+                  <td class="num nowrap">{{ formatoMonto(c.valor) }}</td>
+                  <td class="num nowrap">{{ formatoMonto(c.esperado) }}</td>
+                  <td class="num nowrap">{{ formatoMonto(c.diferencia) }}</td>
+                  <td class="c-motivo">{{ c.detalle || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="vacio">Elija un período con el botón <mat-icon inline>traffic</mat-icon> de la tabla o consulte el siguiente a cerrar.</p>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="bitacora-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon>history</mat-icon> Bitácora de cierres y reaperturas</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="toolbar">
+        <mat-form-field appearance="outline" class="tipo-field">
+          <mat-label>Tipo</mat-label>
+          <mat-select [value]="tipoBitacora()" (selectionChange)="tipoBitacora.set($event.value)">
+            <mat-option value="">Contable y cartera</mat-option>
+            <mat-option value="CONTABLE">Contable</mat-option>
+            <mat-option value="CARTERA">Cartera</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+      @if (cargandoBitacora()) {
+        <div class="loading-inline"><mat-spinner diameter="24"></mat-spinner><span>Cargando bitácora…</span></div>
+      } @else if (errorBitacora()) {
+        <div class="aviso-banner">
+          <mat-icon>warning</mat-icon>
+          <span>No se pudo leer la bitácora: {{ errorBitacora() }}</span>
+        </div>
+      } @else if (bitacoraVisible().length === 0) {
+        <p class="vacio">Sin cierres ni reaperturas registrados.</p>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="periodos-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Período</th>
+                <th>Tipo</th>
+                <th>Acción</th>
+                <th>Usuario</th>
+                <th>Motivo</th>
+                <th>Referencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (h of bitacoraVisible(); track h.codigo) {
+                <tr>
+                  <td class="nowrap">{{ formatoFecha(h.fecha, true) }}</td>
+                  <td class="nowrap">{{ nombreMes(h.mes) }} {{ h.anio }}</td>
+                  <td>{{ h.tipo }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="h.accion === 'CIERRE' ? 'b-cerrado' : 'b-reapertura'">{{ h.accion }}</span>
+                    @if (h.fueraDeOrden === 1) {
+                      <span class="badge b-fuera" matTooltip="Hecho fuera de orden con el parámetro de re-proceso">FUERA DE ORDEN</span>
+                    }
+                  </td>
+                  <td>{{ h.usuario }}</td>
+                  <td class="c-motivo">{{ h.motivo || '—' }}</td>
+                  <td class="nowrap">
+                    @if (h.idCorrida) { Corrida {{ h.idCorrida }} }
+                    @else if (h.idPeriodo) { Período {{ h.idPeriodo }} }
+                    @else { — }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
