@@ -22,6 +22,7 @@ import { ExportService } from '../../../../../shared/services/export.service';
 import { fechaCsv } from '../../../../../shared/utils/fecha-csv.util';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 @Component({
   selector: 'app-anticipos-clientes',
@@ -244,6 +245,8 @@ export class AnticiposClientesComponent {
   }
 
   procesarAnticipo(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.errorProceso.set(MENSAJE_SIN_USUARIO_SESION); return; }
     const titular = this.titularSeleccionado();
     if (!titular || !this.formValor || !this.formCuentaBancaria || !this.formFecha) {
       this.errorProceso.set('Complete todos los campos obligatorios.');
@@ -256,7 +259,6 @@ export class AnticiposClientesComponent {
     }
 
     const idEmpresa = +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
-    const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
     // `.toISOString()` es siempre UTC; con Ecuador en UTC−5 puede dar el día anterior (regla de CLAUDE.md).
     const fecha = this.formFecha instanceof Date
       ? this.funcionesDatos.formatearFechaParaBackend(this.formFecha, TipoFormatoFechaBackend.SOLO_FECHA)!
@@ -414,7 +416,8 @@ export class AnticiposClientesComponent {
   }
 
   private ejecutarAnulacion(id: number, anticipo: any, res: AnularAnticipoDialogResult): void {
-    const idUsuario = +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     this.anulandoId.set(id);
 
     this.anticipoS.anularCliente(id, {

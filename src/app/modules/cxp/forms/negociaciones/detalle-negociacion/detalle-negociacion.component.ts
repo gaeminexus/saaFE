@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { NegociacionProveedor } from '../../../model/negociacion-proveedor';
@@ -85,7 +86,7 @@ export class DetalleNegociacionComponent implements OnInit {
   saldoPendiente = signal(0);
 
   private idNegociacion = 0;
-  private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
+  private get idUsuario(): number | null { return idUsuarioSesion(); }
 
   columnasAdendum = ['numAdendum', 'fechaAdendum', 'descripcion', 'valorAjuste', 'valorTotalResultante', 'estado', 'acciones'];
   columnasDocumentos = ['nombreDoc', 'tipoDoc', 'principal', 'path', 'acciones'];
@@ -247,7 +248,9 @@ export class DetalleNegociacionComponent implements OnInit {
   // ─── PAGOS ──────────────────────────────────────────────────
 
   abrirRegistrarPago(cuota: CuotaConPagos): void {
-    const data: PagoDialogData = { cuota, idUsuario: this.idUsuario };
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
+    const data: PagoDialogData = { cuota, idUsuario: idUsuario };
     this.permisosService.ejecutarSiPermitido(
       Permisos.CXP_PAGO,
       () => {
@@ -267,7 +270,9 @@ export class DetalleNegociacionComponent implements OnInit {
   // ─── ADENDUMS ───────────────────────────────────────────────
 
   abrirAdendum(ad?: AdendumNegociacion): void {
-    const data: AdendumDialogData = { negociacion: this.negociacion()!, valorVigente: this.valorVigente(), adendum: ad || null, idUsuario: this.idUsuario };
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
+    const data: AdendumDialogData = { negociacion: this.negociacion()!, valorVigente: this.valorVigente(), adendum: ad || null, idUsuario: idUsuario };
     this.permisosService.ejecutarSiPermitido(
       Permisos.CXP_ADENDUM,
       () => {

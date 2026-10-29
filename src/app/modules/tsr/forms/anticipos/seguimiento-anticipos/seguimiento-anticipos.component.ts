@@ -20,6 +20,7 @@ import {
 } from '../dialogs/anular-anticipo-dialog/anular-anticipo-dialog.component';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 type TipoTitular = 'cliente' | 'proveedor';
 
@@ -210,9 +211,11 @@ export class SeguimientoAnticiposComponent {
 
   private ejecutarAnulacion(id: number, anticipo: AnticipoSeguimiento,
                             res: AnularAnticipoDialogResult): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const payload = {
       motivo: res.motivo,
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       confirmarReversionCruces: res.confirmarReversionCruces,
     };
     this.anulandoId.set(id);
@@ -261,6 +264,8 @@ export class SeguimientoAnticiposComponent {
    * `mensajeDeError`), no silenciosamente.
    */
   solicitarDevolucion(a: AnticipoSeguimiento): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const id = Number(a?.id ?? 0);
     const valor = Number(a?.saldo ?? 0);
     if (!id || valor <= 0) return;
@@ -269,7 +274,7 @@ export class SeguimientoAnticiposComponent {
     this.anticipoS.solicitarDevolucionCliente({
       idAnticipo: id,
       valor,
-      usuario: this.idUsuarioSesion(),
+      usuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.solicitandoDevolucionId.set(null);
@@ -316,7 +321,4 @@ export class SeguimientoAnticiposComponent {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

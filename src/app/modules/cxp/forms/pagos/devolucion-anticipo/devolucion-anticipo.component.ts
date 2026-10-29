@@ -24,6 +24,7 @@ import {
 import { DevolucionAnticipoService } from '../../../service/devolucion-anticipo.service';
 import { NotaCreditoSaldoService } from '../../../service/nota-credito-saldo.service';
 import { NotaCreditoDisponible } from '../../../model/nota-credito-saldo';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Devolución del saldo de anticipos de un proveedor: el proveedor deposita en nuestro banco el
@@ -240,6 +241,8 @@ export class DevolucionAnticipoComponent implements OnInit {
   }
 
   registrar(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.error.set(MENSAJE_SIN_USUARIO_SESION); return; }
     const titular = this.proveedor();
     const cuenta = this.cuentaSeleccionada();
     const fechaStr = this.fechaISO(this.formFecha);
@@ -260,7 +263,7 @@ export class DevolucionAnticipoComponent implements OnInit {
       fecha: fechaStr,
       referencia: this.formReferencia.trim() || undefined,
       observacion: this.formObservacion.trim() || undefined,
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       formaPago: this.formForma,
       anticipos: lineas,
       notasCredito: lineasNc,
@@ -381,6 +384,8 @@ export class DevolucionAnticipoComponent implements OnInit {
    * mensaje tal cual (§4.2/§6.3 del contrato) — no se reinterpreta.
    */
   anularDevolucion(d: DevolucionAnticipoListado): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     if (!this.puedeAnular(d)) return;
 
     const data: MotivoDialogData = {
@@ -393,7 +398,7 @@ export class DevolucionAnticipoComponent implements OnInit {
       if (!motivo) return;
 
       this.anulando.set(d.id);
-      this.devolucionS.anular(d.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.devolucionS.anular(d.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.anulando.set(null);
           this.snackBar.open(resp.mensaje || 'Devolución anulada.', 'Cerrar', { duration: 5000, panelClass: ['snackbar-success'] });
@@ -430,7 +435,4 @@ export class DevolucionAnticipoComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

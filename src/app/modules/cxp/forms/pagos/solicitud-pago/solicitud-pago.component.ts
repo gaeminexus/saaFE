@@ -28,6 +28,7 @@ import { LiquidacionCompraCompraService } from '../../../service/liquidacion-com
 import { PagoProgramado, RegistrarPagoRequest } from '../../../model/pago-programado';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { PagoProgramadoService } from '../../../service/pago-programado.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /** Tipo de documento elegible para pagar desde esta pantalla. */
 export type TipoDocumentoPagoCxp = 'FACTURA' | 'LIQUIDACION_COMPRA' | 'NOTA_VENTA';
@@ -468,6 +469,8 @@ export class SolicitudPagoComponent implements OnInit {
    * (liquidación), nunca los dos (docs/pagos/API-PAGO-LIQUIDACION-Y-NOTA-VENTA.md §1).
    */
   registrarPago(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.regError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeRegistrar || !this.regIdDocumento) return;
 
     this.registrando.set(true);
@@ -481,7 +484,7 @@ export class SolicitudPagoComponent implements OnInit {
       valor: this.regValorNumerico,
       fechaProgramada: this.fechaISO(this.regFecha),
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       observacion: this.regObservacion.trim(),
     };
     if (tipo === 'LIQUIDACION_COMPRA') {
@@ -569,7 +572,4 @@ export class SolicitudPagoComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

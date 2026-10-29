@@ -24,6 +24,7 @@ import {
 import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
 import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * T3 del circuito de pagos por transferencia
@@ -330,6 +331,8 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
    * ya extendido) — una sola llamada para todo el lote, cada pago con su propia referencia.
    */
   private ejecutarConfirmacionManual(motivo: string): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.confError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     this.confirmandoManual.set(true);
     this.confError.set('');
     this.confResultado.set(null);
@@ -347,7 +350,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
       referenciasPorPago,
       fechaPago: this.fechaISO(this.confFecha),
       observacion: `Confirmación manual: ${nota}`,
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.confirmandoManual.set(false);
@@ -379,6 +382,8 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
 
   /** El endpoint recibe el archivo como binario crudo, no como multipart. */
   async subirRespuesta(): Promise<void> {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.respError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeSubirRespuesta || !this.archivoRespuesta || !this.respIdLote) return;
 
     this.subiendoRespuesta.set(true);
@@ -387,7 +392,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
 
     try {
       const buffer = await this.archivoRespuesta.arrayBuffer();
-      this.pagoS.cargarRespuesta(this.respIdLote, this.idUsuarioSesion(), buffer).subscribe({
+      this.pagoS.cargarRespuesta(this.respIdLote, idUsuario, buffer).subscribe({
         next: (resp) => {
           this.subiendoRespuesta.set(false);
           this.respResultado.set(resp);
@@ -456,7 +461,4 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

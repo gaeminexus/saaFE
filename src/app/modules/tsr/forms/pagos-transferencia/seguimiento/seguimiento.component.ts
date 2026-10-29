@@ -18,6 +18,7 @@ import {
   ResumenSeguimientoPago,
 } from '../../../model/seguimiento-pago';
 import { SeguimientoPagoService } from '../../../service/seguimiento-pago.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Seguimiento de un pago (pedido 1 del usuario, docs/tsr/API-SEGUIMIENTO-PAGOS.md): una sola
@@ -156,6 +157,8 @@ export class SeguimientoComponent implements OnInit {
   }
 
   anular(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const d = this.detalle();
     if (!d?.acciones?.puedeAnular) return;
 
@@ -168,7 +171,7 @@ export class SeguimientoComponent implements OnInit {
     this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
       this.anulando.set(true);
-      this.pagoS.anular(d.pago.idPago, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.pagoS.anular(d.pago.idPago, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.anulando.set(false);
           this.snackBar.open(resp.mensaje ?? 'Pago anulado correctamente.', 'Cerrar', { duration: 5000 });
@@ -183,6 +186,8 @@ export class SeguimientoComponent implements OnInit {
   }
 
   revertir(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const d = this.detalle();
     if (!d?.acciones?.puedeRevertir) return;
 
@@ -196,7 +201,7 @@ export class SeguimientoComponent implements OnInit {
     this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
       this.revirtiendo.set(true);
-      this.pagoS.revertirConfirmado(d.pago.idPago, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.pagoS.revertirConfirmado(d.pago.idPago, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.revirtiendo.set(false);
           this.snackBar.open(resp.mensaje ?? 'Pago reversado.', 'Cerrar', { duration: 6000 });
@@ -244,7 +249,4 @@ export class SeguimientoComponent implements OnInit {
     return (Number(monto) || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

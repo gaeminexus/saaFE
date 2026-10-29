@@ -28,6 +28,7 @@ import {
 import { Titular } from '../../../model/titular';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { IngresoService } from '../../../service/ingreso.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Ingresos de tesorería sin documento físico (intereses ganados, créditos del
@@ -219,6 +220,8 @@ export class RegistroIngresoComponent implements OnInit {
   }
 
   registrar(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.regError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeRegistrar || !this.regCuentaBancaria || this.regIdProducto == null) return;
 
     this.registrando.set(true);
@@ -236,7 +239,7 @@ export class RegistroIngresoComponent implements OnInit {
       idCuentaBancaria: this.regCuentaBancaria.codigo,
       referencia: this.regReferencia.trim() || undefined,
       observacion: this.regObservacion.trim() || undefined,
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.registrando.set(false);
@@ -342,6 +345,8 @@ export class RegistroIngresoComponent implements OnInit {
 
   /** Anular reversa el asiento y el movimiento bancario ya generados. */
   confirmarAnulacion(ingreso: Ingreso): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const data: MotivoDialogData = {
       titulo: `Anular ingreso N° ${ingreso.id}`,
       advertencia:
@@ -353,7 +358,7 @@ export class RegistroIngresoComponent implements OnInit {
 
     this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
-      this.ingresoS.anular(ingreso.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.ingresoS.anular(ingreso.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.snackBar.open(resp.mensaje ?? 'Ingreso anulado.', 'Cerrar', { duration: 6000 });
           this.cargarIngresos();
@@ -392,7 +397,4 @@ export class RegistroIngresoComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

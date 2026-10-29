@@ -19,6 +19,7 @@ import { FacturaEmitir } from '../../../model/factura-emitir';
 import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.service';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Historial y saldo de una factura de venta. Se llega desde la acción
@@ -147,7 +148,9 @@ export class AbonosFacturaComponent implements OnInit {
   }
 
   private revertir(idAplicacion: number, motivo: string): void {
-    this.aplicacionPagoS.revertir(idAplicacion, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
+    this.aplicacionPagoS.revertir(idAplicacion, { motivo, idUsuario: idUsuario }).subscribe({
       next: (resp) => {
         this.snackBar.open(resp?.mensaje ?? 'Abono reversado correctamente.', 'Cerrar', { duration: 4000 });
         this.cargar();
@@ -186,7 +189,4 @@ export class AbonosFacturaComponent implements OnInit {
     this.router.navigate(['/menucuentasxcobrar/gestionar/facturas']);
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

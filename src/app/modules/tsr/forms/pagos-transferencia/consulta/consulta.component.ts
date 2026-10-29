@@ -21,6 +21,7 @@ import { JasperReportesService } from '../../../../../shared/services/jasper-rep
 import { Titular } from '../../../model/titular';
 import { AsientoDePago, ORIGEN_PAGO_LABELS, OrigenPago, PagoProgramado } from '../../../../cxp/model/pago-programado';
 import { PagoProgramadoService } from '../../../../cxp/service/pago-programado.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * T4 del circuito de pagos por transferencia
@@ -236,6 +237,8 @@ export class ConsultaComponent implements OnInit {
   }
 
   confirmarAnulacion(pago: PagoProgramado): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const data: MotivoDialogData = {
       titulo: `Anular pago N° ${pago.id}`,
       advertencia: 'El pago se cancela antes de enviarse al banco. Para reintentar habrá que registrar uno nuevo.',
@@ -244,7 +247,7 @@ export class ConsultaComponent implements OnInit {
 
     this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
-      this.pagoS.anular(pago.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.pagoS.anular(pago.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.snackBar.open(resp.mensaje ?? 'Pago anulado correctamente.', 'Cerrar', { duration: 5000 });
           this.cargarSeguimiento();
@@ -303,6 +306,8 @@ export class ConsultaComponent implements OnInit {
   }
 
   confirmarReverso(pago: PagoProgramado): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const debito = this.esDebitoAutomatico(pago);
     const data: MotivoDialogData = {
       titulo: debito
@@ -317,7 +322,7 @@ export class ConsultaComponent implements OnInit {
 
     this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
-      this.pagoS.revertirConfirmado(pago.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.pagoS.revertirConfirmado(pago.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.snackBar.open(resp.mensaje ?? 'Pago reversado.', 'Cerrar', { duration: 6000 });
           this.cargarSeguimiento();
@@ -365,7 +370,4 @@ export class ConsultaComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

@@ -5,6 +5,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableDataSource } from '@angular/material/table';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
@@ -66,7 +67,7 @@ export class BandejaElectronicaComponent implements OnInit {
 
   // IDs de sesión (se deben obtener del localStorage/session)
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
-  private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
+  private get idUsuario(): number | null { return idUsuarioSesion(); }
 
   ngOnInit(): void {
     this.cargarPeriodos();
@@ -200,25 +201,29 @@ export class BandejaElectronicaComponent implements OnInit {
   // captura de sustentos viven en Gestión de Documentos (decisión del usuario).
 
   toggleReembolso(detalle: DetalleCargaTxt): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const doc = detalle.documento;
     if (doc.estadoDocumento === 3) { this.mostrarError('No se puede marcar reembolso en un documento ya registrado'); return; }
     const esMarcado = doc.esReembolso === 1;
     const accion = esMarcado ? 'desmarcar' : 'marcar como';
     if (!confirm(`¿Desea ${accion} reembolso de gastos el documento ${doc.serieComprobante}?`)) return;
     this.procesando.set(true);
-    this.processService.marcarReembolso(doc.id, !esMarcado, this.idUsuario).subscribe({
+    this.processService.marcarReembolso(doc.id, !esMarcado, idUsuario).subscribe({
       next: () => { this.procesando.set(false); this.mostrarExito(esMarcado ? 'Reembolso desmarcado' : 'Documento marcado como reembolso'); this.recargarDetalle(); },
       error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
     });
   }
 
   private subirXml(file: File, detalle: DetalleCargaTxt): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const idDocumentoCxp = detalle.documento.id;
     this.procesando.set(true);
     const reader = new FileReader();
     reader.onload = (e) => {
       const contenidoXml = (e.target?.result as string) || '';
-      this.processService.cargarXml(idDocumentoCxp, { contenidoXml, idUsuario: this.idUsuario }).subscribe({
+      this.processService.cargarXml(idDocumentoCxp, { contenidoXml, idUsuario: idUsuario }).subscribe({
         next: () => {
           this.procesando.set(false);
           this.mostrarExito('XML subido correctamente');
@@ -233,10 +238,12 @@ export class BandejaElectronicaComponent implements OnInit {
   // ─── FASE 3: REGISTRAR EN BD ────────────────────────────
 
   registrarEnBD(detalle: DetalleCargaTxt): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!confirm(`¿Registrar en BD el documento ${detalle.documento.serieComprobante}?`)) return;
     this.procesando.set(true);
     const idDocumentoCxp = detalle.documento.id;
-    this.processService.registrarBD(idDocumentoCxp, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
+    this.processService.registrarBD(idDocumentoCxp, { idEmpresa: this.idEmpresa, idUsuario: idUsuario }).subscribe({
       next: (resp) => {
         this.procesando.set(false);
         if (resp?.requiereProductos) {
@@ -261,13 +268,15 @@ export class BandejaElectronicaComponent implements OnInit {
   // ─── FASE 3b: CREAR PRODUCTOS Y REGISTRAR ─────────────────────
 
   confirmarProductosYRegistrar(): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.documentoCxpPendiente) return;
     const sinGrupo = this.productosNuevos.filter(p => !p.idGrupo);
     if (sinGrupo.length > 0) { this.mostrarError('Debe asignar un grupo a todos los productos.'); return; }
     this.procesando.set(true);
     this.processService.crearProductosYRegistrar(this.documentoCxpPendiente.id, {
       idEmpresa: this.idEmpresa,
-      idUsuario: this.idUsuario,
+      idUsuario: idUsuario,
       productosConGrupo: this.productosNuevos,
     }).subscribe({
       next: (resp) => {
@@ -300,11 +309,13 @@ export class BandejaElectronicaComponent implements OnInit {
   // ─── FASE 4: RESOLVER NOVEDAD ───────────────────────────
 
   resolverNovedad(detalle: DetalleCargaTxt, accion: 'MANTENER' | 'REEMPLAZAR', xmlFile?: File): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const idDocumentoCxp = detalle.documento.id;
     if (accion === 'MANTENER') {
       if (!confirm(`¿Mantener el documento ${detalle.documento.serieComprobante} sin cambios?`)) return;
       this.procesando.set(true);
-      this.processService.resolverNovedad(idDocumentoCxp, { accion: AccionNovedad.MANTENER, idUsuario: this.idUsuario }).subscribe({
+      this.processService.resolverNovedad(idDocumentoCxp, { accion: AccionNovedad.MANTENER, idUsuario: idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido sin cambios'); this.recargarDetalle(); },
         error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err) || 'Error al resolver'); },
       });
@@ -313,7 +324,7 @@ export class BandejaElectronicaComponent implements OnInit {
       const reader = new FileReader();
       reader.onload = (e) => {
         const contenidoXml = (e.target?.result as string) || '';
-        this.processService.resolverNovedad(idDocumentoCxp, { accion: AccionNovedad.REEMPLAZAR, contenidoXml, idUsuario: this.idUsuario }).subscribe({
+        this.processService.resolverNovedad(idDocumentoCxp, { accion: AccionNovedad.REEMPLAZAR, contenidoXml, idUsuario: idUsuario }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado correctamente'); this.recargarDetalle(); },
           error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });
@@ -345,9 +356,11 @@ export class BandejaElectronicaComponent implements OnInit {
   // ─── FASE 5: REVERTIR ───────────────────────────────────
 
   revertir(detalle: DetalleCargaTxt): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!confirm(`¿Revertir el documento ${detalle.documento.serieComprobante}? Se eliminarán los registros creados en BD.`)) return;
     this.procesando.set(true);
-    this.processService.revertir(detalle.documento.id, this.idUsuario).subscribe({
+    this.processService.revertir(detalle.documento.id, idUsuario).subscribe({
       next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido'); this.recargarDetalle(); },
       error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + this.extraerMensajeError(err)); },
     });

@@ -12,6 +12,7 @@ import { CierreCaja } from '../../../model/cierre-caja';
 import { UsuarioPorCaja } from '../../../model/usuario-por-caja';
 import { CierreCajaService } from '../../../service/cierre-caja.service';
 import { UsuarioPorCajaService } from '../../../service/usuario-por-caja.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 @Component({
   selector: 'app-cierre-caja',
@@ -69,10 +70,10 @@ export class CierreCajaComponent implements OnInit {
   }
 
   private cargarUsuarioCaja(): void {
-    const idUsuario = this.getIdUsuarioLocal();
+    const idUsuario = idUsuarioSesion();
     if (!idUsuario) {
       this.cierreHabilitado.set(false);
-      this.errorMsg.set('No se pudo identificar el usuario para cierre de caja.');
+      this.errorMsg.set(MENSAJE_SIN_USUARIO_SESION);
       return;
     }
 
@@ -191,15 +192,6 @@ export class CierreCajaComponent implements OnInit {
     const mm = pad(d.getMonth() + 1);
     const dd = pad(d.getDate());
     return `${yyyy}-${mm}-${dd}`;
-  }
-
-  private getIdUsuarioLocal(): number | null {
-    const raw = localStorage.getItem('idUsuario');
-    if (!raw) {
-      return null;
-    }
-    const parsed = Number(raw);
-    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private getNombreUsuarioLocal(): string {

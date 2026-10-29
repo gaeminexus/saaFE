@@ -15,6 +15,7 @@ import { CuentaBancariaService } from '../../../../tsr/service/cuenta-bancaria.s
 import { ResultadoAplicacionCxc } from '../../../model/aplicacion-pago-cxc';
 import { FacturaEmitir } from '../../../model/factura-emitir';
 import { AplicacionPagoCxcService } from '../../../service/aplicacion-pago-cxc.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Registro de un cobro recibido por transferencia. Un solo paso: al
@@ -177,6 +178,8 @@ export class RegistrarCobroComponent implements OnInit {
   }
 
   confirmar(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.error.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeConfirmar || !this.idFactura || !this.formCuentaBancaria) return;
 
     this.procesando.set(true);
@@ -190,7 +193,7 @@ export class RegistrarCobroComponent implements OnInit {
       numeroTransferencia: this.formNumeroTransferencia.trim(),
       idCuentaBancaria: this.formCuentaBancaria.codigo,
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       observacion: this.formObservacion.trim(),
     }).subscribe({
       next: (resp) => {
@@ -260,7 +263,4 @@ export class RegistrarCobroComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

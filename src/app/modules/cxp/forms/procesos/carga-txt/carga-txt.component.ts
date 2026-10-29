@@ -3,6 +3,7 @@ import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angul
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 import { Periodo } from '../../../../cnt/model/periodo';
 import { PeriodoService } from '../../../../cnt/service/periodo.service';
 import { CargaDocumentosService } from '../../../service/carga-documentos.service';
@@ -47,7 +48,7 @@ export class CargaTxtComponent implements OnInit {
   resultado = signal<ResultadoCargaTxt | null>(null);
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
-  private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
+  private get idUsuario(): number | null { return idUsuarioSesion(); }
 
   ngOnInit(): void {
     this.cargarPeriodos();
@@ -124,6 +125,8 @@ export class CargaTxtComponent implements OnInit {
   // ─── CARGAR — mismo endpoint/payload que bandeja-electronica.component.ts:134 ───
 
   cargar(): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.error.set(MENSAJE_SIN_USUARIO_SESION); return; }
     const file = this.archivoSeleccionado();
     if (!file || !this.periodoSeleccionado) {
       this.error.set('Seleccione un período contable y un archivo antes de cargar.');
@@ -141,7 +144,7 @@ export class CargaTxtComponent implements OnInit {
         contenidoTxt,
         nombreArchivo: file.name,
         idEmpresa: this.idEmpresa,
-        idUsuario: this.idUsuario,
+        idUsuario: idUsuario,
         idPeriodo: this.periodoSeleccionado!,
       }).subscribe({
         next: (resp) => {
