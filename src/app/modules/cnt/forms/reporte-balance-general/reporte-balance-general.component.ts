@@ -22,11 +22,12 @@ import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-b
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { ReportesContables } from '../descarga-reporte';
 import { EstadoFinancieroOficialService, nombreDeArchivo } from '../../service/estado-financiero-oficial.service';
+import { LeyendaEstadoPeriodoComponent } from '../../components/leyenda-estado-periodo/leyenda-estado-periodo.component';
 
 @Component({
   selector: 'cnt-reporte-balance-general',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule, LeyendaEstadoPeriodoComponent],
   templateUrl: './reporte-balance-general.component.html',
   styleUrls: ['./reporte-balance-general.component.scss'],
 })

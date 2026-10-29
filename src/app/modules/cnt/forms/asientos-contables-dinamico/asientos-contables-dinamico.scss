@@ -1288,3 +1288,28 @@
   vertical-align: top;
   pointer-events: none;
 }
+
+/* C17: vínculo original <-> reverso y rastro de la anulación */
+.enlace-reverso,
+.rastro-anulacion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 4px 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.enlace-reverso {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+
+.rastro-anulacion {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #7c2d12;
+}

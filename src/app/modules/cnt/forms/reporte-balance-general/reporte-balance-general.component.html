@@ -1,5 +1,9 @@
 <div class="bg-container">
-  <h2 class="bg-title">BALANCE CONTABLE</h2>
+  <div class="bg-title-row">
+    <h2 class="bg-title">BALANCE CONTABLE</h2>
+    <!-- C17: PRELIMINAR / DEFINITIVO del mes de la fecha de corte (GET /prdo/estado) -->
+    <cnt-leyenda-estado-periodo [fecha]="form.get('fechaFin')?.value" />
+  </div>
 
   <!-- ── Filtros ─────────────────────────────────────────────── -->
   <mat-card class="bg-card">

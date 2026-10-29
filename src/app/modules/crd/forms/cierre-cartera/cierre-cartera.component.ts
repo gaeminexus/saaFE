@@ -25,12 +25,32 @@ import {
   SolicitudCierreCartera,
   SubProcesoCierre,
   TIPO_CARTERA_CIERRE,
+  corridasVigentesPorMes,
 } from '../../model/cierre-cartera/cierre-cartera.model';
 import { CierreCarteraService } from '../../service/cierre-cartera.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { Permisos } from '../../../../shared/model/permisos';
+import { PermisosService } from '../../../../shared/services/permisos.service';
 import {
-  ReversarCorridaDialogComponent,
-  ReversarCorridaResult,
-} from './reversar-corrida-dialog.component';
+  MotivoCierreDialogComponent,
+  MotivoCierreDialogData,
+  MotivoCierreDialogResult,
+} from '../../../cnt/dialog/motivo-cierre-dialog/motivo-cierre-dialog.component';
+import { Periodo } from '../../../cnt/model/periodo';
+import { periodoCerrado } from '../../../cnt/service/cierre-periodo.service';
+import { PeriodoService } from '../../../cnt/service/periodo.service';
+
+/** C17 — un mes CERRADO para cartera, con el estado contable del mes y del siguiente. */
+interface FilaEstadoCartera {
+  clave: number;
+  anio: number;
+  mes: number;
+  corrida: CorridaCierreCartera;
+  /** null si el período contable no existe. */
+  contableCerrado: boolean | null;
+  contableSiguienteCerrado: boolean | null;
+}
 
 /** De dónde salió el resultado que se está mostrando: cambia el encabezado y las acciones. */
 type OrigenResultado = 'previsualizacion' | 'ejecucion' | 'consulta';
@@ -119,6 +139,12 @@ export class CierreCarteraComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private periodoService = inject(PeriodoService);
+  private permisosService = inject(PermisosService);
+
+  // Estado de cartera por mes (C17)
+  estadoMeses = signal<FilaEstadoCartera[]>([]);
+  cargandoEstado = signal(false);
 
   // Contexto de sesión
   idEmpresa: number | null = null;
@@ -153,6 +179,8 @@ export class CierreCarteraComponent implements OnInit {
       this.error.set(
         'No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.',
       );
+    } else {
+      this.cargarEstadoMeses();
     }
   }
 
@@ -259,9 +287,7 @@ export class CierreCarteraComponent implements OnInit {
           `Cierre de ${this.periodoTexto} ejecutado. Corrida ${res.idCorrida ?? ''}.`,
           true,
         );
-        if (this.mostrarHistorial()) {
-          this.cargarCorridas();
-        }
+        this.cargarEstadoMeses();
       },
       error: (mensaje: string) => {
         this.ejecutando.set(false);
@@ -295,41 +321,139 @@ export class CierreCarteraComponent implements OnInit {
     });
   }
 
-  // ===================== Reversar =====================
+  // ===================== Estado de cartera por mes y reapertura (C17) =====================
 
-  reversar(corrida: CorridaCierreCartera): void {
-    if (corrida.idEstado !== ESTADO_CORRIDA.EJECUTADA || this.ocupado()) {
+  /**
+   * Meses CERRADOS para cartera (corrida EJECUTADA vigente), del más reciente al más antiguo, con el estado
+   * contable del mes y del siguiente (reabrir la cartera de M exige la contabilidad de M y de M+1 abierta).
+   */
+  cargarEstadoMeses(): void {
+    if (this.idEmpresa == null) {
       return;
     }
-    this.dialog
-      .open(ReversarCorridaDialogComponent, {
-        width: '560px',
-        data: {
-          periodo: `${this.nombreMes(corrida.mes)} ${corrida.anio}`,
-          idCorrida: corrida.codigo,
-          cantidadAsientos: 0,
+    this.cargandoEstado.set(true);
+    forkJoin({
+      corridas: this.cierreService.corridas(this.idEmpresa),
+      periodos: this.periodoService.getAll().pipe(catchError(() => of([] as Periodo[]))),
+    }).subscribe({
+      next: ({ corridas, periodos }) => {
+        this.cargandoEstado.set(false);
+        this.corridas.set(corridas ?? []);
+        const cerradoContable = new Map<number, boolean>();
+        for (const p of periodos ?? []) {
+          cerradoContable.set(p.anio * 100 + p.mes, periodoCerrado(p));
+        }
+        const filas: FilaEstadoCartera[] = [];
+        corridasVigentesPorMes(corridas ?? []).forEach((corrida, clave) => {
+          const siguiente = corrida.mes === 12 ? (corrida.anio + 1) * 100 + 1 : clave + 1;
+          filas.push({
+            clave,
+            anio: corrida.anio,
+            mes: corrida.mes,
+            corrida,
+            contableCerrado: cerradoContable.get(clave) ?? null,
+            contableSiguienteCerrado: cerradoContable.get(siguiente) ?? null,
+          });
+        });
+        this.estadoMeses.set(filas.sort((a, b) => b.clave - a.clave));
+      },
+      error: (mensaje: string) => {
+        this.cargandoEstado.set(false);
+        this.estadoMeses.set([]);
+        this.notificar(mensaje, false);
+      },
+    });
+  }
+
+  /** Clave anio*100+mes del último mes cerrado para cartera. */
+  get ultimoMesCerrado(): number | null {
+    const filas = this.estadoMeses();
+    return filas.length ? filas[0].clave : null;
+  }
+
+  puedeReabrirMes(f: FilaEstadoCartera): boolean {
+    return f.clave === this.ultimoMesCerrado && !f.contableCerrado && !f.contableSiguienteCerrado && !this.ocupado();
+  }
+
+  razonNoReabrir(f: FilaEstadoCartera): string {
+    if (f.clave !== this.ultimoMesCerrado) {
+      return 'Solo se reabre el último mes cerrado (cascada desde el más reciente).';
+    }
+    if (f.contableCerrado) {
+      return 'El período contable del mes está CERRADO: reábralo primero en Contabilidad > Cierre de Períodos.';
+    }
+    if (f.contableSiguienteCerrado) {
+      return 'El período contable del mes siguiente está CERRADO: el cierre de cartera asienta también en él.';
+    }
+    return 'Reabrir la cartera del mes (reversa la corrida vigente)';
+  }
+
+  reabrirMes(f: FilaEstadoCartera): void {
+    if (f.clave !== this.ultimoMesCerrado || this.ocupado()) {
+      return;
+    }
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_REABRIR_CARTERA,
+      () => this.confirmarReapertura(f),
+      (mensaje) => this.notificar(mensaje.toUpperCase(), false),
+    );
+  }
+
+  private confirmarReapertura(f: FilaEstadoCartera): void {
+    const periodo = `${this.nombreMes(f.mes)} ${f.anio}`;
+    const data: MotivoCierreDialogData = {
+      titulo: `Reabrir la cartera de ${periodo}`,
+      mensaje:
+        `Se reversa la corrida ${f.corrida.codigo} del cierre de cartera de ${periodo}: el mes vuelve a quedar ` +
+        'ABIERTO para cartera y se puede corregir y volver a cerrar.',
+      advertencias: [
+        'Se reversan TODOS los asientos contables generados por el cierre (los del último día del mes y los de ' +
+          'apertura del día 1 del mes siguiente).',
+        'Se anulan los movimientos del cierre (registros de asiento de la corrida) y la corrida queda REVERSADA.',
+        'Los reportes G40–G51 / EJCC del mes no se pueden generar hasta volver a cerrar la cartera.',
+        'Queda registrado con su motivo en la bitácora de cierres.',
+      ],
+      detalles: [
+        { etiqueta: 'Corrida', valor: String(f.corrida.codigo) },
+        { etiqueta: 'Corte', valor: this.formatoFechaArray(f.corrida.fechaCorte) },
+        {
+          etiqueta: 'Ejecutada',
+          valor: `${this.formatoFechaHoraArray(f.corrida.fechaRegistro)} por ${f.corrida.usuarioRegistro || '—'}`,
         },
-      })
+      ],
+      textoConfirmar: 'Reabrir mes',
+      color: 'warn',
+      icono: 'lock_open',
+      placeholderMotivo: 'Ej. Faltaba aplicar el retorno Petro de julio; autorizado por ...',
+    };
+    this.dialog
+      .open(MotivoCierreDialogComponent, { data, width: '620px' })
       .afterClosed()
-      .subscribe((resultado?: ReversarCorridaResult) => {
-        if (resultado?.motivo) {
-          this.reversarConfirmado(corrida, resultado.motivo);
+      .subscribe((r?: MotivoCierreDialogResult) => {
+        if (r?.motivo) {
+          this.reabrirConfirmado(f, r.motivo);
         }
       });
   }
 
-  private reversarConfirmado(corrida: CorridaCierreCartera, motivo: string): void {
+  private reabrirConfirmado(f: FilaEstadoCartera, motivo: string): void {
+    if (this.idEmpresa == null) {
+      return;
+    }
     this.error.set(null);
     this.reversando.set(true);
     this.cierreService
-      .reversar(corrida.codigo, { usuario: this.usuarioAuditoria, ip: null, motivo })
+      .reabrir(this.idEmpresa, f.anio, f.mes, { usuario: this.usuarioAuditoria, ip: null, motivo })
       .subscribe({
         next: (res) => {
           this.reversando.set(false);
-          this.notificar(`Corrida ${corrida.codigo} reversada.`, true);
-          this.cargarCorridas();
+          this.notificar(
+            `Cartera de ${this.nombreMes(f.mes)} ${f.anio} reabierta (corrida ${f.corrida.codigo} reversada).`,
+            true,
+          );
+          this.cargarEstadoMeses();
           // Si se estaba mostrando esa corrida, refrescar con lo reversado.
-          if (this.resultado()?.idCorrida === corrida.codigo) {
+          if (this.resultado()?.idCorrida === f.corrida.codigo) {
             this.resultado.set(res);
             this.origen.set('consulta');
           }
@@ -340,6 +464,11 @@ export class CierreCarteraComponent implements OnInit {
           this.notificar(mensaje, false);
         },
       });
+  }
+
+  esCorridaVigenteUltimoMes(c: CorridaCierreCartera): boolean {
+    const f = this.estadoMeses()[0];
+    return !!f && f.corrida.codigo === c.codigo;
   }
 
   // ===================== Historial =====================

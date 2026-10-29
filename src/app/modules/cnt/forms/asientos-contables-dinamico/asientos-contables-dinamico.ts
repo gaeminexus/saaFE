@@ -46,6 +46,22 @@ import {
   SubdetalleItem,
   SubdetalleDialogResult,
 } from '../../dialog/subdetalle-asiento-dialog/subdetalle-asiento-dialog.component';
+import {
+  MotivoCierreDialogComponent,
+  MotivoCierreDialogData,
+  MotivoCierreDialogResult,
+} from '../../dialog/motivo-cierre-dialog/motivo-cierre-dialog.component';
+import { EstadoPeriodo, Periodo } from '../../model/periodo';
+import { PeriodoService } from '../../service/periodo.service';
+import {
+  CierrePeriodoService,
+  fechaDeBackend,
+  fechaIso,
+  formatoFecha,
+  nombreMes,
+  periodoCerrado,
+} from '../../service/cierre-periodo.service';
+import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
 const RUBRO_MODULOS_SISTEMA = 15;
 const RUBRO_MODULO_CNT = 1;
@@ -88,6 +104,7 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
   loading = false;
   codigoAsientoActual: number | null = null; // Para trackear si estamos editando
   asientoActual: Asiento | null = null; // Para almacenar datos completos del asiento
+  asientoEnlazado: Asiento | null = null; // C17: reverso u original enlazado por idReversion
   detallesOriginales: any[] = []; // Para trackear detalles cargados del backend
   vieneDesdeReporte = false; // Para mostrar botón de regreso
   hayDetallesSinGuardar = false; // Control para habilitar/deshabilitar botones
@@ -142,7 +159,9 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
     private router: Router,
     private jasperReportes: JasperReportesService,
     private subdetalleAsientoService: SubdetalleAsientoService,
-    private permisosService: PermisosService
+    private permisosService: PermisosService,
+    private cierrePeriodoService: CierrePeriodoService,
+    private periodoService: PeriodoService
   ) {}
 
   ngOnInit(): void {
@@ -322,6 +341,17 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
         if (asiento) {
           this.codigoAsientoActual = asiento.codigo;
           this.asientoActual = asiento; // Almacenar datos completos
+
+          // C17: asiento enlazado (reverso u original) para mostrar el vínculo con su número.
+          this.asientoEnlazado = null;
+          if (asiento.idReversion) {
+            this.asientoService.getById(asiento.idReversion).subscribe({
+              next: (otro) => {
+                if (this.asientoActual?.codigo === asiento.codigo) this.asientoEnlazado = otro ?? null;
+              },
+              error: () => (this.asientoEnlazado = null),
+            });
+          }
 
           // Procesar fechas con manejo de diferentes formatos
           const fechaAsiento = this.parseFechaFromBackend(asiento.fechaAsiento);
@@ -2426,6 +2456,146 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
       return;
     }
 
+    // C17: si el período del asiento está CERRADO no se anula: se reversa en un período abierto
+    // (POST /asnt/anular/{id}). Se consulta el estado vigente al backend, no el del asiento cargado.
+    const { anio, mes } = this.anioMesAsiento();
+    if (anio && mes) {
+      this.loading = true;
+      this.cierrePeriodoService.estado(this.idSucursal, anio, mes).subscribe({
+        next: (estado) => {
+          this.loading = false;
+          if (estado?.estado === 'CERRADO') {
+            this.anularConReverso(anio, mes);
+          } else {
+            this.confirmarAnulacionSimple();
+          }
+        },
+        error: () => {
+          // Sin estado de cierre (backend sin C17): flujo de siempre; el backend bloquea igual si está cerrado.
+          this.loading = false;
+          this.confirmarAnulacionSimple();
+        },
+      });
+      return;
+    }
+    this.confirmarAnulacionSimple();
+  }
+
+  /** Año y mes contable del asiento: los de su período o, si no vino, los de la fecha del asiento. */
+  private anioMesAsiento(): { anio: number | null; mes: number | null } {
+    const p = this.asientoActual?.periodo;
+    if (p?.anio && p?.mes) return { anio: p.anio, mes: p.mes };
+    const f = fechaDeBackend(this.asientoActual?.fechaAsiento) ?? fechaDeBackend(this.form.get('fechaAsiento')?.value);
+    return f ? { anio: f.getFullYear(), mes: f.getMonth() + 1 } : { anio: null, mes: null };
+  }
+
+  /**
+   * C17 — Anulación de un asiento de un período CERRADO: pide motivo y fecha del reverso (por defecto en el
+   * primer período abierto posterior) y llama a `POST /asnt/anular/{id}`. El original queda REVERSADO y
+   * enlazado con su reverso.
+   */
+  private anularConReverso(anio: number, mes: number): void {
+    const idAsiento = this.codigoAsientoActual;
+    if (!idAsiento) return;
+    this.periodoService.getAll().subscribe((periodos) => {
+      const sugerida = this.fechaReversoSugerida(periodos ?? [], anio * 100 + mes);
+      const numero = this.asientoActual?.numeroAlterno || this.asientoActual?.numero || idAsiento;
+      const data: MotivoCierreDialogData = {
+        titulo: `Anular asiento N° ${numero}`,
+        mensaje:
+          `El período ${nombreMes(mes)} ${anio} está CERRADO: el asiento no se anula ni se borra. Se genera un ` +
+          'asiento de REVERSO en un período abierto y el original queda REVERSADO, enlazado con el reverso.',
+        advertencias: [
+          'La fecha del reverso tiene que caer en un período contable abierto (no cerrado ni mayorizado).',
+          sugerida
+            ? `Fecha sugerida: ${formatoFecha(sugerida)} (primer período abierto posterior). Déjela vacía para que la decida el sistema.`
+            : 'No se encontró un período abierto posterior: déjela vacía para que la decida el sistema o elija una.',
+        ],
+        detalles: [
+          { etiqueta: 'Asiento', valor: `N° ${numero} (id ${idAsiento})` },
+          { etiqueta: 'Fecha del asiento', valor: formatoFecha(this.asientoActual?.fechaAsiento) },
+        ],
+        textoConfirmar: 'Anular con reverso',
+        color: 'warn',
+        icono: 'swap_horiz',
+        pedirFecha: true,
+        etiquetaFecha: 'Fecha del reverso',
+        ayudaFecha: 'Por defecto, el primer período abierto posterior',
+        fechaSugerida: sugerida,
+        placeholderMotivo: 'Ej. Asiento duplicado; autorizado por ... (D-0xx)',
+      };
+      this.dialog
+        .open(MotivoCierreDialogComponent, { data, width: '620px' })
+        .afterClosed()
+        .subscribe((r?: MotivoCierreDialogResult) => {
+          if (!r?.motivo) return;
+          this.loading = true;
+          this.asientoService
+            .anularConReverso(idAsiento, usuarioSesion(), r.motivo, r.fecha ? fechaIso(r.fecha) : null)
+            .subscribe({
+              next: (original) => {
+                this.loading = false;
+                this.snackBar.open(
+                  `✅ Asiento reversado. Reverso id ${original?.idReversion ?? '—'} en un período abierto.`,
+                  'Cerrar',
+                  { duration: 6000, panelClass: ['success-snackbar'] },
+                );
+                this.cargarAsientoPorId(idAsiento);
+              },
+              error: (error: any) => {
+                this.loading = false;
+                this.snackBar.open(mensajeDeError(error, 'Error al anular el asiento'), 'Cerrar', {
+                  duration: 10000,
+                  panelClass: ['error-snackbar'],
+                });
+              },
+            });
+        });
+    });
+  }
+
+  /**
+   * Primer período abierto posterior al del asiento (no cerrado ni mayorizado, misma regla que el backend):
+   * hoy si cae en él, si no su primer día.
+   */
+  private fechaReversoSugerida(periodos: Periodo[], claveAsiento: number): Date | null {
+    const candidato = periodos
+      .filter((p) => p.anio * 100 + p.mes > claveAsiento)
+      .filter((p) => !periodoCerrado(p) && p.estado !== EstadoPeriodo.MAYORIZADO)
+      .sort((a, b) => a.anio * 100 + a.mes - (b.anio * 100 + b.mes))[0];
+    if (!candidato) return null;
+    const hoy = new Date();
+    if (hoy.getFullYear() === candidato.anio && hoy.getMonth() + 1 === candidato.mes) {
+      return new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    }
+    return fechaDeBackend(candidato.primerDia) ?? new Date(candidato.anio, candidato.mes - 1, 1);
+  }
+
+  /** C17 — asiento enlazado (reverso u original) para mostrar el vínculo. */
+  get enlaceReverso(): { id: number; texto: string; accion: string } | null {
+    const a = this.asientoActual;
+    if (!a?.idReversion) return null;
+    const otro = this.asientoEnlazado;
+    const numero = otro ? otro.numeroAlterno || otro.numero : null;
+    const ref = numero ? `N° ${numero} (id ${a.idReversion})` : `id ${a.idReversion}`;
+    return a.estado === 3
+      ? { id: a.idReversion, texto: `Reversado por el asiento ${ref}`, accion: 'Ver reverso' }
+      : { id: a.idReversion, texto: `Asiento de reverso del asiento ${ref}`, accion: 'Ver original' };
+  }
+
+  formatoFechaCierre(valor: any): string {
+    return formatoFecha(valor, true);
+  }
+
+  irAsientoEnlazado(): void {
+    const enlace = this.enlaceReverso;
+    if (enlace) {
+      this.router.navigate(['/menucontabilidad/procesos/asientos-dinamico', enlace.id]);
+    }
+  }
+
+  /** Flujo de anulación de un período abierto (sin cambios respecto de antes de C17). */
+  private confirmarAnulacionSimple(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '450px',
       data: {

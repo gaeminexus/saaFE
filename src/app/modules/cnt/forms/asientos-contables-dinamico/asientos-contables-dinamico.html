@@ -106,6 +106,27 @@
           </mat-form-field>
         </div>
 
+        <!-- C17: vínculo original ↔ reverso y rastro de la anulación -->
+        @if (enlaceReverso; as enlace) {
+          <div class="enlace-reverso">
+            <mat-icon>swap_horiz</mat-icon>
+            <span>{{ enlace.texto }}</span>
+            <button mat-stroked-button color="primary" type="button" (click)="irAsientoEnlazado()">
+              <mat-icon>open_in_new</mat-icon>
+              {{ enlace.accion }}
+            </button>
+          </div>
+        }
+        @if (asientoActual?.motivoAnulacion) {
+          <div class="rastro-anulacion">
+            <mat-icon>history_edu</mat-icon>
+            <span>
+              Anulado por <strong>{{ asientoActual?.usuarioAnulacion || '—' }}</strong>
+              el {{ formatoFechaCierre(asientoActual?.fechaAnulacion) }} — Motivo: {{ asientoActual?.motivoAnulacion }}
+            </span>
+          </div>
+        }
+
         <!-- Botones para cabecera -->
         <div class="cabecera-actions">
           <!-- Botones de EDICIÓN: Solo en estado INCOMPLETO (4) -->

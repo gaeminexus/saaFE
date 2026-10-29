@@ -80,6 +80,62 @@
     </div>
   }
 
+  <!-- C17: estado de cartera por mes y reapertura del último mes cerrado -->
+  <mat-card class="corridas-card estado-meses-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon>lock_clock</mat-icon> Estado de cartera por mes</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="seleccion-hint">
+        <mat-icon>info</mat-icon>
+        Un mes con corrida EJECUTADA queda <strong>cerrado para cartera</strong>: no admite cobros, cargas Petro,
+        devoluciones ni otros movimientos con afectación en ese mes. Solo se reabre el último mes cerrado, con la
+        contabilidad del mes y del siguiente abierta.
+      </p>
+      @if (cargandoEstado()) {
+        <div class="loading-inline"><mat-spinner diameter="24"></mat-spinner><span>Cargando…</span></div>
+      } @else if (estadoMeses().length === 0) {
+        <p class="vacio">Ningún mes cerrado para cartera: todos los meses están abiertos.</p>
+      } @else {
+        <table class="corridas-table">
+          <thead>
+            <tr>
+              <th>Mes</th><th>Cartera</th><th>Corrida vigente</th><th>Cerrada el</th>
+              <th>Contable del mes</th><th>Contable mes siguiente</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of estadoMeses(); track f.clave) {
+              <tr>
+                <td>{{ nombreMes(f.mes) }} {{ f.anio }}</td>
+                <td><span class="badge est-ejecutada">CERRADA</span></td>
+                <td>{{ f.corrida.codigo }}</td>
+                <td>{{ formatoFechaHoraArray(f.corrida.fechaRegistro) }}<br /><small>{{ f.corrida.usuarioRegistro }}</small></td>
+                <td>{{ f.contableCerrado == null ? '—' : (f.contableCerrado ? 'CERRADO' : 'ABIERTO') }}</td>
+                <td>{{ f.contableSiguienteCerrado == null ? '—' : (f.contableSiguienteCerrado ? 'CERRADO' : 'ABIERTO') }}</td>
+                <td>
+                  @if (f.clave === ultimoMesCerrado) {
+                    <span [matTooltip]="razonNoReabrir(f)">
+                      <button
+                        mat-stroked-button
+                        color="warn"
+                        (click)="reabrirMes(f)"
+                        [disabled]="!puedeReabrirMes(f)"
+                      >
+                        @if (reversando()) { <mat-spinner diameter="16"></mat-spinner> } @else { <mat-icon>lock_open</mat-icon> }
+                        Reabrir mes
+                      </button>
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+
   <!-- Historial de corridas -->
   @if (mostrarHistorial()) {
     <mat-card class="corridas-card">
@@ -113,16 +169,8 @@
                   <td class="obs">{{ c.observacion || '—' }}</td>
                   <td>{{ formatoFechaHoraArray(c.fechaRegistro) }}<br /><small>{{ c.usuarioRegistro }}</small></td>
                   <td>
-                    @if (c.idEstado === ESTADO_CORRIDA.EJECUTADA) {
-                      <button
-                        mat-stroked-button
-                        color="warn"
-                        (click)="reversar(c)"
-                        [disabled]="ocupado()"
-                        matTooltip="Anula los asientos de esta corrida"
-                      >
-                        <mat-icon>undo</mat-icon> Reversar
-                      </button>
+                    @if (esCorridaVigenteUltimoMes(c)) {
+                      <span class="badge est-ejecutada" matTooltip="Corrida vigente del último mes cerrado: se reabre desde 'Estado de cartera por mes'">vigente</span>
                     }
                   </td>
                 </tr>

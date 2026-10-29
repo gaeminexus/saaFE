@@ -29,6 +29,9 @@ describe('CierreCarteraComponent', () => {
     component = fixture.componentInstance;
     httpMock = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+    // C17: al iniciar carga el estado de cartera por mes (corridas + períodos contables).
+    httpMock.expectOne((r) => r.url.includes('/cierrecartera/corridas')).flush([]);
+    httpMock.expectOne((r) => r.url.endsWith('/prdo/getAll')).flush([]);
   });
 
   afterEach(() => httpMock.verify());

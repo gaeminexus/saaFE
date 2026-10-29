@@ -122,6 +122,13 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        // C17 — cierre y reapertura del período contable, con bitácora (CNT.HCPR)
+        path: 'procesos/cierre-periodo',
+        loadComponent: () => import('./modules/cnt/forms/cierre-periodo/cierre-periodo.component').then((m) => m.CierrePeriodoComponent),
+        canActivate: [authGuard],
+        data: { title: 'Cierre de Períodos' },
+      },
+      {
         path: 'listado-asientos',
         loadComponent: () => import('./modules/cnt/forms/listado-asientos/listado-asientos.component').then((m) => m.ListadoAsientosComponent),
         canActivate: [authGuard],
