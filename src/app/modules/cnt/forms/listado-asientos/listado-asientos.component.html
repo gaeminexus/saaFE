@@ -136,7 +136,8 @@
           <ng-container matColumnDef="numero">
             <th mat-header-cell *matHeaderCellDef mat-sort-header class="header-numero">Número</th>
             <td mat-cell *matCellDef="let asiento" class="cell-numero">
-              <span class="badge-numero">{{ asiento.numero }}</span>
+              <!-- D-036: se muestra el código del asiento (ASNTCDGO), no el consecutivo interno ASNTNMRO -->
+              <span class="badge-numero">{{ asiento.codigo }}</span>
             </td>
           </ng-container>
 

@@ -237,9 +237,9 @@ export class ListadoAsientosComponent implements OnInit, AfterViewInit, AfterVie
             fechaAsiento: item.fechaAsiento ? this.normalizeFecha(item.fechaAsiento) : null,
           }))
           .sort((a: any, b: any) => {
-            // Ordenamiento numérico por número de asiento
-            const numeroA = parseInt(a.numero) || 0;
-            const numeroB = parseInt(b.numero) || 0;
+            // Ordenamiento numérico por código de asiento (D-036)
+            const numeroA = parseInt(a.codigo) || 0;
+            const numeroB = parseInt(b.codigo) || 0;
             return numeroA - numeroB;
           });
 
@@ -298,7 +298,7 @@ export class ListadoAsientosComponent implements OnInit, AfterViewInit, AfterVie
     const numeroFiltro = this.filtroNumero.value?.toString().trim();
     if (numeroFiltro) {
       asientosFiltrados = asientosFiltrados.filter((asiento) =>
-        asiento.numero.toString().includes(numeroFiltro)
+        (asiento.codigo ?? '').toString().includes(numeroFiltro)
       );
     }
 

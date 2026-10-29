@@ -185,7 +185,7 @@
                   <button mat-icon-button class="expand-button">
                     <mat-icon>{{ isAsientoExpandido(asiento.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
                   </button>
-                  <span class="asiento-numero">Asiento #{{ asiento.numeroAlterno || asiento.numero }}</span>
+                  <span class="asiento-numero">Asiento #{{ asiento.codigo }}{{ asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : '' }}</span>
                 </div>
                 <span class="asiento-fecha">{{ asiento.fechaAsiento | date: 'dd/MM/yyyy' }}</span>
               </div>
