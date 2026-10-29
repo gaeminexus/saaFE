@@ -1,5 +1,9 @@
 <div class="bg-container">
-  <h2 class="bg-title">BALANCE CONTABLE</h2>
+  <div class="bg-title-row">
+    <h2 class="bg-title">BALANCE CONTABLE</h2>
+    <!-- C17: PRELIMINAR / DEFINITIVO del mes de la fecha de corte (GET /prdo/estado) -->
+    <cnt-leyenda-estado-periodo [fecha]="form.get('fechaFin')?.value" />
+  </div>
 
   <!-- ── Filtros ─────────────────────────────────────────────── -->
   <mat-card class="bg-card">
@@ -118,6 +122,30 @@
           <mat-icon>picture_as_pdf</mat-icon>
         }
         Imprimir PDF
+      </button>
+
+      <!-- C19: estado financiero OFICIAL (logo, encabezado institucional, resultado del ejercicio,
+           PRELIMINAR/DEFINITIVO, firmas). Lo genera el backend con los mismos filtros. -->
+      <mat-form-field appearance="outline" class="bg-comparativo">
+        <mat-label>Comparativo</mat-label>
+        <mat-select [value]="comparativoOficial()" (selectionChange)="onComparativoOficialChange($event.value)">
+          <mat-option value="NINGUNO">Sin comparativo</mat-option>
+          <mat-option value="MES_ANTERIOR">Mes anterior</mat-option>
+          <mat-option value="CIERRE_ANIO_ANTERIOR">Cierre del año anterior</mat-option>
+          <mat-option value="MISMO_MES_ANIO_ANTERIOR">Mismo mes del año anterior</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-flat-button color="primary" (click)="imprimirOficial('PDF')" [disabled]="imprimiendoOficial()">
+        @if (imprimiendoOficial()) {
+          <mat-spinner diameter="18" class="spinner-btn"></mat-spinner>
+        } @else {
+          <mat-icon>verified</mat-icon>
+        }
+        Estado oficial PDF
+      </button>
+      <button mat-stroked-button color="primary" (click)="imprimirOficial('EXCEL')" [disabled]="imprimiendoOficial()">
+        <mat-icon>grid_on</mat-icon>
+        Estado oficial Excel
       </button>
 
       <mat-checkbox

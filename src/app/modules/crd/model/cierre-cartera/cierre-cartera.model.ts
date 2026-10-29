@@ -164,6 +164,24 @@ export interface CorridaCierreCartera {
   estado: number;
 }
 
+/**
+ * C17 — Corridas vigentes que dejan el mes CERRADO para cartera (EJECUTADA y fila activa), por clave
+ * `anio * 100 + mes`. Es la misma regla del backend (`EstadoCierreService.carteraCerrada`).
+ */
+export function corridasVigentesPorMes(corridas: CorridaCierreCartera[]): Map<number, CorridaCierreCartera> {
+  const mapa = new Map<number, CorridaCierreCartera>();
+  for (const c of corridas ?? []) {
+    if (c.idEstado === ESTADO_CORRIDA.EJECUTADA && c.estado === 1) {
+      const clave = c.anio * 100 + c.mes;
+      const previa = mapa.get(clave);
+      if (!previa || c.codigo > previa.codigo) {
+        mapa.set(clave, c);
+      }
+    }
+  }
+  return mapa;
+}
+
 /** Query para reversar (todos opcionales en la ruta, pero conviene informar usuario y motivo). */
 export interface DatosReverso {
   usuario?: string | null;

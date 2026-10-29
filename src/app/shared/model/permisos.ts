@@ -311,4 +311,11 @@ export class Permisos {
   public static readonly RRH_DEVOLUCION_DE_ANTICIPO                             = 1555;   // SAA > RECURSOS HUMANOS > PROCESOS > ANTICIPOS A TRABAJADORES > DEVOLUCION DE ANTICIPO
   public static readonly RRH_ANTICIPOS_A_TRABAJADORES_MOTIVO                    = 1556;   // SAA > RECURSOS HUMANOS > PROCESOS > ANTICIPOS A TRABAJADORES > MOTIVO
   public static readonly RRH_ACREDITAR_VACACIONES                               = 1557;   // SAA > RECURSOS HUMANOS > PROCESOS > ACREDITAR VACACIONES
+
+  // C17 — cierres bloqueantes. Nodos fuera de lap1-15: los inserta saaBE
+  // docs/logica-negocio/seguridad/sql/C17-FE-01-permisos-cierres.sql (rama cuadre/c17-fe-soporte).
+  public static readonly CNT_CIERRE_DE_PERIODOS                                 = 1558;   // SAA > CONTABILIDAD > PROCESOS > CIERRE DE PERIODOS
+  public static readonly CNT_CERRAR_PERIODO                                     = 1559;   // SAA > CONTABILIDAD > PROCESOS > CIERRE DE PERIODOS > CERRAR PERIODO
+  public static readonly CNT_REABRIR_PERIODO                                    = 1560;   // SAA > CONTABILIDAD > PROCESOS > CIERRE DE PERIODOS > REABRIR PERIODO
+  public static readonly CRD_REABRIR_CARTERA                                    = 1561;   // SAA > CREDITOS > PARAMETRIZACION > CIERRE DE CARTERA > REABRIR CARTERA
 }

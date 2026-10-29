@@ -37,6 +37,10 @@ export interface Asiento {
   periodo: Periodo;
   rubroModuloSistemaP: number;
   rubroModuloSistemaH: number;
+  /** C17 — rastro de la anulación (ASNTMTAN, ASNTFCAN, ASNTUSAN). */
+  motivoAnulacion?: string | null;
+  fechaAnulacion?: any;
+  usuarioAnulacion?: string | null;
 
   // Para el formulario maestro-detalle
   detalles?: DetalleAsiento[];
