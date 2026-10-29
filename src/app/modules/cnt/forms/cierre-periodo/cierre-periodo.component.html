@@ -94,6 +94,15 @@
                     </span>
                   </td>
                   <td class="c-acciones">
+                    <button
+                      mat-icon-button
+                      color="primary"
+                      (click)="consultarControles(f)"
+                      [disabled]="cargandoControles() || procesando()"
+                      matTooltip="Controles de cierre del mes (semáforo)"
+                    >
+                      <mat-icon>traffic</mat-icon>
+                    </button>
                     @if (!f.cerrado) {
                       <span [matTooltip]="razonNoCierre(f)">
                         <button
@@ -126,6 +135,79 @@
       }
       @if (procesando()) {
         <div class="loading-inline"><mat-spinner diameter="22"></mat-spinner><span>Procesando…</span></div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Pase a producción B-1..B-3: semáforo de controles de cierre (GET /prdo/controlCierre). Solo lectura. -->
+  <mat-card class="controles-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>traffic</mat-icon> Controles de cierre
+        @if (filaControles()) { <span class="ctl-periodo">· {{ etiqueta(filaControles()!) }}</span> }
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="toolbar">
+        <span class="resumen">
+          Cuentas puente, ecuación contable, cartera vs contabilidad, bancos vs extracto, asientos y cuadratura
+          B17 ↔ G. Se consultan solos al pulsar <strong>Cerrar período</strong>; con algún ERROR el cierre pide
+          confirmación.
+        </span>
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="consultarControles(filaControles() ?? candidatoCierre()!)"
+          [disabled]="cargandoControles() || (!filaControles() && !candidatoCierre())"
+        >
+          <mat-icon>fact_check</mat-icon>
+          Consultar {{ filaControles() ? etiqueta(filaControles()!) : (candidatoCierre() ? etiqueta(candidatoCierre()!) : '') }}
+        </button>
+      </div>
+
+      @if (cargandoControles()) {
+        <div class="loading-inline"><mat-spinner diameter="24"></mat-spinner><span>Consultando controles…</span></div>
+      } @else if (errorControles()) {
+        <div class="aviso-banner">
+          <mat-icon>warning</mat-icon>
+          <span>No se pudieron consultar los controles: {{ errorControles() }}</span>
+        </div>
+      } @else if (controles().length > 0) {
+        <div class="semaforo" [ngClass]="'sem-' + estadoGeneral()">
+          <mat-icon>{{ iconoEstado(estadoGeneral()) }}</mat-icon>
+          <strong>{{ estadoGeneral() }}</strong>
+          <span>{{ conteoControles().ok }} OK · {{ conteoControles().advertencia }} advertencia(s) · {{ conteoControles().error }} error(es)</span>
+        </div>
+        <div class="tabla-scroll">
+          <table class="periodos-table controles-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Grupo</th>
+                <th>Control</th>
+                <th class="num">Valor</th>
+                <th class="num">Esperado</th>
+                <th class="num">Diferencia</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (c of controles(); track c.codigo) {
+                <tr [ngClass]="'ctl-' + c.estado">
+                  <td><mat-icon class="ctl-icono" [matTooltip]="c.estado">{{ iconoEstado(c.estado) }}</mat-icon></td>
+                  <td class="nowrap">{{ nombreGrupoControl[c.grupo] ?? c.grupo }}</td>
+                  <td>{{ c.descripcion }}</td>
+                  <td class="num nowrap">{{ formatoMonto(c.valor) }}</td>
+                  <td class="num nowrap">{{ formatoMonto(c.esperado) }}</td>
+                  <td class="num nowrap">{{ formatoMonto(c.diferencia) }}</td>
+                  <td class="c-motivo">{{ c.detalle || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="vacio">Elija un período con el botón <mat-icon inline>traffic</mat-icon> de la tabla o consulte el siguiente a cerrar.</p>
       }
     </mat-card-content>
   </mat-card>

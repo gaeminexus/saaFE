@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
-import { EstadoCierrePeriodo, EstadoPeriodo, HistorialCierrePeriodo, Periodo } from '../model/periodo';
+import { ControlCierre, EstadoCierrePeriodo, EstadoPeriodo, HistorialCierrePeriodo, Periodo } from '../model/periodo';
 import { ServiciosCnt } from './ws-cnt';
 
 /** Datos de auditoría que exigen cerrar / reabrir (query params del backend). */
@@ -52,6 +52,16 @@ export class CierrePeriodoService {
     if (tipo) params = params.set('tipo', tipo);
     return this.http
       .get<HistorialCierrePeriodo[]>(`${this.base}/bitacora/${idEmpresa}`, { params })
+      .pipe(catchError(this.aTexto));
+  }
+
+  /**
+   * GET /prdo/controlCierre/{idEmpresa}/{anio}/{mes} — semáforo de controles de cierre (solo lectura): puentes
+   * D-024, ecuación contable, cartera vs contabilidad, bancos vs extracto, asientos y B17 ↔ G.
+   */
+  controlCierre(idEmpresa: number, anio: number, mes: number): Observable<ControlCierre[]> {
+    return this.http
+      .get<ControlCierre[]>(`${this.base}/controlCierre/${idEmpresa}/${anio}/${mes}`)
       .pipe(catchError(this.aTexto));
   }
 

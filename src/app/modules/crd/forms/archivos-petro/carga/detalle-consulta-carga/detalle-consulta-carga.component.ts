@@ -276,6 +276,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
   prevueloAfectacionCargando = signal(false);
   /** El endpoint puede no estar desplegado todavía — no se aproxima, se dice explícito. */
   prevueloAfectacionNoDisponible = signal(false);
+  /** Mensaje del backend cuando el prevuelo falla (vacío = sin respuesta legible). */
+  prevueloAfectacionMensajeError = signal('');
   prevueloAfectacionPanelAbierto = signal(false);
   readonly prevueloAfectacionColumnas = ['codigoPetro', 'cedula', 'participe', 'disponible', 'afectado', 'exceso', 'avpc', 'mensaje'];
   /** Faltantes (§14) — misma forma que la de excesos, con `faltante` en vez de `exceso`. */
@@ -2540,9 +2542,14 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         this.cargarContextoAfectacionFinanciera(novedad);
         this.cargarOpcionesAporte(novedad);
       },
-      error: () => {
+      error: (err) => {
         this.isSavingAfectacionFinanciera.set(false);
-        this.snackBar.open('No se pudieron guardar las afectaciones financieras', 'Cerrar', { duration: 4000 });
+        // Pase a producción §2: mostrar el texto del backend (tope de afectación, CARTERA_CERRADA…).
+        this.snackBar.open(
+          mensajeDeError(err, 'No se pudieron guardar las afectaciones financieras'),
+          'Cerrar',
+          { duration: 8000 },
+        );
       }
     });
   }
@@ -2912,6 +2919,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     this.prevueloAfectacionPanelAbierto.set(true);
     this.prevueloAfectacionCargando.set(true);
     this.prevueloAfectacionNoDisponible.set(false);
+    this.prevueloAfectacionMensajeError.set('');
     this.prevueloAfectacion.set(null);
 
     this.serviciosAsoprepService.prevueloAfectacion(idCarga).subscribe({
@@ -2923,9 +2931,12 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           this.prevueloAfectacionNoDisponible.set(true);
         }
       },
-      error: () => {
+      error: (err) => {
         this.prevueloAfectacionCargando.set(false);
         this.prevueloAfectacionNoDisponible.set(true);
+        // Pase a producción §2: el texto del backend (p. ej. CARTERA_CERRADA o la carga
+        // inexistente) en lugar del aviso genérico.
+        this.prevueloAfectacionMensajeError.set(mensajeDeError(err, ''));
       },
     });
   }

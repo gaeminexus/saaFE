@@ -71,6 +71,25 @@ export interface HistorialCierrePeriodo {
   fueraDeOrden?: number | null;
 }
 
+/** Estado de un control de cierre (semáforo). */
+export type EstadoControlCierre = 'OK' | 'ADVERTENCIA' | 'ERROR';
+
+/**
+ * Pase a producción (B-1..B-3) — un control de `GET /prdo/controlCierre/{idEmpresa}/{anio}/{mes}`.
+ * saaBE docs/logica-negocio/cnt/CONTROL-CIERRE-MES.md.
+ */
+export interface ControlCierre {
+  /** PUENTES | ECUACION | CARTERA | BANCOS | ASIENTOS | B17_G */
+  grupo: string;
+  codigo: string;
+  descripcion: string;
+  valor?: number | null;
+  esperado?: number | null;
+  diferencia?: number | null;
+  estado: EstadoControlCierre;
+  detalle?: string | null;
+}
+
 /**
  * Estados del período contable
  */

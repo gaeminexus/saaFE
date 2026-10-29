@@ -1296,11 +1296,12 @@ export const routes: Routes = [
         canActivate: [authGuard, usuarioUnoGuard],
       },
       {
-        // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),
-        // hasta que exista el esquema de permisos definitivo.
+        // Pase a producción (I-4): ya no es solo del USUARIO 1. Se protege como Cierre de Períodos:
+        // sesión (authGuard) + permiso del árbol en el menú (1412 CIERRE DE CARTERA) y en la
+        // acción de reabrir (1561 REABRIR CARTERA). El backend aplica las reglas C17 de todos modos.
         path: 'cierre-cartera',
         loadComponent: () => import('./modules/crd/forms/cierre-cartera/cierre-cartera.component').then((m) => m.CierreCarteraComponent),
-        canActivate: [authGuard, usuarioUnoGuard],
+        canActivate: [authGuard],
       },
       {
         // TODO TEMPORAL: misma restricción a USUARIO 1 que bandas-cartera (usuarioUnoGuard),

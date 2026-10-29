@@ -19,7 +19,11 @@ import {
   MotivoCierreDialogData,
   MotivoCierreDialogResult,
 } from '../../dialog/motivo-cierre-dialog/motivo-cierre-dialog.component';
-import { EstadoPeriodo, HistorialCierrePeriodo, Periodo } from '../../model/periodo';
+import { ControlCierre, EstadoPeriodo, HistorialCierrePeriodo, Periodo } from '../../model/periodo';
+import {
+  ConfirmDialogComponent,
+  ConfirmDialogData,
+} from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { CierrePeriodoService, formatoFecha, nombreMes, periodoCerrado } from '../../service/cierre-periodo.service';
 import { PeriodoService } from '../../service/periodo.service';
 
@@ -77,6 +81,12 @@ export class CierrePeriodoComponent implements OnInit {
   bitacora = signal<HistorialCierrePeriodo[]>([]);
   cargandoBitacora = signal(false);
   errorBitacora = signal<string | null>(null);
+
+  /** Panel "Controles de cierre": período consultado, resultado y estado de la consulta. */
+  filaControles = signal<FilaCierre | null>(null);
+  controles = signal<ControlCierre[]>([]);
+  cargandoControles = signal(false);
+  errorControles = signal<string | null>(null);
 
   /** Filtro de año de la tabla ('' = todos). */
   anioFiltro = signal<number | ''>('');
@@ -226,9 +236,108 @@ export class CierrePeriodoComponent implements OnInit {
     if (!this.puedeCerrar(f) || this.procesando()) return;
     this.permisosService.ejecutarSiPermitido(
       Permisos.CNT_CERRAR_PERIODO,
-      () => this.confirmarYEjecutar(f, 'cerrar'),
+      () => this.controlarAntesDeCerrar(f),
       (mensaje) => this.notificar(mensaje.toUpperCase(), false),
     );
+  }
+
+  // ===================== Controles de cierre (semáforo, pase a producción B-1..B-3) =====================
+
+  /** Consulta los controles del período y los muestra en el panel (no bloquea nada). */
+  consultarControles(f: FilaCierre, alTerminar?: (lista: ControlCierre[] | null, error: string | null) => void): void {
+    if (!this.idEmpresa) return;
+    this.filaControles.set(f);
+    this.cargandoControles.set(true);
+    this.errorControles.set(null);
+    this.controles.set([]);
+    this.cierreService.controlCierre(this.idEmpresa, f.periodo.anio, f.periodo.mes).subscribe({
+      next: (lista) => {
+        this.controles.set(lista ?? []);
+        this.cargandoControles.set(false);
+        alTerminar?.(lista ?? [], null);
+      },
+      error: (mensaje: string) => {
+        this.cargandoControles.set(false);
+        this.errorControles.set(mensaje);
+        alTerminar?.(null, mensaje);
+      },
+    });
+  }
+
+  /**
+   * Antes de cerrar se consultan los controles. Con algún ERROR (o si no se pudieron consultar) se pide una
+   * confirmación explícita; hoy NO se bloquea (opción documentada en saaBE CONTROL-CIERRE-MES.md §5).
+   */
+  private controlarAntesDeCerrar(f: FilaCierre): void {
+    this.consultarControles(f, (lista, error) => {
+      const errores = (lista ?? []).filter((c) => c.estado === 'ERROR');
+      const advertencias = (lista ?? []).filter((c) => c.estado === 'ADVERTENCIA');
+      if (!error && errores.length === 0) {
+        this.confirmarYEjecutar(f, 'cerrar', advertencias.length);
+        return;
+      }
+      const data: ConfirmDialogData = error
+        ? {
+            title: `No se pudieron consultar los controles de ${this.etiqueta(f)}`,
+            message: `${error}. ¿Desea continuar con el cierre sin ver los controles?`,
+            confirmText: 'Continuar sin controles',
+            type: 'warning',
+          }
+        : {
+            title: `${errores.length} control(es) de cierre en ERROR`,
+            message:
+              `Los controles de ${this.etiqueta(f)} muestran diferencias (detalle en el panel "Controles de cierre"). ` +
+              'Cerrar con diferencias deja el mes DEFINITIVO tal como está. ¿Confirma que desea cerrar de todos modos?',
+            confirmText: 'Cerrar con diferencias',
+            type: 'danger',
+            details: errores.slice(0, 8).map((c) => ({
+              label: c.descripcion,
+              value: c.diferencia != null ? `Diferencia ${this.formatoMonto(c.diferencia)}` : c.estado,
+            })),
+          };
+      this.dialog
+        .open(ConfirmDialogComponent, { data, width: '640px' })
+        .afterClosed()
+        .subscribe((ok?: boolean) => {
+          if (ok) this.confirmarYEjecutar(f, 'cerrar', advertencias.length, errores.length);
+        });
+    });
+  }
+
+  /** Peor estado de la lista (para el semáforo general). */
+  estadoGeneral = computed<'OK' | 'ADVERTENCIA' | 'ERROR' | null>(() => {
+    const lista = this.controles();
+    if (!lista.length) return null;
+    if (lista.some((c) => c.estado === 'ERROR')) return 'ERROR';
+    if (lista.some((c) => c.estado === 'ADVERTENCIA')) return 'ADVERTENCIA';
+    return 'OK';
+  });
+
+  conteoControles = computed(() => {
+    const lista = this.controles();
+    return {
+      ok: lista.filter((c) => c.estado === 'OK').length,
+      advertencia: lista.filter((c) => c.estado === 'ADVERTENCIA').length,
+      error: lista.filter((c) => c.estado === 'ERROR').length,
+    };
+  });
+
+  readonly nombreGrupoControl: Record<string, string> = {
+    PUENTES: 'Cuentas puente (D-024)',
+    ECUACION: 'Ecuación contable',
+    CARTERA: 'Cartera vs contabilidad',
+    BANCOS: 'Bancos vs extracto',
+    ASIENTOS: 'Asientos del mes',
+    B17_G: 'Cuadratura B17 ↔ G',
+  };
+
+  iconoEstado(estado: string | null): string {
+    return estado === 'OK' ? 'check_circle' : estado === 'ERROR' ? 'cancel' : 'warning';
+  }
+
+  formatoMonto(v: number | null | undefined): string {
+    if (v === null || v === undefined) return '—';
+    return v.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   reabrir(f: FilaCierre): void {
@@ -240,8 +349,17 @@ export class CierrePeriodoComponent implements OnInit {
     );
   }
 
-  private confirmarYEjecutar(f: FilaCierre, accion: 'cerrar' | 'reabrir'): void {
+  private confirmarYEjecutar(f: FilaCierre, accion: 'cerrar' | 'reabrir', nAdvertencias = 0, nErrores = 0): void {
     const periodo = this.etiqueta(f);
+    const avisosControles: string[] = [];
+    if (accion === 'cerrar' && nErrores > 0) {
+      avisosControles.push(
+        `Se cierra con ${nErrores} control(es) en ERROR confirmados: indique en el motivo por qué (queda en la bitácora).`,
+      );
+    }
+    if (accion === 'cerrar' && nAdvertencias > 0) {
+      avisosControles.push(`Hay ${nAdvertencias} control(es) con ADVERTENCIA (ver el panel "Controles de cierre").`);
+    }
     const data: MotivoCierreDialogData =
       accion === 'cerrar'
         ? {
@@ -250,6 +368,7 @@ export class CierrePeriodoComponent implements OnInit {
               'El período queda CERRADO para contabilidad: ningún módulo podrá registrar, editar ni eliminar asientos ' +
               'con fecha en este mes, y sus estados financieros salen como DEFINITIVOS.',
             advertencias: [
+              ...avisosControles,
               'Las anulaciones de documentos de este mes generarán un asiento de reverso en el primer período abierto.',
               'Para corregir algo después habrá que reabrir el período (queda en la bitácora).',
             ],

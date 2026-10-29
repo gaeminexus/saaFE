@@ -55,6 +55,17 @@
         }
         {{ puedeReintentar() ? 'Reintentar reportes fallidos' : 'Generar archivos' }}
       </button>
+
+      <!-- I-6: regenerar un mes que ya tiene ejecución (exige el mes de cartera cerrado) -->
+      @if (puedeRegenerar()) {
+        <button mat-stroked-button color="warn"
+                (click)="regenerarArchivos()"
+                [disabled]="ejecutando() || cargandoDetalle()"
+                matTooltip="Crea una ejecución nueva de las G40–G51 del mes seleccionado (por ejemplo, después de reabrir, corregir y volver a cerrar la cartera)">
+          <mat-icon>autorenew</mat-icon>
+          Regenerar G
+        </button>
+      }
     </div>
 
     <!-- Mensaje info (ya generados) -->

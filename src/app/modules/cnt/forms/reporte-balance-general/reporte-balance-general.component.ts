@@ -265,9 +265,10 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
         this.fechaProceso.set(res.fechaProceso);
         this.cargarBalance(res.idEjecucion!);
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
-        this.errorMsg.set('Error de comunicación con el servidor');
+        // Mensaje del backend (REPORTE_MES_NO_CERRADO, fechas inválidas…); genérico solo sin texto.
+        this.errorMsg.set(mensajeDeError(err, 'Error al generar el balance'));
       }
     });
   }

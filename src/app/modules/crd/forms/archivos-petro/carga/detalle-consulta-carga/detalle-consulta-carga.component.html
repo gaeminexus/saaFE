@@ -391,7 +391,11 @@
                   } @else if (prevueloAfectacionNoDisponible()) {
                     <div class="prevuelo-estado prevuelo-estado--error">
                       <mat-icon>error_outline</mat-icon>
-                      <span>No se pudo verificar. El endpoint todavía no está disponible o falló la consulta — no se muestra una aproximación.</span>
+                      @if (prevueloAfectacionMensajeError()) {
+                        <span>No se pudo verificar: {{ prevueloAfectacionMensajeError() }}</span>
+                      } @else {
+                        <span>No se pudo verificar. El endpoint todavía no está disponible o falló la consulta — no se muestra una aproximación.</span>
+                      }
                     </div>
                   } @else if (prevueloAfectacion(); as p) {
                     <!--

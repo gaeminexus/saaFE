@@ -54,6 +54,7 @@
 }
 
 .periodos-card,
+.controles-card,
 .bitacora-card {
   margin-bottom: 16px;
 
@@ -148,6 +149,60 @@
   }
   tr.fila-candidata td {
     background: #eff6ff;
+  }
+}
+
+// Semáforo de controles de cierre
+.ctl-periodo {
+  color: #475569;
+  font-weight: 500;
+}
+
+.semaforo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 8px 0 12px;
+  font-size: 0.9rem;
+
+  &.sem-OK {
+    background: #dcfce7;
+    color: #166534;
+  }
+  &.sem-ADVERTENCIA {
+    background: #fffbeb;
+    color: #92400e;
+  }
+  &.sem-ERROR {
+    background: #fef2f2;
+    color: #b91c1c;
+  }
+}
+
+.controles-table {
+  .num {
+    text-align: right;
+  }
+  .ctl-icono {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+  tr.ctl-OK .ctl-icono {
+    color: #16a34a;
+  }
+  tr.ctl-ADVERTENCIA .ctl-icono {
+    color: #d97706;
+  }
+  tr.ctl-ERROR {
+    td {
+      background: #fff5f5;
+    }
+    .ctl-icono {
+      color: #dc2626;
+    }
   }
 }
 
