@@ -554,7 +554,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
 
     const headers = ['Número', 'Fecha Ingreso', 'Fecha Asiento', 'Tipo', 'Estado', 'Usuario', 'Observaciones'];
     const datos = this.resultadosAsientos.map(asiento => ([
-      asiento.numero.toString() + (asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : ''),
+      (asiento.codigo ?? '').toString() + (asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : ''),
       this.formatearFecha(asiento.fechaIngreso),
       this.formatearFecha(asiento.fechaAsiento),
       this.getTipoAsientoNombre(asiento),
@@ -591,7 +591,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
     const dataKeys = ['numero', 'fechaIngresoFormateada', 'fechaAsientoFormateada', 'tipoNombre', 'estadoLabel', 'nombreUsuario', 'observaciones'];
 
     const datos = this.resultadosAsientos.map(asiento => ({
-      numero: asiento.numero.toString() + (asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : ''),
+      numero: (asiento.codigo ?? '').toString() + (asiento.numeroAlterno ? ' (' + asiento.numeroAlterno + ')' : ''),
       fechaIngresoFormateada: this.formatearFecha(asiento.fechaIngreso),
       fechaAsientoFormateada: this.formatearFecha(asiento.fechaAsiento),
       tipoNombre: this.getTipoAsientoNombre(asiento),
@@ -631,7 +631,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
       'Haber': detalle.valorHaber ? detalle.valorHaber.toFixed(2) : '0.00'
     }));
 
-    const filename = `Asiento_${asiento.numeroAlterno || asiento.numero}_Detalles`;
+    const filename = `Asiento_${asiento.numeroAlterno || asiento.codigo}_Detalles`;
     this.exportService.exportToCSV(datos, filename, headers);
     this.snackBar.open('Detalles del asiento exportados a CSV', 'Cerrar', { duration: 3000 });
   }
@@ -722,7 +722,7 @@ export class ReporteListadoAsientosComponent implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Copiar Asiento',
-        message: `¿Está seguro de que desea copiar el asiento N° ${asiento.numeroAlterno || (asiento.numero ?? asiento.codigo)}?`,
+        message: `¿Está seguro de que desea copiar el asiento N° ${asiento.numeroAlterno || asiento.codigo}?`,
         confirmText: 'Sí, copiar',
         cancelText: 'Cancelar',
       }
