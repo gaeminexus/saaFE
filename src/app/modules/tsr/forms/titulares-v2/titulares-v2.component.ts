@@ -44,6 +44,7 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
+import { MENSAJE_SIN_USUARIO_SESION, nombreUsuarioSesion } from '../../../../shared/utils/usuario-sesion.util';
 
 type Vista = 'lista' | 'editar';
 
@@ -1312,7 +1313,11 @@ export class TitularesV2Component implements OnInit {
     }
 
     const v = this.formCuentaBancaria.value;
-    const usuario = localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema';
+    const usuario = nombreUsuarioSesion();
+    if (usuario == null) {
+      this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 });
+      return;
+    }
     const esNuevo = !v.codigo || v.codigo === 0;
 
     // PUT /ctbn hace merge desnudo: todo campo ausente se graba NULL (docs/tsr/

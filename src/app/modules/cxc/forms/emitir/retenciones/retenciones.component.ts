@@ -18,6 +18,7 @@ import { RetencionEmitirService } from '../../../service/emitir/retencion-emitir
 import { FacturadorService } from '../../../service/facturador.service';
 import { PuntoEmisionService } from '../../../service/punto-emision.service';
 import { DetalleSriService } from '../../../service/detalle-sri.service';
+import { MENSAJE_SIN_USUARIO_SESION, usuarioSesion } from '../../../../../shared/utils/usuario-sesion.util';
 
 const TABLA_TIPO_DOC = '3';             // Tipos de documentos (LSRI 3)
 const TABLA_IMPUESTO = '19';            // Impuestos retención (LSRI 19)
@@ -186,6 +187,7 @@ export class RetencionesComponent implements OnInit {
   }
 
   generaRetencion(): void {
+    if (!(Number(this.vUsuario?.codigo) > 0)) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (this.documentoActual()?.id) { this.mostrarError('La retención ya fue emitida'); return; }
     if (!this.listaDetalles.length) { this.mostrarError('Retención sin detalle'); return; }
     if (!this.personaSeleccionada()?.codigo) { this.mostrarError('Debe seleccionar un proveedor'); return; }
@@ -345,8 +347,9 @@ export class RetencionesComponent implements OnInit {
   }
 
   private cargarSesion(): void {
-    const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-    if (u) { try { this.vUsuario = JSON.parse(u); } catch { /* ignore */ } }
+    const usuario = usuarioSesion();
+    if (usuario) { this.vUsuario = usuario; }
+
     const f = sessionStorage.getItem('facturador') || localStorage.getItem('facturador');
     if (f) { try { this.vFacturador = JSON.parse(f) as Facturador; } catch { /* ignore */ } }
   }

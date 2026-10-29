@@ -13,6 +13,7 @@ import { AplicacionPagoCxp } from '../../../model/aplicacion-pago-cxp';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 export type TipoDocumentoAbonos = 'FACTURA' | 'LIQUIDACION';
 
@@ -119,7 +120,8 @@ export class HistorialAbonosFacturaComponent implements OnChanges {
 
   /** `revertir` opera sobre el id propio de la aplicación: no distingue factura de liquidación. */
   private revertir(idAplicacion: number, motivo: string): void {
-    const idUsuario = this.idUsuarioSesion();
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     this.aplicacionPagoS.revertir(idAplicacion, { motivo, idUsuario }).subscribe({
       next: (resp) => {
         this.snackBar.open(resp?.mensaje ?? 'Abono reversado correctamente.', 'Cerrar', { duration: 4000 });
@@ -171,7 +173,4 @@ export class HistorialAbonosFacturaComponent implements OnChanges {
     );
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

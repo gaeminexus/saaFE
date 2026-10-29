@@ -26,3 +26,36 @@ function leerUsuario(storage: Storage): number | null {
 export function idUsuarioSesion(): number | null {
   return leerUsuario(sessionStorage) ?? leerUsuario(localStorage);
 }
+
+/** Objeto `usuario` que guarda el login, parseado, o `null` si no está o no se puede leer. */
+export function usuarioSesion(): any | null {
+  for (const storage of [sessionStorage, localStorage]) {
+    try {
+      const crudo = storage.getItem('usuario');
+      const u = crudo ? JSON.parse(crudo) : null;
+      if (u && typeof u === 'object') return u;
+    } catch { /* se prueba el siguiente */ }
+  }
+  return null;
+}
+
+function texto(valor: unknown): string | null {
+  return typeof valor === 'string' && valor.trim() ? valor.trim() : null;
+}
+
+function leerNombre(storage: Storage): string | null {
+  let delObjeto: string | null = null;
+  try {
+    const crudo = storage.getItem('usuario');
+    delObjeto = crudo ? texto(JSON.parse(crudo)?.nombre) : null;
+  } catch { /* JSON ilegible: se siguen probando las otras claves */ }
+  return delObjeto ?? texto(storage.getItem('username')) ?? texto(storage.getItem('userName'));
+}
+
+/**
+ * Nombre del usuario de la sesión, o `null`. Orden: `usuario.nombre`, `username`, `userName`, primero
+ * en `sessionStorage` y después en `localStorage`. Sin relleno: si es `null` la pantalla no envía.
+ */
+export function nombreUsuarioSesion(): string | null {
+  return leerNombre(sessionStorage) ?? leerNombre(localStorage);
+}

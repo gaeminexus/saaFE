@@ -43,6 +43,7 @@ import {
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { PagoProgramadoService } from '../../../service/pago-programado.service';
 import { JasperReportesService } from '../../../../../shared/services/jasper-reportes.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Pagos a proveedores por transferencia. Cuatro sub-vistas secuenciales:
@@ -468,6 +469,8 @@ export class PagosTransferenciaComponent implements OnInit {
    * Tesorería → Procesos → Aprobación de pagos.
    */
   registrarPago(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.regError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeRegistrar || !this.regIdFactura) return;
 
     this.registrando.set(true);
@@ -480,7 +483,7 @@ export class PagosTransferenciaComponent implements OnInit {
       valor: this.regValorNumerico,
       fechaProgramada: this.fechaISO(this.regFecha),
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       observacion: this.regObservacion.trim(),
     }).subscribe({
       next: (resp) => {
@@ -619,6 +622,8 @@ export class PagosTransferenciaComponent implements OnInit {
 
   /** Generar el archivo ES la aprobación: no hay un paso previo de aprobar. */
   generarArchivo(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.selError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.selCuentaOrigen || this.seleccionados.size === 0) return;
 
     this.generando.set(true);
@@ -629,7 +634,7 @@ export class PagosTransferenciaComponent implements OnInit {
       idsPagos: Array.from(this.seleccionados),
       idCuentaOrigen: this.selCuentaOrigen.codigo,
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.generando.set(false);
@@ -705,6 +710,8 @@ export class PagosTransferenciaComponent implements OnInit {
 
   /** El endpoint recibe el archivo como binario crudo, no como multipart. */
   async subirRespuesta(): Promise<void> {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.respError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeSubirRespuesta || !this.archivoRespuesta || !this.respIdLote) return;
 
     this.subiendoRespuesta.set(true);
@@ -713,7 +720,7 @@ export class PagosTransferenciaComponent implements OnInit {
 
     try {
       const buffer = await this.archivoRespuesta.arrayBuffer();
-      this.pagoS.cargarRespuesta(this.respIdLote, this.idUsuarioSesion(), buffer).subscribe({
+      this.pagoS.cargarRespuesta(this.respIdLote, idUsuario, buffer).subscribe({
         next: (resp) => {
           this.subiendoRespuesta.set(false);
           this.respResultado.set(resp);
@@ -838,6 +845,8 @@ export class PagosTransferenciaComponent implements OnInit {
 
   /** El motivo del diálogo se guarda como parte de la observación del pago. */
   private ejecutarConfirmacionManual(motivo: string): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.confError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     this.confirmandoManual.set(true);
     this.confError.set('');
     this.confResultado.set(null);
@@ -849,7 +858,7 @@ export class PagosTransferenciaComponent implements OnInit {
       referencia: this.confReferencia.trim() || undefined,
       fechaPago: this.fechaISO(this.confFecha),
       observacion: `Confirmación manual: ${nota}`,
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.confirmandoManual.set(false);
@@ -994,6 +1003,8 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   confirmarAnulacion(pago: PagoProgramado): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const data: MotivoDialogData = {
       titulo: `Anular pago N° ${pago.id}`,
       advertencia: 'El pago se cancela antes de enviarse al banco. Para reintentar habrá que registrar uno nuevo.',
@@ -1002,7 +1013,7 @@ export class PagosTransferenciaComponent implements OnInit {
 
     this.dialog.open(MotivoDialogComponent, { width: '480px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
-      this.pagoS.anular(pago.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.pagoS.anular(pago.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.snackBar.open(resp.mensaje ?? 'Pago anulado correctamente.', 'Cerrar', { duration: 5000 });
           this.cargarSeguimiento();
@@ -1060,6 +1071,8 @@ export class PagosTransferenciaComponent implements OnInit {
   }
 
   confirmarReverso(pago: PagoProgramado): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const debito = this.esDebitoAutomatico(pago);
     const data: MotivoDialogData = {
       titulo: debito
@@ -1074,7 +1087,7 @@ export class PagosTransferenciaComponent implements OnInit {
 
     this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
-      this.pagoS.revertirConfirmado(pago.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.pagoS.revertirConfirmado(pago.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.snackBar.open(resp.mensaje ?? 'Pago reversado.', 'Cerrar', { duration: 6000 });
           this.cargarSeguimiento();
@@ -1132,7 +1145,4 @@ export class PagosTransferenciaComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

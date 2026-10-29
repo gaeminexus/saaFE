@@ -18,6 +18,7 @@ import {
 import { AplicacionNotaCredito, CruzarNotaCreditoResponse, NotaCreditoDisponible, NotaDebitoPendiente } from '../../../model/nota-credito-saldo';
 import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.service';
 import { NotaCreditoSaldoService } from '../../../service/nota-credito-saldo.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Cruce del saldo a favor de una nota de crédito de compra contra OTRA factura pendiente del
@@ -306,6 +307,8 @@ export class CruceNotaCreditoComponent {
   }
 
   cruzar(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.error.set(MENSAJE_SIN_USUARIO_SESION); return; }
     const nc = this.notaElegida();
     const factura = this.facturaElegida();
     const nd = this.notaDebitoElegida();
@@ -326,7 +329,7 @@ export class CruceNotaCreditoComponent {
       valor,
       fecha,
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       observacion: this.formObservacion.trim() || undefined,
     }).subscribe({
       next: (resp) => {
@@ -346,6 +349,8 @@ export class CruceNotaCreditoComponent {
 
   /** Revierte un cruce con el endpoint de reverso de aplicación; el saldo de la NC vuelve solo (se calcula). */
   revertir(cruce: AplicacionNotaCredito): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     // La aplicación original lleva el asiento de la NC: se deshace anulando la NC, no desde aquí (§4.2).
     if (cruce.conAsiento || this.revirtiendo() != null) return;
 
@@ -359,7 +364,7 @@ export class CruceNotaCreditoComponent {
       if (!motivo) return;
 
       this.revirtiendo.set(cruce.idAplicacion);
-      this.aplicacionPagoS.revertir(cruce.idAplicacion, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.aplicacionPagoS.revertir(cruce.idAplicacion, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.revirtiendo.set(null);
           this.resultado.set(null);
@@ -406,7 +411,4 @@ export class CruceNotaCreditoComponent {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

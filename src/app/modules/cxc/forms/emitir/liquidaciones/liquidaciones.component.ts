@@ -50,6 +50,7 @@ import { GrupoProductoPago } from '../../../../cxp/model/grupo_producto_pago';
 import { ProductoPago } from '../../../../cxp/model/producto_pago';
 import { GrupoProductoPagoService } from '../../../../cxp/service/grupo-producto-pago.service';
 import { ProductoPagoService } from '../../../../cxp/service/producto-pago.service';
+import { MENSAJE_SIN_USUARIO_SESION, nombreUsuarioSesion, usuarioSesion } from '../../../../../shared/utils/usuario-sesion.util';
 
 const IVA_GENERAL = '614';
 const TABLA_IVA = '17';
@@ -621,6 +622,7 @@ export class LiquidacionesComponent implements OnInit {
   }
 
   guardar(): void {
+    if (!(Number(this.vUsuario?.codigo) > 0)) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.personaSeleccionada()?.codigo) {
       this.mostrarError('Seleccione un proveedor válido');
       return;
@@ -907,11 +909,13 @@ export class LiquidacionesComponent implements OnInit {
           data: { tipoLabel: 'Liquidación', numero: numero || String(id), movimientos },
         }).afterClosed().subscribe((result: AnularDocumentoCompraDialogResult | null) => {
           if (!result) return;
+          const usuario = nombreUsuarioSesion();
+          if (usuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
           this.procesandoAccion.set(true);
           this.service.anular({
             idLiquidacion: id,
             motivo: result.motivo,
-            usuario: this.nombreUsuarioSesion(),
+            usuario,
             idUsuario: this.appState.getIdUsuario(),
             anularEnCascada: result.anularEnCascada,
           })
@@ -1090,14 +1094,8 @@ export class LiquidacionesComponent implements OnInit {
   }
 
   private cargarSesion(): void {
-    const usuarioStr = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-    if (usuarioStr) {
-      try {
-        this.vUsuario = JSON.parse(usuarioStr) as Usuario;
-      } catch {
-        this.vUsuario = { codigo: 0 } as Usuario;
-      }
-    }
+    const usuario = usuarioSesion();
+    if (usuario) { this.vUsuario = usuario; }
 
     const facturadorStr = sessionStorage.getItem('facturador') || localStorage.getItem('facturador');
     if (facturadorStr) {
@@ -1107,17 +1105,6 @@ export class LiquidacionesComponent implements OnInit {
         this.vFacturador = {} as Facturador;
       }
     }
-  }
-
-  private nombreUsuarioSesion(): string {
-    try {
-      const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-      if (u) {
-        const parsed = JSON.parse(u);
-        return parsed?.username || parsed?.nombre || parsed?.login || 'sistema';
-      }
-    } catch { /* ignore */ }
-    return 'sistema';
   }
 
   private cargarFacturadorYPtoEmision(): void {

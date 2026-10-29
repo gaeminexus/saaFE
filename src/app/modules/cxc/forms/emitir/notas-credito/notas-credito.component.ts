@@ -31,6 +31,7 @@ import { DetalleSriService } from '../../../service/detalle-sri.service';
 import { DatosBusqueda } from '../../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
+import { MENSAJE_SIN_USUARIO_SESION, usuarioSesion } from '../../../../../shared/utils/usuario-sesion.util';
 
 const IVA_GENERAL = '614';
 const TABLA_IVA = '17';
@@ -322,6 +323,7 @@ export class NotasCreditoComponent implements OnInit {
   validaIVAByCambioFecha(): void { this.aplicarIvaGeneralPorFecha(); this.procesoCalculaTotal(); }
 
   generaNotaCredito(): void {
+    if (!(Number(this.vUsuario?.codigo) > 0)) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (this.documentoActual()?.id) { this.mostrarError('La nota de crédito ya fue emitida'); return; }
     if (!this.listaDetalles.length) { this.mostrarError('Nota de crédito sin detalle'); return; }
     if (!this.personaSeleccionada()?.codigo) { this.mostrarError('Debe seleccionar un cliente para continuar'); return; }
@@ -626,8 +628,9 @@ export class NotasCreditoComponent implements OnInit {
   }
 
   private cargarSesion(): void {
-    const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-    if (u) { try { this.vUsuario = JSON.parse(u) as Usuario; } catch { this.vUsuario = { codigo: 0 } as Usuario; } }
+    const usuario = usuarioSesion();
+    if (usuario) { this.vUsuario = usuario; }
+
     const f = sessionStorage.getItem('facturador') || localStorage.getItem('facturador');
     if (f) { try { this.vFacturador = JSON.parse(f) as Facturador; } catch { this.vFacturador = {} as Facturador; } }
   }

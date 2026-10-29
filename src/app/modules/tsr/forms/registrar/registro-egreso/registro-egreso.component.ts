@@ -35,6 +35,7 @@ import { PermisosService } from '../../../../../shared/services/permisos.service
 import { Permisos } from '../../../../../shared/model/permisos';
 import { EgresoService } from '../../../service/egreso.service';
 import { AnticipoDisponible, AnticipoService } from '../../../service/anticipo.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Egresos de tesorería sin documento físico (comisiones, débitos por
@@ -432,6 +433,8 @@ export class RegistroEgresoComponent implements OnInit {
    * Tesorería → Procesos → Aprobación de pagos.
    */
   registrar(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.regError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeRegistrar || this.regIdProducto == null) return;
 
     this.registrando.set(true);
@@ -449,7 +452,7 @@ export class RegistroEgresoComponent implements OnInit {
       idCuentaDestinoTitular: this.pagarConAnticipo() ? undefined : (this.regIdCuentaDestino ?? undefined),
       idAnticipo: this.pagarConAnticipo() ? (this.regIdAnticipo() ?? undefined) : undefined,
       observacion: this.regObservacion.trim() || undefined,
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.registrando.set(false);
@@ -687,6 +690,8 @@ export class RegistroEgresoComponent implements OnInit {
   }
 
   confirmarAnulacion(egreso: Egreso): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 }); return; }
     const data: MotivoDialogData = {
       titulo: `Anular egreso N° ${egreso.id}`,
       advertencia: egreso.anticipo
@@ -698,7 +703,7 @@ export class RegistroEgresoComponent implements OnInit {
 
     this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo) => {
       if (!motivo) return;
-      this.egresoS.anular(egreso.id, { motivo, idUsuario: this.idUsuarioSesion() }).subscribe({
+      this.egresoS.anular(egreso.id, { motivo, idUsuario: idUsuario }).subscribe({
         next: (resp) => {
           this.snackBar.open(resp.mensaje ?? 'Egreso anulado.', 'Cerrar', { duration: 6000 });
           this.cargarEgresos();
@@ -739,7 +744,4 @@ export class RegistroEgresoComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

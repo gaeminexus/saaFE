@@ -13,6 +13,7 @@ import { CuentaBancaria } from '../../../model/cuenta-bancaria';
 import { CuentaBancariaService } from '../../../service/cuenta-bancaria.service';
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * T2 del circuito de pagos por transferencia
@@ -158,6 +159,8 @@ export class ArchivoBancoComponent implements OnInit {
 
   /** Generar el archivo ES la aprobación de envío: no hay un paso previo. */
   generarArchivo(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.selError.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.selCuentaOrigen || this.seleccionados.size === 0) return;
 
     this.generando.set(true);
@@ -168,7 +171,7 @@ export class ArchivoBancoComponent implements OnInit {
       idsPagos: Array.from(this.seleccionados),
       idCuentaOrigen: this.selCuentaOrigen.codigo,
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
     }).subscribe({
       next: (resp) => {
         this.generando.set(false);
@@ -328,7 +331,4 @@ export class ArchivoBancoComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

@@ -44,6 +44,7 @@ import { NotaCreditoCompraService } from '../../../service/nota-credito-compra.s
 import { NotaDebitoCompraService } from '../../../service/nota-debito-compra.service';
 import { RetencionCompraService } from '../../../service/retencion-compra.service';
 import { RetencionCompraV2Service } from '../../../service/retencion-compra-v2.service';
+import { MENSAJE_SIN_USUARIO_SESION, nombreUsuarioSesion } from '../../../../../shared/utils/usuario-sesion.util';
 
 /** Tablas destino de compra que sí admiten anulación (ítem 12/13, 2026-08-28). Las retenciones quedan fuera: sin endpoint. */
 const TABLAS_ANULABLES = ['FACTURA_COMPRA', 'LIQUIDACION_COMPRA', 'LIQUIDACION_COMPRA_COMPRA', 'NOTA_CREDITO_COMPRA', 'NOTA_DEBITO_COMPRA'];
@@ -600,8 +601,12 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
   }
 
   private ejecutarAnulacion(tipo: string, id: number, resultado: AnularDocumentoCompraDialogResult): void {
+    const usuario = nombreUsuarioSesion();
+    if (usuario == null) {
+      this.snackBar.open(MENSAJE_SIN_USUARIO_SESION, 'Cerrar', { duration: 6000 });
+      return;
+    }
     this.anulando.set(true);
-    const usuario = this.usuarioSesion();
 
     const obs$ = TABLAS_LIQUIDACION.includes(tipo)
       ? this.liqService.anular(id, { motivo: resultado.motivo, usuario })

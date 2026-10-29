@@ -25,6 +25,7 @@ import { AnticipoCliente, VerificarAnulacionAnticipoResponse } from '../../../mo
 import { AnticipoClienteService } from '../../../service/anticipo-cliente.service';
 import { Titular } from '../../../../tsr/model/titular';
 import { PersonaCuentaContableService } from '../../../../tsr/service/persona-cuenta-contable.service';
+import { MENSAJE_SIN_USUARIO_SESION, usuarioSesion } from '../../../../../shared/utils/usuario-sesion.util';
 
 const ESTADO_ANTICIPO_PENDIENTE = 1;
 const ESTADO_ANTICIPO_CONFIRMADO = 2;
@@ -550,12 +551,18 @@ export class AnticipoComponent implements OnInit {
       return null;
     }
 
+    const usuario = usuarioSesion();
+    if (!(Number(usuario?.codigo) > 0)) {
+      this.mostrarError(MENSAJE_SIN_USUARIO_SESION);
+      return null;
+    }
+
     return {
       id: this.id || undefined,
       titular,
       fechaAnticipo: this.fechaAnticipo,
       fechaRecepcion: this.fechaRecepcion,
-      usuario: this.usuarioSesion(),
+      usuario: usuario as Usuario,
       /**
        * Nunca `new Date().toISOString()`: siempre UTC, y con Ecuador en UTC−5 el backend
        * descarta el offset y el dato queda 5 horas corrido (regla de CLAUDE.md). Se arma en hora
@@ -568,18 +575,6 @@ export class AnticipoComponent implements OnInit {
       empresa: this.empresaSesion(),
       observacion: this.observacion.trim(),
     };
-  }
-
-  private usuarioSesion(): Usuario {
-    const raw = localStorage.getItem('usuario');
-    if (raw) {
-      try {
-        return JSON.parse(raw) as Usuario;
-      } catch {
-        // continue
-      }
-    }
-    return { codigo: 0, jerarquia: { codigo: 0, nombre: '' } as any, nombre: 'SISTEMA', nivel: 0, codigoPadre: 0, ingresado: 0 };
   }
 
   private empresaSesion(): Empresa {

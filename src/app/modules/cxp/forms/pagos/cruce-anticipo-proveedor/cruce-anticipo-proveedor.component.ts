@@ -20,6 +20,7 @@ import { AplicacionPagoCxpService } from '../../../service/aplicacion-pago-cxp.s
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
 import { FacturaCompraService } from '../../../service/factura-compra.service';
 import { AnticipoDisponible, AnticipoService } from '../../../../tsr/service/anticipo.service';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 
 /**
  * Cruce de un anticipo ya entregado al proveedor contra una factura de
@@ -294,6 +295,8 @@ export class CruceAnticipoProveedorComponent implements OnInit {
   }
 
   confirmar(): void {
+    const idUsuario = idUsuarioSesion();
+    if (idUsuario == null) { this.error.set(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!this.puedeConfirmar || !this.idDocumento) return;
 
     const lineas = this.anticipos()
@@ -319,7 +322,7 @@ export class CruceAnticipoProveedorComponent implements OnInit {
       anticipos: lineas,
       fechaAplicacion: this.fechaISO(),
       idEmpresa: this.idEmpresaSesion(),
-      idUsuario: this.idUsuarioSesion(),
+      idUsuario: idUsuario,
       observacion: this.formObservacion.trim(),
       ...(this.otroProveedor() ? { permitirOtroProveedor: true } : {}),
     };
@@ -375,7 +378,4 @@ export class CruceAnticipoProveedorComponent implements OnInit {
     return +(sessionStorage.getItem('idEmpresa') || localStorage.getItem('idEmpresa') || '0');
   }
 
-  private idUsuarioSesion(): number {
-    return +(sessionStorage.getItem('idUsuario') || localStorage.getItem('idUsuario') || '0');
-  }
 }

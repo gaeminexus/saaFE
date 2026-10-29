@@ -26,6 +26,7 @@ import { TipoDatosBusqueda as TipoDatos } from '../../../../../shared/model/dato
 import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { TitularSelectorDialogComponent } from '../../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { ProductoSelectorDialogComponent } from '../../../../../shared/components/producto-selector-dialog/producto-selector-dialog.component';
+import { MENSAJE_SIN_USUARIO_SESION, usuarioSesion } from '../../../../../shared/utils/usuario-sesion.util';
 
 const IVA_GENERAL = '614';
 const FECHA_CAMBIO_IVA = new Date('2024-04-01');
@@ -160,14 +161,8 @@ export class FacturasIngresoComponent implements OnInit {
   }
 
   private cargarSesion(): void {
-    const usuarioStr = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-    if (usuarioStr) {
-      try {
-        this.vUsuario = JSON.parse(usuarioStr) as Usuario;
-      } catch {
-        this.vUsuario = { codigo: 0 } as Usuario;
-      }
-    }
+    const usuario = usuarioSesion();
+    if (usuario) { this.vUsuario = usuario; }
 
     const empresaStr = sessionStorage.getItem('empresa') || localStorage.getItem('empresa');
     if (empresaStr) {
@@ -627,6 +622,7 @@ export class FacturasIngresoComponent implements OnInit {
   }
 
   generaFactura(): void {
+    if (!(Number(this.vUsuario?.codigo) > 0)) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (this.vFactura?.id) {
       this.mostrarError('La factura ya fue emitida');
       return;
