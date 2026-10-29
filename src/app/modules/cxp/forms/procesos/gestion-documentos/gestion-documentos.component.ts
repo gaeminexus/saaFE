@@ -34,6 +34,7 @@ import { ReembolsosFacturaComponent } from '../reembolsos-factura/reembolsos-fac
 import { PermisosService } from '../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../../shared/utils/usuario-sesion.util';
 import { ImprimirAsientoService } from '../../../../../shared/services/imprimir-asiento.service';
 
 // Estados que aún no están registrados en BD (pendientes de proceso)
@@ -479,7 +480,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   loteBloqueado = computed(() => this.loteEnCurso() || this.lanzandoLote() || !this.cargaTxtSeleccionada());
 
   private get idEmpresa(): number { return Number(localStorage.getItem('empresaCodigo') || localStorage.getItem('empresaId') || 1); }
-  private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
+  private get idUsuario(): number | null { return idUsuarioSesion(); }
 
   ngOnInit(): void {
     this.cargarPeriodos();
@@ -553,10 +554,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
 
   /** §6.1 — Baja del SRI los XML que todavía sirva para esta carga. */
   descargarXmlLote(): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const idCarga = this.cargaTxtSeleccionada();
     if (!idCarga) { this.mostrarError('Seleccione una carga TXT.'); return; }
     this.lanzandoLote.set(true);
-    this.processService.descargarXmlLote(idCarga, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
+    this.processService.descargarXmlLote(idCarga, { idEmpresa: this.idEmpresa, idUsuario: idUsuario }).subscribe({
       next: (resp: any) => {
         this.lanzandoLote.set(false);
         const detalle = resp?.aProcesar != null
@@ -571,10 +574,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
 
   /** §6.2 — Registra y contabiliza toda la carga, en el orden que impone el backend. */
   registrarLote(): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const idCarga = this.cargaTxtSeleccionada();
     if (!idCarga) { this.mostrarError('Seleccione una carga TXT.'); return; }
     this.lanzandoLote.set(true);
-    this.processService.registrarLote(idCarga, { idEmpresa: this.idEmpresa, idUsuario: this.idUsuario }).subscribe({
+    this.processService.registrarLote(idCarga, { idEmpresa: this.idEmpresa, idUsuario: idUsuario }).subscribe({
       next: (resp: any) => {
         this.lanzandoLote.set(false);
         const detalle = resp?.aProcesar != null
@@ -975,11 +980,13 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   }
 
   private subirXml(file: File, doc: DocumentoCxp, esReembolso: boolean): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     this.procesando.set(true);
     const reader = new FileReader();
     reader.onload = (e) => {
       const contenidoXml = (e.target?.result as string) || '';
-      this.processService.cargarXml(doc.id, { contenidoXml, idUsuario: this.idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
+      this.processService.cargarXml(doc.id, { contenidoXml, idUsuario: idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
         next: (resp: any) => {
           this.procesando.set(false);
           this.mostrarExito('XML subido correctamente');
@@ -1040,10 +1047,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   }
 
   private confirmarRegistro(doc: DocumentoCxp, opciones: RegistrarDocumentoDialogResult): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     this.procesando.set(true);
     this.processService.registrarBD(doc.id, {
       idEmpresa: this.idEmpresa,
-      idUsuario: this.idUsuario,
+      idUsuario: idUsuario,
       esIntermediario: opciones.esIntermediario || undefined,
       idProductoIntermediario: opciones.esIntermediario ? (opciones.idProductoIntermediario ?? undefined) : undefined,
       observacionAdicional: opciones.observacionAdicional || undefined,
@@ -1099,6 +1108,8 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
    * anula la contabilidad. El 409 del backend (p. ej. contabilidad activa) se muestra tal cual.
    */
   anularDocumento(doc: DocumentoCxp): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const data: MotivoDialogData = {
       titulo: `Anular ${doc.serieComprobante}`,
       advertencia: 'Use esta opción solo si el emisor anuló el comprobante ante el SRI. Es definitivo.',
@@ -1110,7 +1121,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
         this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
           if (!motivo) return;
           this.procesando.set(true);
-          this.processService.anularDocumento(doc.id, { motivo, idUsuario: this.idUsuario }).subscribe({
+          this.processService.anularDocumento(doc.id, { motivo, idUsuario: idUsuario }).subscribe({
             next: (resp) => {
               this.procesando.set(false);
               this.mostrarExito(resp?.mensaje || 'Documento anulado');
@@ -1132,6 +1143,8 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
    * esa pestaña ya filtra por ese estado, no hace falta repetir la condición acá.
    */
   anularContabilidad(doc: DocumentoCxp): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     const data: MotivoDialogData = {
       titulo: `Anular contabilidad de ${doc.serieComprobante}`,
       advertencia: 'Se elimina el asiento contable del documento; la factura queda intacta. '
@@ -1144,7 +1157,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
         this.dialog.open(MotivoDialogComponent, { width: '520px', data }).afterClosed().subscribe((motivo: string | null) => {
           if (!motivo) return;
           this.procesando.set(true);
-          this.processService.anularContabilidad(doc.id, { motivo, idUsuario: this.idUsuario }).subscribe({
+          this.processService.anularContabilidad(doc.id, { motivo, idUsuario: idUsuario }).subscribe({
             next: (resp) => {
               this.procesando.set(false);
               this.mostrarExito(resp?.mensaje || 'Contabilidad anulada');
@@ -1174,9 +1187,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   }
 
   recontabilizar(doc: DocumentoCxp): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!confirm(`¿Recontabilizar el documento ${doc.serieComprobante}? Se generará un asiento contable nuevo.`)) return;
     this.procesando.set(true);
-    this.processService.recontabilizar(doc.id, { idUsuario: this.idUsuario }).subscribe({
+    this.processService.recontabilizar(doc.id, { idUsuario: idUsuario }).subscribe({
       next: (resp) => {
         this.procesando.set(false);
         this.mostrarExito(resp?.mensaje || 'Documento recontabilizado');
@@ -1194,10 +1209,12 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   // ─── RESOLVER NOVEDAD ───────────────────────────────────
 
   resolverNovedad(doc: DocumentoCxp, accion: 'MANTENER' | 'REEMPLAZAR', xmlFile?: File, esReembolso?: boolean): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (accion === 'MANTENER') {
       if (!confirm(`¿Mantener el documento ${doc.serieComprobante} sin cambios?`)) return;
       this.procesando.set(true);
-      this.processService.resolverNovedad(doc.id, { accion: AccionNovedad.MANTENER, idUsuario: this.idUsuario }).subscribe({
+      this.processService.resolverNovedad(doc.id, { accion: AccionNovedad.MANTENER, idUsuario: idUsuario }).subscribe({
         next: () => { this.procesando.set(false); this.mostrarExito('Documento mantenido'); this.cargar(); },
         error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
       });
@@ -1206,7 +1223,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
       const reader = new FileReader();
       reader.onload = (e) => {
         const contenidoXml = (e.target?.result as string) || '';
-        this.processService.resolverNovedad(doc.id, { accion: AccionNovedad.REEMPLAZAR, contenidoXml, idUsuario: this.idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
+        this.processService.resolverNovedad(doc.id, { accion: AccionNovedad.REEMPLAZAR, contenidoXml, idUsuario: idUsuario, esReembolso: esReembolso ? 1 : 0 }).subscribe({
           next: (resp) => { this.procesando.set(false); this.mostrarExito(resp?.mensaje || 'Reemplazado'); this.cargar(); },
           error: (err) => { this.procesando.set(false); this.mostrarError(this.extraerMensajeError(err)); },
         });
@@ -1257,6 +1274,13 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
     const estadoPrevio = doc.estadoDocumento;
     const valorPrevio = doc.esReembolso === 1;
 
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) {
+      event.source.checked = valorPrevio;
+      this.mostrarError(MENSAJE_SIN_USUARIO_SESION);
+      return;
+    }
+
     if (estadoPrevio === 3 && !confirm(
       `El documento ${doc.serieComprobante} ya está REGISTRADO.\n\n` +
       `Al ${nuevoValor ? 'marcarlo' : 'desmarcarlo'} como reembolso de gastos se ANULA su asiento contable ` +
@@ -1267,7 +1291,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
 
     doc.esReembolso = nuevoValor ? 1 : 0;   // optimista: la grilla responde sin esperar al backend
     this.setReembolsoEnCurso(doc.id, true);
-    this.processService.marcarReembolso(doc.id, nuevoValor, this.idUsuario).subscribe({
+    this.processService.marcarReembolso(doc.id, nuevoValor, idUsuario).subscribe({
       next: (resp: any) => {
         this.setReembolsoEnCurso(doc.id, false);
         if (resp?.esReembolso != null) { doc.esReembolso = Number(resp.esReembolso) ? 1 : 0; }
@@ -1305,6 +1329,8 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
   }
 
   abrirDialogoReembolsos(doc: DocumentoCxp): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     this.permisosService.ejecutarSiPermitido(
       Permisos.CXP_REEMBOLSOS_DE_FACTURA,
       () => {
@@ -1312,7 +1338,7 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
           data: {
             idFacturaCompra: doc.idDocumentoBD,
             contabilizacionPendiente: doc.estadoDocumento === 2,
-            idUsuario: this.idUsuario,
+            idUsuario: idUsuario,
             idEmpresa: this.idEmpresa,
           },
           width: '1200px',
@@ -1326,9 +1352,11 @@ export class GestionDocumentosComponent implements OnInit, AfterViewInit, OnDest
 
   // ─── REVERTIR (estado 3 → 6) ───────────────────────────────────
   revertir(doc: DocumentoCxp): void {
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
     if (!confirm(`¿Revertir el registro del documento ${doc.serieComprobante}? Esta acción eliminará el registro en las tablas CXP y devolverá el documento al estado XML CARGADO.`)) return;
     this.procesando.set(true);
-    this.processService.revertir(doc.id, this.idUsuario).subscribe({
+    this.processService.revertir(doc.id, idUsuario).subscribe({
       next: () => { this.procesando.set(false); this.mostrarExito('Documento revertido correctamente'); this.cargar(); },
       error: (err) => { this.procesando.set(false); this.mostrarError('Error al revertir: ' + this.extraerMensajeError(err)); },
     });

@@ -11,6 +11,7 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { TitularSelectorDialogComponent } from '../../../../shared/components/titular-selector-dialog/titular-selector-dialog.component';
 import { FuncionesDatosService, TipoFormatoFechaBackend } from '../../../../shared/services/funciones-datos.service';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
+import { idUsuarioSesion, MENSAJE_SIN_USUARIO_SESION } from '../../../../shared/utils/usuario-sesion.util';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -92,7 +93,7 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
     try { return JSON.parse(sessionStorage.getItem('empresa') || localStorage.getItem('empresa') || '{}'); }
     catch { return { pjrqcdgo: this.idEmpresa }; }
   }
-  private get idUsuario(): number { try { const u = JSON.parse(localStorage.getItem('usuario') || sessionStorage.getItem('usuario') || '{}'); return u.codigo || u.id || 1; } catch { return 1; } }
+  private get idUsuario(): number | null { return idUsuarioSesion(); }
 
   ngOnInit(): void { this.cargar(); }
   ngAfterViewInit(): void {}
@@ -196,6 +197,8 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
     if (!this.form.titular) { this.mostrarError('Seleccione un proveedor'); return; }
     if (!this.form.descripcion.trim()) { this.mostrarError('Ingrese la descripción'); return; }
     if (!this.form.valorTotal || this.form.valorTotal <= 0) { this.mostrarError('Ingrese el valor total'); return; }
+    const idUsuario = this.idUsuario;
+    if (idUsuario == null) { this.mostrarError(MENSAJE_SIN_USUARIO_SESION); return; }
 
     /**
      * `fechaRegistro`/`fechaModif` son `LocalDateTime` en el backend — nunca un string terminado
@@ -228,9 +231,9 @@ export class NegociacionesComponent implements OnInit, AfterViewInit {
       numeroPagos: this.form.numeroPagos,
       observacion: this.form.observacion || undefined,
       estado: this.form.estado,
-      usuario: { codigo: this.idUsuario } as any,
+      usuario: { codigo: idUsuario } as any,
       fechaRegistro: this.modoEdicion() ? undefined : now,
-      ...(this.modoEdicion() ? { usuarioModif: { codigo: this.idUsuario } as any, fechaModif: now } : {}),
+      ...(this.modoEdicion() ? { usuarioModif: { codigo: idUsuario } as any, fechaModif: now } : {}),
     };
 
     const op$ = this.modoEdicion()
