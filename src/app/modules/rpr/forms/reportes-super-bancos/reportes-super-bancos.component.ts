@@ -109,7 +109,7 @@ export class ReportesSuperBancosComponent implements OnInit {
   /** Campos numéricos por tipo de reporte — null/0 deben salir como "0.00" en el TXT */
   private readonly numericColsMap: Record<string, Set<string>> = {
     G40: new Set(['porcentajeAportePatronalCesantia','porcentajeAportePersonalCesantia','porcentajeAportePatronalJubilacion','porcentajeAportePersonalJubilacion','valorAportePersonalCesantia','valorAportePersonalJubilacion']),
-    G41: new Set(['baseCalculoAportacion']),
+    G41: new Set<string>(), // D-038: baseCalculoAportacion es Caracter(1) segun el manual de catastros (tabla 196), no numerico
     G42: new Set(['aportePatronal','aportePersonal','aporteVoluntario','saldoAportePatronal','saldoAportePersonal','saldoAporteVoluntario','rendimiento']),
     G43: new Set(['numeroImposicionesPersonales','numeroImposicionesPatronales','saldoCuentaIndividual','valoresCompensados','valoresPagados']),
     G44: new Set(['imposicionesAcumuladas','valorPension','valorNetoRecibir','saldoCuenta','valoresCompensados']),

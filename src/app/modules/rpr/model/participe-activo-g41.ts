@@ -11,7 +11,7 @@ export interface ParticipeActivoG41 {
   fechaIngreso: any;
   estadoParticipe: string;
   tipoSistema: string;
-  baseCalculoAportacion: number;
+  baseCalculoAportacion: string;
   tipoRelacionLaboral: string;
   estadoRegistro: string;
   fechaActualizacionEstado: any;
