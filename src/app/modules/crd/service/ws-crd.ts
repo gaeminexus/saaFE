@@ -107,6 +107,7 @@ export class ServiciosCrd {
   public static RS_PLVN = `${API_URL}/plvn`; // Declaración de plazo vencido — memorando, liquidación y reverso (docs/crd/API-PASE-A-PLAZO-VENCIDO.md)
   public static RS_POSG = `${API_URL}/posg`; // Pólizas de seguro de préstamos — desgravamen, incendio, prendario (docs/crd/API-POLIZAS-SEGURO.md)
   public static RS_USAP = `${API_URL}/usap`; // Credenciales de la app móvil (CRD.USAP) — solo los verbos de intranet: estado, crear, resetearClave, reactivar (docs/crd/API-USUARIO-APP-MOVIL.md)
+  public static RS_DSSB = `${API_URL}/dssb`; // DestinoSobrante — destino del sobrante por partícipe en la carga Petro/ARCH (docs/crd/API-DESTINO-SOBRANTE.md)
 }
 /*
 export class ServiciosCrd {

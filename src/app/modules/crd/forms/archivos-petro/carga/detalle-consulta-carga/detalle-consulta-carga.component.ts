@@ -57,6 +57,10 @@ import { Usuario } from '../../../../../../shared/model/usuario';
 import { forkJoin, of, catchError, map, switchMap, Observable } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
 import { RevalidarCargaDialogComponent } from '../../../../dialog/revalidar-carga-dialog/revalidar-carga-dialog.component';
+import { DestinoSobranteDialogComponent, DestinoSobranteDialogData } from '../../../../dialog/destino-sobrante-dialog/destino-sobrante-dialog.component';
+import { DESTINO_SOBRANTE, DestinoSobrante } from '../../../../model/destino-sobrante';
+import { DestinoSobranteService } from '../../../../service/destino-sobrante.service';
+import { criterioEntidadPorCodigoPetro, entidadCorrespondeACodigoPetro } from '../../../../util/rol-participe';
 import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
 import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 
@@ -324,6 +328,7 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     private usuarioService: UsuarioService,
     private novedadParticipeCargaService: NovedadParticipeCargaService,
     private afectacionValoresParticipeCargaService: AfectacionValoresParticipeCargaService,
+    private destinoSobranteService: DestinoSobranteService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private permisosService: PermisosService,
@@ -435,6 +440,9 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
           interesNoDescontado: carga.totalInteresNoDescontado || 0,
           desgravamenNoDescontado: carga.totalDesgravamenNoDescontado || 0
         };
+
+        // Destino del sobrante elegido por partícipe (CRD.DSSB)
+        this.cargarDestinosSobrante(idCarga);
 
         // Cargar detalles
         this.cargarDetalles(idCarga);
@@ -1773,6 +1781,103 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
     }
   }
 
+  // ==================== DESTINO DEL SOBRANTE (CRD.DSSB) ====================
+
+  /**
+   * Tipos de novedad BLOQUEANTE cuyo origen es plata que no se pudo aplicar (sobrante):
+   * 7 DESCUENTOS_ADICIONALES, 13 MONTO_INCONSISTENTE (excedente del motor, HS huérfano, parcial de
+   * ARCH) y 22 APORTE_MONTO_INCONSISTENTE (aporte sin mes). Las demás BLOQUEANTE (partícipe no
+   * encontrado, préstamo no encontrado…) no se resuelven eligiendo destino. Criterio del FE hasta
+   * que el contrato lo marque con un campo del servidor.
+   */
+  private readonly TIPOS_NOVEDAD_SOBRANTE = [7, 13, 22];
+
+  /** Destinos VIGENTES (estado 1) de la carga; los anulados se descartan. */
+  destinosSobrante = signal<DestinoSobrante[]>([]);
+
+  private cargarDestinosSobrante(idCarga: number): void {
+    this.destinoSobranteService.selectByCarga(idCarga).subscribe({
+      next: (destinos) => {
+        this.destinosSobrante.set((destinos || []).filter((d) => Number(d.estado) === 1));
+      },
+      error: (error) => {
+        // No bloquea nada: sin destinos cargados, las novedades siguen como hoy.
+        console.error('Error al cargar destinos del sobrante:', error);
+        this.destinosSobrante.set([]);
+      },
+    });
+  }
+
+  /** Carga PROCESADA (estado 3, como en la consulta) o procesada en esta sesión: la columna pasa a solo lectura. */
+  get cargaProcesada(): boolean {
+    return Number((this.cargaArchivo as any)?.codigoEstado ?? 0) === 3 || this.archivoYaProcesado();
+  }
+
+  /** Destino vigente del partícipe (el DSSB cuelga de la entidad): por código si el rol es el técnico de ARCH, por rol Petro si no. */
+  destinoDe(codigoPetro: number | null | undefined): DestinoSobrante | null {
+    if (!codigoPetro) return null;
+    return this.destinosSobrante().find((d) => entidadCorrespondeACodigoPetro(d.entidad, codigoPetro)) || null;
+  }
+
+  destinoSobranteTexto(codigoPetro: number | null | undefined): string {
+    const d = this.destinoDe(codigoPetro);
+    if (!d) return '—';
+    switch (d.tipoDestino) {
+      case DESTINO_SOBRANTE.SIGUIENTE_CUOTA:
+        return d.prestamo?.codigo ? `Siguiente cuota (préstamo ${d.prestamo.codigo})` : 'Siguiente cuota';
+      case DESTINO_SOBRANTE.APORTE:
+        return d.tipoAporte?.codigo === 11 ? 'Aporte · Cesantía' : 'Aporte · Jubilación';
+      case DESTINO_SOBRANTE.DEVOLUCION:
+        return 'Devolución al partícipe';
+      default:
+        return '—';
+    }
+  }
+
+  /** Novedad BLOQUEANTE de sobrante: es donde el operador puede/debe elegir destino. */
+  esNovedadSobrante(n: NovedadParticipeCarga): boolean {
+    return n.familia === 'BLOQUEANTE' && this.TIPOS_NOVEDAD_SOBRANTE.includes(Number(n.tipoNovedad));
+  }
+
+  /** Sobrante bloqueante sin destino elegido: se resalta. */
+  faltaDestinoSobrante(n: NovedadParticipeCarga): boolean {
+    return this.esNovedadSobrante(n) && !this.cargaProcesada && !this.destinoDe(n.participeXCargaArchivo?.codigoPetro);
+  }
+
+  abrirDestinoSobrante(n: NovedadParticipeCarga): void {
+    const codigoPetro = n.participeXCargaArchivo?.codigoPetro;
+    const idCarga = this.cargaArchivo?.codigo;
+    if (!codigoPetro || !idCarga) {
+      this.snackBar.open('No se encontró el código Petro del partícipe', 'Cerrar', { duration: 3500 });
+      return;
+    }
+
+    const abrir = () => {
+      const data: DestinoSobranteDialogData = {
+        idCarga,
+        codigoPetro,
+        nombre: n.participeXCargaArchivo?.nombre || '',
+        destinoActual: this.destinoDe(codigoPetro),
+        soloLectura: this.cargaProcesada,
+      };
+      this.dialog
+        .open(DestinoSobranteDialogComponent, { width: '520px', maxWidth: '95vw', autoFocus: false, data })
+        .afterClosed()
+        .subscribe((resultado) => {
+          if (resultado) {
+            this.cargarDestinosSobrante(idCarga);
+          }
+        });
+    };
+
+    // Mismo permiso que «Afectar cuotas»: es la misma decisión del operador sobre el sobrante.
+    this.permisosService.ejecutarSiPermitido(
+      Permisos.CRD_AFECTACION_FINANCIERA_DE_CUOTAS,
+      abrir,
+      (mensaje) => this.snackBar.open(mensaje.toUpperCase(), 'Cerrar', { duration: 4000 }),
+    );
+  }
+
   togglePanelAfectacionFinanciera(novedad: NovedadParticipeCarga): void {
     this.permisosService.ejecutarSiPermitido(
       Permisos.CRD_AFECTACION_FINANCIERA_DE_CUOTAS,
@@ -2638,15 +2743,8 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
         // cada rama del árbol de abajo.
         this.valoresAporteEditados.set(this.construirMapaValoresAportados(afectaciones));
 
-        const criteriosEntidad: DatosBusqueda[] = [];
-        const dbCodigoPetro = new DatosBusqueda();
-        dbCodigoPetro.asignaUnCampoSinTrunc(
-          TipoDatosBusqueda.LONG,
-          'rolPetroComercial',
-          String(codigoPetro),
-          TipoComandosBusqueda.IGUAL
-        );
-        criteriosEntidad.push(dbCodigoPetro);
+        // ARCH: el codigoPetro puede ser el rol técnico (9000000 + ENTDCDGO), que se resuelve por código.
+        const criteriosEntidad: DatosBusqueda[] = [criterioEntidadPorCodigoPetro(codigoPetro)];
 
         this.entidadService.selectByCriteria(criteriosEntidad).subscribe({
           next: (entidadesData) => {

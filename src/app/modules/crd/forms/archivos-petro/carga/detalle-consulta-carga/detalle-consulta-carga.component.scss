@@ -1463,3 +1463,19 @@ tr.fila-sin-clasificar {
     z-index: 1;
   }
 }
+
+// Destino del sobrante por partícipe (CRD.DSSB)
+.destino-sobrante-celda {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.destino-pendiente {
+  color: #b26a00;
+  font-weight: 600;
+}
+
+tr.fila-sobrante-sin-destino {
+  background: #fff8e1;
+}

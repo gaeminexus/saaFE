@@ -1,0 +1,96 @@
+<h2 mat-dialog-title>
+  <mat-icon>call_split</mat-icon>
+  Destino del sobrante
+</h2>
+
+<mat-dialog-content class="destino-contenido">
+  <p class="participe">
+    <strong>{{ data.nombre }}</strong>
+    <span class="codigo-petro">Código Petro {{ data.codigoPetro }}</span>
+  </p>
+
+  @if (errorContexto()) {
+    <div class="aviso aviso-error">
+      <mat-icon>error</mat-icon>
+      <span>{{ errorContexto() }}</span>
+    </div>
+  }
+
+  @if (cargandoContexto()) {
+    <div class="cargando"><mat-spinner diameter="28"></mat-spinner><span>Consultando partícipe y préstamos…</span></div>
+  } @else if (esSoloLectura) {
+    <!-- Carga PROCESADA: solo lectura, con lo aplicado/devuelto -->
+    @if (data.destinoActual; as d) {
+      <div class="solo-lectura">
+        <p>
+          <strong>Destino:</strong>
+          @switch (d.tipoDestino) {
+            @case (DESTINO.SIGUIENTE_CUOTA) { Siguiente cuota{{ d.prestamo ? ' (préstamo ' + d.prestamo.codigo + ')' : '' }} }
+            @case (DESTINO.APORTE) { Aporte ({{ d.tipoAporte?.codigo === 11 ? 'Cesantía' : 'Jubilación' }}) }
+            @case (DESTINO.DEVOLUCION) { Devolución al partícipe }
+          }
+        </p>
+        <p><strong>Aplicado a aportes:</strong> {{ (d.valorAplicadoAportes ?? 0) | number : '1.2-2' }}</p>
+        <p><strong>Aplicado a préstamos:</strong> {{ (d.valorAplicadoPrestamos ?? 0) | number : '1.2-2' }}</p>
+        @if (d.idPagoProgramado) {
+          <p><strong>Pago programado de Tesorería:</strong> {{ d.idPagoProgramado }}</p>
+        }
+        @if (d.observacion) {
+          <p><strong>Observación:</strong> {{ d.observacion }}</p>
+        }
+      </div>
+    } @else {
+      <p class="sin-destino">Este partícipe no tenía destino elegido en esta carga.</p>
+    }
+  } @else {
+    <mat-radio-group class="opciones" [(ngModel)]="tipoDestino">
+      <mat-radio-button [value]="DESTINO.SIGUIENTE_CUOTA">Siguiente cuota</mat-radio-button>
+      @if (tipoDestino === DESTINO.SIGUIENTE_CUOTA) {
+        <mat-form-field appearance="outline" class="campo">
+          <mat-label>Préstamo (opcional)</mat-label>
+          <mat-select [(ngModel)]="codigoPrestamo">
+            <mat-option [value]="null">Automático: cuota pendiente más antigua</mat-option>
+            @for (p of prestamos(); track p.codigo) {
+              <mat-option [value]="p.codigo">{{ etiquetaPrestamo(p) }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Solo préstamos vigentes o en mora</mat-hint>
+        </mat-form-field>
+      }
+
+      <mat-radio-button [value]="DESTINO.APORTE">Aporte</mat-radio-button>
+      @if (tipoDestino === DESTINO.APORTE) {
+        <mat-form-field appearance="outline" class="campo">
+          <mat-label>Tipo de aporte</mat-label>
+          <mat-select [(ngModel)]="codigoTipoAporte" required>
+            @for (t of tiposAporte; track t.codigo) {
+              <mat-option [value]="t.codigo">{{ t.nombre }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <mat-radio-button [value]="DESTINO.DEVOLUCION">Devolución al partícipe</mat-radio-button>
+      @if (tipoDestino === DESTINO.DEVOLUCION) {
+        <p class="nota">Se lleva a socios por pagar y se genera un pago programado en Tesorería.</p>
+      }
+    </mat-radio-group>
+
+    <mat-form-field appearance="outline" class="campo campo-completo">
+      <mat-label>Observación (opcional)</mat-label>
+      <textarea matInput rows="2" maxlength="1000" [(ngModel)]="observacion"></textarea>
+    </mat-form-field>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  @if (!esSoloLectura && data.destinoActual?.codigo) {
+    <button mat-button color="warn" [disabled]="guardando()" (click)="anular()">Anular destino</button>
+  }
+  <button mat-button (click)="cerrar()">{{ esSoloLectura ? 'Cerrar' : 'Cancelar' }}</button>
+  @if (!esSoloLectura) {
+    <button mat-raised-button color="primary" [disabled]="!puedeGuardar" (click)="guardar()">
+      @if (guardando()) { <mat-spinner diameter="18"></mat-spinner> } @else { Guardar }
+    </button>
+  }
+</mat-dialog-actions>

@@ -828,6 +828,29 @@
                             </td>
                           </ng-container>
 
+                          <!-- Destino del sobrante (CRD.DSSB, docs/crd/API-DESTINO-SOBRANTE.md §3): uno por partícipe -->
+                          <ng-container matColumnDef="destinoSobrante">
+                            <th mat-header-cell *matHeaderCellDef>Destino del sobrante</th>
+                            <td mat-cell *matCellDef="let element">
+                              <div class="destino-sobrante-celda">
+                                <span [class.destino-pendiente]="faltaDestinoSobrante(element)">
+                                  @if (faltaDestinoSobrante(element)) { Falta elegir } @else { {{ destinoSobranteTexto(element.participeXCargaArchivo?.codigoPetro) }} }
+                                </span>
+                                @if (cargaProcesada) {
+                                  @if (destinoDe(element.participeXCargaArchivo?.codigoPetro)) {
+                                    <button mat-icon-button matTooltip="Ver destino aplicado" (click)="abrirDestinoSobrante(element)">
+                                      <mat-icon>visibility</mat-icon>
+                                    </button>
+                                  }
+                                } @else if (esNovedadSobrante(element) || destinoDe(element.participeXCargaArchivo?.codigoPetro)) {
+                                  <button mat-icon-button color="primary" matTooltip="Elegir o cambiar el destino del sobrante" (click)="abrirDestinoSobrante(element)">
+                                    <mat-icon>edit</mat-icon>
+                                  </button>
+                                }
+                              </div>
+                            </td>
+                          </ng-container>
+
                           <!--
                             Acciones — contrato docs/crd/API-FAMILIA-NOVEDADES-CARGA.md §4: solo
                             BLOQUEANTE ofrece "Afectar cuotas". COBRANZA es gestión de cobranza que NO
@@ -859,11 +882,12 @@
                             </td>
                           </ng-container>
 
-                          <tr mat-header-row *matHeaderRowDef="['familia', 'codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones']; sticky: true"></tr>
+                          <tr mat-header-row *matHeaderRowDef="['familia', 'codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'destinoSobrante', 'acciones']; sticky: true"></tr>
                           <tr
                             mat-row
-                            *matRowDef="let row; columns: ['familia', 'codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'acciones'];"
+                            *matRowDef="let row; columns: ['familia', 'codigoPetro', 'participe', 'tipoNovedad', 'descripcion', 'codigoProducto', 'codigoPrestamo', 'idAsoprepPrestamo', 'codigoCuota', 'montoEsperado', 'montoRecibido', 'montoDiferencia', 'destinoSobrante', 'acciones'];"
                             [class.fila-bloqueante]="row.familia === 'BLOQUEANTE'"
+                            [class.fila-sobrante-sin-destino]="faltaDestinoSobrante(row)"
                             [class.fila-cobranza]="row.familia === 'COBRANZA'"
                             [class.fila-informativa]="row.familia === 'INFORMATIVA'"
                             [class.fila-sin-clasificar]="row.familia == null"></tr>
