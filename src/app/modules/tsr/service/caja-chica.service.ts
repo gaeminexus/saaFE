@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { CajaChica, CajaChicaRegistrarRequest } from '../model/caja-chica';
 import { SaldoCajaChica } from '../model/saldo-caja-chica';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class CajaChicaService {
@@ -22,7 +23,7 @@ export class CajaChicaService {
 
   /** Registra una caja chica nueva; ver `saldoInicialMigrado` en el modelo para el caso de migración. */
   registrar(datos: CajaChicaRegistrarRequest): Observable<CajaChica> {
-    return this.http.post<CajaChica>(`${ServiciosTsr.RS_CJCH}/registrar`, datos, this.httpOptions);
+    return this.http.post<CajaChica>(`${ServiciosTsr.RS_CJCH}/registrar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Edita los datos de la caja (nombre, tope, % de alerta, responsable, etc.) sin tocar el saldo. */
@@ -42,14 +43,14 @@ export class CajaChicaService {
   /** Da de baja la caja (exige saldo cero y sin pagos/cierres en curso; ver API-ANULACION-CAJA-CHICA.md). */
   anular(idCaja: number, datos: { motivo: string; idUsuario: number }): Observable<{ idCaja: number; nombre: string; estado: number; mensaje: string }> {
     return this.http.post<{ idCaja: number; nombre: string; estado: number; mensaje: string }>(
-      `${ServiciosTsr.RS_CJCH}/anular/${idCaja}`, datos, this.httpOptions
+      `${ServiciosTsr.RS_CJCH}/anular/${idCaja}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     );
   }
 
   /** Reactiva una caja dada de baja. */
   activar(idCaja: number, datos: { idUsuario: number }): Observable<{ idCaja: number; nombre: string; estado: number; mensaje: string }> {
     return this.http.post<{ idCaja: number; nombre: string; estado: number; mensaje: string }>(
-      `${ServiciosTsr.RS_CJCH}/activar/${idCaja}`, datos, this.httpOptions
+      `${ServiciosTsr.RS_CJCH}/activar/${idCaja}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     );
   }
 

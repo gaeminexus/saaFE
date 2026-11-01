@@ -8,6 +8,7 @@ import { GrupoConciliacionContable } from '../model/grupo-conciliacion-contable'
 import { ResumenConciliacionCuenta } from '../model/resumen-conciliacion-cuenta';
 import { SugerenciaConciliacionContable } from '../model/sugerencia-conciliacion-contable';
 import { ServiciosTsr } from './ws-tsr';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -57,7 +58,8 @@ export class ConciliacionContableService {
     usuario: string
   ): Observable<GrupoConciliacionContable> {
     const url = `${ServiciosTsr.RS_CNCT}/conciliar`;
-    const body = { idCuentaBancaria, idPeriodo, idsDetalleExtracto, idsDetalleAsiento, usuario };
+    // U-4: el usuario (nombre) es siempre el de la sesión; el parámetro `usuario` se conserva por compatibilidad.
+    const body = { idCuentaBancaria, idPeriodo, idsDetalleExtracto, idsDetalleAsiento, usuario: usuarioSesion() };
     return this.http
       .post<GrupoConciliacionContable>(url, body, this.httpOptions)
       .pipe(catchError(this.handleError));
@@ -66,21 +68,21 @@ export class ConciliacionContableService {
   deshacer(idGrupo: number, usuario: string): Observable<string> {
     const url = `${ServiciosTsr.RS_CNCT}/deshacer/${idGrupo}`;
     return this.http
-      .post(url, { usuario }, { ...this.httpOptions, responseType: 'text' })
+      .post(url, { usuario: usuarioSesion() }, { ...this.httpOptions, responseType: 'text' })
       .pipe(catchError(this.handleError));
   }
 
   verificar(idConciliacionContable: number, usuario: string): Observable<string> {
     const url = `${ServiciosTsr.RS_CNCT}/verificar/${idConciliacionContable}`;
     return this.http
-      .post(url, { usuario }, { ...this.httpOptions, responseType: 'text' })
+      .post(url, { usuario: usuarioSesion() }, { ...this.httpOptions, responseType: 'text' })
       .pipe(catchError(this.handleError));
   }
 
   cerrarMes(idEmpresa: number, idPeriodo: number, usuario: string): Observable<string> {
     const url = `${ServiciosTsr.RS_CNCT}/cerrarMes/${idEmpresa}/${idPeriodo}`;
     return this.http
-      .post(url, { usuario }, { ...this.httpOptions, responseType: 'text' })
+      .post(url, { usuario: usuarioSesion() }, { ...this.httpOptions, responseType: 'text' })
       .pipe(catchError(this.handleError));
   }
 

@@ -10,6 +10,7 @@ import {
   RegistrarEgresoResponse,
 } from '../model/egreso';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /**
  * Egresos de tesorería sin documento físico (EGRS). Registrarlos crea su pago
@@ -29,7 +30,7 @@ export class EgresoService {
    */
   procesar(datos: RegistrarEgresoRequest): Observable<RegistrarEgresoResponse> {
     return this.http.post<RegistrarEgresoResponse>(
-      `${ServiciosTsr.RS_EGRS}/procesar`, datos, this.httpOptions
+      `${ServiciosTsr.RS_EGRS}/procesar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
@@ -40,7 +41,7 @@ export class EgresoService {
    */
   anular(idEgreso: number, datos: MotivoRequest): Observable<AnularEgresoResponse> {
     return this.http.post<AnularEgresoResponse>(
-      `${ServiciosTsr.RS_EGRS}/anular/${idEgreso}`, datos, this.httpOptions
+      `${ServiciosTsr.RS_EGRS}/anular/${idEgreso}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

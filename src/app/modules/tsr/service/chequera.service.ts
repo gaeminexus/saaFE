@@ -10,6 +10,7 @@ import {
   ChequeraSugerirInicio,
 } from '../model/chequera';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -85,7 +86,7 @@ export class ChequeraService {
 
   /** Registra la recepción física de una chequera nueva y la deja ACTIVA. */
   registrarRecepcion(datos: ChequeraRegistrarRecepcionRequest): Observable<Chequera> {
-    return this.http.post<Chequera>(`${ServiciosTsr.RS_CHQR}/registrarRecepcion`, datos, this.httpOptions);
+    return this.http.post<Chequera>(`${ServiciosTsr.RS_CHQR}/registrarRecepcion`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Conteo de cheques por estado de una chequera (para el panel de resumen). */
@@ -102,7 +103,7 @@ export class ChequeraService {
   anular(id: number, motivo: string, idUsuario: number): Observable<ChequeraAnularResponse> {
     return this.http.post<ChequeraAnularResponse>(
       `${ServiciosTsr.RS_CHQR}/anular/${id}`,
-      { motivo, idUsuario },
+      { motivo, idUsuario: idUsuarioSesionObligatorio() },
       this.httpOptions
     );
   }

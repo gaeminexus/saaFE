@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { Cheque } from '../model/cheque';
 import { ChequeListado, ChequeListadoFiltro, ChequeSiguiente } from '../model/cheque-listado';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -95,17 +96,17 @@ export class ChequeService {
 
   /** Anula un cheque ACTIVO. `motivo` es el código numérico del rubro 38 (1, 2 o 3). */
   anular(id: number, motivo: number, idUsuario: number): Observable<any> {
-    return this.http.post(`${ServiciosTsr.RS_DTCH}/anular/${id}`, { motivo, idUsuario }, this.httpOptions);
+    return this.http.post(`${ServiciosTsr.RS_DTCH}/anular/${id}`, { motivo, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Marca cheques GENERADOS como IMPRESOS. */
   imprimir(ids: number[], idUsuario: number): Observable<any> {
-    return this.http.post(`${ServiciosTsr.RS_DTCH}/imprimir`, { ids, idUsuario }, this.httpOptions);
+    return this.http.post(`${ServiciosTsr.RS_DTCH}/imprimir`, { ids, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Marca cheques IMPRESOS como ENTREGADOS. */
   entregar(ids: number[], idUsuario: number): Observable<any> {
-    return this.http.post(`${ServiciosTsr.RS_DTCH}/entregar`, { ids, idUsuario }, this.httpOptions);
+    return this.http.post(`${ServiciosTsr.RS_DTCH}/entregar`, { ids, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Lee `{"mensaje": "..."}` (MensajeErrorJsonFilter) o el mensaje del HttpErrorResponse. */

@@ -238,7 +238,7 @@ export class ConciliacionContableComponent implements OnInit {
     if (!confirm('¿Cerrar este mes? Después de cerrado no se podrán cargar nuevos extractos, conciliar ni deshacer conciliaciones para este período.')) {
       return;
     }
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    const usuario = usuarioSesion();
     this.isCerrandoMes = true;
     this.conciliacionContableService.cerrarMes(empresa.codigo, this.periodoSeleccionado, usuario).subscribe({
       next: () => {
@@ -483,7 +483,7 @@ export class ConciliacionContableComponent implements OnInit {
     if (!this.cuentaSeleccionada || !this.periodoSeleccionado || !this.puedeConciliar) {
       return;
     }
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    const usuario = usuarioSesion();
     this.isConciliando = true;
     this.conciliacionContableService
       .conciliar(
@@ -535,7 +535,7 @@ export class ConciliacionContableComponent implements OnInit {
     if (!this.cuentaSeleccionada || !this.periodoSeleccionado || this.periodoActualCerrado) {
       return;
     }
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    const usuario = usuarioSesion();
     this.conciliacionContableService
       .conciliar(
         this.cuentaSeleccionada,
@@ -578,7 +578,7 @@ export class ConciliacionContableComponent implements OnInit {
       return;
     }
     this.isConfirmandoTodas = true;
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    const usuario = usuarioSesion();
     const pendientes = [...this.sugerencias];
     let exitosas = 0;
     const fallidas: string[] = [];
@@ -688,7 +688,7 @@ export class ConciliacionContableComponent implements OnInit {
     if (this.periodoActualCerrado) {
       return;
     }
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    const usuario = usuarioSesion();
     this.conciliacionContableService.deshacer(grupo.codigo, usuario).subscribe({
       next: () => {
         this.snackBar.open('Conciliación deshecha', 'Cerrar', { duration: 4000 });
@@ -709,7 +709,7 @@ export class ConciliacionContableComponent implements OnInit {
     if (!this.cabecera || this.periodoActualCerrado) {
       return;
     }
-    const usuario = this.usuarioService.getUsuarioLog()?.nombre || '';
+    const usuario = usuarioSesion();
     this.conciliacionContableService.verificar(this.cabecera.codigo, usuario).subscribe({
       next: () => {
         this.snackBar.open('Cuenta/período verificado', 'Cerrar', { duration: 4000 });

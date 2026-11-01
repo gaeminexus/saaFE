@@ -10,6 +10,7 @@ import {
   RegistrarIngresoResponse,
 } from '../model/ingreso';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /**
  * Ingresos de tesorería sin documento físico (INGR). Se registran cuando el
@@ -26,14 +27,14 @@ export class IngresoService {
   /** Registra el ingreso: graba + asiento + movimiento bancario en un paso. */
   procesar(datos: RegistrarIngresoRequest): Observable<RegistrarIngresoResponse> {
     return this.http.post<RegistrarIngresoResponse>(
-      `${ServiciosTsr.RS_INGR}/procesar`, datos, this.httpOptions
+      `${ServiciosTsr.RS_INGR}/procesar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
   /** Anula el ingreso: reversa el asiento y anula el movimiento bancario. */
   anular(idIngreso: number, datos: MotivoRequest): Observable<AnularIngresoResponse> {
     return this.http.post<AnularIngresoResponse>(
-      `${ServiciosTsr.RS_INGR}/anular/${idIngreso}`, datos, this.httpOptions
+      `${ServiciosTsr.RS_INGR}/anular/${idIngreso}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

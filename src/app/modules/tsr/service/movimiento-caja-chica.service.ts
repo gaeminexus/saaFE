@@ -11,6 +11,7 @@ import {
   ReposicionCajaChicaResponse,
 } from '../model/movimiento-caja-chica';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class MovimientoCajaChicaService {
@@ -19,21 +20,21 @@ export class MovimientoCajaChicaService {
   constructor(private http: HttpClient) {}
 
   gasto(datos: GastoCajaChicaRequest): Observable<MovimientoCajaChica> {
-    return this.http.post<MovimientoCajaChica>(`${ServiciosTsr.RS_MVCH}/gasto`, datos, this.httpOptions);
+    return this.http.post<MovimientoCajaChica>(`${ServiciosTsr.RS_MVCH}/gasto`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Repone una caja que ya tuvo apertura (con saldo o movimientos previos). */
   reposicion(datos: ReposicionCajaChicaRequest): Observable<ReposicionCajaChicaResponse> {
-    return this.http.post<ReposicionCajaChicaResponse>(`${ServiciosTsr.RS_MVCH}/reposicion`, datos, this.httpOptions);
+    return this.http.post<ReposicionCajaChicaResponse>(`${ServiciosTsr.RS_MVCH}/reposicion`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   /** Primer fondeo de una caja recién creada (saldo 0, sin movimientos). Mismo payload que `reposicion`. */
   apertura(datos: ReposicionCajaChicaRequest): Observable<ReposicionCajaChicaResponse> {
-    return this.http.post<ReposicionCajaChicaResponse>(`${ServiciosTsr.RS_MVCH}/apertura`, datos, this.httpOptions);
+    return this.http.post<ReposicionCajaChicaResponse>(`${ServiciosTsr.RS_MVCH}/apertura`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   anular(id: number, datos: AnularMovimientoCajaChicaRequest): Observable<any> {
-    return this.http.post(`${ServiciosTsr.RS_MVCH}/anular/${id}`, datos, this.httpOptions);
+    return this.http.post(`${ServiciosTsr.RS_MVCH}/anular/${id}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions);
   }
 
   listar(filtro: MovimientoCajaChicaFiltro): Observable<MovimientoCajaChica[]> {
