@@ -1,4 +1,4 @@
-﻿import { CommonModule } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { forkJoin, Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -24,6 +24,8 @@ import { GaranteG50Service } from '../../service/garante-g50.service';
 import { GarantiaRealG51Service } from '../../service/garantia-real-g51.service';
 import { DetalleEjecucionReporte } from '../../model/detalle-ejecucion-reporte';
 import { EjecucionReporte } from '../../model/ejecucion-reporte';
+import { MatDialog } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-reportes-super-bancos',
@@ -107,7 +109,7 @@ export class ReportesSuperBancosComponent implements OnInit {
   /** Campos numéricos por tipo de reporte — null/0 deben salir como "0.00" en el TXT */
   private readonly numericColsMap: Record<string, Set<string>> = {
     G40: new Set(['porcentajeAportePatronalCesantia','porcentajeAportePersonalCesantia','porcentajeAportePatronalJubilacion','porcentajeAportePersonalJubilacion','valorAportePersonalCesantia','valorAportePersonalJubilacion']),
-    G41: new Set(['baseCalculoAportacion']),
+    G41: new Set<string>(), // D-038: baseCalculoAportacion es Caracter(1) segun el manual de catastros (tabla 196), no numerico
     G42: new Set(['aportePatronal','aportePersonal','aporteVoluntario','saldoAportePatronal','saldoAportePersonal','saldoAporteVoluntario','rendimiento']),
     G43: new Set(['numeroImposicionesPersonales','numeroImposicionesPatronales','saldoCuentaIndividual','valoresCompensados','valoresPagados']),
     G44: new Set(['imposicionesAcumuladas','valorPension','valorNetoRecibir','saldoCuenta','valoresCompensados']),
@@ -154,6 +156,7 @@ export class ReportesSuperBancosComponent implements OnInit {
     private g49Svc: CancelacionG49Service,
     private g50Svc: GaranteG50Service,
     private g51Svc: GarantiaRealG51Service,
+    private dialog: MatDialog,
   ) {
     const anioActual = new Date().getFullYear();
     for (let a = anioActual - 10; a <= anioActual + 1; a++) {
@@ -221,6 +224,7 @@ export class ReportesSuperBancosComponent implements OnInit {
   });
 
   buscarEjecucion(): void {
+    this.yaGenerado.set('');
     this.mensajeInfo.set('');
     this.errorMsg.set('');
     this.ejecucion.set(null);
@@ -252,7 +256,53 @@ export class ReportesSuperBancosComponent implements OnInit {
     });
   }
 
-  generarArchivos(): void {
+  /**
+   * I-6 (pase a producción): regenerar las G40–G51 de un mes que ya tiene ejecución. Flujo C17:
+   * G no cuadra → reabrir cartera → corregir → cerrar cartera → regenerar. El backend
+   * (`POST /ejrc/ejecutar` con `regenerar=true`) crea una ejecución nueva y sigue exigiendo el mes
+   * cerrado: si no lo está, responde 400 `REPORTE_MES_NO_CERRADO` y se muestra ese texto.
+   */
+  regenerarArchivos(): void {
+    const periodo = `${this.mesNombre()} ${this.anioSeleccionado()}`;
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      width: '520px',
+      data: {
+        title: 'Regenerar estructuras G40–G51',
+        message:
+          `Se creará una ejecución NUEVA de las G40–G51 de ${periodo} con los datos actuales del SAA. ` +
+          'La ejecución anterior queda en el historial; las descargas y consultas usarán la nueva. ' +
+          'El mes de cartera debe estar cerrado.',
+        confirmText: 'Regenerar',
+        type: 'warning',
+        details: [
+          { label: 'Período', value: periodo },
+          { label: 'Ejecución vigente', value: this.ejecucion()?.codigo != null ? String(this.ejecucion()!.codigo) : '—' },
+        ],
+      },
+    });
+    ref.afterClosed().subscribe((ok) => {
+      if (ok) {
+        this.generarArchivos(true);
+      }
+    });
+  }
+
+  /** Hay una ejecución del mes seleccionado (consultada o recién generada): se puede regenerar. */
+  puedeRegenerar = computed(() => {
+    const ej = this.ejecucion();
+    const delMesSeleccionado = ej != null && ej.mes === this.mesSeleccionado() && ej.anio === this.anioSeleccionado();
+    return delMesSeleccionado || this.yaGenerado() === this.clavePeriodo();
+  });
+
+  /** Mes ("m-aaaa") para el que el backend respondió "ya fueron generados". */
+  yaGenerado = signal<string>('');
+
+  private clavePeriodo(): string {
+    return `${this.mesSeleccionado()}-${this.anioSeleccionado()}`;
+  }
+
+  generarArchivos(regenerar = false): void {
+    this.yaGenerado.set('');
     this.mensajeInfo.set('');
     this.errorMsg.set('');
     this.ejecucion.set(null);
@@ -263,23 +313,37 @@ export class ReportesSuperBancosComponent implements OnInit {
 
     const usuario = this.usuarioService.getUsuarioLog()?.nombre || 'sistema';
 
+    this.ejecutando.set(true);
     this.ejecucionService.ejecutar({
       mes:  this.mesSeleccionado(),
       anio: this.anioSeleccionado(),
       usuario,
+      ...(regenerar ? { regenerar: true } : {}),
     }).subscribe({
       next: (resp) => {
         this.ejecutando.set(false);
         if (!resp) return;
         if ('mensaje' in resp) {
+          // "Los reportes G40-G51 ya fueron generados…": se ofrece Regenerar.
           this.mensajeInfo.set(resp.mensaje);
+          this.yaGenerado.set(/ya fueron generados/i.test(resp.mensaje) ? this.clavePeriodo() : '');
           const match = resp.mensaje.match(/id:\s*(\d+)/i);
           if (match) { this.cargarDetalle(Number(match[1])); }
+          return;
         } else {
           this.ejecucion.set(resp as EjecucionReporte);
+          if (regenerar) {
+            this.mensajeInfo.set(
+              `Estructuras G40–G51 de ${this.mesNombre()} ${this.anioSeleccionado()} regeneradas ` +
+              `(ejecución ${(resp as EjecucionReporte).codigo ?? '—'}).`,
+            );
+          }
           if ((resp as EjecucionReporte).codigo) {
             this.cargarDetalle((resp as EjecucionReporte).codigo!);
           }
+        }
+        if (regenerar) {
+          return; // regenerar no mueve el "próximo período a generar"
         }
         // Avanzar solo el período permitido al mes siguiente para que el label
         // "Próximo mes a generar" se actualice, pero los combos y mensajes

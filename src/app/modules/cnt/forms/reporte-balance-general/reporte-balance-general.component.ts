@@ -21,11 +21,13 @@ import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-bus
 import { TipoDatosBusqueda as TipoDatos } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { ReportesContables } from '../descarga-reporte';
+import { EstadoFinancieroOficialService, nombreDeArchivo } from '../../service/estado-financiero-oficial.service';
+import { LeyendaEstadoPeriodoComponent } from '../../components/leyenda-estado-periodo/leyenda-estado-periodo.component';
 
 @Component({
   selector: 'cnt-reporte-balance-general',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule],
+  imports: [CommonModule, ReactiveFormsModule, MaterialFormModule, LeyendaEstadoPeriodoComponent],
   templateUrl: './reporte-balance-general.component.html',
   styleUrls: ['./reporte-balance-general.component.scss'],
 })
@@ -41,6 +43,7 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
   private exportService         = inject(ExportService);
   private facturadorService     = inject(FacturadorService);
   private jasperService         = inject(JasperReportesService);
+  private estadoOficialService  = inject(EstadoFinancieroOficialService);
 
   // ── Catálogos ────────────────────────────────────────────────
   reportes = signal<ReporteContable[]>([]);
@@ -61,6 +64,10 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
 
   // ── Reporte Jasper (2026-09-08) ──
   imprimiendo = signal(false);
+
+  // ── Estado financiero oficial (C19, backend /esfo) ──
+  imprimiendoOficial = signal(false);
+  comparativoOficial = signal<string>('NINGUNO');
 
   // ── Computed totales ────────────────────────────────────
   totalSaldoAnterior = computed(() =>
@@ -258,9 +265,10 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
         this.fechaProceso.set(res.fechaProceso);
         this.cargarBalance(res.idEjecucion!);
       },
-      error: () => {
+      error: (err) => {
         this.loading.set(false);
-        this.errorMsg.set('Error de comunicación con el servidor');
+        // Mensaje del backend (REPORTE_MES_NO_CERRADO, fechas inválidas…); genérico solo sin texto.
+        this.errorMsg.set(mensajeDeError(err, 'Error al generar el balance'));
       }
     });
   }
@@ -522,13 +530,57 @@ export class ReporteBalanceGeneralComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (blob) => {
           this.imprimiendo.set(false);
-          guardarArchivo(blob, `balance-general-${idEjecucion}.pdf`);
+          // C19: el archivo se llama como el estado elegido y su periodo (antes siempre "balance-general-<id>",
+          // aunque fuera el Estado de Resultados — observacion del area financiera del 8-oct-2026).
+          guardarArchivo(blob, `${this.nombreArchivoCsv()}.pdf`);
         },
         error: (error) => {
           this.imprimiendo.set(false);
           mensajeReporteFallido(error).then((mensaje) => this.errorMsg.set(mensaje));
         },
       });
+  }
+
+  /**
+   * C19 — Estado financiero OFICIAL (PDF o Excel) desde el backend (`POST /esfo/imprimir`): logo, razón social,
+   * RUC, nombre propio del estado, período en letras, moneda, sin columnas Nivel/Saldo Anterior, Utilidad o
+   * Pérdida del Ejercicio al final, comparativo opcional, firmas y la leyenda PRELIMINAR (período no cerrado) o
+   * DEFINITIVO. Usa los mismos filtros del formulario; el backend genera y borra sus propias ejecuciones.
+   */
+  imprimirOficial(formato: 'PDF' | 'EXCEL'): void {
+    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
+    const v = this.form.getRawValue();
+    const empresa = this.appState.getEmpresa()?.codigo
+      ?? parseInt(localStorage.getItem('idSucursal') || '0', 10);
+    this.imprimiendoOficial.set(true);
+    this.errorMsg.set('');
+    this.estadoOficialService.imprimir({
+      empresa,
+      codigoAlterno: Number(v.codigoAlterno),
+      fechaInicio: this.funcionesDatos.formatearFechaParaBackend(this.fechaInicioParaGenerar(v), TipoFormatoFechaBackend.SOLO_FECHA),
+      fechaFin: this.funcionesDatos.formatearFechaParaBackend(v.fechaFin, TipoFormatoFechaBackend.SOLO_FECHA)!,
+      acumulacion: v.acumulacion === '0' ? 0 : 1,
+      eliminarSaldosCero: v.eliminarSaldosCero,
+      comparativo: this.comparativoOficial(),
+      formato,
+      usuario: usuarioSesion(),
+    }).subscribe({
+      next: (resp) => {
+        this.imprimiendoOficial.set(false);
+        const alternativo = `${this.nombreArchivoCsv()}.${formato === 'PDF' ? 'pdf' : 'xlsx'}`;
+        if (resp.body) {
+          guardarArchivo(resp.body, nombreDeArchivo(resp, alternativo));
+        }
+      },
+      error: (error) => {
+        this.imprimiendoOficial.set(false);
+        mensajeReporteFallido(error).then((mensaje) => this.errorMsg.set(mensaje));
+      },
+    });
+  }
+
+  onComparativoOficialChange(valor: string): void {
+    this.comparativoOficial.set(valor || 'NINGUNO');
   }
 
   onMostrarDebeHaberChange(checked: boolean): void {

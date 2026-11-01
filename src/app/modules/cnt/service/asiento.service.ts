@@ -1,4 +1,4 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -120,6 +120,21 @@ export class AsientoService {
     const body = { razonAnulacion };
     return this.http
       .put<boolean>(`${this.baseUrl}/${id}/anular`, body, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * C17 — `POST /asnt/anular/{id}?usuario&motivo&fechaReverso` (saaBE CIERRES-BLOQUEANTES.md §3-§4).
+   * Período del asiento CERRADO: no se anula; se genera un reverso en `fechaReverso` (yyyy-MM-dd, tiene que
+   * caer en un período abierto) o, sin fecha, en el primer período abierto posterior. El original queda
+   * REVERSADO y enlazado con el reverso por `idReversion` (en los dos sentidos). Devuelve el original.
+   * Motivo obligatorio. Los errores (`PERIODO_CERRADO`...) se propagan con el mensaje del backend.
+   */
+  anularConReverso(id: number, usuario: string, motivo: string, fechaReverso?: string | null): Observable<Asiento> {
+    let params = new HttpParams().set('usuario', usuario).set('motivo', motivo);
+    if (fechaReverso) params = params.set('fechaReverso', fechaReverso);
+    return this.http
+      .post<Asiento>(`${this.baseUrl}/anular/${id}`, null, { params })
       .pipe(catchError(this.handleError));
   }
 

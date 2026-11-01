@@ -10,6 +10,11 @@ export interface EjecutarReporteRequest {
   mes: number;
   anio: number;
   usuario: string;
+  /**
+   * C15/I-6: true = crear una ejecución nueva aunque el mes ya tenga una (regenerar las G de un mes
+   * re-procesado). El backend sigue exigiendo el mes cerrado (`REPORTE_MES_NO_CERRADO`, 400).
+   */
+  regenerar?: boolean;
 }
 
 /**
