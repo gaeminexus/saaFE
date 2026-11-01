@@ -613,7 +613,7 @@ export class ConsultaDocumentosComponent implements OnInit, AfterViewInit, After
       : this.servicioConMovimientos(tipo).anular(id, {
           motivo: resultado.motivo,
           usuario,
-          idUsuario: this.appState.getIdUsuario(),
+          idUsuario: this.appState.getIdUsuarioObligatorio(),
           anularEnCascada: resultado.anularEnCascada,
         } as AnularDocumentoCompraRequest);
 

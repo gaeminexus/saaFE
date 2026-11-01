@@ -13,6 +13,7 @@ import {
 } from '../model/aplicacion-pago-cxc';
 import { ParametrosCartera, ReporteCartera } from '../../cxp/model/cartera';
 import { ServiciosCxc } from './ws-cxc';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /** Abonos, saldo y cobros de una factura de venta (APLC). */
 @Injectable({ providedIn: 'root' })
@@ -66,14 +67,14 @@ export class AplicacionPagoCxcService {
 
   /** Reversa un abono. Requiere motivo; tras el 200 hay que refrescar saldo e historial. */
   revertir(idAplicacion: number, datos: MotivoRequest): Observable<any> {
-    return this.http.post<any>(`${ServiciosCxc.RS_APLC}/revertir/${idAplicacion}`, datos, this.httpOptions).pipe(
+    return this.http.post<any>(`${ServiciosCxc.RS_APLC}/revertir/${idAplicacion}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /** Cruza saldo de anticipos del cliente contra la factura. */
   cruzarAnticipo(datos: CruceAnticipoCxcRequest): Observable<ResultadoAplicacionCxc> {
-    return this.http.post<ResultadoAplicacionCxc>(`${ServiciosCxc.RS_APLC}/anticipo`, datos, this.httpOptions).pipe(
+    return this.http.post<ResultadoAplicacionCxc>(`${ServiciosCxc.RS_APLC}/anticipo`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -85,7 +86,7 @@ export class AplicacionPagoCxcService {
    * AnticipoService.disponiblesCliente().
    */
   cruzarAnticipos(datos: CruceAnticiposCxcRequest): Observable<ResultadoAplicacionCxc> {
-    return this.http.post<ResultadoAplicacionCxc>(`${ServiciosCxc.RS_APLC}/anticipos`, datos, this.httpOptions).pipe(
+    return this.http.post<ResultadoAplicacionCxc>(`${ServiciosCxc.RS_APLC}/anticipos`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -93,7 +94,7 @@ export class AplicacionPagoCxcService {
   /** Registra un cobro por transferencia; contabiliza en el momento de la llamada. */
   cobroTransferencia(datos: CobroTransferenciaRequest): Observable<ResultadoAplicacionCxc> {
     return this.http.post<ResultadoAplicacionCxc>(
-      `${ServiciosCxc.RS_APLC}/cobroTransferencia`, datos, this.httpOptions
+      `${ServiciosCxc.RS_APLC}/cobroTransferencia`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

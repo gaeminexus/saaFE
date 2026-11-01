@@ -464,7 +464,7 @@ export class GastosCajaChicaComponent implements OnInit {
       observacion: this.formObservacion.trim(),
       idTitular: this.formBeneficiario()?.codigo ?? undefined,
       numeroDocumento: this.formNumeroDocumento.trim() || undefined,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
       // Con documento, la clasificación (y su cuenta contable) sale de él: idProducto ya no
       // decide nada en ese camino, así que no se manda. Sin documento, sigue igual que siempre.
       ...(documento
@@ -507,7 +507,7 @@ export class GastosCajaChicaComponent implements OnInit {
           path: resp.filePath,
           nombreDoc: archivo.name,
           tipoDoc: archivo.name.substring(archivo.name.lastIndexOf('.') + 1),
-          usuario: { codigo: this.appState.getIdUsuario() },
+          usuario: { codigo: this.appState.getIdUsuarioObligatorio() },
         }).subscribe({
           next: () => this.snackBar.open('Gasto y adjunto registrados correctamente.', 'Cerrar', { duration: 4000 }),
           error: () => this.snackBar.open('El gasto se registró, pero no se pudo guardar el registro del adjunto.', 'Cerrar', { duration: 6000 }),
@@ -636,7 +636,7 @@ export class GastosCajaChicaComponent implements OnInit {
       if (!motivo) return;
 
       this.anulandoId.set(m.codigo);
-      this.movimientoS.anular(m.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+      this.movimientoS.anular(m.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
         next: (resp: any) => {
           this.anulandoId.set(null);
           // El backend devuelve un mensaje distinto según el tipo (p.ej. "Reposición anulada: se

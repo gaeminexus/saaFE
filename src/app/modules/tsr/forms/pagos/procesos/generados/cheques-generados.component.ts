@@ -180,7 +180,7 @@ export class ChequesGeneradosComponent implements OnInit, AfterViewChecked {
     if (!ids.length) return;
 
     this.marcando.set(true);
-    this.chequeService.imprimir(ids, this.appState.getIdUsuario()).subscribe({
+    this.chequeService.imprimir(ids, this.appState.getIdUsuarioObligatorio()).subscribe({
       next: () => {
         this.marcando.set(false);
         this.snackBar.open(`✓ ${ids.length} cheque(s) marcado(s) como impresos`, 'Cerrar', {

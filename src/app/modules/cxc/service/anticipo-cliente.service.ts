@@ -8,6 +8,7 @@ import {
   VerificarAnulacionAnticipoResponse,
 } from '../model/anticipo-cliente';
 import { ServiciosCxc } from './ws-cxc';
+import { idUsuarioSesionObligatorio, usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -57,7 +58,8 @@ export class AnticipoClienteService {
 
   confirmar(datos: ConfirmarAnticipoClienteRequest): Observable<any | null> {
     return this.http
-      .post<any>(`${ServiciosCxc.RS_ANTC}/confirmar`, datos, this.httpOptions)
+      // U-3 §1: el usuario de sesión va siempre en el cuerpo.
+      .post<any>(`${ServiciosCxc.RS_ANTC}/confirmar`, { ...datos, usuario: usuarioSesion() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -74,7 +76,8 @@ export class AnticipoClienteService {
    */
   anular(id: number, datos: AnularAnticipoClienteRequest): Observable<any | null> {
     return this.http
-      .post<any>(`${ServiciosCxc.RS_ANTC}/anular/${id}`, datos, this.httpOptions)
+      // U-3 §2: `idUsuario` es siempre el id real del usuario de sesión (nunca 0 ni null).
+      .post<any>(`${ServiciosCxc.RS_ANTC}/anular/${id}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

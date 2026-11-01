@@ -30,6 +30,7 @@ import {
   AnularDocumentoCompraDialogResult,
 } from '../../../../cxp/forms/procesos/dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
 import { criteriosDocumentoEmitido } from '../../../../../shared/utils/criterios-documento-emitido.util';
+import { usuarioSesion as usuarioDeSesion } from '../../../../../shared/services/usuario-sesion';
 
 export type TipoDocumento = 'TODOS' | 'FACTURA' | 'NOTA_CREDITO' | 'NOTA_DEBITO' | 'RETENCION' | 'LIQUIDACION';
 
@@ -96,12 +97,9 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
   /** id del documento cuya contabilización está en curso; null si ninguna. */
   idContabilizando = signal<number | null>(null);
 
+  /** Usuario de sesión, sin relleno: si no hay, `usuarioDeSesion()` cierra la sesión y lanza error. */
   private get usuarioSesion(): string {
-    try {
-      const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-      if (u) return JSON.parse(u)?.username || JSON.parse(u)?.nombre || JSON.parse(u)?.login || 'sistema';
-    } catch { /* */ }
-    return 'sistema';
+    return usuarioDeSesion();
   }
 
   // Filtros
@@ -465,7 +463,7 @@ export class ConsultaDocumentosElectronicosComponent implements OnInit {
 
           this.anulando.set(true);
           const usuario = this.usuarioSesion;
-          const idUsuario = this.appState.getIdUsuario();
+          const idUsuario = this.appState.getIdUsuarioObligatorio();
           const { motivo, anularEnCascada } = result;
           const req$: Observable<any> = (() => {
             switch (row.tipo) {

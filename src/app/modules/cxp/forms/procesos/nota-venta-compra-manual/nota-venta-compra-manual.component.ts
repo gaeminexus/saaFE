@@ -112,7 +112,7 @@ export class NotaVentaCompraManualComponent implements OnInit {
   }
 
   private get idEmpresa(): number { return this.appState.getEmpresa()?.codigo || 0; }
-  private get idUsuario(): number { return this.appState.getIdUsuario(); }
+  private get idUsuario(): number { return this.appState.getIdUsuarioObligatorio(); }
 
   // ─── NÚMERO DEL DOCUMENTO (establecimiento/pto. emisión/secuencial) ──────
   // Incidente 2026-09-15 (saaBE/docs/logica-negocio/cxc/PLAN-RETENCION-SOBRE-NOTA-DE-VENTA.md §6):

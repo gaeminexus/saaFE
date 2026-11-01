@@ -515,7 +515,7 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
       this.errorMsg.set('');
       this.successMsg.set('');
 
-      this.cierreS.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+      this.cierreS.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
         next: () => {
           this.anulandoCierre.set(null);
           this.successMsg.set(`Cierre N° ${row.codigo} anulado correctamente.`);
@@ -703,7 +703,7 @@ export class ConciliacionCierreComponent implements OnInit, AfterViewChecked {
       idPeriodo: periodo.codigo,
       partidas,
       saldoExtracto,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     };
 
     this.cerrando.set(true);

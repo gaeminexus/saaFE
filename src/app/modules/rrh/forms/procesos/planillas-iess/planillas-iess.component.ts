@@ -313,7 +313,7 @@ export class PlanillasIessComponent implements OnInit {
             idPeriodo: periodo.codigo,
             tipo: fila.tipo,
             ...resultado,
-            idUsuario: this.appState.getIdUsuario(),
+            idUsuario: this.appState.getIdUsuarioObligatorio(),
           })
           .subscribe({
             next: () => {
@@ -333,7 +333,7 @@ export class PlanillasIessComponent implements OnInit {
 
   conciliar(planilla: PlanillaIess): void {
     this.procesando.set(planilla.codigo);
-    this.planillaIessS.conciliar(planilla.codigo, this.appState.getIdUsuario()).subscribe({
+    this.planillaIessS.conciliar(planilla.codigo, this.appState.getIdUsuarioObligatorio()).subscribe({
       next: (resultado) => {
         this.procesando.set(null);
         const mapa = new Map(this.resultadoConciliacion());
@@ -377,7 +377,7 @@ export class PlanillasIessComponent implements OnInit {
 
         this.procesando.set(planilla.codigo);
         this.planillaIessS
-          .pagar(planilla.codigo, { ...resultado, idUsuario: this.appState.getIdUsuario() })
+          .pagar(planilla.codigo, { ...resultado, idUsuario: this.appState.getIdUsuarioObligatorio() })
           .subscribe({
             next: (respuesta) => {
               this.procesando.set(null);
@@ -409,7 +409,7 @@ export class PlanillasIessComponent implements OnInit {
 
         this.procesando.set(planilla.codigo);
         this.planillaIessS
-          .reversarPago(planilla.codigo, { motivo, idUsuario: this.appState.getIdUsuario() })
+          .reversarPago(planilla.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() })
           .subscribe({
             next: () => {
               this.procesando.set(null);
@@ -438,7 +438,7 @@ export class PlanillasIessComponent implements OnInit {
         if (!motivo) return;
 
         this.procesando.set(planilla.codigo);
-        this.planillaIessS.anular(planilla.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+        this.planillaIessS.anular(planilla.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
           next: () => {
             this.procesando.set(null);
             this.avisar('Planilla anulada.');

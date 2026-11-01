@@ -214,7 +214,7 @@ export class CierreCajaChicaComponent implements OnInit {
     this.cierreS.preparar({
       idCaja,
       fecha: this.fechaCierre(),
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     }).subscribe({
       next: (resp) => {
         this.preparando.set(false);
@@ -257,7 +257,7 @@ export class CierreCajaChicaComponent implements OnInit {
       saldoFisico,
       observacion: this.observacionConfirmar.trim() || undefined,
       idPlanCuentaDiferencia: this.requiereCuentaDiferencia ? this.cuentaDiferencia()!.codigo : undefined,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     }).subscribe({
       next: () => {
         this.confirmando.set(false);
@@ -302,7 +302,7 @@ export class CierreCajaChicaComponent implements OnInit {
       if (!motivo) return;
 
       this.anulando.set(cierre.codigo);
-      this.cierreS.anular(cierre.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+      this.cierreS.anular(cierre.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
         next: () => {
           this.anulando.set(null);
           this.snackBar.open('✓ Cierre anulado correctamente', 'Cerrar', {

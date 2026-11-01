@@ -460,7 +460,7 @@ export class AnticipoComponent implements OnInit {
           this.anulando.set(row.id);
           this.anticipoService.anular(row.id, {
             motivo,
-            idUsuario: this.appState.getIdUsuario(),
+            idUsuario: this.appState.getIdUsuarioObligatorio(),
             confirmarReversionCruces: hayCruces,
           }).subscribe({
             next: (resp) => {

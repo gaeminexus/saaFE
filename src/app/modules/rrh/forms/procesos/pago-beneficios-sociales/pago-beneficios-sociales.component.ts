@@ -330,7 +330,7 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
       .subscribe((confirmado: boolean) => {
         if (!confirmado) return;
 
-        const idUsuario = this.appState.getIdUsuario();
+        const idUsuario = this.appState.getIdUsuarioObligatorio();
         if (!idUsuario) {
           this.avisar('No se pudo determinar el usuario de la sesión.', true);
           return;

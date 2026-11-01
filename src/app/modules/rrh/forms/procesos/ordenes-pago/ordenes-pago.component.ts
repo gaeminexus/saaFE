@@ -205,7 +205,7 @@ export class OrdenesPagoComponent implements OnInit {
   generar(): void {
     if (!this.puedeGenerar() || this.ocupado()) return;
 
-    const idUsuario = this.appState.getIdUsuario();
+    const idUsuario = this.appState.getIdUsuarioObligatorio();
     if (!idUsuario) {
       this.avisar('No se pudo determinar el usuario de la sesión.', true);
       return;
@@ -248,7 +248,7 @@ export class OrdenesPagoComponent implements OnInit {
       return;
     }
 
-    const idUsuario = this.appState.getIdUsuario();
+    const idUsuario = this.appState.getIdUsuarioObligatorio();
     if (!idUsuario) {
       this.avisar('No se pudo determinar el usuario de la sesión.', true);
       return;
@@ -339,7 +339,7 @@ export class OrdenesPagoComponent implements OnInit {
       .subscribe((confirmado: boolean) => {
         if (!confirmado) return;
 
-        const idUsuario = this.appState.getIdUsuario();
+        const idUsuario = this.appState.getIdUsuarioObligatorio();
         if (!idUsuario) {
           this.avisar('No se pudo determinar el usuario de la sesión.', true);
           return;

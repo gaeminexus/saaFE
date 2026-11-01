@@ -498,7 +498,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
       .subscribe((confirmado: boolean) => {
         if (!confirmado) return;
 
-        const idUsuario = this.appState.getIdUsuario();
+        const idUsuario = this.appState.getIdUsuarioObligatorio();
         if (!idUsuario) {
           this.avisar('No se pudo determinar el usuario de la sesión.', true);
           return;
@@ -557,7 +557,7 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
       .subscribe((motivo: string | null) => {
         if (!motivo) return;
 
-        const idUsuario = this.appState.getIdUsuario();
+        const idUsuario = this.appState.getIdUsuarioObligatorio();
         if (!idUsuario) {
           this.avisar('No se pudo determinar el usuario de la sesión.', true);
           return;

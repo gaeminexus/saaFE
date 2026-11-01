@@ -22,6 +22,7 @@ import {
   AnularDocumentoCompraDialogResult,
 } from '../../../../cxp/forms/procesos/dialogs/anular-documento-compra-dialog/anular-documento-compra-dialog.component';
 import { Router } from '@angular/router';
+import { usuarioSesion as usuarioDeSesion } from '../../../../../shared/services/usuario-sesion';
 
 @Component({
   selector: 'app-consulta-facturas',
@@ -46,12 +47,9 @@ export class ConsultaFacturasComponent implements OnInit {
   private permisosService = inject(PermisosService);
   anulandoMovimientos = signal(false);
 
+  /** Usuario de sesión, sin relleno: si no hay, `usuarioDeSesion()` cierra la sesión y lanza error. */
   private get usuarioSesion(): string {
-    try {
-      const u = sessionStorage.getItem('usuario') || localStorage.getItem('usuario');
-      if (u) return JSON.parse(u)?.username || JSON.parse(u)?.nombre || JSON.parse(u)?.login || 'sistema';
-    } catch { /* */ }
-    return 'sistema';
+    return usuarioDeSesion();
   }
 
   imprimiendo = signal(false);
@@ -258,7 +256,7 @@ export class ConsultaFacturasComponent implements OnInit {
           this.facturaService.anularFactura({
             idFactura: Number(row.id),
             usuario: this.usuarioSesion,
-            idUsuario: this.appState.getIdUsuario(),
+            idUsuario: this.appState.getIdUsuarioObligatorio(),
             motivo: result.motivo,
             anularEnCascada: result.anularEnCascada,
           }).subscribe({

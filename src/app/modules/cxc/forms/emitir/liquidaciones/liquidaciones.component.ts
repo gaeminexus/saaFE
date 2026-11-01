@@ -916,7 +916,7 @@ export class LiquidacionesComponent implements OnInit {
             idLiquidacion: id,
             motivo: result.motivo,
             usuario,
-            idUsuario: this.appState.getIdUsuario(),
+            idUsuario: this.appState.getIdUsuarioObligatorio(),
             anularEnCascada: result.anularEnCascada,
           })
             .pipe(finalize(() => this.procesandoAccion.set(false)))

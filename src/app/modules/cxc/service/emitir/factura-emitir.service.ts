@@ -8,6 +8,7 @@ import { ContabilizarDocumentoResponse } from '../../model/contabilizar-document
 import { FacturaEmitir } from '../../model/factura-emitir';
 import { FormaPagoFactura } from '../../model/forma-pago-factura';
 import { ServiciosCxc } from '../ws-cxc';
+import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 
 interface ReintentarAutorizacionRequest {
   idFactura: number;
@@ -86,7 +87,8 @@ export class FacturaEmitirService {
 
   reintentarAutorizacion(datos: ReintentarAutorizacionRequest): Observable<any | null> {
     return this.http
-      .post<any>(`${ServiciosCxc.RS_FCTR}/reintentarAutorizacion`, datos, this.httpOptions)
+      // U-3: la recepción del SRI queda a nombre de quien la ejecuta (docs/cxc/API-USUARIO-OBLIGATORIO-CXC.md §1).
+      .post<any>(`${ServiciosCxc.RS_FCTR}/reintentarAutorizacion`, { ...datos, usuario: usuarioSesion() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

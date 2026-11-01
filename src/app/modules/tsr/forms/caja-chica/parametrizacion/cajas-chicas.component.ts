@@ -205,7 +205,7 @@ export class CajasChicasComponent implements OnInit {
         responsable: this.responsable.trim(),
         observacion: this.observacion.trim() || null,
         saldoInicialMigrado: this.tieneValor(this.saldoInicialMigrado) ? this.numero(this.saldoInicialMigrado) : undefined,
-        idUsuario: this.appState.getIdUsuario(),
+        idUsuario: this.appState.getIdUsuarioObligatorio(),
       };
 
       this.cajaChicaS.registrar(payload).subscribe({
@@ -290,7 +290,7 @@ export class CajasChicasComponent implements OnInit {
       if (!motivo) return;
 
       this.procesandoEstado.set(caja.codigo);
-      this.cajaChicaS.anular(caja.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+      this.cajaChicaS.anular(caja.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
         next: (resp) => {
           this.procesandoEstado.set(null);
           this.snackBar.open('✓ ' + resp.mensaje, 'Cerrar', { duration: 4000, panelClass: ['snackbar-success'] });
@@ -307,7 +307,7 @@ export class CajasChicasComponent implements OnInit {
   reactivar(fila: FilaCajaChica): void {
     const caja = fila.caja;
     this.procesandoEstado.set(caja.codigo);
-    this.cajaChicaS.activar(caja.codigo, { idUsuario: this.appState.getIdUsuario() }).subscribe({
+    this.cajaChicaS.activar(caja.codigo, { idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
       next: (resp) => {
         this.procesandoEstado.set(null);
         this.snackBar.open('✓ ' + resp.mensaje, 'Cerrar', { duration: 4000, panelClass: ['snackbar-success'] });

@@ -248,7 +248,7 @@ export class ConsultaCobrosComponent implements OnInit {
           if (!motivo) return;
 
           this.anulando.set(row.id);
-          this.aplicacionPagoService.revertir(row.id, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+          this.aplicacionPagoService.revertir(row.id, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
             next: () => {
               this.anulando.set(null);
               this.mostrarExito('Cobro anulado correctamente');

@@ -78,3 +78,17 @@ export function idUsuarioSesion(): number | null {
   const codigo = bruto ? parseInt(bruto, 10) : NaN;
   return Number.isNaN(codigo) || codigo <= 0 ? null : codigo;
 }
+
+/**
+ * Igual que `idUsuarioSesion()`, pero sin id real NO devuelve nada: avisa a `SesionPerdidaService`
+ * (cierra la sesión y manda a /login) y lanza `SesionPerdidaError`, así la operación que lo pidió
+ * no se envía nunca con `0`, `null` ni un id inventado.
+ */
+export function idUsuarioSesionObligatorio(): number {
+  const id = idUsuarioSesion();
+  if (id === null) {
+    window.dispatchEvent(new Event(EVENTO_SESION_PERDIDA));
+    throw new SesionPerdidaError();
+  }
+  return id;
+}

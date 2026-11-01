@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
 import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { ServiciosTsr } from './ws-tsr';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 export interface AnticipoRequest {
   idTitular: number;
@@ -241,7 +242,7 @@ export class AnticipoService {
     payload: SolicitarDevolucionAnticipoRequest
   ): Observable<SolicitarDevolucionAnticipoResponse> {
     return this.http.post<SolicitarDevolucionAnticipoResponse>(
-      `${ServiciosTsr.RS_ANTC}/solicitarDevolucion`, payload, this.httpOptions
+      `${ServiciosTsr.RS_ANTC}/solicitarDevolucion`, { ...payload, usuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

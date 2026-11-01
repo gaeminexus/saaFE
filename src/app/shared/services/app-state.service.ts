@@ -8,6 +8,7 @@ import { Usuario } from '../model/usuario';
 import { DetalleRubroService } from './detalle-rubro.service';
 import { empresaSesionCodigo } from './empresa-sesion';
 import { UsuarioService } from './usuario.service';
+import { idUsuarioSesion, idUsuarioSesionObligatorio } from './usuario-sesion';
 
 export interface AppData {
   empresa: Empresa;
@@ -310,8 +311,18 @@ export class AppStateService {
    * cuando la clave no existe (a diferencia de `Number(null)`, que da `0`), y
    * `??` no atrapa `NaN` — por eso el fallback final es `|| 0`, no `?? 0`.
    */
-  getIdUsuario(): number {
-    return (this.getUsuario()?.codigo ?? Number(sessionStorage.getItem('idUsuario'))) || 0;
+  getIdUsuario(): number | null {
+    const enMemoria = this.getUsuario()?.codigo;
+    return enMemoria && enMemoria > 0 ? enMemoria : idUsuarioSesion();
+  }
+
+  /**
+   * Id real del usuario de sesión para mandarlo al backend. Sin sesión NO devuelve 0: cierra la
+   * sesión y lanza `SesionPerdidaError` (ver `idUsuarioSesionObligatorio`), así nada se envía con un id inválido.
+   */
+  getIdUsuarioObligatorio(): number {
+    const id = this.getIdUsuario();
+    return id !== null ? id : idUsuarioSesionObligatorio();
   }
 
   /**

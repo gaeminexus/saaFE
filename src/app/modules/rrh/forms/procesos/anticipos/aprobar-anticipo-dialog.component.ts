@@ -51,7 +51,7 @@ export class AprobarAnticipoDialogComponent {
     if (!this.puedeAprobar) return;
 
     const payload: AprobarAnticipoRequest = {
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     };
 
     this.guardando.set(true);

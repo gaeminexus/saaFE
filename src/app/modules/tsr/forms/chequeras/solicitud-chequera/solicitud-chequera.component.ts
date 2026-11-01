@@ -313,7 +313,7 @@ export class SolicitudChequeraComponent implements OnInit {
       this.loading.set(true);
       this.errorMsg.set('');
       this.successMsg.set('');
-      this.chequeraService.anular(codigo, motivo, this.appState.getIdUsuario()).subscribe({
+      this.chequeraService.anular(codigo, motivo, this.appState.getIdUsuarioObligatorio()).subscribe({
         next: () => {
           this.successMsg.set('Solicitud de chequera anulada correctamente');
           this.cargarSolicitudes();

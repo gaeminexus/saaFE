@@ -328,7 +328,7 @@ export class AprobacionPagosComponent implements OnInit {
         idPago: pago.id,
         idTitular: pago.idTitular,
         beneficiario: pago.beneficiario,
-        idUsuario: this.appState.getIdUsuario(),
+        idUsuario: this.appState.getIdUsuarioObligatorio(),
       },
     }).afterClosed().subscribe((mensaje: string | null) => {
       if (!mensaje) return;
@@ -350,7 +350,7 @@ export class AprobacionPagosComponent implements OnInit {
       idCuentaBancaria: cuenta.codigo,
       formaPago: this.formaPago(),
       fechaPago: this.fechaPago() || undefined,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
       agruparEnUnCheque: (this.puedeMarcarAgruparEnUnCheque() && this.agruparEnUnCheque()) || undefined,
     }).subscribe({
       next: (resp) => {
@@ -397,7 +397,7 @@ export class AprobacionPagosComponent implements OnInit {
       if (!motivo) return;
 
       this.anulando.set(pago.id);
-      this.pagoS.anular(pago.id, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+      this.pagoS.anular(pago.id, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
         next: () => {
           this.anulando.set(null);
           this.snackBar.open('Pago anulado.', 'Cerrar', { duration: 5000, panelClass: ['snackbar-success'] });

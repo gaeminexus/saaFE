@@ -130,7 +130,7 @@ export class DevolucionesAnticipoDialogComponent implements OnInit {
           if (!motivo) return;
 
           this.procesando.set(d.codigo);
-          this.devolucionS.anular(d.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+          this.devolucionS.anular(d.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
             next: () => {
               this.procesando.set(null);
               this.huboCambios = true;

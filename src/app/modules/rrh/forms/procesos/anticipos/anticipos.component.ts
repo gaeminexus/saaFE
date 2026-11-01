@@ -227,7 +227,7 @@ export class AnticiposComponent implements OnInit {
           if (!motivo) return;
 
           this.procesando.set(row.codigo);
-          this.anticipoService.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuario() }).subscribe({
+          this.anticipoService.anular(row.codigo, { motivo, idUsuario: this.appState.getIdUsuarioObligatorio() }).subscribe({
             next: () => {
               this.procesando.set(null);
               this.mostrarExito('Anticipo anulado');

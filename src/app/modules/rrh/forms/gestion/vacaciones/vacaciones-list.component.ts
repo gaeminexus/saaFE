@@ -492,7 +492,7 @@ export class VacacionesListComponent implements OnInit {
     action: 'approve' | 'reject' | 'cancel',
     observacion: string | null,
   ): void {
-    const idUsuario = this.appState.getIdUsuario();
+    const idUsuario = this.appState.getIdUsuarioObligatorio();
     const motivo = observacion ?? undefined;
 
     this.loading.set(true);

@@ -211,7 +211,7 @@ export class RecepcionChequeraComponent implements OnInit {
       comienza,
       finaliza,
       fechaEntrega: `${this.fechaEntrega()}T${hora}:00`,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     };
 
     this.loading.set(true);

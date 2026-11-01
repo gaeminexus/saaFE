@@ -148,7 +148,7 @@ export class ReposicionCajaChicaComponent implements OnInit {
       valor: this.valorNumerico,
       fecha: this.fechaISO(this.fecha),
       descripcion: this.descripcion.trim() || undefined,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     };
 
     const operacion = this.esApertura ? this.movimientoS.apertura(payload) : this.movimientoS.reposicion(payload);

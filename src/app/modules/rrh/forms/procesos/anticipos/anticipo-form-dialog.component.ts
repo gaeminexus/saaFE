@@ -136,7 +136,7 @@ export class AnticipoFormDialogComponent implements OnInit {
       fechaInicioDescuento: this.mesInicioDescuento() ? `${this.mesInicioDescuento()}-01` : undefined,
       motivo: this.motivo().trim(),
       observacion: this.observacion().trim() || undefined,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     };
 
     this.guardando.set(true);

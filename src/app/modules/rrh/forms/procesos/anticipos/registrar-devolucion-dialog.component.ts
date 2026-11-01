@@ -117,7 +117,7 @@ export class RegistrarDevolucionDialogComponent implements OnInit {
       idCuentaBancaria: this.idCuentaBancaria,
       referencia: this.referencia.trim() || null,
       observacion: this.observacion.trim() || null,
-      idUsuario: this.appState.getIdUsuario(),
+      idUsuario: this.appState.getIdUsuarioObligatorio(),
     };
 
     this.guardando.set(true);

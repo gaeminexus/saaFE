@@ -283,7 +283,7 @@ export class ChequeraComponent implements OnInit {
       if (!motivo) return;
 
       this.loading.set(true);
-      this.chequeraService.anular(chequera.codigo, motivo, this.appState.getIdUsuario()).subscribe({
+      this.chequeraService.anular(chequera.codigo, motivo, this.appState.getIdUsuarioObligatorio()).subscribe({
         next: () => {
           this.loading.set(false);
           this.snackBar.open('✓ Chequera anulada correctamente', 'Cerrar', {
@@ -328,7 +328,7 @@ export class ChequeraComponent implements OnInit {
         if (motivo == null) return;
 
         this.loading.set(true);
-        this.chequeService.anular(cheque.codigo, motivo, this.appState.getIdUsuario()).subscribe({
+        this.chequeService.anular(cheque.codigo, motivo, this.appState.getIdUsuarioObligatorio()).subscribe({
           next: () => {
             this.loading.set(false);
             this.snackBar.open('✓ Cheque anulado correctamente', 'Cerrar', {
