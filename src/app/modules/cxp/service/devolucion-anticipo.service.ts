@@ -9,6 +9,7 @@ import {
   RegistrarDevolucionAnticipoResponse,
 } from '../model/devolucion-anticipo';
 import { ServiciosCxp } from './ws-cxp';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /** Devolución del saldo de anticipos de un proveedor (PGS.DVPR/DDPR) — docs/cxp/API-DEVOLUCION-ANTICIPO-PROVEEDOR.md. */
 @Injectable({ providedIn: 'root' })
@@ -21,14 +22,14 @@ export class DevolucionAnticipoService {
   /** Registra la devolución: un asiento y un movimiento bancario por el total, en una sola transacción. */
   registrar(datos: RegistrarDevolucionAnticipoRequest): Observable<RegistrarDevolucionAnticipoResponse> {
     return this.http.post<RegistrarDevolucionAnticipoResponse>(
-      `${ServiciosCxp.RS_DVPR}/registrar`, datos, this.httpOptions
+      `${ServiciosCxp.RS_DVPR}/registrar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
   /** Anula una devolución ACTIVA que todavía no esté conciliada con el extracto. */
   anular(id: number, datos: AnularDevolucionAnticipoRequest): Observable<AnularDevolucionAnticipoResponse> {
     return this.http.post<AnularDevolucionAnticipoResponse>(
-      `${ServiciosCxp.RS_DVPR}/anular/${id}`, datos, this.httpOptions
+      `${ServiciosCxp.RS_DVPR}/anular/${id}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

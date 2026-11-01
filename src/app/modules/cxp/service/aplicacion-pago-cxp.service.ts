@@ -10,6 +10,7 @@ import {
 } from '../model/aplicacion-pago-cxp';
 import { ParametrosCartera, ReporteCartera } from '../model/cartera';
 import { ServiciosCxp } from './ws-cxp';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /** Abonos y saldo de una factura de compra (APLP). */
 @Injectable({ providedIn: 'root' })
@@ -82,14 +83,14 @@ export class AplicacionPagoCxpService {
 
   /** Reversa un abono. Requiere motivo; tras el 200 hay que refrescar saldo e historial. */
   revertir(idAplicacion: number, datos: MotivoRequest): Observable<any> {
-    return this.http.post<any>(`${ServiciosCxp.RS_APLP}/revertir/${idAplicacion}`, datos, this.httpOptions).pipe(
+    return this.http.post<any>(`${ServiciosCxp.RS_APLP}/revertir/${idAplicacion}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
 
   /** Cruza saldo de anticipos del proveedor contra la factura o liquidación (§ nota de arriba). */
   cruzarAnticipo(datos: CruceAnticipoCxpRequest): Observable<ResultadoAplicacionCxp> {
-    return this.http.post<any>(`${ServiciosCxp.RS_APLP}/anticipo`, datos, this.httpOptions).pipe(
+    return this.http.post<any>(`${ServiciosCxp.RS_APLP}/anticipo`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       map((r) => this.normalizarResultado(r)),
       catchError(this.handleError)
     );
@@ -102,7 +103,7 @@ export class AplicacionPagoCxpService {
    * AnticipoService.disponiblesProveedor().
    */
   cruzarAnticipos(datos: CruceAnticiposCxpRequest): Observable<ResultadoAplicacionCxp> {
-    return this.http.post<any>(`${ServiciosCxp.RS_APLP}/anticipos`, datos, this.httpOptions).pipe(
+    return this.http.post<any>(`${ServiciosCxp.RS_APLP}/anticipos`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       map((r) => this.normalizarResultado(r)),
       catchError(this.handleError)
     );

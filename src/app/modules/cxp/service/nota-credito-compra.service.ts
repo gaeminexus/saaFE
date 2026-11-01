@@ -9,6 +9,7 @@ import {
   MovimientoRelacionadoCompra,
 } from '../model/anulacion-documento-compra';
 import { ServiciosCxp } from './ws-cxp';
+import { idUsuarioSesionObligatorio, usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class NotaCreditoCompraService {
@@ -48,7 +49,7 @@ export class NotaCreditoCompraService {
   }
 
   anular(id: number, datos: AnularDocumentoCompraRequest): Observable<AnularDocumentoCompraResponse> {
-    return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_NTCC}/anular/${id}`, datos, this.httpOptions).pipe(
+    return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_NTCC}/anular/${id}`, { ...datos, usuario: usuarioSesion(), idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleErrorAnulacion),
     );
   }

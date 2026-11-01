@@ -12,6 +12,7 @@ import { CargaDocumentosService } from '../../../service/carga-documentos.servic
 import { ProductoPagoService } from '../../../service/producto-pago.service';
 import { ReembolsoFacturaCompraService } from '../../../service/reembolso-factura-compra.service';
 import { ReembolsoDialogComponent, ReembolsoDialogData } from '../dialogs/reembolso-dialog/reembolso-dialog.component';
+import { idUsuarioSesionObligatorio } from '../../../../../shared/services/usuario-sesion';
 
 @Component({
   selector: 'app-reembolsos-factura',
@@ -24,7 +25,8 @@ export class ReembolsosFacturaComponent implements OnInit, OnChanges {
   @Input({ required: true }) idFacturaCompra!: number;
   @Input() editable = true;                    // false = solo lectura (consulta-documentos)
   @Input() contabilizacionPendiente = false;   // true → mostrar botón Contabilizar
-  @Input() idUsuario = 1;
+  /** Ya no tiene default (era 1): el id real sale de la sesión; el servicio lo vuelve a poner en el envío. */
+  @Input() idUsuario: number | null = null;
   @Input() idEmpresa = 1;
   @Output() contabilizado = new EventEmitter<void>();
 
@@ -115,7 +117,7 @@ export class ReembolsosFacturaComponent implements OnInit, OnChanges {
     const data: ReembolsoDialogData = {
       idFacturaCompra: this.idFacturaCompra,
       reembolso,
-      idUsuario: this.idUsuario,
+      idUsuario: this.idUsuario ?? idUsuarioSesionObligatorio(),
       idEmpresa: this.idEmpresa,
     };
     const ref = this.dialog.open(ReembolsoDialogComponent, { data, width: '760px', maxWidth: '94vw' });
@@ -154,7 +156,7 @@ export class ReembolsosFacturaComponent implements OnInit, OnChanges {
     if (!confirm('¿Contabilizar la factura de reembolso? Se generará el asiento por los grupos de producto de los sustentos.')) return;
     this.bloqueantes.set([]);
     this.procesando.set(true);
-    this.cargaDocumentosService.contabilizarReembolso(this.idFacturaCompra, this.idEmpresa, this.idUsuario).subscribe({
+    this.cargaDocumentosService.contabilizarReembolso(this.idFacturaCompra, this.idEmpresa, this.idUsuario ?? idUsuarioSesionObligatorio()).subscribe({
       next: (resp) => {
         this.procesando.set(false);
         // En esta respuesta la clave `asiento` es el CÓDIGO (PK) del asiento, no el número alterno

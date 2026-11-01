@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { LiquidacionCompraCompra } from '../model/liquidacion-compra-compra';
 import { AnularDocumentoCompraResponse, AnularLiquidacionCompraRequest } from '../model/anulacion-documento-compra';
 import { ServiciosCxp } from './ws-cxp';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class LiquidacionCompraCompraService {
@@ -43,7 +44,7 @@ export class LiquidacionCompraCompraService {
    * `movimientosRelacionados` ni `anularEnCascada` para esta tabla, solo motivo + usuario.
    */
   anular(id: number, datos: AnularLiquidacionCompraRequest): Observable<AnularDocumentoCompraResponse> {
-    return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_LQCC}/anular/${id}`, datos, this.httpOptions).pipe(
+    return this.http.post<AnularDocumentoCompraResponse>(`${ServiciosCxp.RS_LQCC}/anular/${id}`, { ...datos, usuario: usuarioSesion() }, this.httpOptions).pipe(
       catchError(this.handleErrorAnulacion),
     );
   }

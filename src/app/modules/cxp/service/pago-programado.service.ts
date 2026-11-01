@@ -24,6 +24,7 @@ import {
   RevertirPagoResponse,
 } from '../model/pago-programado';
 import { ServiciosCxp } from './ws-cxp';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /** Pagos a proveedores por transferencia y lotes de archivo bancario (PGTR). */
 @Injectable({ providedIn: 'root' })
@@ -35,7 +36,7 @@ export class PagoProgramadoService {
 
   /** Registra un pago. Queda en estado 1 y no mueve el saldo de la factura. */
   registrar(datos: RegistrarPagoRequest): Observable<RegistrarPagoResponse> {
-    return this.http.post<RegistrarPagoResponse>(ServiciosCxp.RS_PGTR, datos, this.httpOptions).pipe(
+    return this.http.post<RegistrarPagoResponse>(ServiciosCxp.RS_PGTR, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -80,7 +81,7 @@ export class PagoProgramadoService {
    * aprobación (no hay paso separado). Los pagos pasan a estado 2.
    */
   generarLote(datos: GenerarLoteRequest): Observable<LoteGeneradoResponse> {
-    return this.http.post<LoteGeneradoResponse>(`${ServiciosCxp.RS_PGTR}/lote`, datos, this.httpOptions).pipe(
+    return this.http.post<LoteGeneradoResponse>(`${ServiciosCxp.RS_PGTR}/lote`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -97,7 +98,8 @@ export class PagoProgramadoService {
    * como binario crudo en el body y el usuario en la query string.
    */
   cargarRespuesta(idLote: number, idUsuario: number, contenido: ArrayBuffer): Observable<RespuestaBancoResponse> {
-    const params = new HttpParams().set('idUsuario', idUsuario);
+    // U-3: el id va siempre del usuario de sesión; el parámetro `idUsuario` se conserva por compatibilidad pero ya no se usa.
+    const params = new HttpParams().set('idUsuario', idUsuarioSesionObligatorio());
     return this.http.post<RespuestaBancoResponse>(
       `${ServiciosCxp.RS_PGTR}/lote/${idLote}/respuesta`,
       contenido,
@@ -111,13 +113,13 @@ export class PagoProgramadoService {
    */
   confirmarManual(datos: ConfirmarManualRequest): Observable<ConfirmarManualResponse> {
     return this.http.post<ConfirmarManualResponse>(
-      `${ServiciosCxp.RS_PGTR}/confirmarManual`, datos, this.httpOptions
+      `${ServiciosCxp.RS_PGTR}/confirmarManual`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
   /** Anula un pago que todavía no confirmó el banco. */
   anular(idPago: number, datos: MotivoRequest): Observable<AnularPagoResponse> {
-    return this.http.post<AnularPagoResponse>(`${ServiciosCxp.RS_PGTR}/anular/${idPago}`, datos, this.httpOptions).pipe(
+    return this.http.post<AnularPagoResponse>(`${ServiciosCxp.RS_PGTR}/anular/${idPago}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -129,14 +131,14 @@ export class PagoProgramadoService {
    */
   asignarCuentaDestino(idPago: number, idCuentaDestinoTitular: number, idUsuario: number): Observable<any> {
     return this.http.post<any>(
-      `${ServiciosCxp.RS_PGTR}/cuentaDestino/${idPago}`, { idCuentaDestinoTitular, idUsuario }, this.httpOptions
+      `${ServiciosCxp.RS_PGTR}/cuentaDestino/${idPago}`, { idCuentaDestinoTitular, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
   /** Revierte un pago ya confirmado: deshace contabilidad y devuelve saldo a la factura. */
   revertirConfirmado(idPago: number, datos: MotivoRequest): Observable<RevertirPagoResponse> {
     return this.http.post<RevertirPagoResponse>(
-      `${ServiciosCxp.RS_PGTR}/revertirConfirmado/${idPago}`, datos, this.httpOptions
+      `${ServiciosCxp.RS_PGTR}/revertirConfirmado/${idPago}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
@@ -164,7 +166,7 @@ export class PagoProgramadoService {
    * cuáles (§7.2 del plan).
    */
   aprobar(datos: AprobarPagosRequest): Observable<AprobarPagosResponse> {
-    return this.http.post<AprobarPagosResponse>(`${ServiciosCxp.RS_PGTR}/aprobar`, datos, this.httpOptions).pipe(
+    return this.http.post<AprobarPagosResponse>(`${ServiciosCxp.RS_PGTR}/aprobar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }

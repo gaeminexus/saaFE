@@ -9,6 +9,7 @@ import { ClasificarProductosLotePayload, ProductosSinClasificarLote, ResultadoCl
 import { PlanCuenta } from '../../cnt/model/plan-cuenta';
 import { Empresa } from '../../../shared/model/empresa';
 import { environment } from '../../../../environments/environment';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 const PROCESS_URL = `${environment.apiUrl}/carga-documentos`;
 
@@ -71,7 +72,7 @@ export class CargaDocumentosService {
     idUsuario: number;
     idPeriodo: number;
   }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/cargarTxt`, payload, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<any>(`${PROCESS_URL}/cargarTxt`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /** Consulta resumen de una carga (cabecera + lineas con DocumentoCxp embebido) */
@@ -109,7 +110,7 @@ export class CargaDocumentosService {
     idUsuario: number;
     esReembolso?: number;
   }): Observable<DocumentoCxp | null> {
-    return this.http.post<DocumentoCxp>(`${PROCESS_URL}/cargarXml/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<DocumentoCxp>(`${PROCESS_URL}/cargarXml/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /**
@@ -126,7 +127,7 @@ export class CargaDocumentosService {
     idProductoIntermediario?: number;
     observacionAdicional?: string;
   }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/registrarBD/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<any>(`${PROCESS_URL}/registrarBD/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /**
@@ -135,7 +136,7 @@ export class CargaDocumentosService {
    * pagos programados vigentes; el cuerpo del error es `{error}`, mostrarlo tal cual.
    */
   anularContabilidad(idDocumentoCxp: number, payload: { motivo: string; idUsuario: number }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/anularContabilidad/${idDocumentoCxp}`, payload, this.httpOptions)
+    return this.http.post<any>(`${PROCESS_URL}/anularContabilidad/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -145,7 +146,7 @@ export class CargaDocumentosService {
    * el mensaje del backend se muestra tal cual.
    */
   anularDocumento(idDocumentoCxp: number, payload: { motivo: string; idUsuario: number }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/anularDocumento/${idDocumentoCxp}`, payload, this.httpOptions)
+    return this.http.post<any>(`${PROCESS_URL}/anularDocumento/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -155,7 +156,7 @@ export class CargaDocumentosService {
    * caso el documento NO vuelve solo a REGISTRADO_BD, queda en XML_CARGADO para reintentar.
    */
   recontabilizar(idDocumentoCxp: number, payload: { idUsuario: number }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/recontabilizar/${idDocumentoCxp}`, payload, this.httpOptions)
+    return this.http.post<any>(`${PROCESS_URL}/recontabilizar/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -165,7 +166,7 @@ export class CargaDocumentosService {
     idUsuario: number;
     productosConGrupo: ProductoNuevo[];
   }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/crearProductosYRegistrar/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<any>(`${PROCESS_URL}/crearProductosYRegistrar/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /**
@@ -178,12 +179,12 @@ export class CargaDocumentosService {
     idUsuario: number;
     esReembolso?: number;
   }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/resolverNovedad/${idDocumentoCxp}`, payload, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<any>(`${PROCESS_URL}/resolverNovedad/${idDocumentoCxp}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   /** FASE 5 — Revierte un documento ya registrado en BD */
   revertir(idDocumentoCxp: number, idUsuario: number): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/revertir/${idDocumentoCxp}`, { idUsuario }, this.httpOptions).pipe(catchError(this.handleError));
+    return this.http.post<any>(`${PROCESS_URL}/revertir/${idDocumentoCxp}`, { idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(catchError(this.handleError));
   }
 
   // ─── LOTES POR CARGA TXT (§6.1, §6.2, §6.3) ─────────────
@@ -195,7 +196,7 @@ export class CargaDocumentosService {
    * 202: {idCargaTxt, total, aProcesar, yaConXml, mensaje} · 409: {error}
    */
   descargarXmlLote(idCargaTxt: number, payload: { idEmpresa: number; idUsuario: number }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/descargarXmlLote/${idCargaTxt}`, payload, this.httpOptions)
+    return this.http.post<any>(`${PROCESS_URL}/descargarXmlLote/${idCargaTxt}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleErrorConEstado));
   }
 
@@ -204,7 +205,7 @@ export class CargaDocumentosService {
    * 202: {idCargaTxt, aProcesar, sinXml, yaRegistrados, mensaje} · 409: {error}
    */
   registrarLote(idCargaTxt: number, payload: { idEmpresa: number; idUsuario: number }): Observable<any> {
-    return this.http.post<any>(`${PROCESS_URL}/registrarLote/${idCargaTxt}`, payload, this.httpOptions)
+    return this.http.post<any>(`${PROCESS_URL}/registrarLote/${idCargaTxt}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleErrorConEstado));
   }
 
@@ -235,14 +236,14 @@ export class CargaDocumentosService {
    */
   marcarReembolso(idDocumentoCxp: number, esReembolso: boolean, idUsuario: number): Observable<any> {
     return this.http.post(`${PROCESS_URL}/marcarReembolso/${idDocumentoCxp}`,
-      { esReembolso: esReembolso ? 1 : 0, idUsuario }, this.httpOptions)
+      { esReembolso: esReembolso ? 1 : 0, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleErrorConEstado));
   }
 
   /** Contabiliza una factura de reembolso pendiente (requiere sustentos clasificados y cuadratura). */
   contabilizarReembolso(idFacturaCompra: number, idEmpresa: number, idUsuario: number): Observable<any> {
     return this.http.post(`${PROCESS_URL}/contabilizarReembolso/${idFacturaCompra}`,
-      { idEmpresa, idUsuario }, this.httpOptions)
+      { idEmpresa, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

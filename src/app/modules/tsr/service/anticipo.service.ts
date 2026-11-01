@@ -183,7 +183,7 @@ export class AnticipoService {
   }
 
   procesarProveedor(payload: AnticipoRequest): Observable<AnticipoResponse> {
-    return this.http.post<AnticipoResponse>(`${ServiciosTsr.RS_ANTP}/procesar`, payload, this.httpOptions).pipe(
+    return this.http.post<AnticipoResponse>(`${ServiciosTsr.RS_ANTP}/procesar`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError)
     );
   }
@@ -228,7 +228,7 @@ export class AnticipoService {
 
   anularProveedor(id: number, payload: AnularAnticipoRequest): Observable<VerificacionAnulacionAnticipo> {
     return this.http.post<VerificacionAnulacionAnticipo>(
-      `${ServiciosTsr.RS_ANTP}/anular/${id}`, payload, this.httpOptions
+      `${ServiciosTsr.RS_ANTP}/anular/${id}`, { ...payload, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 

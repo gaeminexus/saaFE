@@ -9,6 +9,7 @@ import {
   NotaDebitoPendiente,
 } from '../model/nota-credito-saldo';
 import { ServiciosCxp } from './ws-cxp';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /** Saldo a favor de las notas de crédito de compra y su cruce contra otra factura — docs/cxp/NC-EXCEDE-SALDO-FACTURA.md §4 y §6. */
 @Injectable({ providedIn: 'root' })
@@ -42,7 +43,7 @@ export class NotaCreditoSaldoService {
   /** Cruza saldo de la NC contra otra factura del mismo proveedor (sin asiento). */
   cruzar(datos: CruzarNotaCreditoRequest): Observable<CruzarNotaCreditoResponse> {
     return this.http.post<CruzarNotaCreditoResponse>(
-      `${ServiciosCxp.RS_APLP}/cruzarNotaCredito`, datos, this.httpOptions
+      `${ServiciosCxp.RS_APLP}/cruzarNotaCredito`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions
     ).pipe(catchError(this.handleError));
   }
 
