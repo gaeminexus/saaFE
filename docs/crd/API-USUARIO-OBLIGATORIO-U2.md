@@ -37,3 +37,19 @@ Ubicar cada llamada de las §1–§3 en `src/app/modules/{crd,cnt,asoprep}` y aj
 llamador. Si un endpoint no se encuentra o su ruta exacta difiere, verificar contra el REST del BE
 (`PrestamoRest`, `AsientoRest`, `AsoprepGenerales`, `DistribucionBandaRest`, `CierreCarteraRest`,
 `GeneracionArchivoPetroRest`) y reportarlo. **BE y FE van en el MISMO EAR.**
+
+## 6. Agregado (2026-11-01, segunda tanda de U-2, saaBE `1fc24033`): más `?usuario=` NUEVOS y obligatorios
+| Endpoint | Nota |
+|---|---|
+| `POST /rest/asgn/revalidarCarga/{idCarga}?usuario=` | Revalidar una carga Petro/ARCH |
+| `GET /rest/asnt/generaReversion/{idAsiento}?usuario=` | Reversión de asiento (cnt). Es un GET que GRABA: el reverso queda a nombre de este usuario |
+| `GET /rest/asnt/generaCopia/{idAsiento}?usuario=` | Copia de asiento (cnt). Ídem |
+
+Sin cambio de firma, pero ahora el usuario tiene que EXISTIR (400 si no):
+- `PUT`/`POST /rest/asnt`: el asiento manual, campo `nombreUsuario`.
+- `POST`/`PUT /rest/avpc` y `/avpc/batch`: `usuarioRegistro` de cada afectación, sin `''`.
+- `POST /rest/gnap`: `usuarioGeneracion`/`usuarioIngreso`.
+
+Sin llamador en el FE (no tocar): `/asgn/procesarCargaPetro`, `/prst/contabilizarDesembolso(s)`, `/gnap/crearCabecera`.
+`CargaArchivoService.procesarCargaPetro` del FE apunta a `/crar/procesarCargaPetro`, que no existe: se
+puede borrar.
