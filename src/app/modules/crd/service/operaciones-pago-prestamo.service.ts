@@ -34,6 +34,7 @@ import {
 } from '../model/simuladores/simulador-prestamo-existente';
 import { SolicitudReporteSimulacion } from '../model/simuladores/reporte-simulacion';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 /**
  * Los 8 endpoints de pago de préstamos documentados en
@@ -327,7 +328,9 @@ export class OperacionesPagoPrestamoService {
 
     let params = new HttpParams();
     if (fecha) params = params.set('fecha', fecha);
-    if (usuario) params = params.set('usuario', usuario);
+    // U-2: el usuario de sesión es obligatorio (docs/crd/API-USUARIO-OBLIGATORIO-U2.md §2); se manda siempre.
+    // El parámetro `usuario` se conserva por compatibilidad con los llamadores, pero ya no se usa.
+    params = params.set('usuario', usuarioSesion());
 
     // El proceso no lleva body; los dos parámetros van en la query string.
     return this.http

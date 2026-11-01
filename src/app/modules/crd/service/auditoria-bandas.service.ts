@@ -18,6 +18,7 @@ import {
   ResumenJerarquicoConcepto,
 } from '../model/auditoria-bandas';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 /**
  * Auditoría de distribución en bandas (`docs/crd/API-AUDITORIA-BANDAS.md`). Todo el contrato es
@@ -81,7 +82,9 @@ export class AuditoriaBandasService {
    */
   recalcularDistribucion(origen: string, idOrigen: number, usuario?: string): Observable<RecalculoDistribucionBanda> {
     let params = new HttpParams().set('origen', origen).set('idOrigen', String(idOrigen));
-    if (usuario) params = params.set('usuario', usuario);
+    // U-2: el usuario de sesión es obligatorio (docs/crd/API-USUARIO-OBLIGATORIO-U2.md §2); se manda siempre.
+    // El parámetro `usuario` se conserva por compatibilidad con el llamador, pero ya no se usa.
+    params = params.set('usuario', usuarioSesion());
     return this.http
       .post<RecalculoDistribucionBanda>(`${ServiciosCrd.RS_DSBN}/recalcularDistribucion`, null, { params })
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => this.normalizarError(error))));

@@ -5,6 +5,7 @@ import { Prestamo } from '../model/prestamo';
 import { PrestamoSustituible, TipoOperacionPrestamo } from '../model/prestamo-sustituible';
 import { SaldoPrestamoResumen } from '../model/saldo-prestamo-resumen';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -80,7 +81,8 @@ export class PrestamoService {
   cargarTablaExcel(idPrestamo: number, archivo: File): Observable<Prestamo | null> {
     const formData = new FormData();
     formData.append('fileData', archivo, archivo.name);
-    const url = `${ServiciosCrd.RS_PRST}/cargarTablaExcel/${idPrestamo}`;
+    // U-2: el backend exige el usuario de sesión (docs/crd/API-USUARIO-OBLIGATORIO-U2.md §1).
+    const url = `${ServiciosCrd.RS_PRST}/cargarTablaExcel/${idPrestamo}?usuario=${encodeURIComponent(usuarioSesion())}`;
     // Sin Content-Type para que el browser lo establezca automáticamente con boundary
     return this.http.post<Prestamo>(url, formData).pipe(catchError(this.handleError));
   }

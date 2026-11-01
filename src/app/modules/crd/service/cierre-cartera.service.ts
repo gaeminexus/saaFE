@@ -8,6 +8,7 @@ import {
   DatosReverso,
   SolicitudCierreCartera,
 } from '../model/cierre-cartera/cierre-cartera.model';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 /**
  * Servicio HTTP del cierre mensual de cartera (Fase 2).
@@ -35,8 +36,9 @@ export class CierreCarteraService {
 
   /** POST /ejecutar — calcula, graba la corrida con su snapshot y genera los asientos. §2.2 */
   ejecutar(solicitud: SolicitudCierreCartera): Observable<CierreCartera> {
+    // U-2: el usuario de sesión va siempre (docs/crd/API-USUARIO-OBLIGATORIO-U2.md §2), pase lo que pase la pantalla.
     return this.http
-      .post<CierreCartera>(`${this.base}/ejecutar`, solicitud)
+      .post<CierreCartera>(`${this.base}/ejecutar`, { ...solicitud, usuario: usuarioSesion() })
       .pipe(catchError(this.handleError));
   }
 
@@ -53,8 +55,8 @@ export class CierreCarteraService {
 
   /** POST /reversar/{idCorrida} — anula los asientos de una corrida y libera el período. §2.4 */
   reversar(idCorrida: number, datos: DatosReverso = {}): Observable<CierreCartera> {
-    let params = new HttpParams();
-    if (datos.usuario) params = params.set('usuario', datos.usuario);
+    // U-2: el usuario de sesión va siempre; `datos.usuario` ya no se usa.
+    let params = new HttpParams().set('usuario', usuarioSesion());
     if (datos.ip) params = params.set('ip', datos.ip);
     if (datos.motivo) params = params.set('motivo', datos.motivo);
     return this.http
@@ -72,8 +74,9 @@ export class CierreCarteraService {
     let params = new HttpParams()
       .set('idEmpresa', idEmpresa)
       .set('anio', anio)
-      .set('mes', mes);
-    if (datos.usuario) params = params.set('usuario', datos.usuario);
+      .set('mes', mes)
+      // U-2: el usuario de sesión va siempre; `datos.usuario` ya no se usa.
+      .set('usuario', usuarioSesion());
     if (datos.ip) params = params.set('ip', datos.ip);
     if (datos.motivo) params = params.set('motivo', datos.motivo);
     return this.http
