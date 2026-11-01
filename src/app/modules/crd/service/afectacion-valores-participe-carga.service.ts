@@ -7,6 +7,7 @@ import {
   RespuestaOpcionesAporte,
 } from '../model/afectacion-valores-participe-carga';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root'
@@ -30,13 +31,14 @@ export class AfectacionValoresParticipeCargaService {
 
   add(datos: any): Observable<AfectacionValoresParticipeCarga | null> {
     return this.http
-      .post<AfectacionValoresParticipeCarga>(ServiciosCrd.RS_AVPC, datos, this.httpOptions)
+      // U-2 §6: `usuarioRegistro` es siempre el usuario de sesión (nunca '' ni un id).
+      .post<AfectacionValoresParticipeCarga>(ServiciosCrd.RS_AVPC, { ...datos, usuarioRegistro: usuarioSesion() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
   update(datos: any): Observable<AfectacionValoresParticipeCarga | null> {
     return this.http
-      .put<AfectacionValoresParticipeCarga>(ServiciosCrd.RS_AVPC, datos, this.httpOptions)
+      .put<AfectacionValoresParticipeCarga>(ServiciosCrd.RS_AVPC, { ...datos, usuarioRegistro: usuarioSesion() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -75,8 +77,9 @@ export class AfectacionValoresParticipeCargaService {
    */
   batch(filas: AfectacionValoresParticipeCarga[]): Observable<ResultadoBatchAfectacion | null> {
     const url = `${ServiciosCrd.RS_AVPC}/batch`;
+    const usuario = usuarioSesion();
     return this.http
-      .post<ResultadoBatchAfectacion>(url, filas, this.httpOptions)
+      .post<ResultadoBatchAfectacion>(url, filas.map((f) => ({ ...f, usuarioRegistro: usuario })), this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

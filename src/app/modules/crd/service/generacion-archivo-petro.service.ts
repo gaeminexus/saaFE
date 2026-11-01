@@ -8,6 +8,7 @@ import {
   ResultadoGeneracionPetro,
 } from '../model/generacion-archivo-petro';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -31,7 +32,12 @@ export class GeneracionArchivoPetroService {
 
   add(datos: any): Observable<GeneracionArchivoPetro | null> {
     return this.http
-      .post<GeneracionArchivoPetro>(ServiciosCrd.RS_GNAP, datos, this.httpOptions)
+      // U-2 §6: quien genera es siempre el usuario de sesión.
+      .post<GeneracionArchivoPetro>(
+        ServiciosCrd.RS_GNAP,
+        { ...datos, usuarioGeneracion: usuarioSesion(), usuarioIngreso: usuarioSesion() },
+        this.httpOptions,
+      )
       .pipe(catchError(this.handleError));
   }
 

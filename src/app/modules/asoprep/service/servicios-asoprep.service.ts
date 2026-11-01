@@ -20,6 +20,7 @@ import {
   ReversarRecepcionResponse,
   TransferenciaDTO,
 } from '../../crd/model/cobro-petro';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root'
@@ -137,7 +138,8 @@ export class ServiciosAsoprepService {
    * ya guardadas — ver el contrato completo en `ResumenRevalidacionCarga`.
    */
   revalidarCarga(idCargaArchivo: number): Observable<ResumenRevalidacionCarga | null> {
-    const url = `${ServiciosAsoprep.RS_ASGN}/revalidarCarga/${idCargaArchivo}`;
+    // U-2 §6: el usuario de sesión es obligatorio (docs/crd/API-USUARIO-OBLIGATORIO-U2.md).
+    const url = `${ServiciosAsoprep.RS_ASGN}/revalidarCarga/${idCargaArchivo}?usuario=${encodeURIComponent(usuarioSesion())}`;
     return this.http.post<ResumenRevalidacionCarga>(url, {}).pipe(catchError(this.handleError));
   }
 

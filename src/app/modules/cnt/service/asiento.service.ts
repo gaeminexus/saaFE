@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 
 import { Asiento, CrearAsiento, EstadoAsiento } from '../model/asiento';
 import { ServiciosCnt } from '../service/ws-cnt';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -52,7 +53,8 @@ export class AsientoService {
    */
   generaReversion(idAsiento: number): Observable<Asiento> {
     const wsGetById = '/generaReversion';
-    const url = `${this.baseUrl}${wsGetById}/${idAsiento}`;
+    // U-2 §6: es un GET que GRABA; el reverso queda a nombre del usuario de sesión.
+    const url = `${this.baseUrl}${wsGetById}/${idAsiento}?usuario=${encodeURIComponent(usuarioSesion())}`;
     return this.http
       .get<Asiento>(url)
       .pipe(catchError(this.handleError));
@@ -63,7 +65,8 @@ export class AsientoService {
    */
   generaCopia(idAsiento: number): Observable<Asiento> {
     const wsGetById = '/generaCopia';
-    const url = `${this.baseUrl}${wsGetById}/${idAsiento}`;
+    // U-2 §6: es un GET que GRABA; la copia queda a nombre del usuario de sesión.
+    const url = `${this.baseUrl}${wsGetById}/${idAsiento}?usuario=${encodeURIComponent(usuarioSesion())}`;
     return this.http
       .get<Asiento>(url)
       .pipe(catchError(this.handleError));
@@ -83,8 +86,9 @@ export class AsientoService {
    * Crear nuevo asiento
    */
   crearAsiento(datosAsiento: CrearAsiento): Observable<Asiento> {
+    // U-2 §6: el asiento manual lleva siempre el usuario de sesión en `nombreUsuario`.
     return this.http
-      .post<Asiento>(this.baseUrl, datosAsiento, this.httpOptions)
+      .post<Asiento>(this.baseUrl, { ...datosAsiento, nombreUsuario: usuarioSesion() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 
@@ -94,9 +98,14 @@ export class AsientoService {
    */
   actualizarAsiento(id: number, datosAsiento: any): Observable<Asiento> {
     // Asegurar que el código esté en el body
+    // U-2 §6: se conserva el usuario del asiento si es uno real; si viene vacío o es un relleno
+    // ('sistema'/'SYSTEM'), el asiento pasa a nombre del usuario de sesión.
+    const previo = String(datosAsiento?.nombreUsuario ?? '').trim();
+    const esRelleno = !previo || ['SISTEMA', 'SYSTEM'].includes(previo.toUpperCase());
     const asientoConCodigo = {
       ...datosAsiento,
       codigo: id,
+      nombreUsuario: esRelleno ? usuarioSesion() : previo,
     };
 
     return this.http
