@@ -58,6 +58,7 @@ import { forkJoin, of, catchError, map, switchMap, Observable } from 'rxjs';
 import { AfectacionFinancieraCuotasDialogComponent } from '../../../../dialog/afectacion-financiera-cuotas-dialog/afectacion-financiera-cuotas-dialog.component';
 import { RevalidarCargaDialogComponent } from '../../../../dialog/revalidar-carga-dialog/revalidar-carga-dialog.component';
 import { ProcesoArchivoErrorDialogComponent } from '../../../../dialog/archivos-petro/proceso-archivo-error-dialog/proceso-archivo-error-dialog.component';
+import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 
 const RUBRO_ESTADOS_CARGA = 166;
 const RUBRO_NOVEDADES_CARGA = 169;
@@ -1065,8 +1066,10 @@ export class DetalleConsultaCargaComponent implements OnInit, AfterViewInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
+        // Quien pulsa «Procesar»; se lee antes de marcar el archivo como procesado.
+        const usuario = usuarioSesion();
         this.archivoYaProcesado.set(true);
-        this.serviciosAsoprepService.aplicarPagosArchivoPetro(this.cargaArchivo!.codigo!).subscribe({
+        this.serviciosAsoprepService.aplicarPagosArchivoPetro(this.cargaArchivo!.codigo!, usuario).subscribe({
           next: () => {
             this.snackBar.open('Archivo procesado exitosamente. Los registros han sido generados en el sistema.', 'Cerrar', { duration: 5000 });
           },

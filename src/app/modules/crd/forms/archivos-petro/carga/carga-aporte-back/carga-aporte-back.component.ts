@@ -31,6 +31,7 @@ import { ExportService } from '../../../../../../shared/services/export.service'
 import { NovedadParticipeCargaService } from '../../../../service/novedad-participe-carga.service';
 import { NovedadParticipeCarga } from '../../../../model/novedad-participe-carga';
 import { catchError, forkJoin, map, of } from 'rxjs';
+import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 
 const RUBRO_NOVEDAES_CARGA = 169;
 
@@ -731,9 +732,11 @@ export class CargaAporteBackComponent implements OnInit {
       return;
     }
 
+    // Quien pulsa «Procesar»; sin usuario `usuarioSesion()` cierra la sesión y no se llega a enviar.
+    const usuario = usuarioSesion();
     this.isLoadingData.set(true);
 
-    this.serviciosAsoprep.aplicarPagosArchivoPetro(codigoCarga).subscribe({
+    this.serviciosAsoprep.aplicarPagosArchivoPetro(codigoCarga, usuario).subscribe({
       next: () => {
         this.isLoadingData.set(false);
         this.archivoProcesado.set(true);

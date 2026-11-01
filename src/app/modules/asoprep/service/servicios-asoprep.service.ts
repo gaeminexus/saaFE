@@ -100,8 +100,12 @@ export class ServiciosAsoprepService {
       return this.http.get<ParticipeXCargaArchivo>(url).pipe(catchError(this.handleError));
   }
 
-  aplicarPagosArchivoPetro(idCargaArchivo: number): Observable<any | null> {
-    const wsEndpoint = `/aplicarPagosArchivoPetro/${idCargaArchivo}`;
+  /**
+   * Procesa la carga a nombre de quien pulsa «Procesar» (`docs/crd/API-PROCESAR-CARGA-CON-USUARIO.md`).
+   * `usuario` es obligatorio: sin él el backend responde 400 y no procesa nada.
+   */
+  aplicarPagosArchivoPetro(idCargaArchivo: number, usuario: string): Observable<any | null> {
+    const wsEndpoint = `/aplicarPagosArchivoPetro/${idCargaArchivo}?usuario=${encodeURIComponent(usuario)}`;
     const url = `${ServiciosAsoprep.RS_ASGN}${wsEndpoint}`;
     return this.http.post<any>(url, {}).pipe(catchError(this.handleError));
   }

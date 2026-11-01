@@ -13,6 +13,7 @@ import { FuncionesDatosService } from '../../../../../../shared/services/funcion
 import { ConfirmDialogComponent } from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { PermisosService } from '../../../../../../shared/services/permisos.service';
 import { Permisos } from '../../../../../../shared/model/permisos';
+import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 
 interface MesCirculo {
   numero: number;
@@ -308,11 +309,13 @@ export class ConsultaArchivosPetroComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (!result) return;
 
+      // Quien pulsa «Procesar»; se lee antes de marcar la carga como en proceso.
+      const usuario = usuarioSesion();
       const procesando = new Set(this.procesandoCodigos());
       procesando.add(carga.codigo!);
       this.procesandoCodigos.set(procesando);
 
-      this.serviciosAsoprepService.aplicarPagosArchivoPetro(carga.codigo!).subscribe({
+      this.serviciosAsoprepService.aplicarPagosArchivoPetro(carga.codigo!, usuario).subscribe({
         next: () => {
           const actualizado = new Set(this.procesandoCodigos());
           actualizado.delete(carga.codigo!);
