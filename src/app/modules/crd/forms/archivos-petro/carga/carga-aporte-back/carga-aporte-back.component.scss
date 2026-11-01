@@ -1352,3 +1352,38 @@ $saa-gradient: linear-gradient(135deg, $saa-primary 0%, $saa-secondary 100%);
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
 }
+
+// Aviso con el formato esperado de la respuesta de ARCH
+.arch-formato-info {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  margin-top: 1rem;
+  background: #eef2ff;
+  border: 1px solid $saa-primary;
+  border-radius: 0.5rem;
+
+  .arch-formato-icon {
+    color: $saa-primary;
+    flex-shrink: 0;
+  }
+
+  .arch-formato-body {
+    flex: 1;
+    font-size: 13px;
+    color: $saa-text-primary;
+    line-height: 1.5;
+
+    ul {
+      margin: 0.5rem 0 0.75rem 1.25rem;
+      padding: 0;
+    }
+
+    code {
+      word-break: break-all;
+    }
+  }
+}

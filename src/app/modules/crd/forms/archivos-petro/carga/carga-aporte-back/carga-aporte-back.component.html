@@ -140,7 +140,7 @@
                     <input
                       type="file"
                       #fileInput
-                      accept=".txt"
+                      [accept]="extensionesAceptadas"
                       (change)="onFileSelected($event)"
                       style="display: none;">
 
@@ -150,10 +150,28 @@
                       class="upload-button"
                       (click)="fileInput.click()">
                       <mat-icon>upload_file</mat-icon>
-                      <span>Seleccionar Archivo TXT</span>
+                      <span>{{ esFilialArch ? 'Seleccionar Archivo' : 'Seleccionar Archivo TXT' }}</span>
                     </button>
                   }
                 </div>
+
+                @if (esFilialArch) {
+                  <div class="arch-formato-info">
+                    <mat-icon class="arch-formato-icon">info</mat-icon>
+                    <div class="arch-formato-body">
+                      <strong>Formato esperado para ARCH (Excel, CSV o TXT)</strong>
+                      <ul>
+                        <li>4 columnas, en este orden: <code>IDENTIFICACION;NOMBRES;MONTO_CALCULADO;MONTO_DESCONTADO</code>.</li>
+                        <li>La identificación debe ir como texto, para no perder el 0 inicial.</li>
+                        <li>Una fila por partícipe, copiada del PDF de ARCH, sin la fila de Total.</li>
+                      </ul>
+                      <button mat-stroked-button color="primary" type="button" (click)="descargarPlantillaArch()">
+                        <mat-icon>download</mat-icon>
+                        <span>Descargar plantilla</span>
+                      </button>
+                    </div>
+                  </div>
+                }
 
                 @if (nombreArchivo) {
                   <div class="file-selected-wrapper">

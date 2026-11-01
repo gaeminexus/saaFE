@@ -34,6 +34,11 @@ import { catchError, forkJoin, map, of } from 'rxjs';
 
 const RUBRO_NOVEDAES_CARGA = 169;
 
+// No hay constante compartida de filiales en el FE: ARCH es la filial con código 2.
+const CODIGO_FILIAL_ARCH = 2;
+const EXTENSIONES_ARCH = ['.xlsx', '.xls', '.csv', '.txt'];
+const ENCABEZADO_PLANTILLA_ARCH = 'IDENTIFICACION;NOMBRES;MONTO_CALCULADO;MONTO_DESCONTADO';
+
 interface Mes {
   valor: number;
   nombre: string;
@@ -369,9 +374,59 @@ export class CargaAporteBackComponent implements OnInit {
     }
   }
 
+  /** ARCH (filial 2) responde en Excel/CSV/TXT; Petrocomercial sigue solo con TXT. */
+  get esFilialArch(): boolean {
+    return this.filialSeleccionada() === CODIGO_FILIAL_ARCH;
+  }
+
+  get extensionesAceptadas(): string {
+    return this.esFilialArch ? EXTENSIONES_ARCH.join(',') : '.txt';
+  }
+
+  /** Plantilla de ARCH generada en el navegador: solo la línea de encabezado, sin backend. */
+  descargarPlantillaArch(): void {
+    const blob = new Blob([ENCABEZADO_PLANTILLA_ARCH + '\r\n'], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = 'plantilla-respuesta-arch.csv';
+    enlace.click();
+    URL.revokeObjectURL(url);
+  }
+
   private setSelectedFile(file: File): void {
-    // Validar extensión del archivo
     const fileName = file.name.toLowerCase();
+
+    if (this.esFilialArch) {
+      // ARCH: se valida solo por extensión; el MIME de Excel/CSV varía según el navegador.
+      if (!EXTENSIONES_ARCH.some(ext => fileName.endsWith(ext))) {
+        this.mensajeErrorArchivo = `Archivo rechazado: "${file.name}". Solo se permiten archivos ${EXTENSIONES_ARCH.join(', ')}`;
+        this.archivoValido = false;
+        this.nombreArchivo = file.name;
+        this.archivoSeleccionado = file;
+        this.snackBar.open(
+          `❌ ERROR: Solo se permiten archivos ${EXTENSIONES_ARCH.join(', ')}`,
+          'Cerrar',
+          {
+            duration: 5000,
+            panelClass: ['error-snackbar']
+          }
+        );
+        return;
+      }
+      this.mensajeErrorArchivo = '';
+      this.archivoValido = true;
+      this.nombreArchivo = file.name;
+      this.archivoSeleccionado = file;
+      this.snackBar.open(
+        `Archivo seleccionado: ${file.name}`,
+        'Cerrar',
+        { duration: 3000 }
+      );
+      return;
+    }
+
+    // Validar extensión del archivo
     if (!fileName.endsWith('.txt')) {
       this.mensajeErrorArchivo = `Archivo rechazado: "${file.name}". Solo se permiten archivos con extensión .txt`;
       this.archivoValido = false;
