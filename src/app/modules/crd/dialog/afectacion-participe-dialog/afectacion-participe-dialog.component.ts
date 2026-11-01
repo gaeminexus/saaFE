@@ -37,6 +37,7 @@ import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { ComponentesPagados, SaldoPrestamoService } from '../../service/saldo-prestamo.service';
 import { AfectacionValoresParticipeCargaService } from '../../service/afectacion-valores-participe-carga.service';
 import { ServiciosAsoprepService } from '../../../asoprep/service/servicios-asoprep.service';
+import { criterioEntidadPorCodigoPetro } from '../../util/rol-participe';
 
 export interface AfectacionParticipeDialogData {
   idCarga: number;
@@ -262,14 +263,8 @@ export class AfectacionParticipeDialogComponent implements OnInit {
 
   private cargarPrestamosAfectables(afectaciones: AfectacionEtiquetada[]): void {
     const criteriosEntidad: DatosBusqueda[] = [];
-    const dbCodigoPetro = new DatosBusqueda();
-    dbCodigoPetro.asignaUnCampoSinTrunc(
-      TipoDatosBusqueda.LONG,
-      'rolPetroComercial',
-      String(this.data.codigoPetro),
-      TipoComandosBusqueda.IGUAL
-    );
-    criteriosEntidad.push(dbCodigoPetro);
+    // ARCH: el codigoPetro puede ser el rol técnico (9000000 + ENTDCDGO), que se resuelve por código.
+    criteriosEntidad.push(criterioEntidadPorCodigoPetro(this.data.codigoPetro));
 
     this.entidadService.selectByCriteria(criteriosEntidad).subscribe({
       next: (entidadesData) => {
