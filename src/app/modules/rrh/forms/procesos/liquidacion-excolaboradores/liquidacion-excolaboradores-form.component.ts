@@ -242,6 +242,10 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
           })),
         );
         this.cargando.set(false);
+        // La lista ya no sincroniza con Tesorería: al abrir una EN_TESORERIA se consulta el pago una vez.
+        if (liquidacion && Number(liquidacion.estado) === EstadoLiquidacionExterna.EN_TESORERIA) {
+          this.sincronizarAlAbrir(liquidacion.codigo);
+        }
       },
       error: (err) => {
         this.cargando.set(false);
@@ -517,6 +521,23 @@ export class LiquidacionExcolaboradoresFormComponent implements OnInit {
           },
         });
       });
+  }
+
+  /** Consulta silenciosa al abrir: solo avisa y refresca si el estado cambió; el botón «Actualizar estado» sigue disponible. */
+  private sincronizarAlAbrir(codigo: number): void {
+    this.liquidacionExternaService.sincronizarPago(codigo).subscribe({
+      next: (actualizada) => {
+        if (Number(actualizada?.estado) !== EstadoLiquidacionExterna.EN_TESORERIA) {
+          this.avisar(
+            Number(actualizada?.estado) === EstadoLiquidacionExterna.PAGADA
+              ? 'Pago confirmado por tesorería. Liquidación pagada.'
+              : 'El estado de la liquidación se actualizó.',
+          );
+          this.recargar(codigo);
+        }
+      },
+      error: () => undefined,
+    });
   }
 
   sincronizarPago(): void {

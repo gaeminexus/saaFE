@@ -17,7 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EstadoLista } from '../estado-lista.service';
-import { ColumnaTabla, TonoPastilla } from '../modelo-formulario';
+import { ColumnaTabla, TonoPastilla, AccionFilaTabla } from '../modelo-formulario';
 
 /**
  * Tabla de lectura del módulo: cabecera fija, filtro sobre todas las columnas, orden por
@@ -53,6 +53,8 @@ export class TablaRrhComponent implements AfterViewInit {
   @Input() permiteEditar = true;
   @Input() permiteBorrar = false;
   @Input() mensajeVacio = 'Todavía no hay registros.';
+  /** Acción extra por fila (opt-in); su clic sale por `accionExtraClick`. */
+  @Input() accionExtra: AccionFilaTabla | null = null;
 
   /** Estado con el que se abre la lista: el que tenía al salir. */
   @Input() set estadoInicial(estado: EstadoLista | null) {
@@ -66,6 +68,7 @@ export class TablaRrhComponent implements AfterViewInit {
 
   @Output() editar = new EventEmitter<any>();
   @Output() borrar = new EventEmitter<any>();
+  @Output() accionExtraClick = new EventEmitter<any>();
   @Output() estadoCambia = new EventEmitter<Partial<EstadoLista>>();
 
   @ViewChild('marco') marco?: ElementRef<HTMLDivElement>;

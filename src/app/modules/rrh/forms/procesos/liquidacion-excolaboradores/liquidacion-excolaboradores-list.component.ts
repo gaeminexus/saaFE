@@ -18,7 +18,7 @@ import { PermisosRrh } from '../../../model/permisos-rrh';
 import { LiquidacionExternaService } from '../../../service/liquidacion-externa.service';
 import { EstadoLista, EstadoListaService } from '../../comunes/estado-lista.service';
 import { mensajeDeError } from '../../comunes/mensajes';
-import { ColumnaTabla, TonoPastilla } from '../../comunes/modelo-formulario';
+import { AccionFilaTabla, ColumnaTabla, TonoPastilla } from '../../comunes/modelo-formulario';
 import { TablaRrhComponent } from '../../comunes/tabla-rrh/tabla-rrh.component';
 import { opcionesAviso } from '../../comunes/avisos';
 
@@ -54,6 +54,20 @@ export class LiquidacionExcolaboradoresListComponent implements OnInit {
     const filas = this.filas();
     return estado === null ? filas : filas.filter((f) => Number(f.estado) === estado);
   });
+
+  /**
+   * «Actualizar estado»: la lista ya no sincroniza con Tesorería al cargarse (contrato U-4 rhh §1). En una
+   * liquidación EN_TESORERIA este botón consulta el pago y la pasa a PAGADA (o la devuelve a REGISTRADA si el
+   * pago se rechazó o anuló).
+   */
+  readonly accionActualizarEstado: AccionFilaTabla = {
+    icono: 'sync',
+    tooltip: 'Actualizar estado',
+    visible: (fila) => Number(fila.estado) === EstadoLiquidacionExterna.EN_TESORERIA,
+    ocupada: (fila) => this.sincronizando().has(fila.codigo),
+  };
+
+  readonly sincronizando = signal<Set<number>>(new Set());
 
   estadoLista: EstadoLista = { filtro: '', ordenPor: null, ascendente: true, scroll: 0, destacado: null };
 
@@ -135,6 +149,41 @@ export class LiquidacionExcolaboradoresListComponent implements OnInit {
       () => this.router.navigate(['/menurecursoshumanos/procesos/liquidaciones-excolaboradores', fila.codigo]),
       (mensaje) => this.avisar(mensaje.toUpperCase(), true),
     );
+  }
+
+  actualizarEstado(fila: any): void {
+    const codigo = Number(fila.codigo);
+    if (this.sincronizando().has(codigo)) return;
+    this.sincronizando.update((s) => new Set(s).add(codigo));
+
+    this.liquidacionExternaService.sincronizarPago(codigo).subscribe({
+      next: (actualizada) => {
+        this.sincronizando.update((s) => {
+          const n = new Set(s);
+          n.delete(codigo);
+          return n;
+        });
+        if (actualizada) {
+          const nueva = this.formatear([actualizada])[0];
+          this.filas.update((filas) => filas.map((f) => (Number(f.codigo) === codigo ? nueva : f)));
+        }
+        if (Number(actualizada?.estado) === EstadoLiquidacionExterna.PAGADA) {
+          this.avisar('Pago confirmado por tesorería. Liquidación pagada.');
+        } else if (Number(actualizada?.estado) === EstadoLiquidacionExterna.EN_TESORERIA) {
+          this.avisar('Todavía no hay confirmación de tesorería para este pago.');
+        } else {
+          this.avisar('Estado actualizado.');
+        }
+      },
+      error: (err) => {
+        this.sincronizando.update((s) => {
+          const n = new Set(s);
+          n.delete(codigo);
+          return n;
+        });
+        this.avisar(mensajeDeError(err, 'No se pudo actualizar el estado del pago.'), true);
+      },
+    });
   }
 
   recordarEstado(estado: Partial<EstadoLista>): void {

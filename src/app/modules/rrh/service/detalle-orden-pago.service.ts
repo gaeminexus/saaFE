@@ -4,6 +4,7 @@ import { Observable, catchError, of, throwError } from 'rxjs';
 import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 import { DetalleOrdenPagoNomina } from '../model/orden-pago-nomina';
 import { ServiciosRhh } from './ws-rrh';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /** CRUD de RHH.DRPG, las líneas de una orden de pago. */
 @Injectable({
@@ -65,7 +66,7 @@ export class DetalleOrdenPagoNominaService {
   reenviar(idDetalle: number, idUsuario: number): Observable<DetalleOrdenPagoNomina> {
     const url = `${ServiciosRhh.RS_DRPG}/reenviar/${idDetalle}`;
     // Cuerpo exacto del contrato §3.4/§4: solo `idUsuario`, sin usuarioRegistro.
-    const cuerpo = { idUsuario };
+    const cuerpo = { idUsuario: idUsuarioSesionObligatorio() };
     return this.http
       .post<DetalleOrdenPagoNomina>(url, cuerpo, this.httpOptions)
       .pipe(catchError((error) => throwError(() => error.error || error)));

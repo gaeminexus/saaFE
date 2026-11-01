@@ -46,6 +46,13 @@
             </td>
           }
           <td class="al-centro columna-acciones">
+            @if (accionExtra && (!accionExtra.visible || accionExtra.visible(fila))) {
+              <button mat-icon-button type="button" (click)="accionExtraClick.emit(fila)"
+                      [matTooltip]="accionExtra.tooltip" [attr.aria-label]="accionExtra.tooltip"
+                      [disabled]="accionExtra.ocupada ? accionExtra.ocupada(fila) : false">
+                <mat-icon>{{ accionExtra.icono }}</mat-icon>
+              </button>
+            }
             @if (permiteEditar) {
               <button mat-icon-button type="button" (click)="alEditar(fila)"
                       matTooltip="Abrir para editar">

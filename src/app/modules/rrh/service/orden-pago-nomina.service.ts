@@ -2,7 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
-import { usuarioSesion } from '../../../shared/services/usuario-sesion';
+import { idUsuarioSesionObligatorio, usuarioSesion } from '../../../shared/services/usuario-sesion';
 import { OrdenPagoNomina } from '../model/orden-pago-nomina';
 import { ServiciosRhh } from './ws-rrh';
 
@@ -80,7 +80,7 @@ export class OrdenPagoNominaService {
    */
   generar(idPeriodo: number, idCuentaBancaria: number, idUsuario: number): Observable<OrdenPagoNomina> {
     const url = `${ServiciosRhh.RS_RDPG}/generar`;
-    const cuerpo = { idPeriodo, idCuentaBancaria, usuarioRegistro: usuarioSesion(), idUsuario };
+    const cuerpo = { idPeriodo, idCuentaBancaria, usuarioRegistro: usuarioSesion(), idUsuario: idUsuarioSesionObligatorio() };
     return this.http
       .post<OrdenPagoNomina>(url, cuerpo, this.httpOptions)
       .pipe(catchError((error) => throwError(() => error.error || error)));
@@ -104,7 +104,7 @@ export class OrdenPagoNominaService {
    */
   confirmar(idOrden: number, fechaAcreditacion: string, idUsuario: number): Observable<OrdenPagoNomina> {
     const url = `${ServiciosRhh.RS_RDPG}/confirmar/${idOrden}`;
-    const cuerpo = { fechaAcreditacion, usuarioRegistro: usuarioSesion(), idUsuario };
+    const cuerpo = { fechaAcreditacion, usuarioRegistro: usuarioSesion(), idUsuario: idUsuarioSesionObligatorio() };
     return this.http
       .post<OrdenPagoNomina>(url, cuerpo, this.httpOptions)
       .pipe(catchError((error) => throwError(() => error.error || error)));

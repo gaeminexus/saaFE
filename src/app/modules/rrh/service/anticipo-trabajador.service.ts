@@ -10,6 +10,7 @@ import {
   SolicitarAnticipoRequest,
 } from '../model/anticipo-trabajador';
 import { ServiciosRhh } from './ws-rrh';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class AnticipoTrabajadorService {
@@ -42,19 +43,19 @@ export class AnticipoTrabajadorService {
   }
 
   solicitar(datos: SolicitarAnticipoRequest): Observable<AnticipoTrabajador | null> {
-    return this.http.post<AnticipoTrabajador>(`${ServiciosRhh.RS_ANTE}/solicitar`, datos, this.httpOptions).pipe(
+    return this.http.post<AnticipoTrabajador>(`${ServiciosRhh.RS_ANTE}/solicitar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError),
     );
   }
 
   aprobar(codigo: number, datos: AprobarAnticipoRequest): Observable<ResultadoAprobarAnticipo> {
     return this.http.post<ResultadoAprobarAnticipo>(
-      `${ServiciosRhh.RS_ANTE}/aprobar/${codigo}`, datos, this.httpOptions,
+      `${ServiciosRhh.RS_ANTE}/aprobar/${codigo}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions,
     ).pipe(catchError((error) => this.handleError(error)));
   }
 
   anular(codigo: number, datos: AnularAnticipoRequest): Observable<unknown> {
-    return this.http.post(`${ServiciosRhh.RS_ANTE}/anular/${codigo}`, datos, this.httpOptions).pipe(
+    return this.http.post(`${ServiciosRhh.RS_ANTE}/anular/${codigo}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions).pipe(
       catchError(this.handleError),
     );
   }

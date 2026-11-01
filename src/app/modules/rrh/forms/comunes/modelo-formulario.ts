@@ -59,6 +59,16 @@ export interface ColumnaTabla {
   pastilla?: (fila: any) => TonoPastilla | null;
 }
 
+/** Acción extra por fila de `app-tabla-rrh` (opt-in: sin ella la tabla queda como siempre). */
+export interface AccionFilaTabla {
+  icono: string;
+  tooltip: string;
+  /** Si se define, la acción solo aparece en las filas donde devuelve true. */
+  visible?: (fila: any) => boolean;
+  /** Si devuelve true, el botón de esa fila queda deshabilitado (acción en curso). */
+  ocupada?: (fila: any) => boolean;
+}
+
 /** Línea de contexto que una sección muestra sobre su tabla. */
 export interface LineaResumen {
   icono: string;

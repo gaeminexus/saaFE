@@ -9,6 +9,7 @@ import {
   RegistrarPlanillaIessRequest,
 } from '../model/planilla-iess';
 import { ServiciosRhh } from './ws-rrh';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /**
  * Planillas del IESS (`RHH.PLIS`): registrar, conciliar, pagar, reversar y anular.
@@ -43,7 +44,7 @@ export class PlanillaIessService {
   /** Captura la planilla que emitió el portal, con sus renglones. Nace en estado Registrada. */
   registrar(datos: RegistrarPlanillaIessRequest): Observable<PlanillaIess> {
     return this.http
-      .post<PlanillaIess>(`${ServiciosRhh.RS_PLIS}/registrar`, datos, this.httpOptions)
+      .post<PlanillaIess>(`${ServiciosRhh.RS_PLIS}/registrar`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => error.error || error)));
   }
 
@@ -52,7 +53,7 @@ export class PlanillaIessService {
     return this.http
       .post<ConciliarPlanillaIessResponse>(
         `${ServiciosRhh.RS_PLIS}/conciliar/${idPlanilla}`,
-        { idUsuario },
+        { idUsuario: idUsuarioSesionObligatorio() },
         this.httpOptions,
       )
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => error.error || error)));
@@ -64,21 +65,21 @@ export class PlanillaIessService {
    */
   pagar(idPlanilla: number, datos: PagarPlanillaIessRequest): Observable<PagarPlanillaIessResponse> {
     return this.http
-      .post<PagarPlanillaIessResponse>(`${ServiciosRhh.RS_PLIS}/pagar/${idPlanilla}`, datos, this.httpOptions)
+      .post<PagarPlanillaIessResponse>(`${ServiciosRhh.RS_PLIS}/pagar/${idPlanilla}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => error.error || error)));
   }
 
   /** Reversa el pago (deshace asiento y movimiento bancario) y vuelve la planilla a Conciliada. */
   reversarPago(idPlanilla: number, datos: { motivo: string; idUsuario: number }): Observable<PlanillaIess> {
     return this.http
-      .post<PlanillaIess>(`${ServiciosRhh.RS_PLIS}/reversarPago/${idPlanilla}`, datos, this.httpOptions)
+      .post<PlanillaIess>(`${ServiciosRhh.RS_PLIS}/reversarPago/${idPlanilla}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => error.error || error)));
   }
 
   /** Sólo desde Registrada o Conciliada. Una planilla Pagada no se anula: se reversa. */
   anular(idPlanilla: number, datos: { motivo: string; idUsuario: number }): Observable<PlanillaIess> {
     return this.http
-      .post<PlanillaIess>(`${ServiciosRhh.RS_PLIS}/anular/${idPlanilla}`, datos, this.httpOptions)
+      .post<PlanillaIess>(`${ServiciosRhh.RS_PLIS}/anular/${idPlanilla}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError((error: HttpErrorResponse) => throwError(() => error.error || error)));
   }
 

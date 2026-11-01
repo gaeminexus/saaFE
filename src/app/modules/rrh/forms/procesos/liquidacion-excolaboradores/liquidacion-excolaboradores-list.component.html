@@ -32,6 +32,8 @@
     [cargando]="cargando()"
     [estadoInicial]="estadoLista"
     mensajeVacio="Todavía no se ha registrado ninguna liquidación de ex-colaborador."
+    [accionExtra]="accionActualizarEstado"
+    (accionExtraClick)="actualizarEstado($event)"
     (editar)="abrir($event)"
     (estadoCambia)="recordarEstado($event)"
   >

@@ -11,6 +11,7 @@ import {
   RegistrarLiquidacionExternaRequest,
 } from '../model/liquidacion-externa';
 import { ServiciosRhh } from './ws-rrh';
+import { idUsuarioSesionObligatorio, usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 /**
  * Liquidaciones de ex-colaboradores de la administración anterior (`RHH.LQEX`/`RHH.DLEX`).
@@ -87,7 +88,7 @@ export class LiquidacionExternaService {
     return this.http
       .post<EnviarATesoreriaLiquidacionExternaResponse>(
         `${ServiciosRhh.RS_LQEX}/enviarATesoreria/${id}`,
-        datos,
+        { ...datos, idUsuario: idUsuarioSesionObligatorio() },
         this.httpOptions,
       )
       .pipe(catchError(this.handleError));
@@ -96,14 +97,19 @@ export class LiquidacionExternaService {
   /** `POST /lqex/sincronizarPago/{id}` (contrato §4). */
   sincronizarPago(id: number): Observable<LiquidacionExterna> {
     return this.http
-      .post<LiquidacionExterna>(`${ServiciosRhh.RS_LQEX}/sincronizarPago/${id}`, null, this.httpOptions)
+      // U-4: el asiento del pago queda a nombre del usuario de sesión.
+      .post<LiquidacionExterna>(
+        `${ServiciosRhh.RS_LQEX}/sincronizarPago/${id}?usuario=${encodeURIComponent(usuarioSesion())}`,
+        null,
+        this.httpOptions,
+      )
       .pipe(catchError(this.handleError));
   }
 
   /** `POST /lqex/anular/{id}` — motivo obligatorio (contrato §4/§6). */
   anular(id: number, datos: AnularLiquidacionExternaRequest): Observable<LiquidacionExterna> {
     return this.http
-      .post<LiquidacionExterna>(`${ServiciosRhh.RS_LQEX}/anular/${id}`, datos, this.httpOptions)
+      .post<LiquidacionExterna>(`${ServiciosRhh.RS_LQEX}/anular/${id}`, { ...datos, idUsuario: idUsuarioSesionObligatorio() }, this.httpOptions)
       .pipe(catchError(this.handleError));
   }
 

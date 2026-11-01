@@ -94,7 +94,8 @@ export class PeriodoNominaService {
 
   /** POST /rest/prdn/simular — calcula sin persistir, para ver el rol antes de comprometerlo. */
   simular(idContrato: number, idPeriodo: number): Observable<ResultadoCalculoNomina> {
-    return this.proceso<ResultadoCalculoNomina>('/simular', { idContrato, idPeriodo });
+    // U-4: el cuerpo lleva `usuario` (la simulación puede crear la proyección de renta del empleado).
+    return this.proceso<ResultadoCalculoNomina>('/simular', { idContrato, idPeriodo, usuario: usuarioSesion() });
   }
 
   aprobar(idPeriodo: number): Observable<unknown> {

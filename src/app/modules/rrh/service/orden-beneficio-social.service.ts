@@ -14,6 +14,7 @@ import {
   ResultadoGenerarOrdenBeneficioSocial,
 } from '../model/orden-beneficio-social';
 import { ServiciosRhh } from './ws-rrh';
+import { idUsuarioSesionObligatorio } from '../../../shared/services/usuario-sesion';
 
 /**
  * Órdenes de pago de beneficio social (RHH.ODBS): cierra el ciclo del décimo acumulado que hoy se
@@ -63,7 +64,7 @@ export class OrdenBeneficioSocialService {
     return this.http
       .post<ResultadoEnviarATesoreria>(
         `${ServiciosRhh.RS_ODBS}/enviarATesoreria/${idOrden}`,
-        datos,
+        { ...datos, idUsuario: idUsuarioSesionObligatorio() },
         this.httpOptions,
       )
       .pipe(catchError((error) => throwError(() => error.error ?? error)));
