@@ -952,20 +952,8 @@
           <!-- Columna Mes del aporte (periodoDevengo); la fecha de caja va en el tooltip -->
           <ng-container matColumnDef="periodoDevengo">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Mes del aporte</th>
-            <td
-              mat-cell
-              *matCellDef="let aporte"
-              [matTooltip]="'Fecha de caja: ' + formatearFecha(aporte.fechaTransaccion)"
-            >
-              @if (mesDevengoAporte(aporte); as mes) {
-                @if (mes.porCaja) {
-                  <span matTooltip="mes de caja (sin mes de devengo)">{{ mes.texto }}</span>
-                } @else {
-                  {{ mes.texto }}
-                }
-              } @else {
-                <span matTooltip="Sin mes de devengo">—</span>
-              }
+            <td mat-cell *matCellDef="let aporte" [matTooltip]="tooltipMesAporte(aporte)">
+              {{ mesAporte(aporte)?.texto ?? '—' }}
             </td>
           </ng-container>
 

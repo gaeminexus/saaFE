@@ -9,6 +9,7 @@ import { FuncionesDatosService } from '../../../../shared/services/funciones-dat
 import { Aporte } from '../../model/aporte';
 import { PagoAporte } from '../../model/pago-aporte';
 import { PagoAporteService } from '../../service/pago-aporte.service';
+import { mesDevengoAporte } from '../../util/mes-aporte';
 
 export interface AportePagosDialogData {
   aporte: Aporte;
@@ -66,6 +67,14 @@ export class AportePagosDialogComponent implements OnInit {
 
   get aporte(): Aporte {
     return this.data.aporte;
+  }
+
+  /** «Mes del aporte: MM/AAAA · Fecha de caja: dd/MM/aaaa»; sin devengo cae al mes de caja. */
+  get lineaMesAporte(): string {
+    const mes = mesDevengoAporte(this.aporte);
+    const caja = this.formatearFecha(this.aporte.fechaTransaccion);
+    const etiqueta = !mes ? 'Mes del aporte: —' : mes.porCaja ? `Mes de caja: ${mes.texto} (sin mes de devengo)` : `Mes del aporte: ${mes.texto}`;
+    return `${etiqueta} · Fecha de caja: ${caja}`;
   }
 
   get tipoAporte(): string {
