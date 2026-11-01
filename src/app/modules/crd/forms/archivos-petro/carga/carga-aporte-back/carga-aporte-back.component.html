@@ -162,7 +162,7 @@
                       <strong>Formato esperado para ARCH (Excel, CSV o TXT)</strong>
                       <ul>
                         <li>4 columnas, en este orden: <code>IDENTIFICACION;NOMBRES;MONTO_CALCULADO;MONTO_DESCONTADO</code>.</li>
-                        <li>La identificación debe ir como texto, para no perder el 0 inicial.</li>
+                        <li><strong>La cédula como texto, para no perder el 0.</strong> En Excel, dale formato Texto a la columna IDENTIFICACION antes de pegar los datos.</li>
                         <li>Una fila por partícipe, copiada del PDF de ARCH, sin la fila de Total.</li>
                       </ul>
                       <button mat-stroked-button color="primary" type="button" (click)="descargarPlantillaArch()">
