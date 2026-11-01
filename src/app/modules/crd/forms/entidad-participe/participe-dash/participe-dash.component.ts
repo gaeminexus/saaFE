@@ -2247,6 +2247,10 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         dataSource.sortingDataAccessor = (item: Aporte, property: string) => {
           switch (property) {
             case 'fechaTransaccion': return new Date(item.fechaTransaccion).getTime();
+            case 'periodoDevengo': {
+              const aaaamm = this.anioMesAporte(item).am;
+              return aaaamm ? aaaamm.anio * 100 + aaaamm.mes : 0;
+            }
             case 'glosa': return item.glosa || '';
             case 'valor': return item.valor || 0;
             case 'valorPagado': return item.valorPagado || 0;
@@ -3771,6 +3775,47 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
    * @param fecha Fecha a formatear (puede ser Date, string o número)
    * @returns Fecha formateada como string o '-' si no hay fecha
    */
+  /**
+   * Año y mes de `periodoDevengo` (APRTPRDV). Llega como arreglo de Jackson `[2026,7,1]` o como
+   * texto ISO `"2026-07-01"`; null si falta. No pasa por `new Date(texto)`: un ISO de solo fecha
+   * se interpreta en UTC y en Ecuador cae al día (y mes) anterior.
+   */
+  private anioMesDevengo(periodo: Aporte['periodoDevengo']): { anio: number; mes: number } | null {
+    if (!periodo) return null;
+    if (Array.isArray(periodo)) {
+      const [anio, mes] = periodo;
+      return anio && mes ? { anio, mes } : null;
+    }
+    if (typeof periodo === 'string') {
+      const m = /^(\d{4})-(\d{2})/.exec(periodo.trim());
+      return m ? { anio: +m[1], mes: +m[2] } : null;
+    }
+    if (periodo instanceof Date && !isNaN(periodo.getTime())) {
+      return { anio: periodo.getFullYear(), mes: periodo.getMonth() + 1 };
+    }
+    return null;
+  }
+
+  /**
+   * Mes del aporte: `periodoDevengo` y, si es null (aportes anteriores al 27-08), el mes de caja
+   * de `fechaTransaccion` (mismo criterio que cartera: NVL(APRTPRDV, mes de APRTFCTR)).
+   */
+  private anioMesAporte(aporte: Aporte): { am: { anio: number; mes: number } | null; porCaja: boolean } {
+    const devengo = this.anioMesDevengo(aporte.periodoDevengo);
+    if (devengo) return { am: devengo, porCaja: false };
+    const caja = this.funcionesDatos.convertirFechaDesdeBackend(aporte.fechaTransaccion);
+    return {
+      am: caja && !isNaN(caja.getTime()) ? { anio: caja.getFullYear(), mes: caja.getMonth() + 1 } : null,
+      porCaja: true,
+    };
+  }
+
+  /** «MM/AAAA» del mes del aporte; `porCaja` indica que no hay mes de devengo y se usó el de caja. */
+  mesDevengoAporte(aporte: Aporte): { texto: string; porCaja: boolean } | null {
+    const { am, porCaja } = this.anioMesAporte(aporte);
+    return am ? { texto: `${String(am.mes).padStart(2, '0')}/${am.anio}`, porCaja } : null;
+  }
+
   formatearFecha(fecha: any): string {
     if (!fecha) return '-';
     return this.funcionesDatos.formatoFechaOrigenConHora(fecha, FuncionesDatosService.SOLO_FECHA) || '-';

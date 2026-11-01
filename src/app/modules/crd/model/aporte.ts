@@ -10,6 +10,7 @@ export interface Aporte {
     contrato: Contrato;       // CNTRCDGO - ID Contrato
     tipoAporte: TipoAporte;     // TPAPCDGO - FK Tipo Aporte
     fechaTransaccion: Date;       // APRTFCTR - Fecha transacción
+    periodoDevengo?: Date | string | number[] | null; // APRTPRDV - Mes al que corresponde el aporte (Jackson: [aaaa,m,d]; a veces texto ISO)
     glosa: string;                // APRTGLSA - Glosa
     valor: number;                // APRTVLRR - Valor
     valorPagado: number;          // APRTVLPG - Valor pagado

@@ -949,11 +949,23 @@
           </div>
           }
           <table mat-table [dataSource]="tipoAporte.aportes" matSort (matSortChange)="onSortChange()" class="detalle-table tipo-table">
-          <!-- Columna Fecha Transacción -->
-          <ng-container matColumnDef="fechaTransaccion">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha</th>
-            <td mat-cell *matCellDef="let aporte">
-              {{ formatearFecha(aporte.fechaTransaccion) }}
+          <!-- Columna Mes del aporte (periodoDevengo); la fecha de caja va en el tooltip -->
+          <ng-container matColumnDef="periodoDevengo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Mes del aporte</th>
+            <td
+              mat-cell
+              *matCellDef="let aporte"
+              [matTooltip]="'Fecha de caja: ' + formatearFecha(aporte.fechaTransaccion)"
+            >
+              @if (mesDevengoAporte(aporte); as mes) {
+                @if (mes.porCaja) {
+                  <span matTooltip="mes de caja (sin mes de devengo)">{{ mes.texto }}</span>
+                } @else {
+                  {{ mes.texto }}
+                }
+              } @else {
+                <span matTooltip="Sin mes de devengo">—</span>
+              }
             </td>
           </ng-container>
 
@@ -996,11 +1008,11 @@
 
           <tr
             mat-header-row
-            *matHeaderRowDef="['fechaTransaccion', 'glosa', 'valor', 'acciones']"
+            *matHeaderRowDef="['periodoDevengo', 'glosa', 'valor', 'acciones']"
           ></tr>
           <tr
             mat-row
-            *matRowDef="let row; columns: ['fechaTransaccion', 'glosa', 'valor', 'acciones']"
+            *matRowDef="let row; columns: ['periodoDevengo', 'glosa', 'valor', 'acciones']"
           ></tr>
         </table>
         </div>
