@@ -117,7 +117,7 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
 
   // Contexto de sesión
   idEmpresa: number | null = null;
-  private usuario = 'SYSTEM';
+  private usuario = '';
 
   // Selección de período — por defecto, el mes calendario anterior al actual (el caso de uso
   // real: procesar agosto durante septiembre).

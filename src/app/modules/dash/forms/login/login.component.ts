@@ -145,6 +145,15 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     const sharedUsername = localStorage.getItem('username');
+    if (!sharedUsername || !sharedUsername.trim()) {
+      // Sesión compartida sin usuario: no se entra. Se limpia lo que quedó y se pide ingresar de nuevo.
+      ['logged', 'token', 'username', 'idSucursal', 'saafeSessionGroupId'].forEach((k) => localStorage.removeItem(k));
+      ['logged', 'token', 'username'].forEach((k) => sessionStorage.removeItem(k));
+      this.loginMessage = 'Tu sesión se perdió; vuelve a ingresar';
+      this.loginMessageType = 'warning';
+      return;
+    }
+
     const sharedToken = localStorage.getItem('token');
     const sharedSucursal = localStorage.getItem('idSucursal') || EMPRESA.toString();
     const sharedGroupId =
@@ -159,11 +168,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (sharedToken) {
       sessionStorage.setItem('token', sharedToken);
-    }
-
-    if (!sharedUsername) {
-      this.irAlDestino();
-      return;
     }
 
     const normalizedUser = sharedUsername.toUpperCase();

@@ -690,7 +690,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   }
 
   private getNombreUsuario(): string {
-    return localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema';
+    return usuarioSesion();
   }
 
   /**

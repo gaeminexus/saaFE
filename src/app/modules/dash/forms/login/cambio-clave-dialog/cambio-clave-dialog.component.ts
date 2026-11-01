@@ -15,6 +15,7 @@ import { Router } from '@angular/router';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { AppStateService } from '../../../../../shared/services/app-state.service';
 import { UsuarioService } from '../../../../../shared/services/usuario.service';
+import { SessionTimeoutService } from '../../session-timeout/session-timeout.service';
 import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
 
 export interface CambioClaveData {
@@ -43,6 +44,7 @@ export class CambioClaveDialogComponent implements OnInit {
     @Inject(MAT_DIALOG_DATA) public data: CambioClaveData,
     private usuarioService: UsuarioService,
     private appStateService: AppStateService,
+    private sessionTimeout: SessionTimeoutService,
     private router: Router,
     private snackBar: MatSnackBar
   ) {}
@@ -172,7 +174,10 @@ export class CambioClaveDialogComponent implements OnInit {
    * Cierra la sesión del usuario (mismo comportamiento que el botón Salir del header)
    */
   private cerrarSesion(): void {
-    // Limpiar TODA la sesión (localStorage, caché de rubros, estado global)
+    // Limpiar TODA la sesión: `logoutByUser` borra también el localStorage compartido (logged,
+    // username, token) y avisa a las otras pestañas. Sin eso, el login restauraba la sesión sin
+    // pedir la contraseña nueva.
+    this.sessionTimeout.logoutByUser();
     this.appStateService.limpiarDatos();
     this.usuarioService.clearSession();
 

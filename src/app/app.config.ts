@@ -12,12 +12,14 @@ export const AppConfig = {
     footerYear: new Date().getFullYear()
   }
 };
-import { ApplicationConfig, APP_INITIALIZER, provideBrowserGlobalErrorListeners, provideZoneChangeDetection, isDevMode } from '@angular/core';
+import { ApplicationConfig, APP_INITIALIZER, inject, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZoneChangeDetection, isDevMode } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideMaterial } from './shared/providers/material.providers';
 import { loadingInterceptor } from './shared/interceptors/loading.interceptor';
+import { sesionInterceptor } from './shared/interceptors/sesion.interceptor';
+import { SesionPerdidaService } from './shared/services/sesion-perdida.service';
 import { AppStateService } from './shared/services/app-state.service';
 import { provideServiceWorker } from '@angular/service-worker';
 
@@ -37,10 +39,15 @@ export function initializeApp(appStateService: AppStateService) {
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
-    provideHttpClient(withInterceptors([loadingInterceptor])),
+    provideHttpClient(withInterceptors([sesionInterceptor, loadingInterceptor])),
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     ...provideMaterial(),
+
+    // Escucha la pérdida del usuario de sesión (evento, storage, visibilitychange) desde el arranque
+    provideAppInitializer(() => {
+      inject(SesionPerdidaService);
+    }),
 
     // Inicializar AppStateService ANTES del bootstrap de la aplicación
     // Esto permite restaurar datos de sesión desde localStorage automáticamente

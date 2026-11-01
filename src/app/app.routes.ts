@@ -5,7 +5,7 @@ import { MenuComponent } from './modules/dash/menu/menu.component';
 import { ReportesSuperBancosComponent } from './modules/rpr/forms/reportes-super-bancos/reportes-super-bancos.component';
 import { InformesMensualesCreditoComponent } from './modules/rpr/forms/informes-mensuales-credito/informes-mensuales-credito.component';
 import { MenureportesComponent } from './modules/rpr/menu/menureportes/menureportes.component';
-import { authGuard } from './shared/guard/auth.guard';
+import { authChildGuard, authGuard } from './shared/guard/auth.guard';
 import { canDeactivateGuard } from './shared/guard/can-deactivate.guard';
 import { usuarioUnoGuard } from './shared/guard/usuario-uno.guard';
 import { ConsultaCargaArchivoResolverService } from './modules/crd/resolver/consulta-carga-archivo-resolver.service';
@@ -43,6 +43,7 @@ export const routes: Routes = [
     path: 'menucontabilidad',
     loadComponent: () => import('./modules/cnt/menu/menucontabilidad/menucontabilidad.component').then((m) => m.MenuContabilidadComponent),
     canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     children: [
       {
         path: 'naturaleza-cuentas',
@@ -169,6 +170,7 @@ export const routes: Routes = [
     path: 'menutesoreria',
     loadComponent: () => import('./modules/tsr/menu/menutesoreria/menutesoreria.component').then((m) => m.MenutesoreriaComponent),
     canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     children: [
       // Parametrización
       {
@@ -494,6 +496,7 @@ export const routes: Routes = [
     path: 'menurecursoshumanos',
     loadComponent: () => import('./modules/rrh/menu/menurecursoshumanos/menurecursoshumanos.component').then((m) => m.MenurecursoshumanosComponent),
     canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     children: [
       // Parametrización
       {
@@ -917,6 +920,7 @@ export const routes: Routes = [
     path: 'menucuentasxcobrar',
     loadComponent: () => import('./modules/cxc/menu/menucuentasxcobrar/menucuentasxcobrar.component').then((m) => m.MenucuentasxcobrarComponent),
     canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     children: [
       {
         path: 'parametrizacion/grupos-productos',
@@ -1032,6 +1036,7 @@ export const routes: Routes = [
     path: 'menucuentaxpagar',
     loadComponent: () => import('./modules/cxp/menu/menucuentasxpagar/menucuentasxpagar.component').then((m) => m.MenucuentaxpagarComponent),
     canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     children: [
       {
         path: 'parametrizacion/grupos-productos',
@@ -1163,6 +1168,7 @@ export const routes: Routes = [
     path: 'menucreditos',
     loadComponent: () => import('./modules/crd/menucreditos/menucreditos.component').then((m) => m.MenucreditosComponent),
     canActivate: [authGuard],
+    canActivateChild: [authChildGuard],
     children: [
       { path: 'parametrizacion', loadComponent: () => import('./modules/crd/menucreditos/parametrizacion-creditos.component').then((m) => m.ParametrizacionCreditosComponent) },
       { path: 'extr', loadComponent: () => import('./modules/crd/forms/historicos/exters/exters.component').then((m) => m.ExtersComponent) },

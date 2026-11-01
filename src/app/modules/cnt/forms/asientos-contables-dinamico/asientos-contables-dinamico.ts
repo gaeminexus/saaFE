@@ -837,7 +837,7 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
       fechaAsiento: fechaAsiento,
       observaciones: this.form.get('observaciones')?.value?.trim() || '',
       estado: estadoFinal,
-      nombreUsuario: localStorage.getItem('username') || 'sistema',
+      nombreUsuario: usuarioSesion(),
       fechaIngreso: new Date(),
       numeroMes: fechaAsiento ? fechaAsiento.getMonth() + 1 : new Date().getMonth() + 1,
       numeroAnio: fechaAsiento ? fechaAsiento.getFullYear() : new Date().getFullYear(),
@@ -1053,7 +1053,7 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
       fechaAsiento: this.form.get('fechaAsiento')?.value,
       observaciones: this.form.get('observaciones')?.value || '',
       estado: 4, // INCOMPLETO
-      nombreUsuario: localStorage.getItem('username') || 'sistema',
+      nombreUsuario: usuarioSesion(),
       fechaIngreso: new Date(),
       // Campos requeridos por el backend
       numeroMes: new Date().getMonth() + 1,
@@ -1637,7 +1637,7 @@ export class AsientosContablesDinamico implements OnInit, AfterViewInit, AfterVi
         asientoActualizado.numero = this.asientoActual.numero;
         asientoActualizado.fechaAsiento = this.asientoActual.fechaAsiento;
         asientoActualizado.observaciones = this.asientoActual.observaciones || '';
-        asientoActualizado.nombreUsuario = this.asientoActual.nombreUsuario || 'sistema';
+        asientoActualizado.nombreUsuario = this.asientoActual.nombreUsuario || usuarioSesion();
         asientoActualizado.fechaIngreso = this.asientoActual.fechaIngreso;
         asientoActualizado.numeroMes = this.asientoActual.numeroMes;
         asientoActualizado.numeroAnio = this.asientoActual.numeroAnio;

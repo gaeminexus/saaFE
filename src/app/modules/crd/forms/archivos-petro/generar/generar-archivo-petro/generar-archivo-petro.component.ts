@@ -17,6 +17,7 @@ import { DatosBusqueda } from '../../../../../../shared/model/datos-busqueda/dat
 import { TipoDatosBusqueda as TipoDatos } from '../../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 import { ParticipeGeneracionArchivoService } from '../../../../service/participe-generacion-archivo.service';
+import { usuarioSesion } from '../../../../../../shared/services/usuario-sesion';
 
 interface Mes {
   valor: number;
@@ -301,7 +302,7 @@ export class GenerarArchivoPetroComponent implements OnInit {
   }
 
   private obtenerUsuarioGeneracion(): string {
-    return (localStorage.getItem('userName') || localStorage.getItem('usuario') || 'sistema').trim();
+    return usuarioSesion();
   }
 
   private extraerCodigoGeneracion(cabecera: unknown): number | null {

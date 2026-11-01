@@ -5,10 +5,10 @@
  * Se consultan varias claves porque el login y `AppStateService` escriben el mismo dato con
  * nombres distintos y no todos existen en ambos almacenamientos: `login.component.ts` guarda
  * `username` en sessionStorage Y localStorage, mientras que `AppStateService.inicializarApp()`
- * guarda `userName` solo en sessionStorage. Leer una sola clave hace que el usuario quede como
- * 'SYSTEM' según por dónde se haya inicializado la sesión.
+ * guarda `userName` solo en sessionStorage. Leer una sola clave haría perder el usuario según por
+ * dónde se haya inicializado la sesión.
  */
-export function usuarioSesion(): string {
+export function leerUsuarioSesion(): string | null {
   const candidatos = [
     sessionStorage.getItem('username'),
     localStorage.getItem('username'),
@@ -20,7 +20,40 @@ export function usuarioSesion(): string {
   ];
 
   const encontrado = candidatos.find((v) => !!v && v.trim().length > 0);
-  return (encontrado ?? 'SYSTEM').trim().slice(0, 50);
+  return encontrado ? encontrado.trim().slice(0, 50) : null;
+}
+
+/** ¿Hay un usuario de sesión? No lanza ni limpia nada: es para guards e interceptores. */
+export function hayUsuarioSesion(): boolean {
+  return leerUsuarioSesion() !== null;
+}
+
+/** Evento que avisa a `SesionPerdidaService` que se perdió el usuario (sale y manda a /login). */
+export const EVENTO_SESION_PERDIDA = 'saafe:sesion-perdida';
+
+export const MENSAJE_SESION_PERDIDA = 'Tu sesión se perdió; vuelve a ingresar';
+
+/** El usuario de la sesión se perdió: la operación NO debe seguir. */
+export class SesionPerdidaError extends Error {
+  constructor() {
+    super(MENSAJE_SESION_PERDIDA);
+    this.name = 'SesionPerdidaError';
+  }
+}
+
+/**
+ * Usuario de la sesión, sin relleno: si no hay, **no se inventa uno**. Un usuario inventado
+ * ('SYSTEM', 'sistema') acababa grabado en asientos y procesos reales. Si no hay usuario se
+ * avisa a `SesionPerdidaService` (cierra la sesión y manda a /login) y se lanza
+ * `SesionPerdidaError`, así la operación que lo pidió no llega a enviarse.
+ */
+export function usuarioSesion(): string {
+  const usuario = leerUsuarioSesion();
+  if (!usuario) {
+    window.dispatchEvent(new Event(EVENTO_SESION_PERDIDA));
+    throw new SesionPerdidaError();
+  }
+  return usuario;
 }
 
 function leerNombreDeJson(bruto: string | null): string | null {

@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Auditoria } from '../model/auditoria';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({
   providedIn: 'root',
@@ -75,8 +76,8 @@ export class AuditoriaService {
     agente?: string;
   }): Auditoria {
     const ahora = new Date();
-    // Obtener usuario del localStorage (guardado en login)
-    const usuario = localStorage.getItem('username') || 'SYSTEM';
+    // Usuario de la sesión; sin usuario cierra la sesión y no registra nada
+    const usuario = usuarioSesion();
 
     const registro: Auditoria = {
       fechaEvento: ahora,

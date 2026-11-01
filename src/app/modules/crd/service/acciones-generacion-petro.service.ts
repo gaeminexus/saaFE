@@ -12,6 +12,7 @@ import {
   ResultadoEliminacionPetro,
 } from '../model/generacion-archivo-petro';
 import { GeneracionArchivoPetroService } from './generacion-archivo-petro.service';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 const NOMBRES_MESES = [
   'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -32,12 +33,7 @@ export class AccionesGeneracionPetroService {
 
   /** Queda como auditoría de quién sacó el archivo del sistema. */
   usuarioSesion(): string {
-    return (
-      sessionStorage.getItem('userName')
-      || localStorage.getItem('userName')
-      || localStorage.getItem('usuario')
-      || 'sistema'
-    ).trim();
+    return usuarioSesion();
   }
 
   etiquetaPeriodo(gen: GeneracionArchivoPetro | null | undefined): string {
