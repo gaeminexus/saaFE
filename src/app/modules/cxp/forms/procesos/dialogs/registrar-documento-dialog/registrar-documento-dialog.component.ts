@@ -6,6 +6,7 @@ import { MaterialFormModule } from '../../../../../../shared/modules/material-fo
 import { DocumentoCxp } from '../../../../model/documento-cxp';
 import { ProductoPago } from '../../../../model/producto_pago';
 import { ProductoPagoService } from '../../../../service/producto-pago.service';
+import { cuentaDeProducto, productoCoincide } from '../../../../util/cuenta-producto';
 
 export interface RegistrarDocumentoDialogData {
   documento: DocumentoCxp;
@@ -61,6 +62,13 @@ export class RegistrarDocumentoDialogComponent {
     return `${p.nombre} (${p.codigo})${grupo}`;
   }
 
+  /** «<número> – <nombre>» de la cuenta del grupo del producto (para la lista y para el valor elegido). */
+  cuentaDe = cuentaDeProducto;
+
+  get cuentaProductoSeleccionado() {
+    return cuentaDeProducto(this.productos.find(x => x.id === this.idProducto));
+  }
+
   get puedeConfirmar(): boolean {
     if (this.esIntermediario && this.idProducto == null) return false;
     if (this.incluirObservacion && !this.observacionAdicional.trim()) return false;
@@ -104,7 +112,7 @@ export class RegistrarDocumentoDialogComponent {
     const q = (this.productoBusqueda || '').toLowerCase().trim();
     if (!q) { this.productosFiltrados = this.productos.slice(0, 50); return; }
     this.productosFiltrados = this.productos
-      .filter(p => p.nombre?.toLowerCase().includes(q) || p.codigo?.toLowerCase().includes(q))
+      .filter(p => productoCoincide(p, q))
       .slice(0, 50);
   }
 

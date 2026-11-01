@@ -41,3 +41,19 @@ mat-dialog-content {
   min-width: 460px;
   max-width: 90vw;
 }
+
+// Cuenta contable de la cuenta del grupo del producto, en la lista y en el valor elegido
+.prod-opt-nombre {
+  display: block;
+}
+
+.prod-opt-cuenta {
+  display: block;
+  font-size: 0.8rem;
+  color: #757575;
+  line-height: 1.3;
+}
+
+.prod-opt-sin-cuenta {
+  color: #e65100 !important;
+}

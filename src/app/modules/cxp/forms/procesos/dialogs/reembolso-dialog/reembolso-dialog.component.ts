@@ -15,6 +15,7 @@ import { ProductoPago } from '../../../../model/producto_pago';
 import { ReembolsoFacturaCompra } from '../../../../model/reembolso-factura-compra';
 import { CargaDocumentosService } from '../../../../service/carga-documentos.service';
 import { ProductoPagoService } from '../../../../service/producto-pago.service';
+import { cuentaDeProducto, productoCoincide } from '../../../../util/cuenta-producto';
 import { ReembolsoFacturaCompraService } from '../../../../service/reembolso-factura-compra.service';
 
 export interface ReembolsoDialogData {
@@ -117,6 +118,13 @@ export class ReembolsoDialogComponent {
     return p ? `${p.nombre} (${p.codigo})` : `#${this.form.idProducto}`;
   }
 
+  /** «<número> – <nombre>» de la cuenta del grupo del producto (para la lista y para el valor elegido). */
+  cuentaDe = cuentaDeProducto;
+
+  get cuentaProductoSeleccionado() {
+    return cuentaDeProducto(this.productos.find(x => x.id === this.form.idProducto));
+  }
+
   // ─── PRODUCTOS ──────────────────────────────────────────
 
   private cargarProductos(): void {
@@ -132,9 +140,9 @@ export class ReembolsoDialogComponent {
   filtrarProductos(): void {
     const q = (this.productoBusqueda || '').toLowerCase().trim();
     if (!q) { this.productosFiltrados = this.productos.slice(0, 50); return; }
-    // Regla de la casa: filtrar por al menos dos campos (nombre y código).
+    // Regla de la casa: filtrar por al menos dos campos (nombre, código y cuenta contable).
     this.productosFiltrados = this.productos
-      .filter(p => p.nombre?.toLowerCase().includes(q) || p.codigo?.toLowerCase().includes(q))
+      .filter(p => productoCoincide(p, q))
       .slice(0, 50);
   }
 
