@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of } from 'rxjs';
 import { ReferenciaFamiliar } from '../model/referencia-familiar';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class ReferenciaFamiliarService {
@@ -26,7 +27,9 @@ export class ReferenciaFamiliarService {
   }
 
   private paramsUsuario(usuario?: string): HttpParams {
-    return usuario ? new HttpParams().set('usuario', usuario) : new HttpParams();
+    // U-2: el backend exige el usuario (sellarActualizacion). Siempre el de la sesión; el parámetro
+    // `usuario` se conserva por compatibilidad con los llamadores pero ya no se usa.
+    return new HttpParams().set('usuario', usuarioSesion());
   }
 
   delete(id: number): Observable<any> {

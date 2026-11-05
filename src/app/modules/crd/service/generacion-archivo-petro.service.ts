@@ -72,10 +72,8 @@ export class GeneracionArchivoPetroService {
    */
   descargarArchivo(codigoGeneracion: number, usuario?: string): Observable<ArchivoPetroDescargado> {
     const url = `${ServiciosCrd.RS_GNAP}/descargarArchivo/${codigoGeneracion}`;
-    let params = new HttpParams();
-    if (usuario) {
-      params = params.set('usuario', usuario);
-    }
+    // U-2: siempre el usuario de la sesión (el parámetro `usuario` ya no se usa).
+    const params = new HttpParams().set('usuario', usuarioSesion());
 
     return this.http
       .get(url, { params, responseType: 'blob', observe: 'response' })
@@ -98,10 +96,8 @@ export class GeneracionArchivoPetroService {
    */
   eliminar(codigoGeneracion: number, usuario?: string): Observable<ResultadoEliminacionPetro> {
     const url = `${ServiciosCrd.RS_GNAP}/eliminar/${codigoGeneracion}`;
-    let params = new HttpParams();
-    if (usuario) {
-      params = params.set('usuario', usuario);
-    }
+    // U-2: siempre el usuario de la sesión (el parámetro `usuario` ya no se usa).
+    const params = new HttpParams().set('usuario', usuarioSesion());
 
     return this.http
       .delete<ResultadoEliminacionPetro>(url, { params })

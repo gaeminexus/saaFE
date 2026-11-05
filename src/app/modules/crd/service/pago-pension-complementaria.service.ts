@@ -13,6 +13,7 @@ import {
   SolicitudProcesoJubilados,
 } from '../model/pago-pension-complementaria';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 /**
  * Corrida mensual de pago a jubilados (pensión complementaria). Contrato:
@@ -57,7 +58,7 @@ export class PagoPensionComplementariaService {
       .set('idEmpresa', idEmpresa)
       .set('anio', anio)
       .set('mes', mes)
-      .set('usuario', usuario);
+      .set('usuario', usuarioSesion());
     return this.http
       .post<RespuestaPgpc<ResultadoGeneracionPagos>>(`${this.base}/generarPagosDelMes`, null, { params })
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
@@ -82,7 +83,7 @@ export class PagoPensionComplementariaService {
       .set('idEmpresa', idEmpresa)
       .set('anio', anio)
       .set('mes', mes)
-      .set('usuario', usuario);
+      .set('usuario', usuarioSesion());
     return this.http
       .post<RespuestaPgpc<ResultadoPrevisualizacionCorrida>>(`${this.base}/previsualizarCorrida`, null, { params })
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
@@ -115,7 +116,7 @@ export class PagoPensionComplementariaService {
    */
   generarSeguro(solicitud: SolicitudProcesoJubilados): Observable<ResultadoGeneracionSeguro> {
     return this.http
-      .post<ResultadoGeneracionSeguro>(`${this.base}/seguro/generar`, solicitud)
+      .post<ResultadoGeneracionSeguro>(`${this.base}/seguro/generar`, { ...solicitud, usuario: usuarioSesion() })
       .pipe(catchError((e: HttpErrorResponse) => throwError(() => this.extraerMensajeError(e))));
   }
 
@@ -128,7 +129,7 @@ export class PagoPensionComplementariaService {
    */
   generarPensiones(solicitud: SolicitudProcesoJubilados): Observable<RespuestaPgpc<ResultadoGeneracionPagos>> {
     return this.http
-      .post<RespuestaPgpc<ResultadoGeneracionPagos>>(`${this.base}/pensiones/generar`, solicitud)
+      .post<RespuestaPgpc<ResultadoGeneracionPagos>>(`${this.base}/pensiones/generar`, { ...solicitud, usuario: usuarioSesion() })
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
   }
 

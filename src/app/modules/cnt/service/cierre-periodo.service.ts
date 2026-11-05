@@ -5,6 +5,7 @@ import { catchError } from 'rxjs/operators';
 import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import { ControlCierre, EstadoCierrePeriodo, EstadoPeriodo, HistorialCierrePeriodo, Periodo } from '../model/periodo';
 import { ServiciosCnt } from './ws-cnt';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 /** Datos de auditoría que exigen cerrar / reabrir (query params del backend). */
 export interface DatosCierre {
@@ -70,7 +71,8 @@ export class CierrePeriodoService {
       .set('idEmpresa', idEmpresa)
       .set('anio', anio)
       .set('mes', mes)
-      .set('usuario', datos.usuario)
+      // U-2: siempre el usuario de la sesión (`datos.usuario` ya no se usa).
+      .set('usuario', usuarioSesion())
       .set('motivo', datos.motivo);
     if (datos.ip) p = p.set('ip', datos.ip);
     return p;

@@ -6,6 +6,7 @@ import { BancoExterno } from '../../tsr/model/banco-externo.model';
 import { AdjuntoCertificadoCnbp, CuentaBancariaParticipe } from '../model/cuenta-bancaria-participe';
 import { Entidad } from '../model/entidad';
 import { ServiciosCrd } from './ws-crd';
+import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 
 @Injectable({ providedIn: 'root' })
 export class CuentaBancariaParticipeService {
@@ -41,7 +42,8 @@ export class CuentaBancariaParticipeService {
 
   /** `usuario` (opcional): sella la auditoría de ENTD (pedido 9). Solo el PUT lo acepta; el alta va por `addConCertificado()`. */
   update(datos: any, usuario?: string): Observable<CuentaBancariaParticipe | null> {
-    const params = usuario ? new HttpParams().set('usuario', usuario) : new HttpParams();
+    // U-2: siempre el usuario de la sesión (el parámetro `usuario` ya no se usa).
+    const params = new HttpParams().set('usuario', usuarioSesion());
     return this.http.put<CuentaBancariaParticipe>(ServiciosCrd.RS_CNBP, datos, { ...this.httpOptions, params }).pipe(catchError(this.handleError));
   }
 
@@ -71,7 +73,8 @@ export class CuentaBancariaParticipeService {
     formData.append('idBancoExterno', String(datos.bancoExterno.codigo));
     formData.append('tipoCuenta', String(datos.tipoCuenta));
     formData.append('numeroCuenta', datos.numeroCuenta);
-    formData.append('usuarioRegistro', usuarioRegistro);
+    // U-2: siempre el usuario de la sesión (el parámetro `usuarioRegistro` ya no se usa).
+    formData.append('usuarioRegistro', usuarioSesion());
 
     // Sin Content-Type: el navegador pone el suyo con el boundary del multipart.
     return this.http
