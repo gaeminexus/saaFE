@@ -163,7 +163,8 @@
           <mat-form-field appearance="fill" class="field">
             <mat-label>Tasa</mat-label>
             <mat-icon matPrefix>percent</mat-icon>
-            <input matInput type="number" formControlName="tasa" min="0" step="0.01" />
+            <input matInput type="number" formControlName="tasa" min="0" step="0.01" readonly />
+            <mat-hint>Tasa única de los créditos: 9 %</mat-hint>
             <mat-error>La tasa es obligatoria</mat-error>
           </mat-form-field>
 
@@ -302,6 +303,10 @@
               <mat-icon>assignment</mat-icon>
               Imprimir solicitud
             </button>
+            <button mat-raised-button type="button" (click)="imprimir('RPRT_PRST_ADRL')" [disabled]="!puedeImprimirAutorizacion">
+              <mat-icon>badge</mat-icon>
+              Imprimir autorización
+            </button>
             <button mat-raised-button type="button" (click)="imprimir('RPRT_PRST_PGRE')" [disabled]="!puedeImprimirPagare">
               <mat-icon>description</mat-icon>
               Imprimir pagaré
@@ -324,6 +329,11 @@
             </button>
           </div>
         </form>
+
+        @if (ultimoPrestamoId()) {
+          <app-evaluacion-otorgamiento-panel [evaluacion]="evaluacion()" [cargando]="cargandoEvaluacion()" />
+          <app-garante-prestamo [idPrestamo]="ultimoPrestamoId()!" [idEstado]="idEstadoPrestamo()" />
+        }
 
         @if (ultimoPrestamoId()) {
           <div class="detalle-header">

@@ -13,7 +13,12 @@ import {
   ParametrosAmortizacion,
   ResultadoSimulacionCreditoNuevo,
 } from '../../model/simuladores/simulador-credito-nuevo';
+import { EvaluacionOtorgamiento, cuotaTotalPrimera } from '../../model/evaluacion-otorgamiento';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
+import { PrestamoService } from '../../service/prestamo.service';
+import { EvaluacionOtorgamientoPanelComponent } from '../evaluacion-otorgamiento-panel/evaluacion-otorgamiento-panel.component';
+import { ParticipeElegido, ParticipeSelectorComponent } from '../participe-selector/participe-selector.component';
+import { SimuladorNovacionComponent } from './simulador-novacion.component';
 
 /**
  * Simulador de crédito nuevo (§7 de `docs/crd/PLAN-SIMULADORES-PRESTAMOS.md`, fase 4).
@@ -27,16 +32,26 @@ import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-p
  * construyó contra el contrato documentado en la §7 del plan, sin poder probarla contra el
  * servidor real.
  */
+const TASA_OTORGAMIENTO = 9;
+
 @Component({
   selector: 'app-simulador-credito',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MaterialFormModule,
+    ParticipeSelectorComponent,
+    EvaluacionOtorgamientoPanelComponent,
+    SimuladorNovacionComponent,
+  ],
   templateUrl: './simulador-credito.component.html',
   styleUrl: './simulador-credito.component.scss',
 })
 export class SimuladorCreditoComponent {
   private servicio = inject(OperacionesPagoPrestamoService);
   private funcionesDatos = inject(FuncionesDatosService);
+  private prestamoService = inject(PrestamoService);
 
   /** Tipo de amortización: literal del backend, sin catálogo (§2.2 del plan). */
   readonly opcionesAmortizacion = Object.entries(NOMBRE_TIPO_AMORTIZACION).map(([valor, texto]) => ({
@@ -48,7 +63,8 @@ export class SimuladorCreditoComponent {
 
   // ---- formulario: los 6 primeros son obligatorios, los 2 últimos no (§7 del plan) ----
   monto: number | null = null;
-  tasaAnual: number | null = null;
+  /** Los créditos van al 9 % (DISENO-SOLICITUD-V1 §B5). */
+  tasaAnual: number | null = TASA_OTORGAMIENTO;
   plazo: number | null = null;
   tipoAmortizacion = 1;
   fechaInicio: Date | null = new Date();
@@ -60,6 +76,12 @@ export class SimuladorCreditoComponent {
   resultado = signal<ResultadoSimulacionCreditoNuevo | null>(null);
   errorMensaje = signal<string | null>(null);
   errorCodigo = signal<string | null>(null);
+
+  // ---- evaluación del otorgamiento (opcional: solo si se elige un partícipe) ----
+  participe: ParticipeElegido | null = null;
+  evaluacion = signal<EvaluacionOtorgamiento | null>(null);
+  cargandoEvaluacion = signal(false);
+  errorEvaluacion = signal<string | null>(null);
 
   /**
    * Bandera única para habilitar "Exportar PDF" (fase 6 del plan).
@@ -107,12 +129,47 @@ export class SimuladorCreditoComponent {
       this.simulando.set(false);
       if (resp.exito && resp.resultado) {
         this.resultado.set(resp.resultado);
+        this.evaluar();
       } else {
         this.resultado.set(null);
         this.errorCodigo.set(String(resp.error ?? ''));
         this.errorMensaje.set(mensajeDeRespuesta(resp));
       }
     });
+  }
+
+  alElegirParticipe(p: ParticipeElegido | null): void {
+    this.participe = p;
+    this.evaluacion.set(null);
+    this.errorEvaluacion.set(null);
+    this.evaluar();
+  }
+
+  /**
+   * `POST prst/evaluarOtorgamiento` con el total de la cuota 1 simulada. Solo informa: no bloquea la simulación.
+   */
+  private evaluar(): void {
+    const res = this.resultado();
+    if (!this.participe || !res) return;
+    this.cargandoEvaluacion.set(true);
+    this.errorEvaluacion.set(null);
+    this.prestamoService
+      .evaluarOtorgamientoSimulado({
+        idEntidad: this.participe.codigoEntidad,
+        monto: this.monto ?? 0,
+        cuotaNueva: cuotaTotalPrimera(res),
+        idPrestamoOriginal: null,
+      })
+      .subscribe({
+        next: (ev) => {
+          this.cargandoEvaluacion.set(false);
+          this.evaluacion.set(ev);
+        },
+        error: (err) => {
+          this.cargandoEvaluacion.set(false);
+          this.errorEvaluacion.set(err?.mensaje || (typeof err === 'string' ? err : null) || 'No se pudo evaluar el otorgamiento');
+        },
+      });
   }
 
   /**
@@ -152,7 +209,7 @@ export class SimuladorCreditoComponent {
 
   nuevaSimulacion(): void {
     this.monto = null;
-    this.tasaAnual = null;
+    this.tasaAnual = TASA_OTORGAMIENTO;
     this.plazo = null;
     this.tipoAmortizacion = 1;
     this.fechaInicio = new Date();
@@ -160,6 +217,8 @@ export class SimuladorCreditoComponent {
     this.desgravamenPorCuota = null;
     this.seguroIncendioPorCuota = null;
     this.resultado.set(null);
+    this.evaluacion.set(null);
+    this.errorEvaluacion.set(null);
     this.errorMensaje.set(null);
     this.errorCodigo.set(null);
   }

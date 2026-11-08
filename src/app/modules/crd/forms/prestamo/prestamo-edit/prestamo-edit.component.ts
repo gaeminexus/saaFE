@@ -41,6 +41,9 @@ import { Producto } from '../../../model/producto';
 import { DetallePrestamoService } from '../../../service/detalle-prestamo.service';
 import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-prestamo.service';
 import { ParticipeService } from '../../../service/participe.service';
+import { GarantePrestamoComponent } from '../garante-prestamo/garante-prestamo.component';
+import { EvaluacionOtorgamiento } from '../../../model/evaluacion-otorgamiento';
+import { EvaluacionOtorgamientoPanelComponent } from '../../evaluacion-otorgamiento-panel/evaluacion-otorgamiento-panel.component';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
 import { FuncionesDatosService } from '../../../../../shared/services/funciones-datos.service';
@@ -73,10 +76,14 @@ enum CodigoEstadoPrestamo {
   ANULADO = 12,
 }
 
-type NombreImpreso = 'RPRT_PRST_SLCT' | 'RPRT_PRST_PGRE' | 'RPRT_TBLA_ACML';
+type NombreImpreso = 'RPRT_PRST_SLCT' | 'RPRT_PRST_ADRL' | 'RPRT_PRST_PGRE' | 'RPRT_TBLA_ACML';
+
+/** Tasa única de los créditos nuevos (DISENO-SOLICITUD-V1 §B5): el backend rechaza con 422 cualquier otra. */
+const TASA_OTORGAMIENTO = 9;
 
 const ETIQUETA_IMPRESO: Record<NombreImpreso, { archivo: string }> = {
   RPRT_PRST_SLCT: { archivo: 'solicitud-credito' },
+  RPRT_PRST_ADRL: { archivo: 'autorizacion-descuento' },
   RPRT_PRST_PGRE: { archivo: 'pagare' },
   RPRT_TBLA_ACML: { archivo: 'tabla-amortizacion' },
 };
@@ -122,6 +129,8 @@ const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
     MatTableModule,
     MatDialogModule,
     MatTooltipModule,
+    EvaluacionOtorgamientoPanelComponent,
+    GarantePrestamoComponent,
   ],
   templateUrl: './prestamo-edit.component.html',
   styleUrl: './prestamo-edit.component.scss',
@@ -136,6 +145,9 @@ export class PrestamoEditComponent implements OnInit {
   private jasperReportes = inject(JasperReportesService);
 
   loading = signal<boolean>(false);
+  /** Evaluación del otorgamiento (capacidad de pago y cupo) del préstamo guardado; solo informa, no bloquea. */
+  evaluacion = signal<EvaluacionOtorgamiento | null>(null);
+  cargandoEvaluacion = signal<boolean>(false);
 
   participesOptions = signal<ParticipeOption[]>([]);
   productosOptions = signal<Producto[]>([]);
@@ -262,6 +274,11 @@ export class PrestamoEditComponent implements OnInit {
     );
   }
 
+  /** La autorización de descuento por rol sigue las mismas reglas que el pagaré; antes de aprobar sale como BORRADOR desde el BE. */
+  get puedeImprimirAutorizacion(): boolean {
+    return this.puedeImprimirPagare;
+  }
+
   /** El lote (§7.4) solo sale con el préstamo aprobado, es decir, con idAsoprep. */
   get puedeImprimirLote(): boolean {
     return this.puedeImprimirDocumento && this.idAsoprepActual() != null;
@@ -368,7 +385,8 @@ export class PrestamoEditComponent implements OnInit {
     idasoprep: [{ value: null as number | null, disabled: true }],
     fechaInicio: [null as Date | null, Validators.required],
     tipoAmortizacion: [1 as number | null, Validators.required],
-    tasa: [0 as number | null, [Validators.required, Validators.min(0)]],
+    // Solo lectura en pantalla (B5): todos los créditos nuevos van al 9 %.
+    tasa: [TASA_OTORGAMIENTO as number | null, [Validators.required, Validators.min(0)]],
     monto: [null as number | null, [Validators.required, Validators.min(0.01)]],
     plazo: [null as number | null, Validators.required],
     // Solo PRENDARIO/HIPOTECARIO (§8): el validador se pone y se quita en `sincronizarGarantia()`.
@@ -516,7 +534,7 @@ export class PrestamoEditComponent implements OnInit {
       idasoprep: (prestamo as any).idAsoprep ?? null,
       fechaInicio: prestamo.fechaInicio ? new Date(prestamo.fechaInicio as any) : null,
       tipoAmortizacion: prestamo.tipoAmortizacion ?? 1,
-      tasa: prestamo.tasa ?? prestamo.tasaNominal ?? 0,
+      tasa: prestamo.tasa || prestamo.tasaNominal || TASA_OTORGAMIENTO,
       monto: prestamo.montoSolicitado ?? 0,
       plazo: prestamo.plazo ?? null,
       valorAsegurado: prestamo.valorAsegurado ?? null,
@@ -532,6 +550,7 @@ export class PrestamoEditComponent implements OnInit {
     this.registrarSustitucion(prestamo);
     if (prestamo.codigo) {
       this.cargarDetallePrestamo(prestamo.codigo);
+      this.cargarEvaluacion(prestamo.codigo);
     }
 
     this.prestamoDesdeConsulta = null;
@@ -787,6 +806,7 @@ export class PrestamoEditComponent implements OnInit {
         this.detallePrestamo.set([]);
         this.detallePrestamoRaw.set([]);
         this.registrarSustitucion(res);
+        if (nuevoPrestamoId) this.cargarEvaluacion(nuevoPrestamoId);
 
         this.snackBar.open('Préstamo guardado correctamente', 'Cerrar', { duration: 3000 });
       },
@@ -861,6 +881,7 @@ export class PrestamoEditComponent implements OnInit {
             this.loading.set(false);
             this.ultimoPrestamoId.set(res?.codigo ?? idPrestamo);
             this.idEstadoPrestamo.set(res?.idEstado ?? prestamoActual.idEstado ?? null);
+            this.cargarEvaluacion(res?.codigo ?? idPrestamo);
             this.snackBar.open('Préstamo actualizado correctamente', 'Cerrar', { duration: 3000 });
           },
           error: (err) => {
@@ -912,7 +933,7 @@ export class PrestamoEditComponent implements OnInit {
       idasoprep: null,
       fechaInicio: null,
       tipoAmortizacion: 1,
-      tasa: 0,
+      tasa: TASA_OTORGAMIENTO,
     });
     this.participeQuery.set('');
     this.ultimoPrestamoId.set(null);
@@ -920,6 +941,7 @@ export class PrestamoEditComponent implements OnInit {
     this.detallePrestamo.set([]);
     this.detallePrestamoRaw.set([]);
     this.mostrarCanceladas.set(false);
+    this.evaluacion.set(null);
   }
 
   generarTablaAmortizacion(): void {
@@ -963,16 +985,25 @@ export class PrestamoEditComponent implements OnInit {
   private ejecutarGeneracionTabla(idPrestamo: number, regenerar: boolean): void {
     this.generandoTabla.set(true);
     this.prestamoService
-      .generarTablaAmortizacion(idPrestamo, this.tieneCuotaCero(), regenerar)
+      .generarTablaAmortizacionConEvaluacion(idPrestamo, this.tieneCuotaCero(), regenerar)
       .pipe(finalize(() => this.generandoTabla.set(false)))
       .subscribe({
         next: (res) => {
-          if (res?.idEstado != null) {
-            this.idEstadoPrestamo.set(res.idEstado);
+          const prestamo = res?.prestamo;
+          if (prestamo?.idEstado != null) {
+            this.idEstadoPrestamo.set(prestamo.idEstado);
           }
-          this.snackBar.open('Tabla de amortización generada correctamente', 'Cerrar', {
-            duration: 3000,
-          });
+          // La evaluación es un aviso: generar no se bloquea por capacidad de pago ni por cupo.
+          const ev = res?.evaluacion ?? null;
+          this.evaluacion.set(ev);
+          const incumple = !!ev?.aplicaReglas && (ev.capacidadOk === false || ev.cupoOk === false);
+          this.snackBar.open(
+            incumple
+              ? 'Tabla generada, pero no cumple las reglas del otorgamiento: ' + (ev?.mensajes?.join(' ') || 'revise la evaluación.')
+              : 'Tabla de amortización generada correctamente',
+            'Cerrar',
+            { duration: incumple ? 10000 : 3000, panelClass: incumple ? ['warning-snackbar'] : undefined }
+          );
           this.cargarDetallePrestamo(idPrestamo);
         },
         error: (err) => {
@@ -1041,7 +1072,7 @@ export class PrestamoEditComponent implements OnInit {
                 'Cerrar',
                 { duration: 5000 }
               );
-              // §7.4: los tres documentos juntos. El préstamo ya quedó aprobado: si falla es un aviso.
+              // §7.4: los cuatro documentos juntos. El préstamo ya quedó aprobado: si falla es un aviso.
               this.imprimirLote(true);
             },
             error: (err) => {
@@ -1101,12 +1132,13 @@ export class PrestamoEditComponent implements OnInit {
 
   /** Parámetros de cada impreso (§7.3): solicitud y tabla llevan el usuario de la sesión; el pagaré no. */
   private parametrosImpreso(nombreReporte: NombreImpreso, idPrestamo: number): Record<string, any> {
+    // La autorización (como la solicitud y la tabla) lleva el usuario de la sesión en el pie; el pagaré no.
     return nombreReporte === 'RPRT_PRST_PGRE'
       ? { P_PRSTCDGO: idPrestamo }
       : { P_PRSTCDGO: idPrestamo, P_USUARIO: usuarioSesion() };
   }
 
-  /** Solicitud (`RPRT_PRST_SLCT`), pagaré (`RPRT_PRST_PGRE`) o tabla (`RPRT_TBLA_ACML`), §7.3. */
+  /** Solicitud (`RPRT_PRST_SLCT`), autorización (`RPRT_PRST_ADRL`), pagaré (`RPRT_PRST_PGRE`) o tabla (`RPRT_TBLA_ACML`), §7.3. */
   imprimir(nombreReporte: NombreImpreso): void {
     const idPrestamo = this.ultimoPrestamoId();
     const habilitado =
@@ -1114,7 +1146,9 @@ export class PrestamoEditComponent implements OnInit {
         ? this.puedeImprimirTabla
         : nombreReporte === 'RPRT_PRST_SLCT'
           ? this.puedeImprimirSolicitud
-          : this.puedeImprimirPagare;
+          : nombreReporte === 'RPRT_PRST_ADRL'
+            ? this.puedeImprimirAutorizacion
+            : this.puedeImprimirPagare;
     if (!idPrestamo || !habilitado) {
       return;
     }
@@ -1136,7 +1170,7 @@ export class PrestamoEditComponent implements OnInit {
   }
 
   /**
-   * Solicitud + pagaré + tabla en un solo PDF (§7.4), en ese orden. Lo llama el botón «Imprimir
+   * Solicitud + autorización + pagaré + tabla en un solo PDF (§7.4), en ese orden. Lo llama el botón «Imprimir
    * documentos» y, de forma automática, la aprobación exitosa: en ese caso un fallo es solo un
    * aviso, porque el préstamo ya quedó aprobado.
    */
@@ -1146,7 +1180,7 @@ export class PrestamoEditComponent implements OnInit {
       return;
     }
 
-    const reportes = (['RPRT_PRST_SLCT', 'RPRT_PRST_PGRE', 'RPRT_TBLA_ACML'] as NombreImpreso[]).map((nombre) => ({
+    const reportes = (['RPRT_PRST_SLCT', 'RPRT_PRST_ADRL', 'RPRT_PRST_PGRE', 'RPRT_TBLA_ACML'] as NombreImpreso[]).map((nombre) => ({
       nombreReporte: nombre,
       parametros: this.parametrosImpreso(nombre, idPrestamo),
     }));
@@ -1221,6 +1255,24 @@ export class PrestamoEditComponent implements OnInit {
               });
             },
           });
+      });
+  }
+
+  /** `GET prst/evaluarOtorgamiento/{id}`. Un fallo se avisa pero no frena nada: la garantía es el 422 del backend. */
+  private cargarEvaluacion(idPrestamo: number): void {
+    this.cargandoEvaluacion.set(true);
+    this.prestamoService
+      .evaluarOtorgamiento(idPrestamo)
+      .pipe(finalize(() => this.cargandoEvaluacion.set(false)))
+      .subscribe({
+        next: (ev) => this.evaluacion.set(ev),
+        error: (err) => {
+          this.evaluacion.set(null);
+          this.snackBar.open(this.extraerMensajeError(err, 'No se pudo evaluar el otorgamiento'), 'Cerrar', {
+            duration: 6000,
+            panelClass: ['warning-snackbar'],
+          });
+        },
       });
   }
 

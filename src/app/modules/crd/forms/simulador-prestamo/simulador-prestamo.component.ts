@@ -97,7 +97,8 @@ export class SimuladorPrestamoComponent {
 
   // ---- pestaña reestructuración ----
   capitalizarVencido = false;
-  nuevaTasaAnual: number | null = null;
+  /** Los créditos van al 9 % (DISENO-SOLICITUD-V1 §B5): arranca en 9,00; vacío = mantener la tasa actual. */
+  nuevaTasaAnual: number | null = 9;
   nuevoPlazo: number | null = null;
   mesesGracia: number | null = 0;
   simulandoReestructuracion = signal(false);

@@ -7,6 +7,8 @@
     </div>
   </div>
 
+  <mat-tab-group animationDuration="0ms">
+  <mat-tab label="Crédito nuevo">
   <!-- Cartel de simulación, siempre visible, no solo en el PDF (§4.6 y §8 del plan). -->
   <div class="aviso simulacion">
     <mat-icon>info</mat-icon>
@@ -21,6 +23,9 @@
       <mat-card-title>Datos del crédito</mat-card-title>
     </mat-card-header>
     <mat-card-content>
+
+      <app-participe-selector (elegido)="alElegirParticipe($event)" />
+      <p class="aviso-opcional">Opcional: elija un partícipe para ver la evaluación de capacidad de pago y cupo.</p>
 
       <div class="campos-grid">
         <mat-form-field appearance="outline">
@@ -154,6 +159,13 @@
       </div>
     </div>
 
+    @if (participe) {
+      <app-evaluacion-otorgamiento-panel [evaluacion]="evaluacion()" [cargando]="cargandoEvaluacion()" />
+      @if (errorEvaluacion(); as error) {
+        <div class="aviso error"><mat-icon>error_outline</mat-icon><span>{{ error }}</span></div>
+      }
+    }
+
     <div class="tabla-scroll">
       <table mat-table [dataSource]="res.tablaProyectada" class="tabla-amortizacion">
 
@@ -228,5 +240,12 @@
       <p>Complete los datos del crédito y presione Simular para ver la tabla de amortización proyectada.</p>
     </div>
   }
+
+  </mat-tab>
+
+  <mat-tab label="Novación">
+    <app-simulador-novacion />
+  </mat-tab>
+  </mat-tab-group>
 
 </div>

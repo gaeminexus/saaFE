@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Prestamo } from '../model/prestamo';
+import { EvaluacionOtorgamiento, SolicitudEvaluacionOtorgamiento, TablaGeneradaConEvaluacion } from '../model/evaluacion-otorgamiento';
 import { PrestamoSustituible, TipoOperacionPrestamo } from '../model/prestamo-sustituible';
 import { SaldoPrestamoResumen } from '../model/saldo-prestamo-resumen';
 import { ServiciosCrd } from './ws-crd';
@@ -96,6 +97,33 @@ export class PrestamoService {
     const url = `${ServiciosCrd.RS_PRST}/generarTablaAmortizacion/${id}/${cuotaCero}?regenerar=${regenerar}`;
 
     return this.http.post<Prestamo>(url, null, this.httpOptions).pipe(catchError(this.handleError));
+  }
+
+  /** Igual que `generarTablaAmortizacion` pero con `conEvaluacion=true`: responde `{prestamo, evaluacion}`. La evaluación es solo un aviso. */
+  generarTablaAmortizacionConEvaluacion(
+    id: number,
+    tieneCuotaCero: boolean = false,
+    regenerar: boolean = false,
+  ): Observable<TablaGeneradaConEvaluacion<Prestamo> | null> {
+    const cuotaCero = tieneCuotaCero ? 1 : 0;
+    const url = `${ServiciosCrd.RS_PRST}/generarTablaAmortizacion/${id}/${cuotaCero}?regenerar=${regenerar}&conEvaluacion=true`;
+    return this.http
+      .post<TablaGeneradaConEvaluacion<Prestamo>>(url, null, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** `GET prst/evaluarOtorgamiento/{id}`: capacidad de pago y cupo de un préstamo guardado. Solo lectura. */
+  evaluarOtorgamiento(id: number): Observable<EvaluacionOtorgamiento | null> {
+    return this.http
+      .get<EvaluacionOtorgamiento>(`${ServiciosCrd.RS_PRST}/evaluarOtorgamiento/${id}`)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** `POST prst/evaluarOtorgamiento`: la misma evaluación para un crédito que todavía no existe (simuladores). */
+  evaluarOtorgamientoSimulado(solicitud: SolicitudEvaluacionOtorgamiento): Observable<EvaluacionOtorgamiento | null> {
+    return this.http
+      .post<EvaluacionOtorgamiento>(`${ServiciosCrd.RS_PRST}/evaluarOtorgamiento`, solicitud, this.httpOptions)
+      .pipe(catchError(this.handleError));
   }
 
   /** Contrato: docs/crd/API-CICLO-OTORGAMIENTO.md §3. `idEmpresa` e `idUsuario` (código numérico, no el login) son obligatorios. */

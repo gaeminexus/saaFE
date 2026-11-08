@@ -24,6 +24,7 @@ import {
   SimulacionPrecancelacion,
 } from '../model/pagos/operaciones-pago';
 import { RespuestaPago } from '../model/pagos/respuesta-pago';
+import { ResultadoSimulacionNovacion } from '../model/evaluacion-otorgamiento';
 import {
   ParametrosAmortizacion,
   ResultadoSimulacionCreditoNuevo,
@@ -255,6 +256,29 @@ export class OperacionesPagoPrestamoService {
     return this.http
       .post<RespuestaPago<ResultadoSimulacionCreditoNuevo>>(url, this.limpiar(parametros), this.httpOptions)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  /**
+   * `POST prst/simularNovacion`: simula novar un quirografario o emergente (tabla nueva al 9 %, valor
+   * líquido y evaluación). No graba nada. Los 422 traen `{mensaje}` (original no permitido, no
+   * sustituible o monto ≤ VS): se devuelve ese texto tal cual.
+   */
+  simularNovacion(solicitud: {
+    idPrestamoOriginal: number;
+    monto: number;
+    plazo: number;
+  }): Observable<RespuestaPago<ResultadoSimulacionNovacion>> {
+    const url = `${ServiciosCrd.RS_PRST}/simularNovacion`;
+    return this.http.post<RespuestaPago<ResultadoSimulacionNovacion>>(url, solicitud, this.httpOptions).pipe(
+      catchError((e: HttpErrorResponse) => {
+        const cuerpo = e.error;
+        const texto = typeof cuerpo === 'string' ? cuerpo : cuerpo?.mensaje;
+        if (texto && !(cuerpo && typeof cuerpo === 'object' && 'exito' in cuerpo)) {
+          return of({ exito: false, etapa: 'VALIDACION', mensaje: texto, httpStatus: e.status } as RespuestaPago<never>);
+        }
+        return of(this.normalizarError(e));
+      })
+    );
   }
 
   // ===================== Simulador sobre préstamo existente (fase 5 de docs/crd/PLAN-SIMULADORES-PRESTAMOS.md) =====================
