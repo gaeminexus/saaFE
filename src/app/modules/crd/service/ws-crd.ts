@@ -109,6 +109,9 @@ export class ServiciosCrd {
   public static RS_USAP = `${API_URL}/usap`; // Credenciales de la app móvil (CRD.USAP) — solo los verbos de intranet: estado, crear, resetearClave, reactivar (docs/crd/API-USUARIO-APP-MOVIL.md)
   public static RS_DSSB = `${API_URL}/dssb`; // DestinoSobrante — destino del sobrante por partícipe en la carga Petro/ARCH (docs/crd/API-DESTINO-SOBRANTE.md)
   public static RS_GRPR = `${API_URL}/grpr`; // Garante del préstamo — uno activo por préstamo, solo editable en estado 6/1 (DISENO-SOLICITUD-V1 §B3)
+  public static RS_RGAP = `${API_URL}/rgap`; // Reglas de aprobación de préstamos por tipo, monto y plazo (DISENO-SOLICITUD-V1 B4)
+  public static RS_NVAP = `${API_URL}/nvap`; // Niveles de una regla de aprobación
+  public static RS_UNAP = `${API_URL}/unap`; // Usuarios que pueden aprobar un nivel
 }
 /*
 export class ServiciosCrd {

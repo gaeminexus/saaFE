@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Prestamo } from '../model/prestamo';
 import { EvaluacionOtorgamiento, SolicitudEvaluacionOtorgamiento, TablaGeneradaConEvaluacion } from '../model/evaluacion-otorgamiento';
+import { EstadoAprobacionPrestamo, ResultadoAprobacionPrestamo } from '../model/nivel-aprobacion';
 import { PrestamoSustituible, TipoOperacionPrestamo } from '../model/prestamo-sustituible';
 import { SaldoPrestamoResumen } from '../model/saldo-prestamo-resumen';
 import { ServiciosCrd } from './ws-crd';
@@ -137,6 +138,28 @@ export class PrestamoService {
     const url = `${ServiciosCrd.RS_PRST}/aprobar/${id}`;
     return this.http
       .post<Prestamo>(url, { usuario, observacion, idEmpresa, idUsuario }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** Igual que `aprobar` pero con `conDetalle=true`: con niveles de aprobación la respuesta dice si la aprobación quedó completa. */
+  aprobarConDetalle(
+    id: number,
+    usuario: string,
+    observacion: string,
+    idEmpresa: number,
+    idUsuario: number
+  ): Observable<ResultadoAprobacionPrestamo<Prestamo> | null> {
+    const url = `${ServiciosCrd.RS_PRST}/aprobar/${id}?conDetalle=true`;
+    return this.http
+      .post<ResultadoAprobacionPrestamo<Prestamo>>(url, { usuario, observacion, idEmpresa, idUsuario }, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  /** `GET prst/estadoAprobacion/{id}?idUsuario=`: niveles, quién aprobó, nivel pendiente y si este usuario puede aprobarlo. */
+  estadoAprobacion(id: number, idUsuario: number | null): Observable<EstadoAprobacionPrestamo | null> {
+    const consulta = idUsuario != null ? `?idUsuario=${idUsuario}` : '';
+    return this.http
+      .get<EstadoAprobacionPrestamo>(`${ServiciosCrd.RS_PRST}/estadoAprobacion/${id}${consulta}`)
       .pipe(catchError(this.handleError));
   }
 

@@ -16,7 +16,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
-import { finalize, forkJoin } from 'rxjs';
+import { Observable, finalize, forkJoin, map, of } from 'rxjs';
 
 import { MotivoAnularPrestamoDialogComponent } from './motivo-anular-prestamo-dialog.component';
 import {
@@ -43,6 +43,8 @@ import { EstadoCuotaPrestamoService } from '../../../service/estado-cuota-presta
 import { ParticipeService } from '../../../service/participe.service';
 import { GarantePrestamoComponent } from '../garante-prestamo/garante-prestamo.component';
 import { EvaluacionOtorgamiento } from '../../../model/evaluacion-otorgamiento';
+import { EstadoAprobacionPrestamo } from '../../../model/nivel-aprobacion';
+import { AprobacionesPanelComponent } from '../../aprobaciones-panel/aprobaciones-panel.component';
 import { EvaluacionOtorgamientoPanelComponent } from '../../evaluacion-otorgamiento-panel/evaluacion-otorgamiento-panel.component';
 import { PrestamoService } from '../../../service/prestamo.service';
 import { ProductoService } from '../../../service/producto.service';
@@ -131,6 +133,7 @@ const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
     MatTooltipModule,
     EvaluacionOtorgamientoPanelComponent,
     GarantePrestamoComponent,
+    AprobacionesPanelComponent,
   ],
   templateUrl: './prestamo-edit.component.html',
   styleUrl: './prestamo-edit.component.scss',
@@ -148,6 +151,9 @@ export class PrestamoEditComponent implements OnInit {
   /** Evaluación del otorgamiento (capacidad de pago y cupo) del préstamo guardado; solo informa, no bloquea. */
   evaluacion = signal<EvaluacionOtorgamiento | null>(null);
   cargandoEvaluacion = signal<boolean>(false);
+  /** Niveles de aprobación del préstamo (B4); `null` mientras no se haya consultado. */
+  estadoAprobacion = signal<EstadoAprobacionPrestamo | null>(null);
+  cargandoAprobacion = signal<boolean>(false);
 
   participesOptions = signal<ParticipeOption[]>([]);
   productosOptions = signal<Producto[]>([]);
@@ -229,7 +235,25 @@ export class PrestamoEditComponent implements OnInit {
 
   /** Sin tabla (PENDIENTE) no hay nada que aprobar todavía. */
   get puedeAprobar(): boolean {
-    return this.idEstadoPrestamo() === CodigoEstadoPrestamo.GENERADO;
+    if (this.idEstadoPrestamo() !== CodigoEstadoPrestamo.GENERADO) return false;
+    // Con niveles configurados solo se habilita si el backend dice que este usuario puede aprobar el pendiente.
+    return this.conNiveles ? !!this.estadoAprobacion()?.puedeAprobar : true;
+  }
+
+  /** Hay niveles de aprobación configurados para este préstamo (si no, se aprueba en un paso, como siempre). */
+  get conNiveles(): boolean {
+    const e = this.estadoAprobacion();
+    return !!e && !e.sinNiveles;
+  }
+
+  get textoAprobar(): string {
+    const e = this.estadoAprobacion();
+    return this.conNiveles && e?.nivelPendiente != null ? `Aprobar nivel ${e.nivelPendiente} de ${e.totalNiveles}` : 'Aprobar';
+  }
+
+  /** Alguno de los niveles ya aprobó: guardar o regenerar la tabla vuelve a empezar la aprobación. */
+  private get hayAprobacionesParciales(): boolean {
+    return !!this.estadoAprobacion()?.niveles.some((n) => n.decision === 1);
   }
 
   get puedeRechazar(): boolean {
@@ -551,6 +575,7 @@ export class PrestamoEditComponent implements OnInit {
     if (prestamo.codigo) {
       this.cargarDetallePrestamo(prestamo.codigo);
       this.cargarEvaluacion(prestamo.codigo);
+      this.cargarAprobacion(prestamo.codigo);
     }
 
     this.prestamoDesdeConsulta = null;
@@ -711,7 +736,9 @@ export class PrestamoEditComponent implements OnInit {
 
     const idPrestamoExistente = this.ultimoPrestamoId();
     if (idPrestamoExistente) {
-      this.guardarEdicion(idPrestamoExistente, v, producto);
+      this.confirmarPerdidaAprobaciones().subscribe((ok) => {
+        if (ok) this.guardarEdicion(idPrestamoExistente, v, producto);
+      });
     } else {
       this.guardarAlta(v, codigoEntidad, producto);
     }
@@ -806,7 +833,10 @@ export class PrestamoEditComponent implements OnInit {
         this.detallePrestamo.set([]);
         this.detallePrestamoRaw.set([]);
         this.registrarSustitucion(res);
-        if (nuevoPrestamoId) this.cargarEvaluacion(nuevoPrestamoId);
+        if (nuevoPrestamoId) {
+          this.cargarEvaluacion(nuevoPrestamoId);
+          this.cargarAprobacion(nuevoPrestamoId);
+        }
 
         this.snackBar.open('Préstamo guardado correctamente', 'Cerrar', { duration: 3000 });
       },
@@ -882,6 +912,7 @@ export class PrestamoEditComponent implements OnInit {
             this.ultimoPrestamoId.set(res?.codigo ?? idPrestamo);
             this.idEstadoPrestamo.set(res?.idEstado ?? prestamoActual.idEstado ?? null);
             this.cargarEvaluacion(res?.codigo ?? idPrestamo);
+            this.cargarAprobacion(res?.codigo ?? idPrestamo);
             this.snackBar.open('Préstamo actualizado correctamente', 'Cerrar', { duration: 3000 });
           },
           error: (err) => {
@@ -942,6 +973,7 @@ export class PrestamoEditComponent implements OnInit {
     this.detallePrestamoRaw.set([]);
     this.mostrarCanceladas.set(false);
     this.evaluacion.set(null);
+    this.estadoAprobacion.set(null);
   }
 
   generarTablaAmortizacion(): void {
@@ -967,7 +999,8 @@ export class PrestamoEditComponent implements OnInit {
       title: 'Regenerar tabla de amortización',
       message:
         `El préstamo ya tiene ${cuotasExistentes} cuota${cuotasExistentes === 1 ? '' : 's'} generada` +
-        `${cuotasExistentes === 1 ? '' : 's'}. Se van a reemplazar todas y la operación no se puede deshacer.`,
+        `${cuotasExistentes === 1 ? '' : 's'}. Se van a reemplazar todas y la operación no se puede deshacer.` +
+        (this.hayAprobacionesParciales ? ' Además, se perderán las aprobaciones de los niveles ya aprobados.' : ''),
       confirmText: 'Regenerar',
       type: 'danger',
     };
@@ -1005,8 +1038,10 @@ export class PrestamoEditComponent implements OnInit {
             { duration: incumple ? 10000 : 3000, panelClass: incumple ? ['warning-snackbar'] : undefined }
           );
           this.cargarDetallePrestamo(idPrestamo);
+          this.cargarAprobacion(idPrestamo);
         },
         error: (err) => {
+          this.cargarAprobacion(idPrestamo);
           this.snackBar.open(this.extraerMensajeError(err, 'Error al generar tabla de amortización'), 'Cerrar', {
             duration: 6000,
             panelClass: ['error-snackbar'],
@@ -1024,8 +1059,8 @@ export class PrestamoEditComponent implements OnInit {
     const data: ConfirmDialogData = {
       title: 'Aprobar préstamo',
       message:
-        'Se va a aprobar el préstamo. La tabla de amortización queda congelada a partir de este momento, ' +
-        'aunque todavía no tenga pagos registrados. La operación no se puede deshacer.',
+        (this.conNiveles ? `Se va a aprobar el nivel ${this.estadoAprobacion()?.nivelPendiente} de ${this.estadoAprobacion()?.totalNiveles}. Al aprobar el último nivel, ` : 'Se va a aprobar el préstamo. ') +
+        'la tabla de amortización queda congelada, aunque todavía no tenga pagos registrados. La operación no se puede deshacer.',
       confirmText: 'Aprobar',
       type: 'warning',
     };
@@ -1050,10 +1085,17 @@ export class PrestamoEditComponent implements OnInit {
 
         this.aprobando.set(true);
         this.prestamoService
-          .aprobar(idPrestamo, usuarioSesion(), '', idEmpresa, idUsuario)
+          .aprobarConDetalle(idPrestamo, usuarioSesion(), '', idEmpresa, idUsuario)
           .pipe(finalize(() => this.aprobando.set(false)))
           .subscribe({
-            next: (res) => {
+            next: (detalle) => {
+              this.cargarAprobacion(idPrestamo);
+              // Aprobación por niveles: si falta alguno, el préstamo sigue GENERADO y no se imprime nada todavía.
+              if (detalle && !detalle.aprobacionCompleta) {
+                this.snackBar.open(detalle.mensaje || 'Nivel aprobado; faltan niveles por aprobar', 'Cerrar', { duration: 8000 });
+                return;
+              }
+              const res = detalle?.prestamo;
               if (res?.idEstado != null) {
                 this.idEstadoPrestamo.set(res.idEstado);
               }
@@ -1246,6 +1288,7 @@ export class PrestamoEditComponent implements OnInit {
               if (res?.idEstado != null) {
                 this.idEstadoPrestamo.set(res.idEstado);
               }
+              this.cargarAprobacion(idPrestamo);
               this.snackBar.open('Préstamo rechazado', 'Cerrar', { duration: 3000 });
             },
             error: (err) => {
@@ -1274,6 +1317,36 @@ export class PrestamoEditComponent implements OnInit {
           });
         },
       });
+  }
+
+  /** `GET prst/estadoAprobacion/{id}?idUsuario=`. Un fallo se avisa pero no frena nada. */
+  private cargarAprobacion(idPrestamo: number): void {
+    this.cargandoAprobacion.set(true);
+    this.prestamoService
+      .estadoAprobacion(idPrestamo, idUsuarioSesion())
+      .pipe(finalize(() => this.cargandoAprobacion.set(false)))
+      .subscribe({
+        next: (e) => this.estadoAprobacion.set(e),
+        error: (err) => {
+          this.estadoAprobacion.set(null);
+          this.snackBar.open(this.extraerMensajeError(err, 'No se pudo consultar el estado de aprobación'), 'Cerrar', {
+            duration: 6000,
+            panelClass: ['warning-snackbar'],
+          });
+        },
+      });
+  }
+
+  /** Pregunta antes de una acción que, en el backend, invalida las aprobaciones parciales. Sin ellas, sigue sin preguntar. */
+  private confirmarPerdidaAprobaciones(): Observable<boolean> {
+    if (!this.hayAprobacionesParciales) return of(true);
+    const data: ConfirmDialogData = {
+      title: 'Aprobaciones parciales',
+      message: 'Se perderán las aprobaciones de los niveles ya aprobados. La aprobación vuelve a empezar desde el nivel 1.',
+      confirmText: 'Continuar',
+      type: 'warning',
+    };
+    return this.dialog.open(ConfirmDialogComponent, { data, width: '560px' }).afterClosed().pipe(map((ok) => !!ok));
   }
 
   private cargarDetallePrestamo(codigoPrestamo: number, corregirEstados = false): void {

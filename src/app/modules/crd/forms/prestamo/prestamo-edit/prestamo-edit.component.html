@@ -264,7 +264,7 @@
                 } @else {
                   <mat-icon>check_circle</mat-icon>
                 }
-                Aprobar
+                {{ textoAprobar }}
               </button>
               <button
                 mat-raised-button
@@ -331,6 +331,7 @@
         </form>
 
         @if (ultimoPrestamoId()) {
+          <app-aprobaciones-panel [estado]="estadoAprobacion()" [cargando]="cargandoAprobacion()" />
           <app-evaluacion-otorgamiento-panel [evaluacion]="evaluacion()" [cargando]="cargandoEvaluacion()" />
           <app-garante-prestamo [idPrestamo]="ultimoPrestamoId()!" [idEstado]="idEstadoPrestamo()" />
         }

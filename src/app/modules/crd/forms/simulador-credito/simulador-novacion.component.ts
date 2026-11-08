@@ -91,8 +91,7 @@ export class SimuladorNovacionComponent {
       .pipe(finalize(() => this.cargandoPrestamos.set(false)))
       .subscribe({
         next: (lista) => {
-          // Solo quirografarios y emergentes. La fila trae la familia (tipo de préstamo del producto), no el
-          // código Petro (PQ/PE): se filtra por esa familia; el backend valida igual con el código Petro.
+          // Solo quirografarios y emergentes (codigoPetro PQ/PE); el backend valida igual.
           this.prestamos.set((lista || []).filter((s) => this.esQuirografarioOEmergente(s)));
           if (!this.prestamos().length) {
             this.errorPrestamos.set('El partícipe no tiene quirografarios ni emergentes para novar.');
@@ -149,8 +148,8 @@ export class SimuladorNovacionComponent {
     this.errorMensaje.set(null);
   }
 
+  /** Solo quirografarios (PQ) y emergentes (PE), por el código Petro del producto. */
   private esQuirografarioOEmergente(s: PrestamoSustituible): boolean {
-    const familia = (s.familia || '').toUpperCase();
-    return familia.includes('QUIROGRAF') || familia.includes('EMERGENT');
+    return s.codigoPetro === 'PQ' || s.codigoPetro === 'PE';
   }
 }

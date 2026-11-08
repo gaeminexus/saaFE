@@ -7,6 +7,8 @@ export interface PrestamoSustituible {
   idAsoprep: number | null;
   producto: string;
   familia: string;
+  /** Código Petro del producto (PQ quirografario, PE emergente, PH hipotecario…). */
+  codigoPetro: string | null;
   estado: number;
   /** `false` → no se puede usar; `motivo` dice por qué. */
   puede: boolean;

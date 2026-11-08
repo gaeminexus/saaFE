@@ -1326,6 +1326,13 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/crd/forms/parametrizacion/cuentas-tipo-aporte/cuentas-tipo-aporte.component').then((m) => m.CuentasTipoAporteComponent),
         canActivate: [authGuard, usuarioUnoGuard],
       },
+      {
+        // TODO TEMPORAL: misma restricción a USUARIO 1 que las demás pantallas de configuración de este menú
+        // (usuarioUnoGuard) hasta que exista el permiso del árbol para «Niveles de aprobación».
+        path: 'niveles-aprobacion',
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/niveles-aprobacion/niveles-aprobacion.component').then((m) => m.NivelesAprobacionComponent),
+        canActivate: [authGuard, usuarioUnoGuard],
+      },
       // Rutas de Contratos
       {
         path: 'contrato-dash',

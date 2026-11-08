@@ -1,0 +1,272 @@
+<div class="nvap-container">
+
+  <div class="header">
+    <div class="header-title">
+      <mat-icon class="header-icon">rule</mat-icon>
+      <h1>Niveles de aprobación</h1>
+    </div>
+    @if (vista() === 'lista') {
+      <button mat-raised-button color="primary" (click)="nueva()">
+        <mat-icon>add</mat-icon> Nueva regla
+      </button>
+    } @else {
+      <button mat-stroked-button (click)="volver()">
+        <mat-icon>arrow_back</mat-icon> Volver a la lista
+      </button>
+    }
+  </div>
+
+  @if (error(); as e) {
+    <div class="aviso error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+  }
+
+  @if (vista() === 'lista') {
+
+    <p class="ayuda">
+      Cada regla dice a qué préstamos aplica (tipo, monto y plazo) y cuántos niveles de aprobación necesita. Gana la de
+      menor prioridad. Mientras no haya ninguna regla activa, los préstamos se aprueban en un solo paso.
+    </p>
+
+    @if (cargando()) {
+      <mat-spinner diameter="28"></mat-spinner>
+    }
+
+    <table mat-table [dataSource]="filas()" class="tabla-reglas">
+      <ng-container matColumnDef="nombre">
+        <th mat-header-cell *matHeaderCellDef>Nombre</th>
+        <td mat-cell *matCellDef="let f">{{ f.regla.nombre }}</td>
+      </ng-container>
+      <ng-container matColumnDef="tipo">
+        <th mat-header-cell *matHeaderCellDef>Tipo de préstamo</th>
+        <td mat-cell *matCellDef="let f">{{ nombreTipo(f.regla.idTipoPrestamo) }}</td>
+      </ng-container>
+      <ng-container matColumnDef="monto">
+        <th mat-header-cell *matHeaderCellDef>Monto desde – hasta</th>
+        <td mat-cell *matCellDef="let f">{{ rango(f.regla.montoMinimo, f.regla.montoMaximo, 'dinero') }}</td>
+      </ng-container>
+      <ng-container matColumnDef="plazo">
+        <th mat-header-cell *matHeaderCellDef>Plazo desde – hasta</th>
+        <td mat-cell *matCellDef="let f">{{ rango(f.regla.plazoMinimo, f.regla.plazoMaximo, 'cuotas') }}</td>
+      </ng-container>
+      <ng-container matColumnDef="prioridad">
+        <th mat-header-cell *matHeaderCellDef>Prioridad</th>
+        <td mat-cell *matCellDef="let f">{{ f.regla.prioridad }}</td>
+      </ng-container>
+      <ng-container matColumnDef="niveles">
+        <th mat-header-cell *matHeaderCellDef>Niveles</th>
+        <td mat-cell *matCellDef="let f">{{ f.niveles ?? '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="estado">
+        <th mat-header-cell *matHeaderCellDef>Estado</th>
+        <td mat-cell *matCellDef="let f">
+          <span class="estado" [class.inactiva]="!esActiva(f.regla)">{{ esActiva(f.regla) ? 'Activa' : 'Inactiva' }}</span>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="acciones">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let f">
+          <button mat-icon-button matTooltip="Editar" (click)="editar(f)"><mat-icon>edit</mat-icon></button>
+          @if (esActiva(f.regla)) {
+            <button mat-icon-button matTooltip="Inactivar" (click)="inactivarRegla(f)"><mat-icon>block</mat-icon></button>
+          }
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columnas"></tr>
+      <tr mat-row *matRowDef="let row; columns: columnas;"></tr>
+    </table>
+
+    @if (!filas().length && !cargando()) {
+      <p class="vacio">No hay reglas. Los préstamos se aprueban en un solo paso.</p>
+    }
+
+    <mat-card class="probar-card">
+      <mat-card-header><mat-card-title>Probar la configuración</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <div class="campos-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de préstamo</mat-label>
+            <input matInput [value]="probarTipoTexto()" (input)="alEscribirTipoProbar($any($event.target).value)"
+                   [matAutocomplete]="autoTipoProbar" placeholder="Nombre o código SBS" />
+            <mat-autocomplete #autoTipoProbar="matAutocomplete" (optionSelected)="alElegirTipoProbar($event.option.value)">
+              <mat-option [value]="null">Cualquiera</mat-option>
+              @for (t of tiposFiltradosProbar(); track t.codigo) {
+                <mat-option [value]="t">{{ etiquetaTipo(t) }}</mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Monto</mat-label>
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="probarMonto" name="probarMonto" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Plazo (cuotas)</mat-label>
+            <input matInput type="number" min="1" step="1" [(ngModel)]="probarPlazo" name="probarPlazo" />
+          </mat-form-field>
+        </div>
+        <div class="acciones">
+          <button mat-raised-button color="primary" [disabled]="probando()" (click)="probar()">
+            <mat-icon>play_arrow</mat-icon> Probar
+          </button>
+        </div>
+
+        @if (errorProbar(); as e) {
+          <div class="aviso error"><mat-icon>error_outline</mat-icon><span>{{ e }}</span></div>
+        }
+
+        @if (simulacion(); as s) {
+          @if (s.regla; as r) {
+            <div class="resultado">
+              <p><b>Aplica la regla «{{ r.regla.nombre }}»</b> (prioridad {{ r.regla.prioridad }}).</p>
+              <ol>
+                @for (n of r.niveles; track n.codigo) {
+                  <li>
+                    <b>{{ n.nombre }}</b>:
+                    @for (u of n.usuarios; track u.codigo; let ultimo = $last) {{{ u.nombre }}{{ ultimo ? '' : ', ' }}} @empty {sin usuarios}
+                  </li>
+                }
+              </ol>
+              @if (s.mensaje) { <p>{{ s.mensaje }}</p> }
+            </div>
+          } @else {
+            <div class="resultado">
+              <p>{{ s.mensaje || (s.sinReglasActivas ? 'No hay reglas activas: se aprueba en un solo paso.' : 'Ninguna regla aplica.') }}</p>
+            </div>
+          }
+        }
+      </mat-card-content>
+    </mat-card>
+
+  } @else {
+
+    <mat-card class="regla-card">
+      <mat-card-header>
+        <mat-card-title>{{ reglaId() == null ? 'Nueva regla' : 'Regla' }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="campos-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre *</mat-label>
+            <input matInput [(ngModel)]="nombre" name="nombre" maxlength="200" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de préstamo</mat-label>
+            <input matInput [value]="tipoTexto()" (input)="alEscribirTipo($any($event.target).value)"
+                   [matAutocomplete]="autoTipo" placeholder="Cualquiera" />
+            <mat-autocomplete #autoTipo="matAutocomplete" (optionSelected)="alElegirTipo($event.option.value)">
+              <mat-option [value]="null">Cualquiera</mat-option>
+              @for (t of tiposFiltradosEdicion(); track t.codigo) {
+                <mat-option [value]="t">{{ etiquetaTipo(t) }}</mat-option>
+              }
+            </mat-autocomplete>
+            <mat-hint>Vacío = cualquier tipo</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Prioridad *</mat-label>
+            <input matInput type="number" min="0" step="1" [(ngModel)]="prioridad" name="prioridad" />
+            <mat-hint>Gana la menor. Por defecto 100</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Monto desde</mat-label>
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="montoMinimo" name="montoMinimo" />
+            <mat-hint>Vacío = sin límite</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Monto hasta</mat-label>
+            <input matInput type="number" min="0" step="0.01" [(ngModel)]="montoMaximo" name="montoMaximo" />
+            <mat-hint>Vacío = sin límite</mat-hint>
+          </mat-form-field>
+          <div></div>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Plazo desde (cuotas)</mat-label>
+            <input matInput type="number" min="1" step="1" [(ngModel)]="plazoMinimo" name="plazoMinimo" />
+            <mat-hint>Vacío = sin límite</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Plazo hasta (cuotas)</mat-label>
+            <input matInput type="number" min="1" step="1" [(ngModel)]="plazoMaximo" name="plazoMaximo" />
+            <mat-hint>Vacío = sin límite</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="acciones">
+          <button mat-raised-button color="primary" [disabled]="!puedeGuardarRegla" (click)="guardarRegla()">
+            <mat-icon>save</mat-icon> Guardar regla
+          </button>
+          @if (ocupado()) { <mat-spinner diameter="20"></mat-spinner> }
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    @if (completa(); as c) {
+      <mat-card class="niveles-card">
+        <mat-card-header>
+          <mat-card-title>Niveles de aprobación ({{ c.niveles.length }})</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <p class="ayuda">
+            El número de niveles es cuántos tiene la regla. En cada nivel basta con que apruebe uno de sus usuarios.
+            Un mismo usuario no puede aprobar dos niveles del mismo préstamo.
+          </p>
+
+          @for (n of c.niveles; track n.codigo; let i = $index) {
+            <div class="nivel">
+              <div class="nivel-cabecera">
+                <span class="nivel-orden">{{ n.orden }}</span>
+                <mat-form-field appearance="outline" class="nivel-nombre">
+                  <mat-label>Nombre del nivel</mat-label>
+                  <input matInput [(ngModel)]="nombresEditados[n.codigo]" [name]="'nivel' + n.codigo" maxlength="150" />
+                </mat-form-field>
+                <button mat-icon-button matTooltip="Guardar nombre" [disabled]="!nombreCambiado(n.codigo, n.nombre) || ocupado()"
+                        (click)="renombrarNivel(n.codigo, n.orden)"><mat-icon>save</mat-icon></button>
+                <button mat-icon-button matTooltip="Subir" [disabled]="i === 0 || ocupado()" (click)="mover(i, -1)"><mat-icon>arrow_upward</mat-icon></button>
+                <button mat-icon-button matTooltip="Bajar" [disabled]="i === c.niveles.length - 1 || ocupado()" (click)="mover(i, 1)"><mat-icon>arrow_downward</mat-icon></button>
+                <button mat-icon-button matTooltip="Quitar nivel" [disabled]="ocupado()" (click)="quitarNivel(n.codigo, n.nombre)"><mat-icon>delete</mat-icon></button>
+              </div>
+
+              <div class="usuarios">
+                @for (u of n.usuarios; track u.codigo) {
+                  <span class="usuario-chip">
+                    {{ u.nombre }}
+                    <button mat-icon-button class="chip-quitar" matTooltip="Quitar usuario" [disabled]="ocupado()" (click)="quitarUsuario(u.codigo)">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  </span>
+                } @empty {
+                  <span class="sin-usuarios">Este nivel no tiene usuarios: no se podrá aprobar.</span>
+                }
+              </div>
+
+              <mat-form-field appearance="outline" class="usuario-buscar">
+                <mat-label>Agregar usuario</mat-label>
+                <input matInput [(ngModel)]="busquedaUsuario[n.codigo]" [name]="'busca' + n.codigo"
+                       [matAutocomplete]="autoUsuario" placeholder="Buscar por nombre o código" />
+                <mat-autocomplete #autoUsuario="matAutocomplete" (optionSelected)="agregarUsuario(n.codigo, $event.option.value)">
+                  @for (u of usuariosFiltrados(n.codigo); track u.codigo) {
+                    <mat-option [value]="u.codigo">{{ u.nombre }} ({{ u.codigo }})</mat-option>
+                  }
+                </mat-autocomplete>
+              </mat-form-field>
+            </div>
+          }
+
+          <div class="nuevo-nivel">
+            <mat-form-field appearance="outline">
+              <mat-label>Nuevo nivel</mat-label>
+              <input matInput [(ngModel)]="nuevoNivelNombre" name="nuevoNivel" maxlength="150" placeholder="Ej.: Jefe de Crédito" />
+            </mat-form-field>
+            <button mat-stroked-button [disabled]="!nuevoNivelNombre.trim() || ocupado()" (click)="agregarNivel()">
+              <mat-icon>add</mat-icon> Agregar nivel
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    } @else if (reglaId() == null) {
+      <p class="ayuda">Guarde la regla para poder agregar sus niveles.</p>
+    }
+
+  }
+</div>

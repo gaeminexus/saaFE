@@ -422,6 +422,13 @@ export class MenucreditosComponent {
         idPermiso: Permisos.CRD_CUENTAS_POR_TIPO_DE_APORTE,
         route: '/menucreditos/cuentas-tipo-aporte',
       });
+      // Sin permiso propio en el árbol todavía: se muestra solo al USUARIO 1 (igual que la ruta) y reusa el de «Parametrización».
+      paramNode?.children?.push({
+        displayName: 'Niveles de Aprobación',
+        iconName: 'rule',
+        idPermiso: Permisos.CRD_PARAMETRIZACION,
+        route: '/menucreditos/niveles-aprobacion',
+      });
     }
   }
 }
