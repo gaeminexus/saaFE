@@ -352,6 +352,27 @@
       </p>
     }
 
+    @if (res.totalRetenido || res.totalRetenidoAcumuladoAPagar) {
+      <div class="totales-comparativa">
+        <div class="total-box total-seguro">
+          <mat-icon>savings</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Pensión retenida (sin cuenta)</span>
+            <span class="total-valor">$ {{ money(res.totalRetenido) }}</span>
+            <span class="total-sub">no se devenga ni se paga hasta que haya cuenta</span>
+          </div>
+        </div>
+        <div class="total-box total-dinero">
+          <mat-icon>payments</mat-icon>
+          <div class="total-info">
+            <span class="total-label">Retenido acumulado a pagar</span>
+            <span class="total-valor">$ {{ money(res.totalRetenidoAcumuladoAPagar) }}</span>
+            <span class="total-sub">meses anteriores de jubilados que ya tienen cuenta</span>
+          </div>
+        </div>
+      </div>
+    }
+
     <div class="kpis">
       <div class="kpi">
         <span class="kpi-label">Evaluados</span>
@@ -460,6 +481,8 @@
                   <th class="c-num">Total</th>
                   <th class="c-num" matTooltip="Cuenta 2.3.01.10.03">Pensión</th>
                   <th class="c-num" matTooltip="Cuenta 2.3.90.90.06 — porción de la mensualidad, no un adicional">Seguro</th>
+                  <th class="c-num" matTooltip="Pensión del mes que queda retenida porque el jubilado no tiene una sola cuenta activa con certificado: no se devenga ni se paga hasta que la tenga">Pensión retenida (sin cuenta)</th>
+                  <th class="c-num" matTooltip="Pensión retenida de meses anteriores que esta corrida pagaría porque el jubilado ya tiene cuenta con certificado">Retenido acumulado a pagar</th>
                   <th>Participación</th>
                   <th>Motivo</th>
                 </tr>
@@ -478,6 +501,8 @@
                     <td class="c-num">$ {{ money(d.total) }}</td>
                     <td class="c-num">$ {{ money(d.totalPension) }}</td>
                     <td class="c-num">$ {{ money(d.totalSeguro) }}</td>
+                    <td class="c-num">$ {{ money(d.montoRetenido) }}</td>
+                    <td class="c-num">$ {{ money(d.retenidoAcumuladoAPagar) }}</td>
                     <td>
                       <span class="badge" [ngClass]="claseParticipacion(d.participacion)">
                         {{ textoParticipacion(d.participacion) }}
@@ -562,6 +587,12 @@
           <div class="resumen-item">
             <span class="l">Órdenes generadas</span><span class="v">$ {{ money(res.totalOrdenesGeneradas) }}</span>
           </div>
+          <div class="resumen-item">
+            <span class="l">Pensión retenida (sin cuenta)</span><span class="v">$ {{ money(res.totalRetenido) }}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="l">Retenido acumulado pagado</span><span class="v">$ {{ money(res.totalRetenidoAcumuladoPagado) }}</span>
+          </div>
         </div>
 
         @if (res.errores?.length) {
@@ -586,6 +617,8 @@
                 <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.01.10.03">Pensión acum.</th>
                 <th class="c-num" matTooltip="Acumulado del retroactivo, cuenta 2.3.90.90.06">Seguro acum.</th>
                 <th class="c-num" matTooltip="Parte del seguro acumulado que sale en la orden aparte al proveedor del seguro">Seguro médico (a proveedor)</th>
+                <th class="c-num" matTooltip="Pensión de los meses de esta corrida que quedó retenida (sin cuenta con certificado): no se devengó ni se pagó">Pensión retenida (sin cuenta)</th>
+                <th class="c-num" matTooltip="Retenido de meses anteriores que esta corrida pagó, una orden por mes">Retenido acum. pagado</th>
                 <th class="c-num">Cruzado a préstamo</th>
                 <th class="c-num">Orden de pago</th>
                 <th>Estado</th>
@@ -602,6 +635,13 @@
                   <td class="c-num">{{ d.totalPension != null ? money(d.totalPension) : '—' }}</td>
                   <td class="c-num">{{ d.totalSeguro != null ? money(d.totalSeguro) : '—' }}</td>
                   <td class="c-num">{{ d.valorSeguroInterno != null ? money(d.valorSeguroInterno) : '—' }}</td>
+                  <td class="c-num">{{ d.valorRetenido != null ? money(d.valorRetenido) : '—' }}</td>
+                  <td class="c-num">
+                    {{ d.retenidoAcumuladoPagado != null ? money(d.retenidoAcumuladoPagado) : '—' }}
+                    @if (d.mesesRetenidosPagados) {
+                      <br /><small>{{ d.mesesRetenidosPagados }} mes(es)</small>
+                    }
+                  </td>
                   <td class="c-num">{{ d.valorCruzadoAPrestamo != null ? money(d.valorCruzadoAPrestamo) : '—' }}</td>
                   <td class="c-num">{{ d.valorOrdenPago != null ? money(d.valorOrdenPago) : '—' }}</td>
                   <td>

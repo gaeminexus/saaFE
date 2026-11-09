@@ -162,6 +162,8 @@
           <div><strong>Cédula:</strong> {{ entidadSeleccionada()?.numeroIdentificacion || '-' }}</div>
         </div>
 
+        <app-pension-retenida-jubilado [idEntidad]="entidadSeleccionada()?.codigo ?? null" [nombre]="entidadSeleccionada()?.razonSocial ?? ''" />
+
         <form [formGroup]="asignacionForm" class="filtros-form asignacion-form">
           <mat-form-field appearance="fill">
             <mat-label>Valor a pagar</mat-label>

@@ -33,6 +33,7 @@ import {
 } from '../../../../service/verificacion-cuenta-certificado.service';
 import { CorridaMesPagoJubiladosComponent } from './corrida-mes/corrida-mes-pago-jubilados.component';
 import { SeguimientoPagoJubiladosComponent } from './seguimiento/seguimiento-pago-jubilados.component';
+import { PensionRetenidaJubiladoComponent } from './pension-retenida/pension-retenida-jubilado.component';
 
 @Component({
   selector: 'app-proceso-pago-jubilados',
@@ -46,6 +47,7 @@ import { SeguimientoPagoJubiladosComponent } from './seguimiento/seguimiento-pag
     MatTabsModule,
     CorridaMesPagoJubiladosComponent,
     SeguimientoPagoJubiladosComponent,
+    PensionRetenidaJubiladoComponent,
   ],
   templateUrl: './proceso-pago-jubilados.component.html',
   styleUrl: './proceso-pago-jubilados.component.scss',

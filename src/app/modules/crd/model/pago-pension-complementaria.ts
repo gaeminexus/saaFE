@@ -82,6 +82,11 @@ export interface DetallePagoPension {
    * Opcional: puede faltar en un backend más viejo (anterior a §4ter).
    */
   valorSeguroInterno?: number;
+  /** Pensión de los meses de esta corrida que quedó retenida (sin cuenta con certificado). */
+  valorRetenido?: number;
+  /** Retenido de meses anteriores que esta corrida pagó (una orden por mes). */
+  retenidoAcumuladoPagado?: number;
+  mesesRetenidosPagados?: number;
 }
 
 /** §1 — cuerpo de `resultado` de `POST /pgpc/generarPagosDelMes`. */
@@ -103,6 +108,10 @@ export interface ResultadoGeneracionPagos {
    * pendiente de renombre coordinado con el backend.
    */
   totalSeguroInternoGeneral?: number;
+  /** Pensión que quedó retenida en la corrida (jubilados sin salida): no se devenga ni se paga. */
+  totalRetenido?: number;
+  /** Retenido de meses anteriores que la corrida pagó. Ya está incluido en `totalOrdenesGeneradas`. */
+  totalRetenidoAcumuladoPagado?: number;
   errores: string[];
   detalle: DetallePagoPension[];
 }
@@ -208,6 +217,10 @@ export interface DetallePrevisualizacionPago {
    */
   totalPension: number;
   totalSeguro: number;
+  /** Pensión de la corrida que quedaría retenida (sin cuenta con certificado). */
+  montoRetenido?: number;
+  /** Retenido de meses anteriores que la corrida pagaría (con cuenta con certificado). */
+  retenidoAcumuladoAPagar?: number;
 }
 
 /**
@@ -308,6 +321,10 @@ export interface ResultadoPrevisualizacionCorrida {
    * NO está incluido en `totalADinero` (que es exclusivamente dinero al banco del jubilado).
    */
   totalSeguroInternoGeneral: number;
+  /** Pensión retenida (jubilados sin salida) que la corrida dejaría sin devengar ni pagar. */
+  totalRetenido?: number;
+  /** Retenido de meses anteriores que la corrida pagaría (jubilados con salida). */
+  totalRetenidoAcumuladoAPagar?: number;
   /**
    * La suma de los TRES: `totalACruzarPrestamos + totalADinero + totalSeguroInternoGeneral`
    * (§4ter — ya no son solo dos). Es lo que se descuenta de las cuentas de pensión complementaria.
@@ -316,4 +333,37 @@ export interface ResultadoPrevisualizacionCorrida {
   /** Suma del seguro médico (cuenta `2.3.90.90.06`) de todos los jubilados evaluados. */
   totalSeguroGeneral: number;
   detalle: DetallePrevisualizacionPago[];
+}
+
+/**
+ * Pensión retenida de jubilados sin cuenta bancaria (saaBE docs/logica-negocio/crd/API-PENSION-RETENIDA.md).
+ * Un mes retenido no se devenga ni se paga hasta que el jubilado tenga una sola cuenta activa con certificado.
+ */
+export interface LineaPensionRetenida {
+  idPago: number;
+  anio: number;
+  mes: number;
+  valor: number;
+  /** Solo en `pagados`. */
+  idOrdenPago?: number | null;
+  /** Solo en `pagados`; `null` en los históricos ya devengados. */
+  idAsientoDevengo?: number | null;
+  /** Histórico ya devengado: su «por pagar» ya existía, no se devenga otra vez. */
+  historicoYaDevengado?: boolean;
+  /** Solo en `noPagados`: por qué no se pudo pagar. */
+  motivo?: string | null;
+}
+
+/** `GET /pgpc/retenidos/{idEntidad}` y `resultado` de `POST /pgpc/pagarRetenidos`. */
+export interface ResultadoPensionRetenida {
+  idEntidad: number;
+  tieneSalida: boolean;
+  motivoSinSalida?: string | null;
+  pendientes: LineaPensionRetenida[];
+  totalPendiente: number;
+  pagados: LineaPensionRetenida[];
+  noPagados: LineaPensionRetenida[];
+  totalPagado: number;
+  totalNoPagado: number;
+  mensaje?: string | null;
 }

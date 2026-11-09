@@ -687,14 +687,16 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       total: d.total,
       totalPension: d.totalPension,
       totalSeguro: d.totalSeguro,
+      montoRetenido: d.montoRetenido ?? 0,
+      retenidoAcumuladoAPagar: d.retenidoAcumuladoAPagar ?? 0,
       participacion: this.textoParticipacion(d.participacion),
       motivoBloqueo: d.motivoBloqueo ?? '',
     }));
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-prevuelo-${this.periodoArchivo()}${sufijo}`,
-      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Seguro a traspaso interno', 'Total', 'Pensión', 'Seguro médico', 'Participación', 'Motivo bloqueo'],
-      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'montoSeguroInterno', 'total', 'totalPension', 'totalSeguro', 'participacion', 'motivoBloqueo'],
+      ['Entidad', 'Nombre', 'Meses adeudados', 'Monto a cruzar', 'Monto a dinero', 'Seguro a traspaso interno', 'Total', 'Pensión', 'Seguro médico', 'Pensión retenida (sin cuenta)', 'Retenido acumulado a pagar', 'Participación', 'Motivo bloqueo'],
+      ['idEntidad', 'nombre', 'mesesAdeudados', 'montoACruzar', 'montoADinero', 'montoSeguroInterno', 'total', 'totalPension', 'totalSeguro', 'montoRetenido', 'retenidoAcumuladoAPagar', 'participacion', 'motivoBloqueo'],
     );
   }
 
@@ -711,6 +713,9 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
       totalPension: d.totalPension ?? '',
       totalSeguro: d.totalSeguro ?? '',
       valorSeguroInterno: d.valorSeguroInterno ?? '',
+      valorRetenido: d.valorRetenido ?? '',
+      retenidoAcumuladoPagado: d.retenidoAcumuladoPagado ?? '',
+      mesesRetenidosPagados: d.mesesRetenidosPagados ?? '',
       valorCruzadoAPrestamo: d.valorCruzadoAPrestamo ?? '',
       valorOrdenPago: d.valorOrdenPago ?? '',
       estado: this.esDesviacion(d) ? 'Desviación' : this.textoEstadoDetalle(d),
@@ -719,8 +724,8 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
     this.exportService.exportToCSV(
       filas,
       `corrida-jubilados-resultado-${this.periodoArchivo()}`,
-      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Pensión acumulada', 'Seguro acumulado', 'Seguro a traspaso interno', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
-      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'totalPension', 'totalSeguro', 'valorSeguroInterno', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
+      ['Entidad', 'Nombre', 'Pensión', 'Seguro', 'Pensión acumulada', 'Seguro acumulado', 'Seguro a traspaso interno', 'Pensión retenida (sin cuenta)', 'Retenido acumulado pagado', 'Meses retenidos pagados', 'Cruzado a préstamo', 'Orden de pago', 'Estado', 'Mensaje'],
+      ['idEntidad', 'nombre', 'valorPension', 'valorSeguroSalud', 'totalPension', 'totalSeguro', 'valorSeguroInterno', 'valorRetenido', 'retenidoAcumuladoPagado', 'mesesRetenidosPagados', 'valorCruzadoAPrestamo', 'valorOrdenPago', 'estado', 'mensaje'],
     );
   }
 

@@ -7,6 +7,7 @@ import {
   PagoPensionComplementaria,
   ResultadoGeneracionPagos,
   ResultadoGeneracionSeguro,
+  ResultadoPensionRetenida,
   ResultadoPrevisualizacionCorrida,
   ResultadoSincronizacion,
   RespuestaPgpc,
@@ -167,6 +168,36 @@ export class PagoPensionComplementariaService {
     return this.http
       .get<PagoPensionComplementaria[]>(`${this.base}/porEntidad/${idEntidad}`)
       .pipe(catchError((e: HttpErrorResponse) => throwError(() => this.extraerMensajeError(e))));
+  }
+
+  /**
+   * GET /pgpc/retenidos/{idEntidad} — solo lectura: meses de pensión retenidos pendientes de un jubilado, su
+   * total, y si hoy tiene salida (una sola cuenta activa con certificado) o por qué no (`motivoSinSalida`).
+   * Sin sobre: objeto directo.
+   */
+  retenidos(idEntidad: number): Observable<ResultadoPensionRetenida> {
+    return this.http
+      .get<ResultadoPensionRetenida>(`${this.base}/retenidos/${idEntidad}`)
+      .pipe(catchError((e: HttpErrorResponse) => throwError(() => this.extraerMensajeError(e))));
+  }
+
+  /**
+   * POST /pgpc/pagarRetenidos?idEntidad&idEmpresa&usuario — paga lo acumulado (una orden por mes), sin cuerpo.
+   * Lo que no se pudo pagar NO es error HTTP: viene en `resultado.noPagados` con su `motivo`. El 400 por usuario
+   * inválido llega como texto plano, no como `{mensaje}`.
+   */
+  pagarRetenidos(idEntidad: number, idEmpresa: number): Observable<RespuestaPgpc<ResultadoPensionRetenida>> {
+    const params = new HttpParams()
+      .set('idEntidad', idEntidad)
+      .set('idEmpresa', idEmpresa)
+      .set('usuario', usuarioSesion());
+    return this.http
+      .post<RespuestaPgpc<ResultadoPensionRetenida>>(`${this.base}/pagarRetenidos`, null, { params })
+      .pipe(
+        catchError((e: HttpErrorResponse) =>
+          of({ exito: false, error: 'ERROR_INTERNO', mensaje: this.extraerMensajeError(e) } as RespuestaPgpc<ResultadoPensionRetenida>),
+        ),
+      );
   }
 
   // ===================== manejo de errores =====================
