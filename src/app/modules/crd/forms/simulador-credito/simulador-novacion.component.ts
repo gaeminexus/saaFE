@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { guardarArchivo, mensajeReporteFallido } from '../../../../shared/services/descarga-reporte';
 import { FuncionesDatosService } from '../../../../shared/services/funciones-datos.service';
 import { formatearMoneda } from '../../../../shared/utils/moneda.util';
 import { ResultadoSimulacionNovacion, cuotaTotalPrimera } from '../../model/evaluacion-otorgamiento';
 import { mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { SolicitudReporteSimulacion } from '../../model/simuladores/reporte-simulacion';
 import { PrestamoSustituible } from '../../model/prestamo-sustituible';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
@@ -54,6 +56,8 @@ export class SimuladorNovacionComponent {
   simulando = signal(false);
   resultado = signal<ResultadoSimulacionNovacion | null>(null);
   errorMensaje = signal<string | null>(null);
+  exportandoPdf = signal(false);
+  errorPdf = signal<string | null>(null);
 
   get original(): PrestamoSustituible | null {
     return this.prestamos().find((p) => p.idPrestamo === this.idOriginal) ?? null;
@@ -124,6 +128,32 @@ export class SimuladorNovacionComponent {
       });
   }
 
+  /** PDF de la novación simulada: el backend recalcula con los mismos datos que `simularNovacion`. */
+  exportarPdf(): void {
+    const r = this.resultado();
+    if (!r || this.idOriginal == null || this.exportandoPdf()) return;
+    this.errorPdf.set(null);
+    this.exportandoPdf.set(true);
+
+    const solicitud: SolicitudReporteSimulacion = {
+      tipo: 'NOVACION',
+      novacion: { idPrestamoOriginal: this.idOriginal, monto: this.monto ?? 0, plazo: this.plazo ?? 0 },
+      nombreSocio: this.participe?.nombre ?? null,
+      identificacionSocio: this.participe?.numeroIdentificacion ?? null,
+    };
+
+    this.operaciones.reporteSimulacion(solicitud).subscribe({
+      next: (blob) => {
+        this.exportandoPdf.set(false);
+        guardarArchivo(blob, `simulacion-novacion-${r.original?.idAsoprep ?? this.idOriginal}.pdf`);
+      },
+      error: (err) => {
+        this.exportandoPdf.set(false);
+        mensajeReporteFallido(err).then((mensaje) => this.errorPdf.set(mensaje));
+      },
+    });
+  }
+
   nuevaSimulacion(): void {
     this.selector?.limpiar();
     this.participe = null;
@@ -146,6 +176,7 @@ export class SimuladorNovacionComponent {
   private limpiarResultado(): void {
     this.resultado.set(null);
     this.errorMensaje.set(null);
+    this.errorPdf.set(null);
   }
 
   /** Solo quirografarios (PQ) y emergentes (PE), por el código Petro del producto. */

@@ -11,7 +11,7 @@ import { ParametrosReestructuracion } from './simulador-prestamo-existente';
  * Verificado por el árbitro contra `ejb/crd/service/dto/SolicitudReporteSimulacion.java` (§7.2
  * del plan): los nombres de campo de acá son los reales, no una inferencia.
  */
-export type TipoReporteSimulacion = 'CREDITO_NUEVO' | 'ABONO_CAPITAL' | 'REESTRUCTURACION';
+export type TipoReporteSimulacion = 'CREDITO_NUEVO' | 'ABONO_CAPITAL' | 'REESTRUCTURACION' | 'NOVACION';
 
 export interface SolicitudReporteSimulacion {
   tipo: TipoReporteSimulacion;
@@ -37,4 +37,7 @@ export interface SolicitudReporteSimulacion {
 
   /** Solo cuando `tipo === 'REESTRUCTURACION'`: los mismos parámetros de `simularReestructuracion`. */
   reestructuracion?: ParametrosReestructuracion;
+
+  /** Solo cuando `tipo === 'NOVACION'`: los mismos campos que el cuerpo de `POST /prst/simularNovacion`. */
+  novacion?: { idPrestamoOriginal: number; monto: number; plazo: number };
 }

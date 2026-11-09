@@ -65,9 +65,28 @@
       </div>
     }
 
+    @if (errorPdf(); as errPdf) {
+      <div class="aviso error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errPdf }}</span>
+      </div>
+    }
+
     <div class="acciones">
       <button mat-stroked-button (click)="nuevaSimulacion()">
         <mat-icon>backspace</mat-icon> Limpiar
+      </button>
+      <button
+        mat-stroked-button
+        [disabled]="!resultado() || exportandoPdf()"
+        matTooltip="Exportar la simulación de novación en PDF"
+        (click)="exportarPdf()">
+        @if (exportandoPdf()) {
+          <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+          <mat-icon>picture_as_pdf</mat-icon>
+        }
+        Exportar PDF
       </button>
       <button mat-raised-button color="primary" [disabled]="!puedeSimular" (click)="simular()">
         @if (simulando()) {
