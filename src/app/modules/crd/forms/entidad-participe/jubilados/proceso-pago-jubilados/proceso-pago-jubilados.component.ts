@@ -26,6 +26,9 @@ import { CodigoEstadoParticipe } from '../../../../model/estado-participe';
 import { ValorPagoPensionComplementaria } from '../../../../model/valor-pago-pension-complementaria';
 import { AporteService } from '../../../../service/aporte.service';
 import { EntidadService } from '../../../../service/entidad.service';
+import { PagoPensionComplementariaService } from '../../../../service/pago-pension-complementaria.service';
+import { ResultadoPensionRetenida, ResumenRetenidosJubilado } from '../../../../model/pago-pension-complementaria';
+import { empresaSesionCodigo } from '../../../../../../shared/services/empresa-sesion';
 import { ValorPagoPensionComplementariaService } from '../../../../service/valor-pago-pension-complementaria.service';
 import {
   VerificacionCuentaCertificado,
@@ -33,7 +36,7 @@ import {
 } from '../../../../service/verificacion-cuenta-certificado.service';
 import { CorridaMesPagoJubiladosComponent } from './corrida-mes/corrida-mes-pago-jubilados.component';
 import { SeguimientoPagoJubiladosComponent } from './seguimiento/seguimiento-pago-jubilados.component';
-import { PensionRetenidaJubiladoComponent } from './pension-retenida/pension-retenida-jubilado.component';
+import { ResultadoPensionRetenidaComponent } from './pension-retenida/resultado-pension-retenida.component';
 
 @Component({
   selector: 'app-proceso-pago-jubilados',
@@ -47,7 +50,7 @@ import { PensionRetenidaJubiladoComponent } from './pension-retenida/pension-ret
     MatTabsModule,
     CorridaMesPagoJubiladosComponent,
     SeguimientoPagoJubiladosComponent,
-    PensionRetenidaJubiladoComponent,
+    ResultadoPensionRetenidaComponent,
   ],
   templateUrl: './proceso-pago-jubilados.component.html',
   styleUrl: './proceso-pago-jubilados.component.scss',
@@ -70,6 +73,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
+  private pgpcService = inject(PagoPensionComplementariaService);
 
   filtrosForm!: FormGroup;
   asignacionForm!: FormGroup;
@@ -102,8 +106,8 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
   /** No nulo si NINGÚN jubilado con cuenta tiene certificado — probable catálogo sin cargar. NO degradar a un simple "Falta". */
   avisoCertificadosPadron = signal<string | null>(null);
 
-  displayedColumns: string[] = ['cedula', 'nombre', 'estado', 'saldoPension', 'acciones'];
-  displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'tienePrestamo', 'valorSeguro', 'cuentaBancaria', 'certificado', 'acciones'];
+  displayedColumns: string[] = ['cedula', 'nombre', 'estado', 'saldoPension', 'retenido', 'acciones'];
+  displayedColumnsAsignaciones: string[] = ['cedula', 'nombre', 'valorRegistrado', 'cuotas', 'valorMensual', 'tienePrestamo', 'valorSeguro', 'cuentaBancaria', 'certificado', 'retenido', 'acciones'];
   dataSource = new MatTableDataSource<Entidad>([]);
   dataSourceAsignaciones = new MatTableDataSource<ValorPagoPensionComplementaria>([]);
 
@@ -141,6 +145,7 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
 
     this.cargarAsignaciones();
     this.cargarUniversoJubilados();
+    this.cargarRetenidos();
   }
 
   private filtroTextoAsignaciones = '';
@@ -749,6 +754,95 @@ export class ProcesoPagoJubiladosComponent implements OnInit {
 
     const normalizado = nombreTipo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     return normalizado.includes('pension complementaria');
+  }
+
+  // ===================== Pensión retenida: botón «Pagar pendientes» por fila =====================
+
+  /** Jubilados con pensiones pendientes (retenidas o rechazadas por el banco), por `idEntidad`. Una sola consulta. */
+  retenidosMap = signal<Map<number, ResumenRetenidosJubilado>>(new Map());
+  errorRetenidos = signal<string | null>(null);
+  pagandoRetenidos = signal<number | null>(null);
+  resultadoRetenidos = signal<ResultadoPensionRetenida | null>(null);
+  tituloResultadoRetenidos = signal<string>('');
+  mensajeResultadoRetenidos = signal<string | null>(null);
+
+  private cargarRetenidos(): void {
+    const idEmpresa = empresaSesionCodigo();
+    if (idEmpresa == null) {
+      return;
+    }
+    this.pgpcService.retenidosEnBloque(idEmpresa).subscribe({
+      next: (filas) => {
+        this.retenidosMap.set(new Map((filas || []).map((f) => [f.idEntidad, f])));
+        this.errorRetenidos.set(null);
+      },
+      error: (mensaje: string) => {
+        this.retenidosMap.set(new Map());
+        this.errorRetenidos.set(`No se pudo consultar la pensión retenida: ${mensaje}`);
+      },
+    });
+  }
+
+  retenidoDe(codigo: number | null | undefined): ResumenRetenidosJubilado | null {
+    return codigo == null ? null : this.retenidosMap().get(codigo) ?? null;
+  }
+
+  get totalRetenidosPendientes(): number {
+    let total = 0;
+    this.retenidosMap().forEach((f) => (total += f.totalPendiente));
+    return total;
+  }
+
+  pagarPendientes(codigo: number | null | undefined, nombre: string | null | undefined): void {
+    const fila = this.retenidoDe(codigo);
+    const idEmpresa = empresaSesionCodigo();
+    if (!fila || !fila.tieneSalida || this.pagandoRetenidos() != null) {
+      return;
+    }
+    if (idEmpresa == null) {
+      this.snackBar.open('No se pudo determinar la empresa de la sesión', 'Cerrar', { duration: 4000 });
+      return;
+    }
+    const nombreJubilado = nombre || fila.nombre || 'el jubilado';
+    const data: ConfirmDialogData = {
+      title: 'Pagar pensiones pendientes',
+      message: `Se generará una orden de pago por cada mes pendiente de ${nombreJubilado}. Esto descuenta de su cuenta de pensión complementaria.`,
+      confirmText: 'Pagar',
+      cancelText: 'Cancelar',
+      type: 'warning',
+      details: [
+        { label: 'Meses pendientes', value: String(fila.meses) },
+        { label: 'Total', value: `$ ${fila.totalPendiente.toFixed(2)}` },
+      ],
+    };
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '520px' })
+      .afterClosed()
+      .subscribe((ok) => {
+        if (!ok) {
+          return;
+        }
+        this.pagandoRetenidos.set(fila.idEntidad);
+        this.pgpcService.pagarRetenidos(fila.idEntidad, idEmpresa).subscribe((resp) => {
+          this.pagandoRetenidos.set(null);
+          if (resp.exito && resp.resultado) {
+            this.resultadoRetenidos.set(resp.resultado);
+            this.tituloResultadoRetenidos.set(nombreJubilado);
+            this.mensajeResultadoRetenidos.set(resp.mensaje ?? null);
+          } else {
+            this.snackBar.open(resp.mensaje || 'No se pudo pagar las pensiones pendientes', 'Cerrar', {
+              duration: 10000,
+              panelClass: ['error-snackbar'],
+            });
+          }
+          this.cargarRetenidos();
+        });
+      });
+  }
+
+  /** Texto de ayuda de la fila: meses y total pendientes. */
+  textoRetenido(fila: ResumenRetenidosJubilado): string {
+    return `${fila.meses} mes(es) pendiente(s): $ ${fila.totalPendiente.toFixed(2)}`;
   }
 
   verDash(entidad: Entidad): void {

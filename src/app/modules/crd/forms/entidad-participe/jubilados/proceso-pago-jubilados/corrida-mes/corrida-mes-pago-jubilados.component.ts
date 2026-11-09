@@ -26,6 +26,7 @@ import {
   Participacion,
   ResultadoGeneracionPagos,
   ResultadoPrevisualizacionCorrida,
+  ResultadoProcesoPendientes,
   SolicitudProcesoJubilados,
 } from '../../../../../model/pago-pension-complementaria';
 import { PagoPensionComplementariaService } from '../../../../../service/pago-pension-complementaria.service';
@@ -377,6 +378,100 @@ export class CorridaMesPagoJubiladosComponent implements OnInit {
         this.notificar(resp.mensaje ?? 'No se pudo generar las pensiones.', false);
       }
     });
+  }
+
+  // ===================== Procesar pendientes del mes =====================
+
+  /** ⛔ NO genera las pensiones del mes: solo paga pensiones retenidas o rechazadas por el banco. */
+  procesandoPendientes = signal(false);
+  consultandoPendientes = signal(false);
+  resultadoPendientes = signal<ResultadoProcesoPendientes | null>(null);
+  mensajePendientes = signal<string | null>(null);
+  errorPendientes = signal<string | null>(null);
+
+  confirmarProcesarPendientes(): void {
+    if (this.idEmpresa == null || this.procesandoPendientes() || this.consultandoPendientes()) {
+      return;
+    }
+    this.errorPendientes.set(null);
+    this.consultandoPendientes.set(true);
+    this.pgpcService.retenidosEnBloque(this.idEmpresa).subscribe({
+      next: (filas) => {
+        this.consultandoPendientes.set(false);
+        if (!filas.length) {
+          this.notificar('No hay jubilados con pensiones pendientes.', true);
+          return;
+        }
+        const total = filas.reduce((s, f) => s + f.totalPendiente, 0);
+        const conSalida = filas.filter((f) => f.tieneSalida);
+        const totalConSalida = conSalida.reduce((s, f) => s + f.totalPendiente, 0);
+        const data: ConfirmarGeneracionData = {
+          titulo: 'Confirmar proceso de pendientes',
+          periodo: this.periodoTexto,
+          advertencia:
+            'Se van a pagar las pensiones pendientes (retenidas por falta de cuenta o rechazadas por el banco) ' +
+            'solo de los jubilados que ya tienen una cuenta activa con certificado: una orden de pago por mes. ' +
+            'NO se generan las pensiones de este mes. Genera asientos y órdenes en tesorería.',
+          desglose: [
+            { label: 'Total de pendientes', valor: total, nota: `${filas.length} jubilado(s)`, clase: 'total' },
+            { label: 'Con salida (se pagarían)', valor: totalConSalida, nota: `${conSalida.length} jubilado(s)`, clase: 'dinero' },
+          ],
+          avisoExtra:
+            filas.length > conSalida.length
+              ? `${filas.length - conSalida.length} jubilado(s) siguen sin salida y quedarán pendientes.`
+              : undefined,
+          textoBoton: 'Procesar pendientes',
+        };
+        this.dialog
+          .open(ConfirmarGeneracionDialogComponent, { data, width: '520px' })
+          .afterClosed()
+          .subscribe((confirmado) => {
+            if (confirmado) {
+              this.procesarPendientesConfirmado();
+            }
+          });
+      },
+      error: (mensaje: string) => {
+        this.consultandoPendientes.set(false);
+        this.errorPendientes.set(`No se pudo consultar los pendientes: ${mensaje}`);
+      },
+    });
+  }
+
+  private procesarPendientesConfirmado(): void {
+    if (this.idEmpresa == null) {
+      return;
+    }
+    this.resultadoPendientes.set(null);
+    this.mensajePendientes.set(null);
+    this.errorPendientes.set(null);
+    this.procesandoPendientes.set(true);
+    this.pgpcService.procesarPendientes(this.idEmpresa, this.anio, this.mes).subscribe((resp) => {
+      this.procesandoPendientes.set(false);
+      if (resp.exito && resp.resultado) {
+        this.resultadoPendientes.set(resp.resultado);
+        this.mensajePendientes.set(resp.mensaje ?? null);
+        const r = resp.resultado;
+        this.notificar(
+          r.conError > 0 || r.conPendientesSinPagar > 0
+            ? 'Pendientes procesados con novedades. Revise el detalle.'
+            : 'Pendientes procesados correctamente.',
+          r.conError === 0 && r.conPendientesSinPagar === 0,
+        );
+      } else {
+        this.errorPendientes.set(resp.mensaje ?? 'No se pudo procesar los pendientes.');
+        this.notificar(resp.mensaje ?? 'No se pudo procesar los pendientes.', false);
+      }
+    });
+  }
+
+  /** Detalle por jubilado del resultado: solo los que tuvieron pagos o algo sin pagar. */
+  get detallePendientes() {
+    return (this.resultadoPendientes()?.detalle ?? []).filter((d) => d.pagados.length || d.noPagados.length);
+  }
+
+  mesRetenido(l: { mes: number; anio: number }): string {
+    return `${String(l.mes).padStart(2, '0')}/${l.anio}`;
   }
 
   // ===================== Derivados del prevuelo =====================

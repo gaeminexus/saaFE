@@ -198,6 +198,111 @@
     }
   }
 
+  <!-- Pendientes: no recorre el padrón ni genera pensiones del mes. -->
+  <mat-card class="proceso-card">
+    <mat-card-content>
+      <div class="proceso-header">
+        <mat-icon>savings</mat-icon>
+        <div class="proceso-titulo">
+          <span class="pt-nombre">Procesar pendientes del mes</span>
+          <span class="pt-momento">Cuando haya cuentas nuevas o pagos rechazados</span>
+        </div>
+      </div>
+      <p class="proceso-pendiente-texto">
+        Paga las pensiones pendientes (retenidas por falta de cuenta con certificado, o rechazadas por el banco) solo de los
+        jubilados que ya tienen salida. <strong>No genera las pensiones del mes</strong>, no toca el seguro ni el cruce y no
+        recorre el padrón. Se puede repetir.
+      </p>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="confirmarProcesarPendientes()"
+        [disabled]="idEmpresa == null || procesandoPendientes() || consultandoPendientes()"
+      >
+        @if (procesandoPendientes() || consultandoPendientes()) {
+          <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+          <mat-icon>play_circle</mat-icon>
+        }
+        Procesar pendientes del mes
+      </button>
+      @if (errorPendientes()) {
+        <div class="error-banner error-banner-proceso">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorPendientes() }}</span>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  @if (resultadoPendientes(); as rp) {
+    <mat-card class="resultado-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>fact_check</mat-icon> Resultado de los pendientes de {{ periodoTexto }}</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (mensajePendientes()) {
+          <p class="mensaje-resultado">{{ mensajePendientes() }}</p>
+        }
+        <div class="resumen-grid">
+          <div class="resumen-item"><span class="l">Evaluados</span><span class="v">{{ rp.evaluados }}</span></div>
+          <div class="resumen-item"><span class="l">Con pagos</span><span class="v">{{ rp.conPagos }}</span></div>
+          <div class="resumen-item"><span class="l">Con pendientes sin pagar</span><span class="v">{{ rp.conPendientesSinPagar }}</span></div>
+          <div class="resumen-item" [class.con-error]="rp.conError > 0"><span class="l">Con error</span><span class="v">{{ rp.conError }}</span></div>
+          <div class="resumen-item"><span class="l">Meses pagados</span><span class="v">{{ rp.mesesPagados }}</span></div>
+          <div class="resumen-item"><span class="l">Total pagado</span><span class="v">$ {{ money(rp.totalPagado) }}</span></div>
+          <div class="resumen-item"><span class="l">Total no pagado</span><span class="v">$ {{ money(rp.totalNoPagado) }}</span></div>
+        </div>
+
+        @if (rp.errores?.length) {
+          <div class="errores-lista">
+            <div class="err-titulo"><mat-icon>error</mat-icon> Errores</div>
+            <ul>
+              @for (e of rp.errores; track $index) {
+                <li>{{ e }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (detallePendientes.length) {
+          <div class="tabla-scroll">
+            <table class="detalle-table">
+              <thead>
+                <tr>
+                  <th>Entidad</th>
+                  <th class="c-num">Pagado</th>
+                  <th>Meses pagados</th>
+                  <th class="c-num">No pagado</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of detallePendientes; track d.idEntidad) {
+                  <tr [class.fila-desviacion]="d.noPagados.length > 0">
+                    <td>{{ d.idEntidad }}</td>
+                    <td class="c-num">$ {{ money(d.totalPagado) }}</td>
+                    <td>
+                      @for (l of d.pagados; track l.idPago) {
+                        <div>{{ mesRetenido(l) }} — $ {{ money(l.valor) }}@if (l.idOrdenPago) { · orden {{ l.idOrdenPago }} }</div>
+                      } @empty { — }
+                    </td>
+                    <td class="c-num">$ {{ money(d.totalNoPagado) }}</td>
+                    <td>
+                      @for (l of d.noPagados; track l.idPago) {
+                        <div>{{ mesRetenido(l) }}: {{ l.motivo || 'sin motivo informado' }}</div>
+                      } @empty { — }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
   @if (errorPrevuelo()) {
     <div class="error-banner">
       <mat-icon>error_outline</mat-icon>

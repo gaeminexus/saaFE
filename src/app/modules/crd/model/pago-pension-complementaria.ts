@@ -367,3 +367,29 @@ export interface ResultadoPensionRetenida {
   totalNoPagado: number;
   mensaje?: string | null;
 }
+
+/** Una fila de `GET /pgpc/retenidos?idEmpresa=`: jubilado con pensiones pendientes (retenidas o rechazadas por el banco). */
+export interface ResumenRetenidosJubilado {
+  idEntidad: number;
+  nombre: string;
+  identificacion: string;
+  totalPendiente: number;
+  meses: number;
+  tieneSalida: boolean;
+  motivoSinSalida?: string | null;
+}
+
+/** `resultado` de `POST /pgpc/procesarPendientes`. No genera pensiones del mes: solo paga pendientes. */
+export interface ResultadoProcesoPendientes {
+  anio: number;
+  mes: number;
+  evaluados: number;
+  conPagos: number;
+  conPendientesSinPagar: number;
+  conError: number;
+  mesesPagados: number;
+  totalPagado: number;
+  totalNoPagado: number;
+  detalle: ResultadoPensionRetenida[];
+  errores: string[];
+}

@@ -328,6 +328,17 @@
               Ir a Consulta
             </button>
           </div>
+          @if (mostrarAprobarRechazar && motivoSinCuentaDestino) {
+            <div class="aviso-cuenta-destino" role="alert">
+              <mat-icon>warning</mat-icon>
+              <span>
+                {{ motivoSinCuentaDestino }}
+                @if (bloqueaCuentaDestino) {
+                  <strong> No se puede aprobar el último nivel hasta resolverlo.</strong>
+                }
+              </span>
+            </div>
+          }
         </form>
 
         @if (ultimoPrestamoId()) {

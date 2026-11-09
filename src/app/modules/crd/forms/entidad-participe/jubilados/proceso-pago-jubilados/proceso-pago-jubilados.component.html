@@ -2,6 +2,15 @@
 <mat-tab-group animationDuration="0ms" class="jubilados-tabs">
 <mat-tab label="Padrón">
 <ng-template matTabContent>
+  @if (errorRetenidos()) {
+    <p class="aviso-certificados"><mat-icon>error_outline</mat-icon> <span>{{ errorRetenidos() }}</span></p>
+  }
+  <app-resultado-pension-retenida
+    [resultado]="resultadoRetenidos()"
+    [titulo]="tituloResultadoRetenidos()"
+    [mensaje]="mensajeResultadoRetenidos()"
+    (cerrar)="resultadoRetenidos.set(null)" />
+
   <div class="resumen-pendiente">
     <div class="rp-item rp-sin-pension">
       <mat-icon>assignment_late</mat-icon>
@@ -106,6 +115,28 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="retenido">
+              <th mat-header-cell *matHeaderCellDef matTooltip="Pensión retenida por no tener una sola cuenta activa con certificado, o rechazada por el banco">Pensión retenida (sin cuenta)</th>
+              <td mat-cell *matCellDef="let entidad">
+                @if (retenidoDe(entidad.codigo); as r) {
+                  <div class="celda-retenido">
+                    <small>{{ textoRetenido(r) }}</small>
+                    <button mat-stroked-button color="primary" type="button"
+                            [disabled]="!r.tieneSalida || pagandoRetenidos() != null"
+                            [matTooltip]="r.tieneSalida ? 'Genera una orden de pago por cada mes pendiente' : (r.motivoSinSalida || 'Sin una sola cuenta activa con certificado')"
+                            (click)="pagarPendientes(r.idEntidad, entidad.razonSocial)">
+                      Pagar pendientes
+                    </button>
+                    @if (!r.tieneSalida) {
+                      <small class="motivo-sin-salida">{{ r.motivoSinSalida }}</small>
+                    }
+                  </div>
+                } @else {
+                  <span>—</span>
+                }
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="acciones">
               <th mat-header-cell *matHeaderCellDef>Acciones</th>
               <td mat-cell *matCellDef="let entidad">
@@ -162,7 +193,7 @@
           <div><strong>Cédula:</strong> {{ entidadSeleccionada()?.numeroIdentificacion || '-' }}</div>
         </div>
 
-        <app-pension-retenida-jubilado [idEntidad]="entidadSeleccionada()?.codigo ?? null" [nombre]="entidadSeleccionada()?.razonSocial ?? ''" />
+
 
         <form [formGroup]="asignacionForm" class="filtros-form asignacion-form">
           <mat-form-field appearance="fill">
@@ -335,6 +366,28 @@
                       <mat-icon matTooltip="No se pudo verificar (ver el aviso arriba de la tabla)">help_outline</mat-icon>
                     }
                   }
+                }
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="retenido">
+              <th mat-header-cell *matHeaderCellDef matTooltip="Pensión retenida por no tener una sola cuenta activa con certificado, o rechazada por el banco">Pensión retenida (sin cuenta)</th>
+              <td mat-cell *matCellDef="let item">
+                @if (retenidoDe(item.entidad?.codigo); as r) {
+                  <div class="celda-retenido">
+                    <small>{{ textoRetenido(r) }}</small>
+                    <button mat-stroked-button color="primary" type="button"
+                            [disabled]="!r.tieneSalida || pagandoRetenidos() != null"
+                            [matTooltip]="r.tieneSalida ? 'Genera una orden de pago por cada mes pendiente' : (r.motivoSinSalida || 'Sin una sola cuenta activa con certificado')"
+                            (click)="pagarPendientes(r.idEntidad, item.entidad?.razonSocial)">
+                      Pagar pendientes
+                    </button>
+                    @if (!r.tieneSalida) {
+                      <small class="motivo-sin-salida">{{ r.motivoSinSalida }}</small>
+                    }
+                  </div>
+                } @else {
+                  <span>—</span>
                 }
               </td>
             </ng-container>

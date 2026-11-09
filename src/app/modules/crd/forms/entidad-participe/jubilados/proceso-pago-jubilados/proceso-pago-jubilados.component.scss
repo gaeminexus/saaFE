@@ -157,3 +157,16 @@
   gap: 0.5rem;
   min-height: 80px;
 }
+
+.celda-retenido {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.motivo-sin-salida {
+  color: #8a4b00;
+  max-width: 280px;
+}

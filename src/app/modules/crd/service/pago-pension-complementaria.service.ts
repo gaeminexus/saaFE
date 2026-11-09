@@ -9,6 +9,8 @@ import {
   ResultadoGeneracionSeguro,
   ResultadoPensionRetenida,
   ResultadoPrevisualizacionCorrida,
+  ResultadoProcesoPendientes,
+  ResumenRetenidosJubilado,
   ResultadoSincronizacion,
   RespuestaPgpc,
   SolicitudProcesoJubilados,
@@ -196,6 +198,37 @@ export class PagoPensionComplementariaService {
       .pipe(
         catchError((e: HttpErrorResponse) =>
           of({ exito: false, error: 'ERROR_INTERNO', mensaje: this.extraerMensajeError(e) } as RespuestaPgpc<ResultadoPensionRetenida>),
+        ),
+      );
+  }
+
+  /**
+   * GET /pgpc/retenidos?idEmpresa= — lectura en bloque: una fila por jubilado con pendientes (total, meses,
+   * `tieneSalida`, `motivoSinSalida`), para el botón por fila sin un GET por jubilado.
+   */
+  retenidosEnBloque(idEmpresa: number): Observable<ResumenRetenidosJubilado[]> {
+    const params = new HttpParams().set('idEmpresa', idEmpresa);
+    return this.http
+      .get<ResumenRetenidosJubilado[]>(`${this.base}/retenidos`, { params })
+      .pipe(catchError((e: HttpErrorResponse) => throwError(() => this.extraerMensajeError(e))));
+  }
+
+  /**
+   * POST /pgpc/procesarPendientes?idEmpresa&anio&mes&usuario — paga solo a los jubilados con pendientes
+   * (retenidos y rechazados por el banco). ⛔ NO genera las pensiones del mes. Repetible. Un jubilado con error no
+   * detiene al resto: va en `resultado.errores`. Nunca propaga el error HTTP (sobre con exito=false).
+   */
+  procesarPendientes(idEmpresa: number, anio: number, mes: number): Observable<RespuestaPgpc<ResultadoProcesoPendientes>> {
+    const params = new HttpParams()
+      .set('idEmpresa', idEmpresa)
+      .set('anio', anio)
+      .set('mes', mes)
+      .set('usuario', usuarioSesion());
+    return this.http
+      .post<RespuestaPgpc<ResultadoProcesoPendientes>>(`${this.base}/procesarPendientes`, null, { params })
+      .pipe(
+        catchError((e: HttpErrorResponse) =>
+          of({ exito: false, error: 'ERROR_INTERNO', mensaje: this.extraerMensajeError(e) } as RespuestaPgpc<ResultadoProcesoPendientes>),
         ),
       );
   }

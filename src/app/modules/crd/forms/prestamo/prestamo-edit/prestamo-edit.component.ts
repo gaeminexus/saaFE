@@ -240,7 +240,20 @@ export class PrestamoEditComponent implements OnInit {
   get puedeAprobar(): boolean {
     if (this.idEstadoPrestamo() !== CodigoEstadoPrestamo.GENERADO) return false;
     // Con niveles configurados solo se habilita si el backend dice que este usuario puede aprobar el pendiente.
+    if (this.bloqueaCuentaDestino) return false;
     return this.conNiveles ? !!this.estadoAprobacion()?.puedeAprobar : true;
+  }
+
+  /** Aviso del backend: el socio no tiene una cuenta bancaria activa única y el último nivel no podrá aprobar. */
+  get motivoSinCuentaDestino(): string | null {
+    return this.estadoAprobacion()?.motivoSinCuentaDestino || null;
+  }
+
+  /** Solo se bloquea cuando lo que se aprueba es el último nivel (sin niveles, la aprobación única lo es). */
+  get bloqueaCuentaDestino(): boolean {
+    if (!this.motivoSinCuentaDestino) return false;
+    const e = this.estadoAprobacion();
+    return !this.conNiveles || (e?.nivelPendiente != null && e.nivelPendiente === e.totalNiveles);
   }
 
   /** Hay niveles de aprobación configurados para este préstamo (si no, se aprueba en un paso, como siempre). */
@@ -1132,8 +1145,10 @@ export class PrestamoEditComponent implements OnInit {
               this.imprimirLote(true);
             },
             error: (err) => {
+              // El mensaje de CUENTA_DESTINO_NO_VALIDA es largo y accionable: se deja más tiempo en pantalla.
+              this.cargarAprobacion(idPrestamo);
               this.snackBar.open(this.extraerMensajeError(err, 'Error al aprobar el préstamo'), 'Cerrar', {
-                duration: 6000,
+                duration: 15000,
                 panelClass: ['error-snackbar'],
               });
             },

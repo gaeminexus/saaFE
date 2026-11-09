@@ -69,6 +69,8 @@ export interface EstadoAprobacionPrestamo {
   totalNiveles: number;
   puedeAprobar: boolean;
   mensaje: string | null;
+  /** Texto si el último nivel no podrá aprobar por falta de cuenta de destino (cuenta activa única); null = bien. */
+  motivoSinCuentaDestino?: string | null;
 }
 
 /** Respuesta de `POST prst/aprobar/{id}?conDetalle=true`. */
