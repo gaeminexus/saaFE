@@ -24,6 +24,7 @@
 export class ReportesNomina {
   public static readonly ROL_INDIVIDUAL = 'RPRT_ROLL_INDV';
   public static readonly ROL_CONSOLIDADO = 'RPRT_ROLL_CNSL';
+  public static readonly ROL_DETALLADO = 'RPRT_ROLL_DTLL';
   public static readonly PROVISIONES = 'RPRT_PRVS_PRDO';
   public static readonly RESUMEN_APORTES = 'RPRT_APRT_RSMN';
 

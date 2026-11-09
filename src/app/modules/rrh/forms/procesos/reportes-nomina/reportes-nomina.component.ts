@@ -32,7 +32,7 @@ interface ReporteDisponible {
 }
 
 /**
- * Los tres reportes del período. El rol individual no está aquí: se descarga por colaborador
+ * Los reportes del período. El rol individual no está aquí: se descarga por colaborador
  * desde la pantalla de roles de pago.
  */
 const REPORTES: ReporteDisponible[] = [
@@ -42,6 +42,13 @@ const REPORTES: ReporteDisponible[] = [
     descripcion: 'Todos los colaboradores del período en una sola planilla, con sus totales.',
     icono: 'table_view',
     archivo: 'rol-consolidado',
+  },
+  {
+    plantilla: ReportesNomina.ROL_DETALLADO,
+    titulo: 'Rol detallado',
+    descripcion: 'Cada colaborador con todos sus ingresos, egresos y provisiones del período, concepto por concepto.',
+    icono: 'view_list',
+    archivo: 'rol-detallado',
   },
   {
     plantilla: ReportesNomina.PROVISIONES,
@@ -62,7 +69,7 @@ const REPORTES: ReporteDisponible[] = [
   {
     plantilla: ReportesNomina.CONTROL_IESS,
     titulo: 'Control IESS',
-    descripcion: 'Verificado el 2026-09-03: pide período de nómina, igual que los tres de arriba.',
+    descripcion: 'Verificado el 2026-09-03: pide período de nómina, igual que los de arriba.',
     icono: 'fact_check',
     archivo: 'control-iess',
   },
@@ -71,10 +78,10 @@ const REPORTES: ReporteDisponible[] = [
 /**
  * Reportes internos de nómina (fase 5).
  *
- * Ninguno tiene endpoint propio: los tres se piden por `POST /rest/rprt/generar` con
+ * Ninguno tiene endpoint propio: se piden por `POST /rest/rprt/generar` con
  * `modulo: 'rhh'`, a través de `JasperReportesService`.
  *
- * Las tres plantillas están publicadas en `rep/rhh/` desde la entrega de la fase 5; sus nombres
+ * Las plantillas están publicadas en `rep/rhh/` desde la entrega de la fase 5; sus nombres
  * viven en `ReportesNomina`, en `../descarga-reporte`.
  */
 @Component({
