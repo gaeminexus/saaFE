@@ -20,6 +20,8 @@ export interface EvaluacionOtorgamiento {
   capacidadOk: boolean | null;
   saldoCuentaIndividual: number | null;
   saldoCapitalVigentes: number | null;
+  /** Capital pendiente solo de quirografarios y emergentes vigentes: el que usa la regla del cupo. */
+  saldoCapitalCupo?: number | null;
   cupoOk: boolean | null;
   mensajes: string[] | null;
 }

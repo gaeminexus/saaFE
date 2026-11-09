@@ -75,6 +75,7 @@ enum CodigoEstadoPrestamo {
   CANCELADO_POR_NOVACION = 5,
   CANCELADO_POR_REESTRUCTURACION = 13,
   EN_MORA = 11,
+  APROBADO = 14,
   ANULADO = 12,
 }
 
@@ -96,6 +97,7 @@ const NOMBRES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.VIGENTE]: 'Vigente',
   [CodigoEstadoPrestamo.RECHAZADO]: 'Rechazado',
   [CodigoEstadoPrestamo.EN_MORA]: 'En mora',
+  [CodigoEstadoPrestamo.APROBADO]: 'Aprobado – pendiente de desembolso',
   [CodigoEstadoPrestamo.CANCELADO_POR_NOVACION]: 'Cancelado por novación',
   [CodigoEstadoPrestamo.CANCELADO_POR_REESTRUCTURACION]: 'Cancelado por reestructuración',
   [CodigoEstadoPrestamo.ANULADO]: 'Anulado',
@@ -107,6 +109,7 @@ const CLASES_ESTADO_PRESTAMO: Record<number, string> = {
   [CodigoEstadoPrestamo.VIGENTE]: 'prestamo-vigente',
   [CodigoEstadoPrestamo.RECHAZADO]: 'prestamo-rechazado',
   [CodigoEstadoPrestamo.EN_MORA]: 'prestamo-en-mora',
+  [CodigoEstadoPrestamo.APROBADO]: 'prestamo-aprobado',
   [CodigoEstadoPrestamo.CANCELADO_POR_NOVACION]: 'prestamo-anulado',
   [CodigoEstadoPrestamo.CANCELADO_POR_REESTRUCTURACION]: 'prestamo-anulado',
   [CodigoEstadoPrestamo.ANULADO]: 'prestamo-anulado',
@@ -260,10 +263,18 @@ export class PrestamoEditComponent implements OnInit {
     return this.mostrarAprobarRechazar;
   }
 
-  /** Anular solo se ofrece en VIGENTE o EN_MORA (§7.1); habilitarlo depende de `puedeAnular`. */
+  /** Anular solo se ofrece en APROBADO, VIGENTE o EN_MORA (§7.1); habilitarlo depende de `puedeAnular`. */
   get mostrarAnular(): boolean {
     const estado = this.idEstadoPrestamo();
-    return estado === CodigoEstadoPrestamo.VIGENTE || estado === CodigoEstadoPrestamo.EN_MORA;
+    return this.estadoAdmiteAnular(estado);
+  }
+
+  private estadoAdmiteAnular(estado: number | null): boolean {
+    return (
+      estado === CodigoEstadoPrestamo.APROBADO ||
+      estado === CodigoEstadoPrestamo.VIGENTE ||
+      estado === CodigoEstadoPrestamo.EN_MORA
+    );
   }
 
   get habilitarAnular(): boolean {
@@ -438,7 +449,7 @@ export class PrestamoEditComponent implements OnInit {
       const estado = this.idEstadoPrestamo();
       untracked(() => {
         this.puedeAnularInfo.set(null);
-        if (!id || (estado !== CodigoEstadoPrestamo.VIGENTE && estado !== CodigoEstadoPrestamo.EN_MORA)) return;
+        if (!id || !this.estadoAdmiteAnular(estado)) return;
         this.prestamoService.puedeAnular(id).subscribe({
           next: (r) => {
             if (this.ultimoPrestamoId() === id) this.puedeAnularInfo.set(r);
@@ -1108,8 +1119,11 @@ export class PrestamoEditComponent implements OnInit {
                 this.form.controls.idasoprep.setValue(idAsoprep);
                 this.idAsoprepActual.set(idAsoprep);
               }
+              // El estado sale de la respuesta: APROBADO (14) queda pendiente de desembolso por tesorería.
+              const pendienteDesembolso = res?.idEstado === CodigoEstadoPrestamo.APROBADO;
               this.snackBar.open(
                 (idAsoprep != null ? `Préstamo aprobado con N° Asoprep ${idAsoprep}` : 'Préstamo aprobado correctamente') +
+                  (pendienteDesembolso ? ', pendiente de desembolso por tesorería' : '') +
                   (original ? `. Préstamo original N° ${original.numero} cancelado` : ''),
                 'Cerrar',
                 { duration: 5000 }

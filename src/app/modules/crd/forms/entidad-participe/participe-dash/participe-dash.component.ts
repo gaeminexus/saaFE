@@ -2666,6 +2666,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
     8: 'De plazo vencido',
     9: 'Cancelado por revisar',
     10: 'Vigente por revisar',
+    14: 'Aprobado – pendiente de desembolso',
   };
 
   private readonly ESTADOS_PRIORITARIOS_CODIGO = new Set<number>([2, 8, 10]);
@@ -2739,6 +2740,7 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
       8: 'prestamo-card--vencido',
       9: 'prestamo-card--cancelado',
       10: 'prestamo-card--vigente',
+      14: 'prestamo-card--generado',
     };
     return cod != null ? (mapa[cod] ?? 'prestamo-card--default') : 'prestamo-card--default';
   }
@@ -2896,130 +2898,6 @@ export class ParticipeDashComponent implements OnInit, AfterViewInit {
         this.snackBar.open('Error al recuperar la cuota', 'Cerrar', { duration: 5000 });
       },
     });
-  }
-
-  /**
-   * Recalcula el estado del préstamo basándose en el estado de todas sus cuotas
-   * y actualiza el préstamo si el estado ha cambiado.
-   *
-   * SIN USO: hoy no la invoca nadie (tras cambiar una cuota se llama a
-   * sincronizarEstadoPrestamoDesdeBackend). Los códigos de cuota ya están
-   * corregidos, pero los códigos de estado de PRÉSTAMO a los que mapea siguen
-   * pendientes de validación con negocio antes de volver a engancharla.
-   */
-  private recalcularEstadoPrestamo(prestamo: Prestamo): void {
-    if (!prestamo || !prestamo.codigo) {
-      return;
-    }
-
-    const dataSource = this.detallesPrestamo.get(prestamo.codigo);
-    if (!dataSource || dataSource.data.length === 0) {
-      return;
-    }
-
-    // Obtener todos los estados de las cuotas
-    // d.detalle.estado (DTPRESTD) es la única fuente válida del estado de la cuota
-    const estadosCuotas = dataSource.data.map((d) => obtenerCodigoEstadoCuota(d.detalle) ?? 0);
-
-    // Determinar el nuevo estado del préstamo basándose en las cuotas
-    let nuevoEstadoCodigo: number | null = null;
-
-    // Lógica de negocio para determinar el estado del préstamo:
-    // 1. Si todas las cuotas están PAGADAS, el préstamo está pagado
-    // 2. Si todas están CANCELADAS ANTICIPADAMENTE, el préstamo está anulado
-    // 3. Si hay al menos una cuota PENDIENTE o ACTIVA, el préstamo sigue vigente
-    // 4. Si hay una mezcla, priorizar el estado más relevante
-
-    const todasPagadas = estadosCuotas.every((estado) => estado === CodigoEstadoCuota.PAGADA);
-    const todasAnuladas = estadosCuotas.every(
-      (estado) => estado === CodigoEstadoCuota.CANCELADA_ANTICIPADA,
-    );
-    const hayVigentes = estadosCuotas.some(
-      (estado) =>
-        estado === CodigoEstadoCuota.PENDIENTE || estado === CodigoEstadoCuota.ACTIVA,
-    );
-    const hayPagadas = estadosCuotas.some((estado) => estado === CodigoEstadoCuota.PAGADA);
-
-    if (todasPagadas) {
-      nuevoEstadoCodigo = 2; // Pagado
-    } else if (todasAnuladas) {
-      nuevoEstadoCodigo = 3; // Anulado
-    } else if (hayVigentes) {
-      nuevoEstadoCodigo = 1; // Vigente
-    } else if (hayPagadas) {
-      // Algunas pagadas pero no todas, mantener como Vigente
-      nuevoEstadoCodigo = 1;
-    }
-
-    // Verificar si el estado actual del préstamo es diferente
-    const estadoActualCodigo = prestamo.estadoPrestamo?.codigo || 0;
-
-    if (nuevoEstadoCodigo && nuevoEstadoCodigo !== estadoActualCodigo) {
-      console.log(
-        `🔄 Recalculando estado del préstamo ${prestamo.codigo}: ${estadoActualCodigo} → ${nuevoEstadoCodigo}`
-      );
-
-      // Recuperar el préstamo completo y actualizarlo
-      this.prestamoService.getById(prestamo.codigo.toString()).subscribe({
-        next: (prestamoCompleto) => {
-          if (!prestamoCompleto) {
-            console.warn('No se pudo recuperar el préstamo completo para actualizar estado');
-            return;
-          }
-
-          // Preparar el objeto para el backend
-          const estadoResuelto = this.resolverEstadoPrestamo(nuevoEstadoCodigo);
-          const prestamoParaBackend: any = {
-            ...prestamoCompleto,
-            idEstado: estadoResuelto.codigoAlterno,
-            estadoPrestamo: estadoResuelto.codigoPk,
-          };
-
-          if ('estado' in prestamoParaBackend) {
-            delete prestamoParaBackend.estado;
-          }
-
-          // Actualizar en el backend
-          this.prestamoService.update(prestamoParaBackend).subscribe({
-            next: (respuesta) => {
-              // Actualizar en la lista local
-              const index = this.prestamos.findIndex((p) => p.codigo === prestamo.codigo);
-              if (index !== -1) {
-                this.prestamos[index].estadoPrestamo = {
-                  codigo: nuevoEstadoCodigo,
-                  nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
-                } as EstadoPrestamo;
-                this.prestamos = [...this.prestamos];
-              }
-
-              // Actualizar el préstamo seleccionado
-              if (this.prestamoSeleccionado?.codigo === prestamo.codigo) {
-                this.prestamoSeleccionado.estadoPrestamo = {
-                  codigo: nuevoEstadoCodigo,
-                  nombre: this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo),
-                } as EstadoPrestamo;
-              }
-
-              // Forzar detección de cambios
-              this.cdr.detectChanges();
-
-              const estadoTexto = this.obtenerNombreEstadoPrestamo(nuevoEstadoCodigo);
-              console.log(`✅ Estado del préstamo actualizado a: ${estadoTexto}`);
-            },
-            error: (error) => {
-              console.error('Error al actualizar estado del préstamo:', error);
-            },
-          });
-        },
-        error: (error) => {
-          console.error('Error al recuperar préstamo completo:', error);
-        },
-      });
-    } else {
-      console.log(
-        `✅ Estado del préstamo ${prestamo.codigo} ya está correcto: ${estadoActualCodigo}`
-      );
-    }
   }
 
   /**

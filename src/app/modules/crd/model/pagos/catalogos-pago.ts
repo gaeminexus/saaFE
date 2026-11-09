@@ -55,6 +55,7 @@ export enum EstadoPrestamoOperativo {
   CANCELADO_POR_REESTRUCTURACION = 13,
   DE_PLAZO_VENCIDO = 8,
   EN_MORA = 11,
+  APROBADO = 14,
 }
 
 export const NOMBRE_ESTADO_PRESTAMO: Record<number, string> = {
@@ -67,6 +68,7 @@ export const NOMBRE_ESTADO_PRESTAMO: Record<number, string> = {
   [EstadoPrestamoOperativo.CANCELADO_POR_REESTRUCTURACION]: 'Cancelado por reestructuración',
   [EstadoPrestamoOperativo.DE_PLAZO_VENCIDO]: 'De plazo vencido',
   [EstadoPrestamoOperativo.EN_MORA]: 'En mora',
+  [EstadoPrestamoOperativo.APROBADO]: 'Aprobado – pendiente de desembolso',
 };
 
 /** Estados terminales: el préstamo no admite ninguna operación de pago. */
@@ -78,9 +80,17 @@ export const ESTADOS_PRESTAMO_TERMINALES: readonly number[] = [
   EstadoPrestamoOperativo.CANCELADO_POR_REESTRUCTURACION,
 ];
 
-/** ¿El préstamo admite operaciones de pago? */
+/** Estados que admiten operaciones de pago (lista blanca): VIGENTE, DE PLAZO VENCIDO, VIGENTE POR REVISAR, EN MORA. */
+export const ESTADOS_PRESTAMO_OPERABLES: readonly number[] = [
+  EstadoPrestamoOperativo.VIGENTE,
+  EstadoPrestamoOperativo.DE_PLAZO_VENCIDO,
+  10,
+  EstadoPrestamoOperativo.EN_MORA,
+];
+
+/** ¿El préstamo admite operaciones de pago? GENERADO y APROBADO (aún sin desembolso) no. */
 export function admiteOperaciones(idEstado: number | null | undefined): boolean {
-  return idEstado != null && !ESTADOS_PRESTAMO_TERMINALES.includes(Number(idEstado));
+  return idEstado != null && ESTADOS_PRESTAMO_OPERABLES.includes(Number(idEstado));
 }
 
 /** Tipo de operación registrada en EventoPrestamo. */

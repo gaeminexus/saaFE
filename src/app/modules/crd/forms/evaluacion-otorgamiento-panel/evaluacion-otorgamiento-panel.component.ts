@@ -34,6 +34,7 @@ import { EvaluacionOtorgamiento } from '../../model/evaluacion-otorgamiento';
             <div class="eval-item"><span>Cuota nueva</span><strong>{{ ev.cuotaNueva | number: '1.2-2' }}</strong></div>
             <div class="eval-item"><span>Cuenta individual</span><strong>{{ ev.saldoCuentaIndividual | number: '1.2-2' }}</strong></div>
             <div class="eval-item"><span>Saldo de créditos vigentes</span><strong>{{ ev.saldoCapitalVigentes | number: '1.2-2' }}</strong></div>
+            <div class="eval-item"><span>Saldo quirografarios y emergentes</span><strong>{{ ev.saldoCapitalCupo | number: '1.2-2' }}</strong></div>
             <div class="eval-item"><span>Monto</span><strong>{{ ev.monto | number: '1.2-2' }}</strong></div>
           </div>
 
@@ -44,7 +45,7 @@ import { EvaluacionOtorgamiento } from '../../model/evaluacion-otorgamiento';
             </span>
             <span class="eval-semaforo" [ngClass]="clase(ev.cupoOk)">
               <mat-icon>{{ icono(ev.cupoOk) }}</mat-icon>
-              Cupo (100 % cuenta individual): {{ texto(ev.cupoOk) }}
+              Cupo (100 % cuenta individual): {{ textoCupo(ev) }}
             </span>
           </div>
 
@@ -88,6 +89,11 @@ export class EvaluacionOtorgamientoPanelComponent {
 
   icono(ok: boolean | null | undefined): string {
     return ok == null ? 'help_outline' : ok ? 'check_circle' : 'cancel';
+  }
+
+  /** `cupoOk` null con cuenta individual conocida = el crédito nuevo no entra en la regla (hipotecario, prendario o sin código). */
+  textoCupo(ev: EvaluacionOtorgamiento): string {
+    return ev.cupoOk == null && ev.saldoCuentaIndividual != null ? 'no aplica' : this.texto(ev.cupoOk);
   }
 
   texto(ok: boolean | null | undefined): string {
