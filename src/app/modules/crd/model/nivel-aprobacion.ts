@@ -6,6 +6,8 @@ export interface ReglaAprobacion {
   codigo?: number;
   /** `null` = cualquier tipo de préstamo. */
   idTipoPrestamo: number | null;
+  /** `null` = cualquier operación; 1 = Nuevo, 2 = Novación, 3 = Reestructuración. */
+  operacion?: number | null;
   nombre: string;
   /** Vacío (`null`) = sin límite. */
   montoMinimo: number | null;

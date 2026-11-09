@@ -34,11 +34,12 @@ export class NivelAprobacionService {
   }
 
   /** Qué regla aplicaría a un préstamo de ese tipo, monto y plazo. Sirve para probar la configuración. */
-  simular(idTipo: number | null, monto: number | null, plazo: number | null): Observable<SimulacionReglaAprobacion> {
+  simular(idTipo: number | null, monto: number | null, plazo: number | null, operacion: number | null = null): Observable<SimulacionReglaAprobacion> {
     let params = new HttpParams();
     if (idTipo != null) params = params.set('idTipo', idTipo);
     if (monto != null) params = params.set('monto', monto);
     if (plazo != null) params = params.set('plazo', plazo);
+    if (operacion != null) params = params.set('operacion', operacion);
     return this.http.get<SimulacionReglaAprobacion>(`${ServiciosCrd.RS_RGAP}/simular`, { params });
   }
 

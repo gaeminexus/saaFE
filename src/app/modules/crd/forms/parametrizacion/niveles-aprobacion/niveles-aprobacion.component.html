@@ -40,6 +40,10 @@
         <th mat-header-cell *matHeaderCellDef>Tipo de préstamo</th>
         <td mat-cell *matCellDef="let f">{{ nombreTipo(f.regla.idTipoPrestamo) }}</td>
       </ng-container>
+      <ng-container matColumnDef="operacion">
+        <th mat-header-cell *matHeaderCellDef>Operación</th>
+        <td mat-cell *matCellDef="let f">{{ nombreOperacion(f.regla.operacion) }}</td>
+      </ng-container>
       <ng-container matColumnDef="monto">
         <th mat-header-cell *matHeaderCellDef>Monto desde – hasta</th>
         <td mat-cell *matCellDef="let f">{{ rango(f.regla.montoMinimo, f.regla.montoMaximo, 'dinero') }}</td>
@@ -93,6 +97,14 @@
                 <mat-option [value]="t">{{ etiquetaTipo(t) }}</mat-option>
               }
             </mat-autocomplete>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Operación</mat-label>
+            <mat-select [(ngModel)]="probarOperacion" name="probarOperacion">
+              @for (o of operaciones; track o.valor) {
+                <mat-option [value]="o.valor">{{ o.nombre }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
           <mat-form-field appearance="outline">
             <mat-label>Monto</mat-label>
@@ -160,6 +172,16 @@
               }
             </mat-autocomplete>
             <mat-hint>Vacío = cualquier tipo</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Operación</mat-label>
+            <mat-select [(ngModel)]="operacion" name="operacion">
+              <mat-option [value]="null">Cualquiera</mat-option>
+              @for (o of operaciones; track o.valor) {
+                <mat-option [value]="o.valor">{{ o.nombre }}</mat-option>
+              }
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline">

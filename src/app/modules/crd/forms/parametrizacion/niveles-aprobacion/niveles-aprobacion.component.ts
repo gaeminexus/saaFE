@@ -20,6 +20,13 @@ import { TipoPrestamoService } from '../../../service/tipo-prestamo.service';
 
 const PRIORIDAD_POR_DEFECTO = 100;
 
+/** Operación a la que aplica una regla (`null` = cualquiera). */
+const OPERACIONES: { valor: number; nombre: string }[] = [
+  { valor: 1, nombre: 'Nuevo' },
+  { valor: 2, nombre: 'Novación' },
+  { valor: 3, nombre: 'Reestructuración' },
+];
+
 interface FilaRegla {
   regla: ReglaAprobacion;
   /** Niveles activos de la regla; `null` si no se pudo consultar. */
@@ -45,7 +52,7 @@ export class NivelesAprobacionComponent implements OnInit {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
-  readonly columnas = ['nombre', 'tipo', 'monto', 'plazo', 'prioridad', 'niveles', 'estado', 'acciones'];
+  readonly columnas = ['nombre', 'tipo', 'operacion', 'monto', 'plazo', 'prioridad', 'niveles', 'estado', 'acciones'];
 
   vista = signal<'lista' | 'edicion'>('lista');
   cargando = signal(false);
@@ -66,6 +73,7 @@ export class NivelesAprobacionComponent implements OnInit {
   montoMaximo: number | null = null;
   plazoMinimo: number | null = null;
   plazoMaximo: number | null = null;
+  operacion: number | null = null;
   prioridad: number | null = PRIORIDAD_POR_DEFECTO;
 
   nuevoNivelNombre = '';
@@ -77,6 +85,7 @@ export class NivelesAprobacionComponent implements OnInit {
   // ---- probar ----
   probarTipo: TipoPrestamo | null = null;
   probarTipoTexto = signal('');
+  probarOperacion = 1;
   probarMonto: number | null = null;
   probarPlazo: number | null = null;
   probando = signal(false);
@@ -132,6 +141,12 @@ export class NivelesAprobacionComponent implements OnInit {
         },
       });
     });
+  }
+
+  readonly operaciones = OPERACIONES;
+
+  nombreOperacion(op: number | null | undefined): string {
+    return op == null ? 'Cualquiera' : (OPERACIONES.find((o) => o.valor === op)?.nombre ?? `Operación ${op}`);
   }
 
   nombreTipo(id: number | null | undefined): string {
@@ -194,6 +209,7 @@ export class NivelesAprobacionComponent implements OnInit {
     this.montoMaximo = r?.montoMaximo ?? null;
     this.plazoMinimo = r?.plazoMinimo ?? null;
     this.plazoMaximo = r?.plazoMaximo ?? null;
+    this.operacion = r?.operacion ?? null;
     this.prioridad = r?.prioridad ?? PRIORIDAD_POR_DEFECTO;
     this.nuevoNivelNombre = '';
   }
@@ -208,6 +224,7 @@ export class NivelesAprobacionComponent implements OnInit {
     const cuerpo: ReglaAprobacion = {
       ...(id != null ? { codigo: id } : {}),
       idTipoPrestamo: this.tipoElegido?.codigo ?? null,
+      operacion: this.operacion,
       nombre: this.nombre.trim(),
       montoMinimo: this.vacioANull(this.montoMinimo),
       montoMaximo: this.vacioANull(this.montoMaximo),
@@ -375,7 +392,7 @@ export class NivelesAprobacionComponent implements OnInit {
     this.errorProbar.set(null);
     this.simulacion.set(null);
     this.servicio
-      .simular(this.probarTipo?.codigo ?? null, this.vacioANull(this.probarMonto), this.vacioANull(this.probarPlazo))
+      .simular(this.probarTipo?.codigo ?? null, this.vacioANull(this.probarMonto), this.vacioANull(this.probarPlazo), this.probarOperacion)
       .pipe(finalize(() => this.probando.set(false)))
       .subscribe({
         next: (s) => this.simulacion.set(s),
