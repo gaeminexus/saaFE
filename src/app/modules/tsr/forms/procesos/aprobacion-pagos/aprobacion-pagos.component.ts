@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { mostrarAdvertencias } from '../../../../../shared/components/advertencias-dialog/advertencias-dialog.component';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -356,6 +357,7 @@ export class AprobacionPagosComponent implements OnInit {
       next: (resp) => {
         this.aprobando.set(false);
         this.resultado.set(resp);
+        mostrarAdvertencias(this.dialog, resp, 'Pagos aprobados con advertencia');
         this.snackBar.open(resp.mensaje || 'Pagos aprobados', 'Cerrar', {
           duration: 5000,
           panelClass: ['snackbar-success'],

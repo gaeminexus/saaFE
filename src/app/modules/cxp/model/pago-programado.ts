@@ -191,6 +191,8 @@ export interface RespuestaBancoResponse {
   rechazados: number;
   /** Filas del archivo que no se pudieron procesar; hay que investigarlas. */
   errores?: string[];
+  advertencia?: string;
+  advertencias?: string[];
 }
 
 /**
@@ -221,6 +223,9 @@ export interface ConfirmarManualResponse {
   confirmados: number;
   /** Pagos que no se pudieron confirmar, con el motivo. */
   errores?: string[];
+  /** Casos para revisar a mano (p. ej. desembolso de préstamo con valor de sustitución distinto). */
+  advertencia?: string;
+  advertencias?: string[];
 }
 
 /** Respuesta de POST /pgtr/anular/{id}. */
@@ -381,6 +386,8 @@ export interface AprobarPagosResponse {
   registrados: number[];
   confirmados: number[];
   cheques?: ChequeAprobado[];
+  advertencia?: string;
+  advertencias?: string[];
   mensaje: string;
 }
 

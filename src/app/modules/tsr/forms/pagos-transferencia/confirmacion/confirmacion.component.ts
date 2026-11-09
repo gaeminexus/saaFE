@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewChecked, Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { mostrarAdvertencias } from '../../../../../shared/components/advertencias-dialog/advertencias-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -355,6 +356,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
       next: (resp) => {
         this.confirmandoManual.set(false);
         this.confResultado.set(resp);
+        mostrarAdvertencias(this.dialog, resp, 'Pago confirmado con advertencia');
         this.referenciasPorPago.set({});
         this.confObservacion = '';
         this.cargarPagosPorConfirmar();
@@ -396,6 +398,7 @@ export class ConfirmacionComponent implements OnInit, AfterViewChecked {
         next: (resp) => {
           this.subiendoRespuesta.set(false);
           this.respResultado.set(resp);
+          mostrarAdvertencias(this.dialog, resp, 'Respuesta del banco procesada con advertencia');
           this.cargarPagosPorConfirmar();
           this.snackBar.open(resp.mensaje ?? 'Respuesta procesada.', 'Cerrar', { duration: 5000 });
         },

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { mostrarAdvertencias } from '../../../../../shared/components/advertencias-dialog/advertencias-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute } from '@angular/router';
@@ -724,6 +725,7 @@ export class PagosTransferenciaComponent implements OnInit {
         next: (resp) => {
           this.subiendoRespuesta.set(false);
           this.respResultado.set(resp);
+          mostrarAdvertencias(this.dialog, resp, 'Respuesta del banco procesada con advertencia');
           this.cargarSeguimiento();
           this.snackBar.open(resp.mensaje ?? 'Respuesta procesada.', 'Cerrar', { duration: 5000 });
         },
@@ -863,6 +865,7 @@ export class PagosTransferenciaComponent implements OnInit {
       next: (resp) => {
         this.confirmandoManual.set(false);
         this.confResultado.set(resp);
+        mostrarAdvertencias(this.dialog, resp, 'Pago confirmado con advertencia');
         this.confReferencia = '';
         this.confObservacion = '';
         this.cargarPagosPorConfirmar();
