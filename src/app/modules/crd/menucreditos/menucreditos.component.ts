@@ -77,6 +77,13 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_CIERRE_DE_CARTERA,
           route: '/menucreditos/cierre-cartera',
         },
+        // Reusa el permiso de Parametrización hasta que exista uno propio en el árbol.
+        {
+          displayName: 'Niveles de Aprobación',
+          iconName: 'rule',
+          idPermiso: Permisos.CRD_PARAMETRIZACION,
+          route: '/menucreditos/niveles-aprobacion',
+        },
       ],
     },
     // La opción "Bandas de Cartera" se agrega en el constructor solo para el USUARIO 1
@@ -421,13 +428,6 @@ export class MenucreditosComponent {
         iconName: 'account_balance_wallet',
         idPermiso: Permisos.CRD_CUENTAS_POR_TIPO_DE_APORTE,
         route: '/menucreditos/cuentas-tipo-aporte',
-      });
-      // Sin permiso propio en el árbol todavía: se muestra solo al USUARIO 1 (igual que la ruta) y reusa el de «Parametrización».
-      paramNode?.children?.push({
-        displayName: 'Niveles de Aprobación',
-        iconName: 'rule',
-        idPermiso: Permisos.CRD_PARAMETRIZACION,
-        route: '/menucreditos/niveles-aprobacion',
       });
     }
   }
