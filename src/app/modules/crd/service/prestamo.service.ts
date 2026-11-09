@@ -1,7 +1,8 @@
-import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { Prestamo } from '../model/prestamo';
+import { ResumenSolicitudes } from '../forms/prestamo/prestamo-dash/solicitudes-resumen/solicitudes-resumen.component';
 import { EvaluacionOtorgamiento, SolicitudEvaluacionOtorgamiento, TablaGeneradaConEvaluacion } from '../model/evaluacion-otorgamiento';
 import { EstadoAprobacionPrestamo, ResultadoAprobacionPrestamo } from '../model/nivel-aprobacion';
 import { PrestamoSustituible, TipoOperacionPrestamo } from '../model/prestamo-sustituible';
@@ -164,6 +165,16 @@ export class PrestamoService {
   }
 
   /** `GET prst/sustituibles/{idEntidad}?tipo=` (docs/crd/API-REESTRUCTURACION-NOVACION.md §2): préstamos del partícipe que se pueden reestructurar o novar, con su VS. */
+  /** `GET prst/resumenSolicitudes` (sección «Solicitudes» del dashboard): sin fechas = mes en curso. 400 fecha mal formada, 422 hasta < desde. */
+  resumenSolicitudes(filtros: { desde?: string; hasta?: string; idProducto?: number | null; idFilial?: number | null }): Observable<ResumenSolicitudes> {
+    let params = new HttpParams();
+    if (filtros.desde) params = params.set('desde', filtros.desde);
+    if (filtros.hasta) params = params.set('hasta', filtros.hasta);
+    if (filtros.idProducto != null) params = params.set('idProducto', filtros.idProducto);
+    if (filtros.idFilial != null) params = params.set('idFilial', filtros.idFilial);
+    return this.http.get<ResumenSolicitudes>(`${ServiciosCrd.RS_PRST}/resumenSolicitudes`, { params });
+  }
+
   sustituibles(idEntidad: number, tipo: Exclude<TipoOperacionPrestamo, 'NUEVO'>): Observable<PrestamoSustituible[] | null> {
     const url = `${ServiciosCrd.RS_PRST}/sustituibles/${idEntidad}?tipo=${tipo}`;
     return this.http.get<PrestamoSustituible[]>(url).pipe(catchError(this.handleError));

@@ -40,6 +40,12 @@
     </div>
   </section>
 
+  <app-solicitudes-resumen
+    [datos]="solicitudes()"
+    [cargando]="cargandoSolicitudes()"
+    [error]="errorSolicitudes()"
+    (consultar)="cargarSolicitudes($event)" />
+
   <section class="filters-panel">
     <div class="filters-panel__header">
       <div>

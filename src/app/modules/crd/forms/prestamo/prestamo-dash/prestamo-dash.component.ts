@@ -44,6 +44,13 @@ import { EstadoParticipeService } from '../../../service/estado-participe.servic
 import { EstadoPrestamoService } from '../../../service/estado-prestamo.service';
 import { NovedadParticipeCargaService } from '../../../service/novedad-participe-carga.service';
 import { PrestamoService } from '../../../service/prestamo.service';
+import { mensajeDeError } from '../../../../../shared/utils/mensaje-error.util';
+import {
+  RangoSolicitudes,
+  ResumenSolicitudes,
+  SolicitudesResumenComponent,
+  rangoMesEnCurso,
+} from './solicitudes-resumen/solicitudes-resumen.component';
 import { ProductoService } from '../../../service/producto.service';
 import { NovedadParticipeCarga } from '../../../model/novedad-participe-carga';
 
@@ -213,6 +220,7 @@ const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    SolicitudesResumenComponent,
   ],
   templateUrl: './prestamo-dash.component.html',
   styleUrl: './prestamo-dash.component.scss',
@@ -244,6 +252,12 @@ export class PrestamoDashComponent implements OnInit {
 
   readonly loading = signal<boolean>(false);
   readonly error = signal<string>('');
+
+  // ---- sección «Solicitudes» (GET prst/resumenSolicitudes) ----
+  readonly solicitudes = signal<ResumenSolicitudes | null>(null);
+  readonly cargandoSolicitudes = signal(false);
+  readonly errorSolicitudes = signal<string | null>(null);
+  private rangoSolicitudes: RangoSolicitudes = rangoMesEnCurso();
   readonly prestamos = signal<Prestamo[]>([]);
   readonly aporteKpi = signal<AporteKpiDTO | null>(null);
   readonly resumenPorTipoData = signal<AporteResumenTipoDTO[]>([]);
@@ -857,7 +871,37 @@ export class PrestamoDashComponent implements OnInit {
     });
   }
 
+  /** Cifras de solicitudes con el rango propio de la sección y el producto del filtro del tablero. */
+  cargarSolicitudes(rango?: RangoSolicitudes): void {
+    if (rango) this.rangoSolicitudes = rango;
+    this.cargandoSolicitudes.set(true);
+    this.errorSolicitudes.set(null);
+    this.prestamoService
+      .resumenSolicitudes({
+        desde: this.fechaIso(this.rangoSolicitudes.desde),
+        hasta: this.fechaIso(this.rangoSolicitudes.hasta),
+        idProducto: this.filtrosForm.getRawValue().producto,
+      })
+      .subscribe({
+        next: (r) => {
+          this.solicitudes.set(r);
+          this.cargandoSolicitudes.set(false);
+        },
+        error: (err) => {
+          this.errorSolicitudes.set(mensajeDeError(err, 'No se pudieron cargar las solicitudes'));
+          this.cargandoSolicitudes.set(false);
+        },
+      });
+  }
+
+  /** yyyy-MM-dd en hora local (sin pasar por UTC). */
+  private fechaIso(f: Date): string {
+    const dos = (n: number) => String(n).padStart(2, '0');
+    return `${f.getFullYear()}-${dos(f.getMonth() + 1)}-${dos(f.getDate())}`;
+  }
+
   cargarDatos(): void {
+    this.cargarSolicitudes();
     this.loading.set(true);
     this.error.set('');
 
