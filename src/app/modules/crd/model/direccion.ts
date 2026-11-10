@@ -19,4 +19,6 @@ export interface Direccion {
     callePrincipal: string;   // DRCCCLPR - Calle principal
     calleSecundaria: string;  // DRCCCLSC - Calle secundaria
     numero: string;           // DRCCNMRO - Número de domicilio
+    /** DRCCBRRO - Barrio / Sector, hasta 300 (opcional; Anexo I). */
+    barrio?: string | null;
 }

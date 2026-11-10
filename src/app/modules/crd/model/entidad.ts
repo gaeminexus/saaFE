@@ -50,4 +50,6 @@ export interface Entidad {
     urlFotoLogo: string;        // ENTDURFL - URL Foto Logo (opcional)
     rolPetroComercial: number; // ENTDRLPC - Rol Petro Comercial
     estadoCivil: EstadoCivil | null; // ESCVCDGO - FK Estado Civil
+    /** ENTDSEXO - Sexo del partícipe: 'M' o 'F' (opcional; Anexo I del contrato de adhesión). */
+    sexo?: 'M' | 'F' | null;
 }

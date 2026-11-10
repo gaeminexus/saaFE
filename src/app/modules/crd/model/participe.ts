@@ -13,6 +13,10 @@ export interface Participe {
     unidadAdministrativa: string;   // PRTCUNAD - Unidad Administrativa
     cargoActual: string;            // PRTCCRGA - Cargo actual
     nivelEstudios: string;          // PRTCNVES - Nivel de estudios
+    /** PRTCMDLB - Modalidad laboral: 1 Nombramiento, 2 Contrato (opcional; Anexo I). */
+    modalidadLaboral?: number | null;
+    /** PRTCTTPR - Título profesional, hasta 300 (opcional; Anexo I). */
+    tituloProfesional?: string | null;
     ingresoAdicionalMensual: number; // PRTCIAMM - Ingreso adicional monto mensual
     ingresoAdicionalActividad: string; // PRTCIAAC - Ingreso adicional actividad
     tipoCalificacion: number;   // TPCLCDGO - FK Código Tipo Calificación
@@ -28,3 +32,9 @@ export interface Participe {
     tipoAporte: TipoAporte | null;    // TPAPCDGO - FK Tipo Aporte
 }
 
+
+/** Valores de `Participe.modalidadLaboral`. */
+export const MODALIDADES_LABORALES = [
+    { id: 1, nombre: 'Nombramiento' },
+    { id: 2, nombre: 'Contrato' },
+];

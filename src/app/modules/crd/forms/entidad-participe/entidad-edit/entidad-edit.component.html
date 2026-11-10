@@ -254,6 +254,18 @@
             <mat-card-content>
               <div class="form-row">
                 <mat-form-field appearance="fill" class="third-width">
+                  <mat-label>Sexo</mat-label>
+                  <mat-select formControlName="sexo">
+                    <mat-option [value]="null">-- Seleccionar --</mat-option>
+                    <mat-option value="M">Masculino</mat-option>
+                    <mat-option value="F">Femenino</mat-option>
+                  </mat-select>
+                  <mat-icon matSuffix>wc</mat-icon>
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="third-width">
                   <mat-label>Número de Cargas Familiares</mat-label>
                   <input matInput formControlName="numeroCargasFamiliares" type="number" min="0">
                   <mat-icon matSuffix>family_restroom</mat-icon>
@@ -442,6 +454,23 @@
                 <mat-form-field appearance="fill" class="half-width">
                   <mat-label>Nivel Estudios</mat-label>
                   <input matInput formControlName="nivelEstudios" maxlength="100">
+                </mat-form-field>
+              </div>
+
+              <div class="form-row">
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Título Profesional</mat-label>
+                  <input matInput formControlName="tituloProfesional" maxlength="300">
+                </mat-form-field>
+
+                <mat-form-field appearance="fill" class="half-width">
+                  <mat-label>Modalidad Laboral</mat-label>
+                  <mat-select formControlName="modalidadLaboral">
+                    <mat-option [value]="null">-- Seleccionar --</mat-option>
+                    @for (m of modalidadesLaborales; track m.id) {
+                      <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+                    }
+                  </mat-select>
                 </mat-form-field>
               </div>
 

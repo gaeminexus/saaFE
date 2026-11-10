@@ -12,7 +12,7 @@ import { TipoComandosBusqueda } from '../../../../../shared/model/datos-busqueda
 import { TipoDatosBusqueda } from '../../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { Entidad } from '../../../model/entidad';
 import { Filial } from '../../../model/filial';
-import { Participe } from '../../../model/participe';
+import { MODALIDADES_LABORALES, Participe } from '../../../model/participe';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
 import { TipoHidrocarburifica } from '../../../model/tipo-hidrocarburifica';
 import { TipoParticipe } from '../../../model/tipo-participe';
@@ -111,6 +111,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
   saving = signal<boolean>(false);
   errorMsg = signal<string>('');
   modoEdicion = signal<boolean>(false);
+  readonly modalidadesLaborales = MODALIDADES_LABORALES;
   entidadActual = signal<Entidad | null>(null);
   participeActual = signal<Participe | null>(null);
   formValid = signal<boolean>(false); // Nueva señal para validez del formulario
@@ -268,6 +269,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       razonSocial: ['', [Validators.required, Validators.maxLength(200)]],
       nombreComercial: ['', [Validators.maxLength(200)]],
       fechaNacimiento: [null],
+      sexo: [null as 'M' | 'F' | null],
 
       // Contacto
       correoPersonal: ['', [Validators.email, Validators.maxLength(100)]],
@@ -301,6 +303,8 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       unidadAdministrativa: ['', [Validators.maxLength(200)]],
       cargoActual: ['', [Validators.maxLength(200)]],
       nivelEstudios: ['', [Validators.maxLength(100)]],
+      modalidadLaboral: [null as number | null],
+      tituloProfesional: ['', [Validators.maxLength(300)]],
       ingresoAdicionalMensual: [0, [Validators.min(0)]],
       ingresoAdicionalActividad: ['', [Validators.maxLength(200)]],
       tipoCalificacion: [0],
@@ -437,6 +441,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       correoInstitucional: entidad.correoInstitucional,
       telefono: entidad.telefono,
       movil: entidad.movil,
+      sexo: entidad.sexo ?? null,
       tieneCorreoPersonal: entidad.tieneCorreoPersonal || 0,
       tieneCorreoTrabajo: entidad.tieneCorreoTrabajo || 0,
       tieneTelefono: entidad.tieneTelefono || 0,
@@ -499,6 +504,8 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
             unidadAdministrativa: participe.unidadAdministrativa || '',
             cargoActual: participe.cargoActual || '',
             nivelEstudios: participe.nivelEstudios || '',
+            modalidadLaboral: participe.modalidadLaboral ?? null,
+            tituloProfesional: participe.tituloProfesional || '',
             ingresoAdicionalMensual: participe.ingresoAdicionalMensual || 0,
             ingresoAdicionalActividad: participe.ingresoAdicionalActividad || '',
             tipoCalificacion: participe.tipoCalificacion || 0,
@@ -644,6 +651,7 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       tipoHidrocarburifica: formValue.tipoHidrocarburifica || undefined,
       tipoIdentificacion: formValue.tipoIdentificacion || undefined,
       tipoVivienda: formValue.tipoVivienda || undefined,
+      sexo: formValue.sexo || null,
       fechaNacimiento: this.funcionesDatosService.formatearFechaParaBackend(formValue.fechaNacimiento) as any,
       cargasFamiliares: Number(formValue.numeroCargasFamiliares || 0),
       tieneCorreoPersonal: formValue.tieneCorreoPersonal ? 1 : 0,
@@ -662,6 +670,8 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
     delete (datos as any).unidadAdministrativa;
     delete (datos as any).cargoActual;
     delete (datos as any).nivelEstudios;
+    delete (datos as any).modalidadLaboral;
+    delete (datos as any).tituloProfesional;
     delete (datos as any).ingresoAdicionalMensual;
     delete (datos as any).ingresoAdicionalActividad;
     delete (datos as any).tipoCalificacion;
@@ -697,6 +707,8 @@ export class EntidadEditComponent implements OnInit, OnChanges, OnDestroy {
       unidadAdministrativa: formValue.unidadAdministrativa || '',
       cargoActual: formValue.cargoActual || '',
       nivelEstudios: formValue.nivelEstudios || '',
+      modalidadLaboral: formValue.modalidadLaboral || null,
+      tituloProfesional: formValue.tituloProfesional?.trim() || null,
       ingresoAdicionalMensual: Number(formValue.ingresoAdicionalMensual || 0),
       ingresoAdicionalActividad: formValue.ingresoAdicionalActividad || '',
       tipoCalificacion: Number(formValue.tipoCalificacion || 0),

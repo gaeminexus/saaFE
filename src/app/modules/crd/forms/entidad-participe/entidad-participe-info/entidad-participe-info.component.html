@@ -271,7 +271,7 @@
                   </mat-form-field>
                 </div>
                 <div class="form-row">
-                  <mat-form-field appearance="outline" class="full-width">
+                  <mat-form-field appearance="outline" class="half-width">
                     <mat-label>Estado Civil</mat-label>
                     <mat-select formControlName="estadoCivil" [compareWith]="compararPorCodigo">
                       <mat-option [value]="null">-- Seleccionar --</mat-option>
@@ -280,6 +280,15 @@
                       }
                     </mat-select>
                     <mat-icon matSuffix>favorite</mat-icon>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Sexo</mat-label>
+                    <mat-select formControlName="sexo">
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      <mat-option value="M">Masculino</mat-option>
+                      <mat-option value="F">Femenino</mat-option>
+                    </mat-select>
+                    <mat-icon matSuffix>wc</mat-icon>
                   </mat-form-field>
                 </div>
               </mat-card-content>
@@ -427,6 +436,23 @@
                   </mat-form-field>
                 </div>
                 <div class="form-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Título Profesional</mat-label>
+                    <input matInput formControlName="tituloProfesional" maxlength="300">
+                    <mat-icon matSuffix>workspace_premium</mat-icon>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Modalidad Laboral</mat-label>
+                    <mat-select formControlName="modalidadLaboral">
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
+                      @for (m of modalidadesLaborales; track m.id) {
+                        <mat-option [value]="m.id">{{ m.nombre }}</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>badge</mat-icon>
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>Actividad Ingreso Adicional</mat-label>
                     <input matInput formControlName="ingresoAdicionalActividad" maxlength="200">
@@ -515,6 +541,13 @@
                     <mat-label>Calle Secundaria</mat-label>
                     <input matInput formControlName="calleSecundaria" maxlength="200">
                     <mat-icon matSuffix>signpost</mat-icon>
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Barrio / Sector</mat-label>
+                    <input matInput formControlName="barrio" maxlength="300">
+                    <mat-icon matSuffix>holiday_village</mat-icon>
                   </mat-form-field>
                 </div>
                 <div class="form-row">

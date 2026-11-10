@@ -12,7 +12,7 @@ import { Permisos } from '../../../../../shared/model/permisos';
 
 import { Entidad } from '../../../model/entidad';
 import { CodigoEstadoParticipe } from '../../../model/estado-participe';
-import { Participe } from '../../../model/participe';
+import { MODALIDADES_LABORALES, Participe } from '../../../model/participe';
 import { Exter } from '../../../model/exter';
 import { Filial } from '../../../model/filial';
 import { TipoIdentificacion } from '../../../model/tipo-identificacion';
@@ -123,6 +123,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   tiposIdentificacionOptions = signal<TipoIdentificacion[]>([]);
   tiposParticipeOptions = signal<TipoParticipe[]>([]);
   estadosCivilOptions = signal<EstadoCivil[]>([]);
+  readonly modalidadesLaborales = MODALIDADES_LABORALES;
   tiposAporteOptions = signal<TipoAporte[]>([]);
   bancoExternosOptions = signal<BancoExterno[]>([]);
   /** Texto del buscador que vive dentro del combo de bancos. */
@@ -274,6 +275,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       tipoHidrocarburifica: [null as TipoHidrocarburifica | null],
       tipoVivienda: [null as TipoVivienda | null],
       estadoCivil: [null as EstadoCivil | null],
+      sexo: [null as string | null],
       cargasFamiliares: [0, Validators.min(0)],
       sectorPublico: [0],
       porcentajeSimilitud: [0, [Validators.min(0), Validators.max(100)]],
@@ -302,6 +304,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
       unidadAdministrativa: ['', Validators.maxLength(200)],
       cargoActual: ['', Validators.maxLength(200)],
       nivelEstudios: ['', Validators.maxLength(100)],
+      modalidadLaboral: [null as number | null],
+      tituloProfesional: ['', Validators.maxLength(300)],
       ingresoAdicionalMensual: [0, Validators.min(0)],
       ingresoAdicionalActividad: ['', Validators.maxLength(200)],
       tipoCalificacion: [null],
@@ -321,6 +325,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       codigo: [null],
       descripcion: ['', Validators.maxLength(300)],
       referencia: ['', Validators.maxLength(200)],
+      barrio: ['', Validators.maxLength(300)],
       callePrincipal: ['', Validators.maxLength(200)],
       calleSecundaria: ['', Validators.maxLength(200)],
       numero: ['', Validators.maxLength(50)],
@@ -546,6 +551,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       tipoHidrocarburifica: entidad.tipoHidrocarburifica,
       tipoVivienda: entidad.tipoVivienda,
       estadoCivil: entidad.estadoCivil || null,
+      sexo: entidad.sexo ?? null,
       cargasFamiliares: entidad.cargasFamiliares || 0,
       sectorPublico: entidad.sectorPublico || 0,
       porcentajeSimilitud: entidad.porcentajeSimilitud || 0,
@@ -583,6 +589,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
       unidadAdministrativa: participe.unidadAdministrativa || '',
       cargoActual: participe.cargoActual || '',
       nivelEstudios: participe.nivelEstudios || '',
+      modalidadLaboral: participe.modalidadLaboral ?? null,
+      tituloProfesional: participe.tituloProfesional || '',
       ingresoAdicionalMensual: participe.ingresoAdicionalMensual || 0,
       ingresoAdicionalActividad: participe.ingresoAdicionalActividad || '',
       tipoCalificacion: participe.tipoCalificacion || null,
@@ -603,6 +611,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       codigo: direccion.codigo,
       descripcion: direccion.descripcion || '',
       referencia: direccion.referencia || '',
+      barrio: direccion.barrio || '',
       callePrincipal: (direccion as any).callePrincipal || '',
       calleSecundaria: (direccion as any).calleSecundaria || '',
       numero: (direccion as any).numero || '',
@@ -657,7 +666,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
   private guardarDireccion(entidad: Entidad): void {
     const dirFormValue = this.direccionForm.getRawValue();
-    const tieneDatos = dirFormValue.descripcion || dirFormValue.callePrincipal || dirFormValue.calleSecundaria;
+    const tieneDatos = dirFormValue.descripcion || dirFormValue.callePrincipal || dirFormValue.calleSecundaria || dirFormValue.barrio;
 
     if (!tieneDatos) {
       this.saving.set(false);
@@ -668,7 +677,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
     // Solo el código: ver el comentario de `prepararDatosParticipe()` — mandar la Entidad
     // completa como FK anidada rompe la deserialización de Jackson (confirmado con un PUT real).
-    const dirData = { ...dirFormValue, entidad: { codigo: entidad.codigo }, porDefecto: 1, trabajo: 0 };
+    const dirData = { ...dirFormValue, barrio: dirFormValue.barrio?.trim() || null, entidad: { codigo: entidad.codigo }, porDefecto: 1, trabajo: 0 };
     const usuario = usuarioSesion();
     const dirObs = dirFormValue.codigo
       ? this.direccionService.update(dirData, usuario)
@@ -1307,6 +1316,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
     formValue.tieneCorreoPersonal = formValue.tieneCorreoPersonal ? 1 : 0;
     formValue.tieneCorreoTrabajo  = formValue.tieneCorreoTrabajo  ? 1 : 0;
     formValue.tieneTelefono       = formValue.tieneTelefono       ? 1 : 0;
+    formValue.sexo = formValue.sexo || null;
 
     /**
      * `TipoHidrocarburifica` es el único catálogo del formulario con una relación anidada:
@@ -1345,6 +1355,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
      * probando el PUT real: con la `Entidad` completa falla, con `{ codigo }` responde 200.
      */
     formValue.entidad = { codigo: entidad.codigo };
+    formValue.modalidadLaboral = formValue.modalidadLaboral || null;
+    formValue.tituloProfesional = formValue.tituloProfesional?.trim() || null;
 
     // Formatear fechas
     const datosFormateados = this.funcionesDatosService.formatearFechasParaBackend(formValue, [
