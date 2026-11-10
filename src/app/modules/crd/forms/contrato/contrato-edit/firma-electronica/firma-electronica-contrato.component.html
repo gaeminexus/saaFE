@@ -75,6 +75,20 @@
         </div>
       }
 
+      <!-- ENVIADO ya no termina solo: el socio tiene que firmar y alguien consulta el resultado -->
+      @if (estadoActual() === ESTADO_FIRMA.ENVIADO) {
+        <div class="firma-espera">
+          <mat-icon>hourglass_top</mat-icon>
+          <div>
+            <b>El socio debe abrir el enlace y firmar.</b>
+            <span>Cuando lo haya hecho, pulse «Actualizar estado» para traer el contrato firmado.</span>
+          </div>
+          <button mat-flat-button color="primary" type="button" (click)="actualizar()" [disabled]="operando() !== null">
+            <mat-icon>sync</mat-icon> Actualizar estado
+          </button>
+        </div>
+      }
+
       <!-- Anulación con motivo -->
       @if (mostrandoAnular()) {
         <div class="firma-anular">
@@ -106,11 +120,6 @@
         @if (estadoActual() === ESTADO_FIRMA.PENDIENTE_ENVIO) {
           <button mat-flat-button color="primary" type="button" (click)="reintentar()" [disabled]="operando() !== null">
             <mat-icon>replay</mat-icon> Reintentar
-          </button>
-        }
-        @if (estadoActual() === ESTADO_FIRMA.ENVIADO) {
-          <button mat-flat-button color="primary" type="button" (click)="actualizar()" [disabled]="operando() !== null">
-            <mat-icon>sync</mat-icon> Actualizar estado
           </button>
         }
         @if (vivo() && !mostrandoAnular()) {

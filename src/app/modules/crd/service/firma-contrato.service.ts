@@ -18,13 +18,14 @@ import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 export class FirmaContratoService {
   private http = inject(HttpClient);
 
-  enviar(idContrato: number): Observable<RespuestaFirma> {
+  /** `codigoDactilar` va en el cuerpo del POST (no en la URL): se digita en el momento y no se guarda en ningún lado. */
+  enviar(idContrato: number, codigoDactilar: string): Observable<RespuestaFirma> {
     const params = new HttpParams().set('idContrato', idContrato).set('usuario', usuarioSesion());
-    return this.post(`${ServiciosCrd.RS_FRCN}/enviar`, params);
+    return this.post(`${ServiciosCrd.RS_FRCN}/enviar`, params, { codigoDactilar });
   }
 
-  reintentar(idFirma: number): Observable<RespuestaFirma> {
-    return this.post(`${ServiciosCrd.RS_FRCN}/reintentar/${idFirma}`, this.soloUsuario());
+  reintentar(idFirma: number, codigoDactilar: string): Observable<RespuestaFirma> {
+    return this.post(`${ServiciosCrd.RS_FRCN}/reintentar/${idFirma}`, this.soloUsuario(), { codigoDactilar });
   }
 
   actualizar(idFirma: number): Observable<RespuestaFirma> {
@@ -69,12 +70,12 @@ export class FirmaContratoService {
     return new HttpParams().set('usuario', usuarioSesion());
   }
 
-  private post(url: string, params: HttpParams): Observable<RespuestaFirma> {
-    return this.http.post<RespuestaFirma>(url, null, { params }).pipe(
+  private post(url: string, params: HttpParams, cuerpo: object | null = null): Observable<RespuestaFirma> {
+    return this.http.post<RespuestaFirma>(url, cuerpo, { params }).pipe(
       catchError((error: HttpErrorResponse) => {
-        const cuerpo = error?.error;
-        if (cuerpo && typeof cuerpo === 'object' && 'exito' in cuerpo) {
-          return of({ ...cuerpo, exito: false } as RespuestaFirma);
+        const respuesta = error?.error;
+        if (respuesta && typeof respuesta === 'object' && 'exito' in respuesta) {
+          return of({ ...respuesta, exito: false } as RespuestaFirma);
         }
         // 400 de usuario inválido (texto plano), backend caído, etc.
         return of({

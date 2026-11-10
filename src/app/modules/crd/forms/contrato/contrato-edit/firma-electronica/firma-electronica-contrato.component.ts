@@ -15,10 +15,7 @@ import { FirmaContratoService } from '../../../../service/firma-contrato.service
 import { Entidad } from '../../../../model/entidad';
 import { ESTADO_FIRMA, FirmaContrato, RespuestaFirma, TramiteFirma } from '../../../../model/firma-contrato';
 import { FuncionesDatosService } from '../../../../../../shared/services/funciones-datos.service';
-import {
-  ConfirmDialogComponent,
-  ConfirmDialogData,
-} from '../../../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { EnviarFirmaDialogComponent, EnviarFirmaDialogData } from './enviar-firma-dialog.component';
 
 const ESTADOS: Record<number, { texto: string; clase: string }> = {
   [ESTADO_FIRMA.PENDIENTE_ENVIO]: { texto: 'Pendiente de envío', clase: 'pendiente' },
@@ -34,6 +31,7 @@ const MENSAJES_POR_CODIGO: Record<string, string> = {
   FORMATO_CONTRATO_PENDIENTE: 'El formato del contrato todavía no está disponible.',
   PROVEEDOR_NO_DISPONIBLE: 'El servicio de firma de Security Data no está disponible todavía.',
   PROVEEDOR_NO_CONFIGURADO: 'Falta configurar el servicio de firma electrónica en el servidor.',
+  REPRESENTANTE_SIN_FIRMA: 'Security Data todavía no tiene cargada la firma del representante legal de ASOPREP.',
 };
 
 /**
@@ -135,42 +133,57 @@ export class FirmaElectronicaContratoComponent implements OnInit {
     return d ? this.funcionesDatos.formatoFecha(d, FuncionesDatosService.FECHA_HORA) || '—' : '—';
   }
 
-  /** Traduce los códigos conocidos («CODIGO: texto» o el código solo) y deja el resto como vino, sin el prefijo. */
+  /**
+   * Traduce los códigos conocidos («CODIGO: texto» o el código solo) y deja el resto como vino, sin el prefijo.
+   * FIRMANTE_RECHAZADO muestra el motivo de Security Data tal cual; FIRMANTE_REQUIERE_DATOS antepone el aviso a la lista.
+   */
   traducir(texto: string | null | undefined, codigo?: string | null): string {
     const base = (texto || '').trim();
-    for (const cod of Object.keys(MENSAJES_POR_CODIGO)) {
-      if (codigo === cod || base.startsWith(cod)) return MENSAJES_POR_CODIGO[cod];
+    const es = (cod: string) => codigo === cod || base.startsWith(cod);
+    const detalle = base.replace(/^[A-Z_]{4,}:\s*/, '');
+    if (es('FIRMANTE_REQUIERE_DATOS')) {
+      return `Security Data pide datos adicionales del socio:${detalle ? ' ' + detalle : ''}`;
     }
-    return base.replace(/^[A-Z_]{4,}:\s*/, '') || 'No se pudo completar la operación.';
+    if (es('FIRMANTE_RECHAZADO')) {
+      return detalle || 'Security Data rechazó los datos del socio.';
+    }
+    for (const cod of Object.keys(MENSAJES_POR_CODIGO)) {
+      if (es(cod)) return MENSAJES_POR_CODIGO[cod];
+    }
+    return detalle || 'No se pudo completar la operación.';
   }
 
   // ══════════════════════ Acciones ══════════════════════
 
   enviarAFirmar(): void {
-    const datos: ConfirmDialogData = {
-      title: 'Enviar a firmar',
-      message: 'Se enviará el contrato en PDF y los datos del partícipe a Security Data para que lo devuelva firmado por el partícipe y por el representante legal.',
-      details: [
-        { label: 'Partícipe', value: this.nombres() },
-        { label: 'Cédula', value: this.cedula() },
-        { label: 'Correo', value: this.correo() || '—' },
-        { label: 'Celular', value: this.celular() || '—' },
-      ],
-      confirmText: 'Enviar a firmar',
-      cancelText: 'Cancelar',
-      type: 'warning',
-    };
-    this.dialog
-      .open(ConfirmDialogComponent, { data: datos, width: '560px', autoFocus: false })
-      .afterClosed()
-      .subscribe((ok) => {
-        if (ok) this.ejecutar('enviar', this.servicio.enviar(this.idContrato()));
-      });
+    this.pedirCodigoDactilar('Enviar a firmar', (codigo) =>
+      this.ejecutar('enviar', this.servicio.enviar(this.idContrato(), codigo)));
   }
 
   reintentar(): void {
     const f = this.actual()?.firma;
-    if (f) this.ejecutar('reintentar', this.servicio.reintentar(f.codigo));
+    if (!f) return;
+    this.pedirCodigoDactilar('Reintentar envío', (codigo) =>
+      this.ejecutar('reintentar', this.servicio.reintentar(f.codigo, codigo)));
+  }
+
+  /** El código dactilar no se guarda: se pide cada vez y solo vive mientras dura el diálogo. */
+  private pedirCodigoDactilar(titulo: string, alConfirmar: (codigo: string) => void): void {
+    const datos: EnviarFirmaDialogData = {
+      titulo,
+      nombres: this.nombres(),
+      cedula: this.cedula(),
+      correo: this.correo(),
+      celular: this.celular(),
+    };
+    this.dialog
+      .open<EnviarFirmaDialogComponent, EnviarFirmaDialogData, string | null>(EnviarFirmaDialogComponent, {
+        data: datos, width: '560px', autoFocus: 'input', disableClose: true,
+      })
+      .afterClosed()
+      .subscribe((codigo) => {
+        if (codigo) alConfirmar(codigo);
+      });
   }
 
   actualizar(): void {

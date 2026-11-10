@@ -105,3 +105,19 @@
   .historial-cab { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
   .historial-error { font-size: 0.85rem; color: #991b1b; }
 }
+
+.firma-espera {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 0.75rem;
+  background: #dbeafe;
+  color: #1e3a8a;
+
+  > mat-icon { flex-shrink: 0; }
+  > div { display: flex; flex-direction: column; flex: 1 1 260px; }
+  > div span { font-size: 0.85rem; }
+}
