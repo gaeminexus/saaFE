@@ -64,5 +64,14 @@ export class ServiciosCnt {
   public static RS_SDAS = `${API_URL}/sdas`;
   public static RS_DTMT = `${API_URL}/dtmt`;
 
+  // C25 — Seguimiento de novedades (saaBE rama cuadre/c25-seguimiento-novedades)
+  public static RS_NVDD = `${API_URL}/nvdd`;
+  public static RS_RQNV = `${API_URL}/rqnv`;
+  public static RS_RSNV = `${API_URL}/rsnv`;
+  public static RS_VNNV = `${API_URL}/vnnv`;
+  public static RS_ADNV = `${API_URL}/adnv`;
+  public static RS_DCSN = `${API_URL}/dcsn`;
+  public static RS_HSNV = `${API_URL}/hsnv`;
+
 
 }

@@ -1,0 +1,348 @@
+<mat-card class="detalle-card">
+  @if (cargando() && !detalle()) {
+    <div class="loading-inline"><mat-spinner diameter="28"></mat-spinner><span>Cargando la novedad…</span></div>
+  }
+  @if (error()) {
+    <div class="error-banner"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>
+  }
+
+  @if (detalle(); as d) {
+    @let n = d.novedad;
+    <div class="cabecera">
+      <div class="cabecera-titulo">
+        <span class="codigo">{{ n.codigoNovedad }}</span>
+        <span class="modulo">{{ n.modulo }} · {{ n.anio }}-{{ n.mes < 10 ? '0' + n.mes : n.mes }}{{ n.version > 1 ? ' · v' + n.version : '' }}</span>
+        <span class="chip" [ngClass]="claseEstadoNovedad(n.estado)">{{ estadosNovedad[n.estado] }}</span>
+        <span class="chip chip-tipo">{{ etiquetaTipo(n.tipoRespuesta) }}</span>
+        @if (d.listaParaCerrar) {
+          <span class="chip chip-verde" matTooltip="Todos los requerimientos están aplicados o no aplican">Lista para cerrar</span>
+        }
+        <span class="espacio"></span>
+        <button mat-icon-button (click)="cargar()" matTooltip="Actualizar"><mat-icon>refresh</mat-icon></button>
+        <button mat-icon-button (click)="cerrarPanel.emit()" matTooltip="Cerrar el detalle"><mat-icon>close</mat-icon></button>
+      </div>
+      <h3 class="titulo">{{ n.titulo }}</h3>
+      <div class="datos">
+        <span><strong>Área:</strong> {{ etiquetaArea(n.area) }}</span>
+        @if (n.valor != null) {
+          <span><strong>Valor:</strong> {{ formatoMonto(n.valor) }}</span>
+        }
+        <span><strong>Enviada:</strong> {{ formatoFecha(n.fechaEnvio, true) }}</span>
+        <span><strong>Responder hasta:</strong> {{ formatoFecha(n.fechaLimite) }}</span>
+        @if (n.fechaCierre) {
+          <span><strong>Cerrada:</strong> {{ formatoFecha(n.fechaCierre, true) }} por {{ n.usuarioCierre }}</span>
+        }
+        <span><strong>Archivo:</strong> {{ n.archivo || '—' }}</span>
+        @if (n.criterios) {
+          <span><strong>Criterios:</strong> {{ n.criterios }}</span>
+        }
+      </div>
+
+      <div class="acciones">
+        @if (n.estado === 1) {
+          <button mat-flat-button color="primary" (click)="enviar()" [disabled]="procesando()"><mat-icon>send</mat-icon> Enviar a ASOPREP</button>
+        }
+        @if (n.estado !== 7 && n.estado !== 8 && n.estado !== 9) {
+          <button mat-stroked-button (click)="registrarAjuste()" [disabled]="procesando()"><mat-icon>playlist_add_check</mat-icon> Asientos de ajuste</button>
+          <button mat-stroked-button (click)="registrarDecision(null, null)" [disabled]="procesando()"><mat-icon>gavel</mat-icon> Registrar decisión</button>
+          <button mat-stroked-button [matMenuTriggerFor]="menuVincular" [disabled]="procesando()"><mat-icon>link</mat-icon> Vincular</button>
+          <button mat-stroked-button (click)="adjuntar()" [disabled]="procesando()"><mat-icon>attach_file</mat-icon> Adjuntar</button>
+        }
+        @if (enSeguimiento()) {
+          <button mat-flat-button color="primary" (click)="cerrar()" [disabled]="procesando() || !d.listaParaCerrar"
+            [matTooltip]="d.listaParaCerrar ? 'Cerrar la novedad' : 'Faltan requerimientos por aplicar'">
+            <mat-icon>lock</mat-icon> Cerrar
+          </button>
+        }
+        @if (n.estado === 7) {
+          <button mat-stroked-button color="warn" (click)="reabrir()" [disabled]="procesando()"><mat-icon>lock_open</mat-icon> Reabrir</button>
+        }
+        <button mat-icon-button [matMenuTriggerFor]="menuMas" matTooltip="Más acciones"><mat-icon>more_vert</mat-icon></button>
+        <mat-menu #menuVincular="matMenu">
+          <button mat-menu-item (click)="vincularAsientoOrigen()"><mat-icon>receipt_long</mat-icon> Asiento de origen</button>
+          <button mat-menu-item (click)="vincularDecision()"><mat-icon>gavel</mat-icon> Decisión existente (D-nnn)</button>
+        </mat-menu>
+        <mat-menu #menuMas="matMenu">
+          <button mat-menu-item (click)="nuevaVersion()" [disabled]="n.estado === 1 || n.estado === 8 || n.estado === 9"><mat-icon>content_copy</mat-icon> Nueva versión</button>
+          <button mat-menu-item (click)="anular()" [disabled]="n.estado === 7 || n.estado === 8 || n.estado === 9"><mat-icon>delete_forever</mat-icon> Anular</button>
+        </mat-menu>
+      </div>
+    </div>
+
+    @if (textoDecision(); as t) {
+      <div class="aviso-decision">
+        <div class="aviso-decision-titulo"><mat-icon>content_paste</mat-icon> {{ t.numero }}: fila para DECISIONES-Y-PARTIDAS.md (D-056 (3))</div>
+        <pre class="texto-md">{{ t.texto }}</pre>
+        <div class="acciones">
+          <button mat-stroked-button (click)="copiarTextoDecision()"><mat-icon>content_copy</mat-icon> Copiar</button>
+          <button mat-flat-button color="primary" (click)="marcarDecisionCopiada()"><mat-icon>done</mat-icon> Ya está en el expediente</button>
+          <button mat-button (click)="textoDecision.set(null)">Ocultar</button>
+        </div>
+      </div>
+    }
+
+    <mat-accordion multi>
+      <mat-expansion-panel [expanded]="true">
+        <mat-expansion-panel-header><mat-panel-title><mat-icon>search</mat-icon> Qué se encontró y cómo se resolvió</mat-panel-title></mat-expansion-panel-header>
+        <div class="texto-largo">
+          <h4>Qué se encontró</h4>
+          <pre>{{ n.hallazgo || '—' }}</pre>
+          <h4>Cómo se resolvió</h4>
+          <pre>{{ n.resolucion || '—' }}</pre>
+        </div>
+      </mat-expansion-panel>
+
+      <mat-expansion-panel [expanded]="true">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>assignment</mat-icon> Requerimientos ({{ d.requerimientos.length }})</mat-panel-title>
+        </mat-expansion-panel-header>
+        @if (d.requerimientos.length === 0) {
+          <p class="vacio">Novedad informativa: no pide nada. Se da por conocida con el acta del mes.</p>
+        }
+        @for (item of d.requerimientos; track item.requerimiento.codigo) {
+          @let r = item.requerimiento;
+          <div class="req" [class.req-cerrado]="r.estado >= 6">
+            <div class="req-cab">
+              <span class="req-num">{{ r.secuencia }}</span>
+              <span class="chip chip-tipo">{{ etiquetaTipo(r.tipo) }}</span>
+              <span class="chip" [ngClass]="claseEstadoRequerimiento(r.estado)">{{ estadosRequerimiento[r.estado] }}</span>
+              <span class="req-area">{{ etiquetaArea(r.area) }}</span>
+              @if (r.referencia) {
+                <span class="req-ref">{{ r.tipoReferencia }} {{ r.referencia }}</span>
+              }
+              @if (r.valor != null) {
+                <span class="req-ref">{{ formatoMonto(r.valor) }}</span>
+              }
+              <span class="espacio"></span>
+              @if (enSeguimiento() && (r.estado === 1 || r.estado === 4)) {
+                <button mat-stroked-button (click)="responder(r)" [disabled]="procesando()"><mat-icon>reply</mat-icon> Responder</button>
+                <button mat-icon-button (click)="noExiste(r)" matTooltip="El documento no existe"><mat-icon>report</mat-icon></button>
+              }
+              @if (enSeguimiento() && r.estado === 3) {
+                <button mat-flat-button color="primary" (click)="aplicar(r)" [disabled]="procesando()"><mat-icon>task_alt</mat-icon> Aplicar</button>
+              }
+              @if (r.estado < 6 && n.estado !== 8 && n.estado !== 9 && n.estado !== 7) {
+                <button mat-icon-button (click)="noAplica(r)" matTooltip="Ya no aplica"><mat-icon>block</mat-icon></button>
+              }
+            </div>
+            <p class="req-desc">{{ r.descripcion }}</p>
+            @if (r.opciones) {
+              <p class="req-sup"><strong>Opciones:</strong> {{ r.opciones }}</p>
+            }
+            @if (r.supuesto) {
+              <p class="req-sup"><strong>Mientras tanto rige:</strong> {{ r.supuesto }}</p>
+            }
+            @for (rs of item.respuestas; track rs.respuesta.codigo) {
+              @let s = rs.respuesta;
+              <div class="resp" [class.resp-observada]="s.estado === 3" [class.resp-aceptada]="s.estado === 2">
+                <div class="resp-cab">
+                  <mat-icon>chat</mat-icon>
+                  <span>{{ formatoFecha(s.fecha, true) }} · {{ s.canal }} · {{ etiquetaArea(s.area) }} · registró {{ s.usuarioRegistro }}</span>
+                  <span class="chip" [class.chip-verde]="s.estado === 2" [class.chip-rojo]="s.estado === 3" [class.chip-ambar]="s.estado === 1">{{ estadosRespuesta[s.estado] }}</span>
+                  @if (s.opcion) {
+                    <span class="chip chip-tipo">{{ s.opcion }}</span>
+                  }
+                  @if (s.idDecision) {
+                    <span class="chip chip-violeta">Con decisión</span>
+                  }
+                  <span class="espacio"></span>
+                  @if (s.estado === 1 && enSeguimiento()) {
+                    @if (!s.idDecision && (r.tipo === 'DECISION' || r.tipo === 'APROBACION' || r.estado === 5)) {
+                      <button mat-stroked-button (click)="registrarDecision(r, s)"><mat-icon>gavel</mat-icon> Decisión</button>
+                    }
+                    <button mat-stroked-button color="primary" (click)="aceptar(s, r)"><mat-icon>thumb_up</mat-icon> Aceptar</button>
+                    <button mat-stroked-button color="warn" (click)="observar(s)"><mat-icon>feedback</mat-icon> Observar</button>
+                  }
+                </div>
+                @if (s.texto) {
+                  <p class="resp-texto">{{ s.texto }}</p>
+                }
+                @if (s.observacionRevision) {
+                  <p class="resp-obs"><strong>Revisión ({{ s.usuarioRevision }}):</strong> {{ s.observacionRevision }}</p>
+                }
+                @for (a of rs.adjuntos; track a.codigo) {
+                  <div class="adjunto">
+                    <mat-icon>attach_file</mat-icon>
+                    <a (click)="descargar(a)" class="enlace">{{ a.tipoDocumento }} · {{ a.nombreArchivo }}</a>
+                    @if (a.fechaCopiaExpediente) {
+                      <span class="chip chip-verde">En el expediente</span>
+                    } @else if (verTrazabilidad()) {
+                      <button mat-button (click)="marcarCopiado(a)">Marcar copiado al expediente</button>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </mat-expansion-panel>
+
+      <mat-expansion-panel [expanded]="ajustes().length > 0 || origen().length > 0">
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>receipt_long</mat-icon> Asientos: {{ ajustes().length }} de ajuste · {{ origen().length }} de origen</mat-panel-title>
+        </mat-expansion-panel-header>
+        <h4>Asientos manuales de ajuste (Contabilidad, D-056 (7))</h4>
+        @if (ajustes().length === 0) {
+          <p class="vacio">Todavía no hay asientos de ajuste registrados.</p>
+        }
+        <ng-container *ngTemplateOutlet="tablaAsientos; context: { lista: ajustes() }"></ng-container>
+        <h4>Asientos de origen (donde quedó registrada la novedad)</h4>
+        @if (origen().length === 0) {
+          <p class="vacio">Sin asientos de origen vinculados.</p>
+        }
+        <ng-container *ngTemplateOutlet="tablaAsientos; context: { lista: origen() }"></ng-container>
+      </mat-expansion-panel>
+
+      <mat-expansion-panel [expanded]="d.cuentasPorRegularizar.length > 0">
+        <mat-expansion-panel-header><mat-panel-title><mat-icon>account_balance</mat-icon> Cuentas por regularizar</mat-panel-title></mat-expansion-panel-header>
+        <p class="nota">{{ d.c22.mensaje }}</p>
+        @if (d.cuentasPorRegularizar.length === 0) {
+          <p class="vacio">La novedad no mueve cuentas por regularizar.</p>
+        } @else {
+          <table class="tabla">
+            <thead><tr><th>Cuenta</th><th class="num">Origen</th><th class="num">Ajustes</th><th class="num">Pendiente</th></tr></thead>
+            <tbody>
+              @for (c of d.cuentasPorRegularizar; track c.cuenta) {
+                <tr>
+                  <td>{{ c.cuenta }} {{ c.nombre }}</td>
+                  <td class="num">{{ formatoMonto(c.origen) }}</td>
+                  <td class="num">{{ formatoMonto(c.ajuste) }}</td>
+                  <td class="num" [class.pendiente]="c.pendiente !== 0"><strong>{{ formatoMonto(c.pendiente) }}</strong></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+        <button mat-stroked-button disabled matTooltip="Se habilita cuando C22 (Contabilidad > Regularización) esté programado">
+          <mat-icon>open_in_new</mat-icon> Ir a Regularización
+        </button>
+      </mat-expansion-panel>
+
+      <mat-expansion-panel>
+        <mat-expansion-panel-header>
+          <mat-panel-title><mat-icon>gavel</mat-icon> Decisiones ({{ decisiones().length }}) y relacionadas ({{ relacionadas().length }})</mat-panel-title>
+        </mat-expansion-panel-header>
+        @for (v of decisiones(); track v.codigo) {
+          <div class="vinculo">
+            <span class="chip chip-violeta">{{ v.numeroDecision }}</span>
+            <span>{{ v.temaDecision }}</span>
+            <span class="espacio"></span>
+            <button mat-button (click)="verTextoDecision(v)">Texto para el expediente</button>
+          </div>
+        }
+        @for (v of relacionadas(); track v.codigo) {
+          <div class="vinculo">
+            <mat-icon>call_split</mat-icon>
+            <span><strong>{{ v.novedadRelacionada }}</strong> {{ v.tituloRelacionada }} ({{ v.estadoRelacionada }})</span>
+          </div>
+        }
+        @for (v of otrosVinculos(); track v.codigo) {
+          <div class="vinculo">
+            <mat-icon>link</mat-icon>
+            <span>{{ v.tipo }} {{ v.idPartidaC22 || (v.tipoDocumentoModulo + ' ' + v.idDocumentoModulo) }}</span>
+            <span class="espacio"></span>
+            <button mat-icon-button (click)="desvincular(v)" matTooltip="Quitar"><mat-icon>link_off</mat-icon></button>
+          </div>
+        }
+        @if (d.adjuntos.length) {
+          <h4>Adjuntos de la novedad</h4>
+          @for (a of d.adjuntos; track a.codigo) {
+            <div class="adjunto">
+              <mat-icon>attach_file</mat-icon>
+              <a (click)="descargar(a)" class="enlace">{{ a.tipoDocumento }} · {{ a.nombreArchivo }}</a>
+              @if (a.fechaCopiaExpediente) {
+                <span class="chip chip-verde">En el expediente</span>
+              } @else if (verTrazabilidad()) {
+                <button mat-button (click)="marcarCopiado(a)">Marcar copiado al expediente</button>
+              }
+            </div>
+          }
+        }
+      </mat-expansion-panel>
+
+      @if (verTrazabilidad()) {
+        <mat-expansion-panel>
+          <mat-expansion-panel-header><mat-panel-title><mat-icon>folder_open</mat-icon> Trazabilidad interna (GAEMII)</mat-panel-title></mat-expansion-panel-header>
+          <p class="nota">Archivos de trabajo del expediente. Lote: {{ n.lote || '—' }}.</p>
+          <ul class="fuentes">
+            @for (f of (n.fuentes || '').split('; '); track f) {
+              @if (f) {
+                <li><code>{{ f }}</code></li>
+              }
+            }
+          </ul>
+        </mat-expansion-panel>
+      }
+
+      <mat-expansion-panel>
+        <mat-expansion-panel-header><mat-panel-title><mat-icon>history</mat-icon> Historial ({{ d.historial.length }})</mat-panel-title></mat-expansion-panel-header>
+        <table class="tabla">
+          <thead><tr><th>Fecha</th><th>Acción</th><th>Req.</th><th>Estado</th><th>Motivo</th><th>Usuario</th></tr></thead>
+          <tbody>
+            @for (h of d.historial; track h.codigo) {
+              <tr>
+                <td>{{ formatoFecha(h.fecha, true) }}</td>
+                <td>{{ h.accion }}</td>
+                <td>{{ h.idRequerimiento ? '#' + h.idRequerimiento : '—' }}</td>
+                <td>{{ h.estadoAnterior ?? '—' }} → {{ h.estadoNuevo ?? '—' }}</td>
+                <td>{{ h.motivo }}</td>
+                <td>{{ h.usuario }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (anulados().length) {
+          <h4>Vínculos anulados</h4>
+          @for (v of anulados(); track v.codigo) {
+            <div class="vinculo anulado">{{ v.tipo }} {{ v.numeroAsiento || v.numeroDecision || v.novedadRelacionada || '' }} — {{ v.motivoAnulacion }} ({{ v.usuarioAnulacion }})</div>
+          }
+        }
+      </mat-expansion-panel>
+    </mat-accordion>
+  }
+</mat-card>
+
+<ng-template #tablaAsientos let-lista="lista">
+  @if (lista.length) {
+    <table class="tabla">
+      <thead><tr><th>Asiento</th><th>Fecha</th><th>Módulo</th><th class="num">Debe</th><th>Req.</th><th>Registró</th><th></th></tr></thead>
+      <tbody>
+        @for (v of lista; track v.codigo) {
+          <tr>
+            <td><a class="enlace" (click)="irAsiento(v)" matTooltip="Abrir el asiento">{{ v.numeroAsiento }}</a> <span class="tenue">({{ v.idAsiento }})</span></td>
+            <td>{{ formatoFecha(v.fechaAsiento) }}</td>
+            <td>{{ v.moduloOrigenAsiento || '—' }}</td>
+            <td class="num">{{ formatoMonto(v.totalDebe) }}</td>
+            <td>{{ v.idRequerimiento ? '#' + v.idRequerimiento : '—' }}</td>
+            <td>{{ v.usuarioRegistro }}</td>
+            <td class="acc">
+              <button mat-icon-button (click)="alternarLineas(v)" matTooltip="Líneas"><mat-icon>{{ lineasAbiertas().has(v.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon></button>
+              @if (novedad()?.estado !== 7) {
+                <button mat-icon-button (click)="desvincular(v)" matTooltip="Quitar el vínculo"><mat-icon>link_off</mat-icon></button>
+              }
+            </td>
+          </tr>
+          @if (lineasAbiertas().has(v.codigo)) {
+            <tr class="lineas">
+              <td colspan="7">
+                <table class="tabla interna">
+                  <thead><tr><th>Cuenta</th><th>Descripción</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+                  <tbody>
+                    @for (l of v.lineas ?? []; track l.idDetalle) {
+                      <tr [class.por-regularizar]="l.porRegularizar">
+                        <td>{{ l.cuenta }} {{ l.nombreCuenta }}</td>
+                        <td>{{ l.descripcion }}</td>
+                        <td class="num">{{ formatoMonto(l.debe) }}</td>
+                        <td class="num">{{ formatoMonto(l.haber) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  }
+</ng-template>

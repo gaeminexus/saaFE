@@ -1,0 +1,38 @@
+@use '../novedades-comun';
+
+.detalle-card { padding: 12px 16px; }
+.cabecera { margin-bottom: 10px; }
+.cabecera-titulo { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.codigo { font-size: 1.25rem; font-weight: 700; color: #1a3d6d; }
+.modulo { color: #64748b; font-size: 0.85rem; }
+.titulo { margin: 6px 0; font-size: 1rem; color: #0f172a; }
+.datos { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.82rem; color: #334155; }
+.acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.texto-largo {
+  h4 { margin: 8px 0 4px; color: #1a3d6d; }
+  pre { white-space: pre-wrap; font-family: inherit; font-size: 0.84rem; background: #f8fafc; border-radius: 6px; padding: 8px 10px; margin: 0; max-height: 420px; overflow: auto; }
+}
+h4 { margin: 10px 0 6px; color: #1a3d6d; font-size: 0.9rem; }
+mat-panel-title mat-icon { margin-right: 6px; color: #2b6cb0; }
+.req { border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.req-cerrado { background: #f8fafc; }
+.req-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.req-num { font-weight: 700; color: #1a3d6d; min-width: 18px; }
+.req-area, .req-ref { font-size: 0.8rem; color: #475569; }
+.req-desc { margin: 6px 0 2px; font-size: 0.86rem; white-space: pre-wrap; }
+.req-sup { margin: 2px 0; font-size: 0.8rem; color: #475569; }
+.resp { margin: 6px 0 0 18px; border-left: 3px solid #cbd5e1; padding: 4px 8px; }
+.resp-aceptada { border-left-color: #22c55e; }
+.resp-observada { border-left-color: #ef4444; }
+.resp-cab { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.8rem; color: #475569; mat-icon { font-size: 18px; height: 18px; width: 18px; } }
+.resp-texto, .resp-obs { margin: 4px 0; font-size: 0.84rem; white-space: pre-wrap; }
+.adjunto, .vinculo { display: flex; align-items: center; gap: 6px; font-size: 0.83rem; margin: 3px 0; }
+.anulado { color: #94a3b8; text-decoration: line-through; }
+.lineas > td { background: #f8fafc; }
+.interna { font-size: 0.78rem; }
+.por-regularizar td { background: #fffbeb; }
+.pendiente { color: #b91c1c; }
+.fuentes { margin: 0; padding-left: 18px; font-size: 0.8rem; }
+.aviso-decision { border: 1px solid #c4b5fd; background: #f5f3ff; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; }
+.aviso-decision-titulo { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #5b21b6; }
+.texto-md { white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; background: #fff; padding: 6px 8px; border-radius: 4px; }

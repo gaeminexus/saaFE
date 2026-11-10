@@ -318,4 +318,17 @@ export class Permisos {
   public static readonly CNT_CERRAR_PERIODO                                     = 1559;   // SAA > CONTABILIDAD > PROCESOS > CIERRE DE PERIODOS > CERRAR PERIODO
   public static readonly CNT_REABRIR_PERIODO                                    = 1560;   // SAA > CONTABILIDAD > PROCESOS > CIERRE DE PERIODOS > REABRIR PERIODO
   public static readonly CRD_REABRIR_CARTERA                                    = 1561;   // SAA > CREDITOS > PARAMETRIZACION > CIERRE DE CARTERA > REABRIR CARTERA
+
+  // C25 — seguimiento de novedades. Nodos fuera de lap1-15: los inserta saaBE
+  // docs/logica-negocio/seguridad/sql/C25-FE-01-permisos-seguimiento-novedades.sql (rama cuadre/c25-seguimiento-novedades).
+  // 1562 es el usuario REPROCESO (SCP.PJRQ también guarda usuarios): el rango empieza en 1563.
+  public static readonly CNT_SEGUIMIENTO_NOVEDADES                              = 1563;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES
+  public static readonly CNT_SN_CARGAR_NOVEDADES                                = 1564;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > CARGAR NOVEDADES
+  public static readonly CNT_SN_ENVIAR_NOVEDADES                                = 1565;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > ENVIAR NOVEDADES
+  public static readonly CNT_SN_RESPONDER_REQUERIMIENTO                         = 1566;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > RESPONDER REQUERIMIENTO
+  public static readonly CNT_SN_REVISAR_RESPUESTA                               = 1567;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > REVISAR RESPUESTA
+  public static readonly CNT_SN_REGISTRAR_DECISION                              = 1568;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > REGISTRAR DECISION
+  public static readonly CNT_SN_REGISTRAR_AJUSTE                                = 1569;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > REGISTRAR AJUSTE
+  public static readonly CNT_SN_CERRAR_NOVEDAD                                  = 1570;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > CERRAR NOVEDAD
+  public static readonly CNT_SN_VER_TRAZABILIDAD                                = 1571;   // SAA > CONTABILIDAD > PROCESOS > SEGUIMIENTO NOVEDADES > VER TRAZABILIDAD
 }

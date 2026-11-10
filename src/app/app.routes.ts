@@ -130,6 +130,14 @@ export const routes: Routes = [
         data: { title: 'Cierre de Períodos' },
       },
       {
+        // C25 — seguimiento de novedades comunicadas a ASOPREP (CNT.NVDD y relacionadas)
+        path: 'procesos/seguimiento-novedades',
+        loadComponent: () =>
+          import('./modules/cnt/forms/seguimiento-novedades/seguimiento-novedades.component').then((m) => m.SeguimientoNovedadesComponent),
+        canActivate: [authGuard],
+        data: { title: 'Seguimiento Novedades' },
+      },
+      {
         path: 'listado-asientos',
         loadComponent: () => import('./modules/cnt/forms/listado-asientos/listado-asientos.component').then((m) => m.ListadoAsientosComponent),
         canActivate: [authGuard],

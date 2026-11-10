@@ -1,0 +1,299 @@
+<div class="seguimiento-container">
+  <div class="page-header">
+    <h1 class="page-title"><mat-icon>fact_check</mat-icon> Seguimiento de Novedades</h1>
+    <p class="page-subtitle">
+      Lo que se comunicó a ASOPREP de cada mes re-procesado: qué se pidió, qué respondió, la decisión de Contabilidad
+      de ASOPREP con su constancia y los <strong>asientos manuales de ajuste</strong> con que se arregló cada novedad.
+      Todas las novedades aparecen, clasificadas por tipo (también las informativas).
+    </p>
+  </div>
+
+  @if (error()) {
+    <div class="error-banner"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>
+  }
+
+  <div class="toolbar">
+    <mat-form-field appearance="outline" class="campo-corto">
+      <mat-label>Año</mat-label>
+      <mat-select [value]="anio()" (selectionChange)="anio.set($event.value); seleccion.set(null); cargar()">
+        @for (a of anios; track a) {
+          <mat-option [value]="a">{{ a }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="campo-corto">
+      <mat-label>Mes</mat-label>
+      <mat-select [value]="mes()" (selectionChange)="mes.set($event.value); seleccion.set(null); cargar()">
+        @for (m of meses; track m) {
+          <mat-option [value]="m">{{ nombreMes(m) }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <button mat-stroked-button (click)="cargar()" [disabled]="cargando() || procesando()"><mat-icon>refresh</mat-icon> Actualizar</button>
+    <span class="espacio"></span>
+    <input #archivoLote type="file" accept=".json,application/json" hidden (change)="cargarArchivo($event, 'novedades')" />
+    <input #archivoDecisiones type="file" accept=".json,application/json" hidden (change)="cargarArchivo($event, 'decisiones')" />
+    <button mat-stroked-button [matMenuTriggerFor]="menuCarga" [disabled]="procesando()"><mat-icon>upload</mat-icon> Cargar</button>
+    <mat-menu #menuCarga="matMenu">
+      <button mat-menu-item (click)="archivoLote.click()"><mat-icon>description</mat-icon> Lote del mes (novedades-AAAA-MM.json)</button>
+      <button mat-menu-item (click)="archivoDecisiones.click()"><mat-icon>gavel</mat-icon> Decisiones del expediente (decisiones.json)</button>
+    </mat-menu>
+    <button mat-stroked-button (click)="enviarMes()" [disabled]="procesando()"><mat-icon>send</mat-icon> Enviar el mes</button>
+    <button mat-stroked-button (click)="cerrarInformativas()" [disabled]="procesando()"><mat-icon>done_all</mat-icon> Cerrar informativas</button>
+  </div>
+
+  @if (resumen(); as r) {
+    <div class="resumen">
+      <mat-card class="tarjeta">
+        <div class="tarjeta-titulo">Novedades de {{ titulo() }}</div>
+        <div class="cifra">{{ r.novedades }}</div>
+        <div class="chips">
+          @for (e of entradas(r.porEstado); track e.clave) {
+            <span class="chip chip-gris">{{ e.clave }} {{ e.valor }}</span>
+          }
+        </div>
+      </mat-card>
+      <mat-card class="tarjeta">
+        <div class="tarjeta-titulo">Por tipo (clic para filtrar)</div>
+        <div class="chips">
+          @for (t of tipos; track t.valor) {
+            <button class="chip chip-boton" [class.activo]="tipo() === t.valor" (click)="filtrarTipo(t.valor)" [matTooltip]="t.ayuda">
+              {{ t.etiqueta }} {{ r.porTipo[t.valor] || 0 }}
+            </button>
+          }
+        </div>
+      </mat-card>
+      <mat-card class="tarjeta">
+        <div class="tarjeta-titulo">Requerimientos</div>
+        <div class="chips">
+          @for (e of entradas(r.requerimientosPorEstado); track e.clave) {
+            <span class="chip chip-gris">{{ e.clave }} {{ e.valor }}</span>
+          }
+        </div>
+        <div class="tarjeta-titulo sub">Pendientes por área</div>
+        <div class="chips">
+          @for (e of entradas(r.pendientesPorArea); track e.clave) {
+            <span class="chip chip-azul">{{ etiquetaArea(e.clave) }} {{ e.valor }}</span>
+          } @empty {
+            <span class="tenue">—</span>
+          }
+        </div>
+      </mat-card>
+      <mat-card class="tarjeta">
+        <div class="tarjeta-titulo">Antigüedad de lo pendiente</div>
+        <div class="semaforo">
+          <span class="chip chip-verde">0–15 días: {{ r.antiguedadPendientes.hasta15 }}</span>
+          <span class="chip chip-ambar">16–30: {{ r.antiguedadPendientes.de16a30 }}</span>
+          <span class="chip chip-rojo">+30: {{ r.antiguedadPendientes.masDe30 }}</span>
+          <span class="chip chip-rojo">Vencidos: {{ r.antiguedadPendientes.vencidos }}</span>
+        </div>
+      </mat-card>
+      <mat-card class="tarjeta ancha">
+        <div class="tarjeta-titulo">Cuentas por regularizar al cierre del mes (desde la contabilidad)</div>
+        <table class="tabla">
+          <thead>
+            <tr><th>Cuenta</th><th class="num">Movimiento del mes</th><th class="num">Explicado por novedades</th><th class="num">Sin novedad</th><th class="num">Regularizado</th><th class="num">Saldo final</th></tr>
+          </thead>
+          <tbody>
+            @for (c of r.cuentasPorRegularizar.cuentas; track c.cuenta) {
+              <tr>
+                <td>{{ c.cuenta }} {{ c.nombre }}</td>
+                <td class="num">{{ formatoMonto(c.movimientoMes) }}</td>
+                <td class="num">{{ formatoMonto(c.explicadoPorNovedades) }}</td>
+                <td class="num" [class.alerta]="c.sinNovedad !== 0">{{ formatoMonto(c.sinNovedad) }}</td>
+                <td class="num">{{ formatoMonto(c.regularizadoPorAjustes) }}</td>
+                <td class="num"><strong>{{ formatoMonto(c.saldoFinal) }}</strong></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="nota">{{ r.cuentasPorRegularizar.c22.mensaje }}</p>
+      </mat-card>
+    </div>
+  }
+
+  <mat-tab-group [selectedIndex]="pestana()" (selectedIndexChange)="pestana.set($event)" animationDuration="0ms">
+    <mat-tab label="Novedades ({{ bandeja().length }})">
+      <div class="filtros">
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Módulo</mat-label>
+          <mat-select [value]="modulo()" (selectionChange)="modulo.set($event.value); cargar()">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (m of modulos; track m) {
+              <mat-option [value]="m">{{ m }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Tipo</mat-label>
+          <mat-select [value]="tipo()" (selectionChange)="tipo.set($event.value); cargar()">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (t of tipos; track t.valor) {
+              <mat-option [value]="t.valor">{{ t.etiqueta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Estado</mat-label>
+          <mat-select [value]="estado()" (selectionChange)="estado.set($event.value); cargar()">
+            <mat-option [value]="null">Todos (sin reemplazadas)</mat-option>
+            @for (e of estadosNovedadLista; track e.valor) {
+              <mat-option [value]="e.valor">{{ e.etiqueta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Área</mat-label>
+          <mat-select [value]="area()" (selectionChange)="area.set($event.value); cargar()">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (a of areas; track a.valor) {
+              <mat-option [value]="a.valor">{{ a.etiqueta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-texto">
+          <mat-label>Buscar (título, código, préstamo, operación, D-nnn…)</mat-label>
+          <input matInput [ngModel]="texto()" (ngModelChange)="texto.set($event)" (keyup.enter)="cargar()" />
+        </mat-form-field>
+        <button mat-button (click)="limpiarFiltros()">Limpiar</button>
+        <button mat-button (click)="exportarBandeja()"><mat-icon>download</mat-icon> CSV</button>
+      </div>
+      @if (cargando()) {
+        <div class="loading-inline"><mat-spinner diameter="28"></mat-spinner><span>Cargando…</span></div>
+      } @else if (bandeja().length === 0) {
+        <p class="vacio">No hay novedades para {{ titulo() }} con esos filtros. Se cargan al final de cada mes re-procesado (D-056).</p>
+      } @else {
+        <div class="tabla-scroll">
+          <table class="tabla bandeja">
+            <thead>
+              <tr>
+                <th>Código</th><th>Módulo</th><th>Título</th><th>Tipo</th><th>Área</th><th class="num">Pedidos</th>
+                <th class="num">Ajustes</th><th class="num">Por regularizar</th><th>Estado</th><th class="num">Días</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of bandeja(); track f.codigo) {
+                <tr (click)="abrir(f.codigo)" [class.seleccionada]="seleccion() === f.codigo" [class.vencida]="f.vencida">
+                  <td class="codigo">{{ f.codigoNovedad }}{{ f.version > 1 ? ' v' + f.version : '' }}</td>
+                  <td>{{ f.modulo }}</td>
+                  <td class="titulo">{{ f.titulo }}</td>
+                  <td><span class="chip chip-tipo">{{ etiquetaTipo(f.tipoRespuesta) }}</span></td>
+                  <td>{{ etiquetaArea(f.area) }}</td>
+                  <td class="num" [matTooltip]="f.pendientes + ' pendientes · ' + f.porRevisar + ' por revisar · ' + f.porAplicar + ' por aplicar · ' + f.terminados + ' terminados'">
+                    {{ f.requerimientos === 0 ? '—' : f.pendientes + f.porRevisar + f.porAplicar + ' / ' + f.requerimientos }}
+                  </td>
+                  <td class="num">{{ f.asientosAjuste || '—' }}</td>
+                  <td class="num">{{ f.saldoPorRegularizar ? formatoMonto(f.saldoPorRegularizar) : '—' }}</td>
+                  <td>
+                    <span class="chip" [ngClass]="claseEstadoNovedad(f.estado)">{{ estadosNovedad[f.estado] }}</span>
+                    @if (f.listaParaCerrar) {
+                      <mat-icon class="icono-ok" matTooltip="Lista para cerrar">task_alt</mat-icon>
+                    }
+                  </td>
+                  <td class="num">{{ f.diasDesdeEnvio ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </mat-tab>
+
+    <mat-tab label="Requerimientos ({{ totalPendientes() }} pendientes)">
+      <div class="filtros">
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Área</mat-label>
+          <mat-select [value]="area()" (selectionChange)="area.set($event.value); cargar()">
+            <mat-option [value]="null">Todas</mat-option>
+            @for (a of areas; track a.valor) {
+              <mat-option [value]="a.valor">{{ a.etiqueta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Estado del pedido</mat-label>
+          <mat-select [value]="estadoReq()" (selectionChange)="estadoReq.set($event.value); cargar()">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (e of estadosReqLista; track e.valor) {
+              <mat-option [value]="e.valor">{{ e.etiqueta }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="campo-corto">
+          <mat-label>Módulo</mat-label>
+          <mat-select [value]="modulo()" (selectionChange)="modulo.set($event.value); cargar()">
+            <mat-option [value]="null">Todos</mat-option>
+            @for (m of modulos; track m) {
+              <mat-option [value]="m">{{ m }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr><th>Novedad</th><th>#</th><th>Tipo</th><th>Área</th><th>Pedido</th><th>Referencia</th><th class="num">Valor</th><th>Estado</th><th class="num">Días</th></tr>
+          </thead>
+          <tbody>
+            @for (r of requerimientos(); track r.codigo) {
+              <tr (click)="abrir(r.idNovedad); pestana.set(0)" [class.vencida]="r.vencido">
+                <td class="codigo">{{ r.modulo }} {{ r.codigoNovedad }}</td>
+                <td>{{ r.secuencia }}</td>
+                <td><span class="chip chip-tipo">{{ etiquetaTipo(r.tipo) }}</span></td>
+                <td>{{ etiquetaArea(r.area) }}</td>
+                <td class="titulo">{{ r.descripcion }}</td>
+                <td>{{ r.referencia ? r.tipoReferencia + ' ' + r.referencia : '—' }}</td>
+                <td class="num">{{ formatoMonto(r.valor) }}</td>
+                <td><span class="chip" [ngClass]="claseEstadoRequerimiento(r.estado)">{{ estadosRequerimiento[r.estado] }}</span></td>
+                <td class="num">{{ r.diasDesdeEnvio ?? '—' }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="9" class="vacio">Sin requerimientos con esos filtros.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Acta y pedido">
+      <div class="acta">
+        <div class="filtros">
+          <button mat-flat-button color="primary" (click)="generarActa()"><mat-icon>summarize</mat-icon> Reporte para el acta de {{ titulo() }}</button>
+          <button mat-stroked-button (click)="generarPedido()"><mat-icon>outgoing_mail</mat-icon> Pedido pendiente por área{{ area() ? ' (' + etiquetaArea(area()) + ')' : '' }}</button>
+        </div>
+        @if (acta(); as a) {
+          @if (!a.puedeGenerarse) {
+            <div class="aviso-banner">
+              <mat-icon>warning</mat-icon>
+              <span>Hay {{ a.bloqueos.length }} novedad(es) sin revisar o sin enviar: procesarlas antes de firmar el acta.</span>
+            </div>
+            <ul class="bloqueos">
+              @for (b of a.bloqueos.slice(0, 15); track b) {
+                <li>{{ b }}</li>
+              }
+            </ul>
+          }
+          <div class="acciones">
+            <button mat-stroked-button (click)="copiar(a.texto)"><mat-icon>content_copy</mat-icon> Copiar</button>
+            <button mat-stroked-button (click)="descargar(a.texto, 'anexo-acta-novedades-' + a.mes + '.md')"><mat-icon>download</mat-icon> Descargar .md</button>
+            <span class="tenue">{{ a.decisiones.length }} decisiones · {{ a.ajustes.length }} ajustes · {{ a.pendientes.length }} pendientes · {{ a.informativas.length }} informativas</span>
+          </div>
+          <pre class="texto-md">{{ a.texto }}</pre>
+        }
+        @if (pedido()) {
+          <div class="acciones">
+            <button mat-stroked-button (click)="copiar(pedido())"><mat-icon>content_copy</mat-icon> Copiar pedido</button>
+            <button mat-stroked-button (click)="descargar(pedido(), 'pedido-pendiente-' + anio() + '-' + mes() + '.txt')"><mat-icon>download</mat-icon> Descargar</button>
+          </div>
+          <pre class="texto-md">{{ pedido() }}</pre>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  @if (seleccion(); as id) {
+    <div id="detalle-novedad" class="detalle">
+      <app-detalle-novedad [idNovedad]="id" [idEmpresa]="idEmpresa" (cambio)="cargar()" (cerrarPanel)="seleccion.set(null)"></app-detalle-novedad>
+    </div>
+  }
+</div>
