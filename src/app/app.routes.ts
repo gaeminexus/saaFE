@@ -1331,6 +1331,12 @@ export const routes: Routes = [
         loadComponent: () => import('./modules/crd/forms/parametrizacion/niveles-aprobacion/niveles-aprobacion.component').then((m) => m.NivelesAprobacionComponent),
         canActivate: [authGuard],
       },
+      // Consola de pruebas de Security Data (todos los usuarios; la protege el backend con saa.firma.securitydata.pruebas).
+      {
+        path: 'pruebas-security-data',
+        loadComponent: () => import('./modules/crd/forms/parametrizacion/pruebas-security-data/pruebas-security-data.component').then((m) => m.PruebasSecurityDataComponent),
+        canActivate: [authGuard],
+      },
       // Rutas de Contratos
       {
         path: 'contrato-dash',

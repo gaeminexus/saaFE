@@ -51,6 +51,8 @@ export class ServiciosCrd {
   public static RS_ADJN = `${API_URL}/adjn`;
   /** Firma electrónica del contrato de adhesión (docs/logica-negocio/crd/API-FIRMA-ELECTRONICA-CONTRATO.md del BE). */
   public static RS_FRCN = `${API_URL}/frcn`;
+  /** Consola de pruebas de Security Data (docs/logica-negocio/crd/DISENO-PANTALLA-PRUEBAS-SECURITY-DATA.md del BE). */
+  public static RS_SDPR = `${API_URL}/sdpr`;
   public static RS_ADTR = `${API_URL}/adtr`;
   public static RS_CXCP = `${API_URL}/cxcp`;
   public static RS_BPRF = `${API_URL}/bprf`;

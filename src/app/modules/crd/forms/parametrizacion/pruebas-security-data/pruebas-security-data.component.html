@@ -1,0 +1,163 @@
+<div class="pruebas-container">
+  <div class="cabecera">
+    <h1><mat-icon>science</mat-icon> Pruebas Security Data</h1>
+    <p>Cada paso de la API de firma electrónica, uno por uno, con la petición enviada y la respuesta recibida.</p>
+  </div>
+
+  <div class="aviso-fijo">
+    <mat-icon>warning_amber</mat-icon>
+    <span>
+      <b>Crear tarea envía correo y WhatsApp reales al firmante. Use solo datos autorizados.</b>
+      Las llamadas las hace el servidor; el token y la clave nunca llegan al navegador. El código dactilar no se guarda.
+    </span>
+  </div>
+
+  @for (p of pasos; track p.numero) {
+    <mat-card class="paso">
+      <mat-card-header>
+        <span mat-card-avatar class="numero">{{ p.numero }}</span>
+        <mat-card-title>{{ p.titulo }}</mat-card-title>
+        <mat-card-subtitle>{{ p.llamada }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="descripcion">{{ p.descripcion }}</p>
+
+        @if (p.campos.length > 0) {
+          <div class="campos">
+            @for (c of p.campos; track c.clave) {
+              @if (visible(p, c)) {
+              @switch (c.tipo) {
+                @case ('check') {
+                  <mat-checkbox [ngModel]="valor(p, c)" (ngModelChange)="poner(p, c, $event)">{{ c.etiqueta }}</mat-checkbox>
+                }
+                @case ('select') {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ c.etiqueta }}</mat-label>
+                    <mat-select [ngModel]="valor(p, c)" (ngModelChange)="poner(p, c, $event)">
+                      @for (o of c.opciones; track o.valor) {
+                        <mat-option [value]="o.valor">{{ o.texto }}</mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
+                }
+                @case ('area') {
+                  <mat-form-field appearance="outline" class="ancho">
+                    <mat-label>{{ c.etiqueta }}</mat-label>
+                    <textarea matInput rows="3" [ngModel]="valor(p, c)" (ngModelChange)="poner(p, c, $event)"></textarea>
+                    @if (c.ayuda) { <mat-hint>{{ c.ayuda }}</mat-hint> }
+                  </mat-form-field>
+                }
+                @default {
+                  <mat-form-field appearance="outline">
+                    <mat-label>{{ c.etiqueta }}</mat-label>
+                    <input matInput [type]="c.tipo === 'numero' ? 'number' : 'text'" autocomplete="off"
+                           [attr.maxlength]="c.maxLength ?? null"
+                           [ngModel]="valor(p, c)" (ngModelChange)="poner(p, c, $event)">
+                    @if (c.ayuda) { <mat-hint>{{ c.ayuda }}</mat-hint> }
+                  </mat-form-field>
+                }
+              }
+              }
+            }
+          </div>
+        }
+
+        @if (p.archivos; as a) {
+          <div class="archivo">
+            <label class="etiqueta-archivo">{{ a.etiqueta }}</label>
+            <input type="file" accept="application/pdf" [multiple]="a.multiple" (change)="elegirArchivos(p, $event)">
+            @if (nombresArchivos(p)) { <span class="nombres">{{ nombresArchivos(p) }}</span> }
+          </div>
+        }
+
+        @if (p.numero === 5) {
+          <div class="posiciones">
+            <button mat-stroked-button type="button" (click)="calcularPosiciones(p)" [disabled]="calculando() || ejecutando() !== null">
+              <mat-icon>straighten</mat-icon> Calcular posiciones para el contrato
+            </button>
+            @if (posiciones(); as pos) {
+              <button mat-button type="button" (click)="quitarPosiciones()">Quitar posiciones calculadas</button>
+              <div class="posiciones-detalle">
+                <b>Socio (se manda esto en vez de la posición única):</b>
+                @for (x of pos.participe; track $index) { <span>{{ textoPosicion(x) }}</span> }
+                <b>Representante:</b>
+                @for (x of pos.representante; track $index) { <span>{{ textoPosicion(x) }}</span> }
+              </div>
+            }
+          </div>
+        }
+
+        <div class="acciones">
+          <button mat-flat-button color="primary" type="button" (click)="ejecutar(p)" [disabled]="ejecutando() !== null">
+            @if (ejecutando() === p.numero) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>play_arrow</mat-icon>
+            }
+            Ejecutar
+          </button>
+          @if (p.numero === 2) {
+            <button mat-stroked-button type="button" (click)="llenarDesdeSocio(p)" [disabled]="llenando() || ejecutando() !== null">
+              <mat-icon>person_search</mat-icon> Llenar desde socio
+            </button>
+          }
+          @if (p.descargaPdf) {
+            <button mat-stroked-button type="button" (click)="descargarPdf(p)" [disabled]="!puedeDescargar(p)">
+              <mat-icon>picture_as_pdf</mat-icon> Descargar PDF
+            </button>
+          }
+        </div>
+
+        @if (resultados()[p.numero]; as r) {
+          <div class="resultado">
+            @if (r.datos; as d) {
+              <div class="chips">
+                <span class="chip" [ngClass]="claseHttp(d.httpStatus)">HTTP {{ d.httpStatus }}</span>
+                <span class="chip neutro">{{ d.duracionMs }} ms</span>
+                <span class="ruta">{{ d.metodo }} {{ d.ruta }}</span>
+              </div>
+              @if (d.resumen; as rs) {
+                <div class="resumen">{{ json(rs) }}</div>
+              }
+
+              <div class="panel">
+                <button type="button" class="panel-cab" (click)="alternar(p, 'pet')">
+                  <mat-icon>{{ abierto(p, 'pet') ? 'expand_less' : 'expand_more' }}</mat-icon> Petición
+                </button>
+                @if (abierto(p, 'pet')) {
+                  <button mat-icon-button type="button" class="copiar" title="Copiar" (click)="copiar(d.peticion)">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                  <pre>{{ json(d.peticion) }}</pre>
+                }
+              </div>
+
+              <div class="panel">
+                <button type="button" class="panel-cab" (click)="alternar(p, 'res')">
+                  <mat-icon>{{ abierto(p, 'res') ? 'expand_less' : 'expand_more' }}</mat-icon> Respuesta
+                </button>
+                @if (abierto(p, 'res')) {
+                  <button mat-icon-button type="button" class="copiar" title="Copiar" (click)="copiar(d.respuesta)">
+                    <mat-icon>content_copy</mat-icon>
+                  </button>
+                  <pre>{{ json(d.respuesta) }}</pre>
+                }
+              </div>
+            } @else {
+              <div class="chips">
+                <span class="chip" [ngClass]="claseHttp(r.estadoHttp)">HTTP {{ r.estadoHttp || 'sin respuesta' }}</span>
+              </div>
+              <div class="fallo">
+                @if (r.error === 'PRUEBAS_DESHABILITADAS') {
+                  Las pruebas están deshabilitadas en el servidor (falta la propiedad saa.firma.securitydata.pruebas = true).
+                } @else {
+                  {{ r.mensaje }}
+                }
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

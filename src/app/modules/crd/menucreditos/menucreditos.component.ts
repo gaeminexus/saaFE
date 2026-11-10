@@ -84,6 +84,12 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_PARAMETRIZACION,
           route: '/menucreditos/niveles-aprobacion',
         },
+        {
+          displayName: 'Pruebas Security Data',
+          iconName: 'science',
+          idPermiso: Permisos.CRD_PARAMETRIZACION,
+          route: '/menucreditos/pruebas-security-data',
+        },
       ],
     },
     // La opción "Bandas de Cartera" se agrega en el constructor solo para el USUARIO 1
