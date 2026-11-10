@@ -1,0 +1,183 @@
+<mat-card class="form-section firma-card">
+  <mat-card-header>
+    <mat-icon mat-card-avatar>draw</mat-icon>
+    <mat-card-title>Firma electrónica</mat-card-title>
+    <mat-card-subtitle>
+      Security Data firma por el partícipe y por el representante legal y devuelve el PDF firmado por los dos.
+    </mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    @if (cargando()) {
+      <div class="firma-cargando"><mat-spinner diameter="28"></mat-spinner> Consultando el trámite de firma...</div>
+    } @else if (errorCarga()) {
+      <div class="firma-aviso error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorCarga() }}</span>
+        <button mat-button type="button" (click)="cargar()"><mat-icon>refresh</mat-icon> Reintentar</button>
+      </div>
+    } @else {
+      <!-- Estado del trámite -->
+      <div class="firma-estado">
+        @if (actual(); as t) {
+          <span class="chip-firma" [ngClass]="claseEstado(t.firma)">{{ textoEstado(t.firma) }}</span>
+          <span class="firma-id">Trámite #{{ t.firma.codigo }}</span>
+        } @else {
+          <span class="chip-firma sin-tramite">Sin trámite de firma</span>
+        }
+      </div>
+
+      <!-- Datos del partícipe que se mandan -->
+      <div class="firma-datos">
+        <div class="dato"><span class="dato-label">Cédula</span><span>{{ cedula() || '—' }}</span></div>
+        <div class="dato"><span class="dato-label">Nombres</span><span>{{ nombres() || '—' }}</span></div>
+        <div class="dato" [class.falta]="!correo()"><span class="dato-label">Correo</span><span>{{ correo() || '—' }}</span></div>
+        <div class="dato" [class.falta]="!celular()"><span class="dato-label">Celular</span><span>{{ celular() || '—' }}</span></div>
+      </div>
+
+      @if (faltantes().length > 0 && puedeEnviar()) {
+        <div class="firma-aviso" [class.error]="sinContacto()" [class.advertencia]="!sinContacto()">
+          <mat-icon>{{ sinContacto() ? 'block' : 'warning_amber' }}</mat-icon>
+          <span>
+            Al partícipe le falta {{ faltantes().join(', ') }}.
+            @if (sinContacto()) {
+              Sin eso el servidor no deja enviar a firmar: complételo en la ficha del partícipe.
+            } @else {
+              Se puede enviar, pero Security Data no tendrá ese medio de contacto.
+            }
+          </span>
+        </div>
+      }
+
+      <!-- Fechas y último error del trámite actual -->
+      @if (actual(); as t) {
+        <div class="firma-fechas">
+          <span><b>Registrado:</b> {{ fecha(t.firma.fechaRegistro) }}</span>
+          <span><b>Enviado:</b> {{ fecha(t.firma.fechaEnvio) }}</span>
+          <span><b>Firmado:</b> {{ fecha(t.firma.fechaFirma) }}</span>
+          <span><b>Última consulta:</b> {{ fecha(t.firma.fechaUltimaConsulta) }}</span>
+          @if (t.firma.estado === ESTADO_FIRMA.ANULADO) {
+            <span><b>Anulado:</b> {{ fecha(t.firma.fechaAnulacion) }} — {{ t.firma.motivoAnulacion || 'sin motivo' }}</span>
+          }
+        </div>
+        @if (t.firma.error) {
+          <div class="firma-aviso error">
+            <mat-icon>error_outline</mat-icon>
+            <span><b>Último error:</b> {{ traducir(t.firma.error) }}</span>
+          </div>
+        }
+      }
+
+      <!-- Mensaje del último intento -->
+      @if (aviso(); as a) {
+        <div class="firma-aviso" [class.ok]="a.ok" [class.error]="!a.ok">
+          <mat-icon>{{ a.ok ? 'check_circle' : 'error_outline' }}</mat-icon>
+          <span>{{ a.texto }}</span>
+        </div>
+      }
+
+      <!-- Anulación con motivo -->
+      @if (mostrandoAnular()) {
+        <div class="firma-anular">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Motivo de la anulación</mat-label>
+            <textarea matInput rows="2" maxlength="500" [ngModel]="motivoAnulacion()"
+                      (ngModelChange)="motivoAnulacion.set($event)"></textarea>
+          </mat-form-field>
+          <div class="firma-botones">
+            <button mat-stroked-button type="button" (click)="cancelarAnular()" [disabled]="operando() === 'anular'">
+              Cancelar
+            </button>
+            <button mat-flat-button color="warn" type="button" (click)="confirmarAnular()"
+                    [disabled]="!motivoAnulacion().trim() || operando() === 'anular'">
+              <mat-icon>cancel</mat-icon> Anular trámite
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Botones según el estado -->
+      <div class="firma-botones">
+        @if (puedeEnviar()) {
+          <button mat-flat-button color="primary" type="button" (click)="enviarAFirmar()"
+                  [disabled]="operando() !== null || sinContacto()">
+            <mat-icon>send</mat-icon> Enviar a firmar
+          </button>
+        }
+        @if (estadoActual() === ESTADO_FIRMA.PENDIENTE_ENVIO) {
+          <button mat-flat-button color="primary" type="button" (click)="reintentar()" [disabled]="operando() !== null">
+            <mat-icon>replay</mat-icon> Reintentar
+          </button>
+        }
+        @if (estadoActual() === ESTADO_FIRMA.ENVIADO) {
+          <button mat-flat-button color="primary" type="button" (click)="actualizar()" [disabled]="operando() !== null">
+            <mat-icon>sync</mat-icon> Actualizar estado
+          </button>
+        }
+        @if (vivo() && !mostrandoAnular()) {
+          <button mat-stroked-button color="warn" type="button" (click)="abrirAnular()" [disabled]="operando() !== null">
+            <mat-icon>cancel</mat-icon> Anular
+          </button>
+        }
+        @if (actual(); as t) {
+          @if (t.firma.idAdjuntoOriginal) {
+            <button mat-stroked-button type="button" (click)="descargar(t.firma, 'ORIGINAL')" [disabled]="operando() !== null">
+              <mat-icon>description</mat-icon> Descargar original
+            </button>
+          }
+          @if (t.firma.idAdjuntoFirmado) {
+            <button mat-stroked-button type="button" (click)="descargar(t.firma, 'FIRMADO')" [disabled]="operando() !== null">
+              <mat-icon>verified</mat-icon> Descargar firmado
+            </button>
+          }
+        }
+        @if (operando()) {
+          <mat-spinner diameter="22"></mat-spinner>
+        }
+      </div>
+
+      <!-- Historial plegable -->
+      @if (anteriores().length > 0) {
+        <div class="firma-historial">
+          <button mat-button type="button" (click)="historialAbierto.set(!historialAbierto())">
+            <mat-icon>{{ historialAbierto() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            Trámites anteriores ({{ anteriores().length }})
+          </button>
+          @if (historialAbierto()) {
+            <div class="historial-lista">
+              @for (t of anteriores(); track t.firma.codigo) {
+                <div class="historial-item">
+                  <div class="historial-cab">
+                    <span class="chip-firma" [ngClass]="claseEstado(t.firma)">{{ textoEstado(t.firma) }}</span>
+                    <span class="firma-id">Trámite #{{ t.firma.codigo }} · {{ fecha(t.firma.fechaRegistro) }}</span>
+                    @if (t.firma.idAdjuntoOriginal) {
+                      <button mat-icon-button type="button" title="Descargar original"
+                              (click)="descargar(t.firma, 'ORIGINAL')" [disabled]="operando() !== null">
+                        <mat-icon>description</mat-icon>
+                      </button>
+                    }
+                    @if (t.firma.idAdjuntoFirmado) {
+                      <button mat-icon-button type="button" title="Descargar firmado"
+                              (click)="descargar(t.firma, 'FIRMADO')" [disabled]="operando() !== null">
+                        <mat-icon>verified</mat-icon>
+                      </button>
+                    }
+                  </div>
+                  <div class="firma-fechas">
+                    <span><b>Enviado:</b> {{ fecha(t.firma.fechaEnvio) }}</span>
+                    <span><b>Firmado:</b> {{ fecha(t.firma.fechaFirma) }}</span>
+                    @if (t.firma.estado === ESTADO_FIRMA.ANULADO) {
+                      <span><b>Anulado:</b> {{ fecha(t.firma.fechaAnulacion) }} — {{ t.firma.motivoAnulacion || 'sin motivo' }}</span>
+                    }
+                  </div>
+                  @if (t.firma.error) {
+                    <div class="historial-error">{{ traducir(t.firma.error) }}</div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </mat-card-content>
+</mat-card>

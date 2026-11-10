@@ -49,6 +49,8 @@ export class ServiciosCrd {
   public static RS_NVPC = `${API_URL}/nvpc`;
   public static RS_AVPC = `${API_URL}/avpc`;
   public static RS_ADJN = `${API_URL}/adjn`;
+  /** Firma electrónica del contrato de adhesión (docs/logica-negocio/crd/API-FIRMA-ELECTRONICA-CONTRATO.md del BE). */
+  public static RS_FRCN = `${API_URL}/frcn`;
   public static RS_ADTR = `${API_URL}/adtr`;
   public static RS_CXCP = `${API_URL}/cxcp`;
   public static RS_BPRF = `${API_URL}/bprf`;

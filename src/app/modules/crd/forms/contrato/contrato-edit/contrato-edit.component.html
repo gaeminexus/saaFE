@@ -58,6 +58,9 @@
         </mat-card-content>
       </mat-card>
 
+      <!-- Firma electrónica del contrato (solo en un contrato existente) -->
+      <app-firma-electronica-contrato [idContrato]="cab.idContrato" [entidad]="entidadReal()" />
+
       <!-- Historial de vigencias, agrupado por tipo de aporte -->
       @for (grupo of [
         { titulo: 'Jubilación', icono: 'elderly', lista: vigenciasJubilacion(), tipo: ID_TIPO_APORTE.JUBILACION },

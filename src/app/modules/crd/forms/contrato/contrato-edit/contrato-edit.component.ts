@@ -14,6 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
+import { FirmaElectronicaContratoComponent } from './firma-electronica/firma-electronica-contrato.component';
 import { ContratoService } from '../../../service/contrato.service';
 import { VigenciaContratoService } from '../../../service/vigencia-contrato.service';
 import { Contrato } from '../../../model/contrato';
@@ -43,7 +44,7 @@ const TIPOS_APORTE = [
   imports: [
     CommonModule, ReactiveFormsModule, MatFormFieldModule, MatInputModule, MatSelectModule,
     MatButtonModule, MatButtonToggleModule, MatIconModule, MatCardModule, MatDatepickerModule,
-    MatProgressSpinnerModule, MatSnackBarModule,
+    MatProgressSpinnerModule, MatSnackBarModule, FirmaElectronicaContratoComponent,
   ],
   templateUrl: './contrato-edit.component.html',
   styleUrls: ['./contrato-edit.component.scss'],
