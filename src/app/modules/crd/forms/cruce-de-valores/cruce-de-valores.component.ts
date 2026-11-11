@@ -49,6 +49,10 @@ type EstadoCobertura = 'cubierta' | 'parcial' | 'pendiente';
 
 interface CoberturaCuota {
   cuota: DetallePrestamo;
+  /** Vencimiento ya normalizado (en `cuotasCompletas` llega como arreglo `[y,m,d,...]`). */
+  vencimiento: Date | null;
+  /** Lo que realmente falta pagar de la cuota (`saldoPendienteDe`), no `DTPRSLDO`. */
+  pendiente: number;
   aplicado: number;
   estado: EstadoCobertura;
 }
@@ -686,7 +690,11 @@ export class CruceDeValoresComponent {
       this.snackBar.open('Primero indique cuánto va a usar de cada fondo de aportes.', 'Cerrar', { duration: 3000 });
       return;
     }
-    const objetivo = pc.cuotas.slice(0, cantidad).reduce((s, c) => s + (c.saldo ?? 0), 0);
+    if (!this.proyeccionLista(pc)) {
+      this.snackBar.open('Todavía se están calculando las cuotas del préstamo. Intente en unos segundos.', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    const objetivo = this.pendientesDe(pc).slice(0, cantidad).reduce((s, c) => s + c.pendiente, 0);
     const v = +Math.min(objetivo, this.maxParaPrestamo(pc)).toFixed(2);
     pc.montoTexto = v > 0.004 ? this.formatMoneda(v) : '';
     pc.nota = null;
@@ -710,17 +718,46 @@ export class CruceDeValoresComponent {
   }
 
   /**
+   * ¿Ya llegaron la tabla de amortización completa y los pagos vigentes? Sin ambos no se puede
+   * proyectar: sería inventar una cobertura.
+   */
+  proyeccionLista(pc: PrestamoCruce): boolean {
+    this.version();
+    return pc.cuotasCompletasCargadas && pc.pagosCargados;
+  }
+
+  /**
+   * Cuotas con deuda real, de la más antigua a la más nueva, con lo que falta pagar de cada una.
+   *
+   * Sale de `cuotasCompletas` y de `saldoPendienteDe` —el mismo criterio de `saldoTotalDe()` y del
+   * motor de pago del backend— y NO de `DetallePrestamo.saldo` (DTPRSLDO): en los créditos migrados
+   * de Petrocomercial trae el saldo de capital de la tabla, no lo pendiente de la cuota, y
+   * `pc.cuotas` además viene filtrado por `DTPRSLDO > 0`.
+   */
+  private pendientesDe(pc: PrestamoCruce): { cuota: DetallePrestamo; pendiente: number }[] {
+    if (!this.proyeccionLista(pc)) return [];
+    const pagos = this.pagosPorCuota();
+    return pc.cuotasCompletas
+      .map((cuota) => ({ cuota, pendiente: this.saldoPrestamo.saldoPendienteDe(cuota, pagos) }))
+      .filter((c) => c.pendiente > 0.004);
+  }
+
+  cuotasPendientes(pc: PrestamoCruce): number {
+    return this.pendientesDe(pc).length;
+  }
+
+  /**
    * Proyección de cómo caería el monto asignado sobre las cuotas pendientes: se consume de la más
    * antigua a la más nueva, que es el orden en el que aplica el backend. Es una estimación por
-   * saldo de cuota — el desglose real (desgravamen, mora, interés, capital, seguro) lo devuelve el
-   * servidor en la respuesta del pago y se muestra en el comprobante.
+   * pendiente de cuota — el desglose real (desgravamen, mora, interés, capital, seguro) lo devuelve el
+   * servidor en la respuesta del pago y se muestra en el comprobante. Vacía mientras no haya datos.
    */
   coberturaProyectada(pc: PrestamoCruce): CoberturaCuota[] {
     this.version();
     let restante = this.parseMoneda(pc.montoTexto);
     const salida: CoberturaCuota[] = [];
-    for (const cuota of pc.cuotas) {
-      const valor = cuota.saldo ?? 0;
+    for (const { cuota, pendiente } of this.pendientesDe(pc)) {
+      const valor = pendiente;
       let aplicado = 0;
       let estado: EstadoCobertura = 'pendiente';
       if (restante >= valor - 0.004 && valor > 0) {
@@ -732,7 +769,13 @@ export class CruceDeValoresComponent {
         estado = 'parcial';
         restante = 0;
       }
-      salida.push({ cuota, aplicado, estado });
+      salida.push({
+        cuota,
+        vencimiento: this.funcionesDatos.convertirFechaDesdeBackend(cuota.fechaVencimiento) as Date | null,
+        pendiente,
+        aplicado,
+        estado,
+      });
     }
     return salida;
   }

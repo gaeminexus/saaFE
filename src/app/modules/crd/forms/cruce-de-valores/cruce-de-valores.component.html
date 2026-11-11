@@ -174,7 +174,7 @@
                   @if (pc.estado === 'ok') { <span class="badge ok">Cruzado</span> }
                   @if (pc.estado === 'error') { <span class="badge error">No aplicado</span> }
                 </div>
-                <div class="ph-meta">Préstamo #{{ pc.prestamo.idAsoprep }} &middot; {{ pc.cuotas.length }} cuotas pendientes</div>
+                <div class="ph-meta">Préstamo #{{ pc.prestamo.idAsoprep }} &middot; @if (proyeccionLista(pc)) { {{ cuotasPendientes(pc) }} cuotas pendientes } @else { calculando… }</div>
               </div>
             </div>
             <div class="ph-right">
@@ -275,10 +275,10 @@
                     @for (c of coberturaProyectada(pc); track c.cuota.codigo) {
                       <tr [class]="c.estado">
                         <td>{{ c.cuota.numeroCuota }}</td>
-                        <td>{{ c.cuota.fechaVencimiento | date : 'dd/MM/yyyy' }}</td>
+                        <td>{{ c.vencimiento | date : 'dd/MM/yyyy' }}</td>
                         <td class="num">{{ formatMoneda(c.cuota.capital) }}</td>
                         <td class="num">{{ formatMoneda(c.cuota.interes) }}</td>
-                        <td class="num valor-cell">{{ formatMoneda(c.cuota.saldo) }}</td>
+                        <td class="num valor-cell">{{ formatMoneda(c.pendiente) }}</td>
                         <td class="num">{{ c.aplicado > 0.004 ? formatMoneda(c.aplicado) : '—' }}</td>
                         <td>
                           <span class="estado-mini" [class]="c.estado">
@@ -288,7 +288,7 @@
                       </tr>
                     }
                     @empty {
-                      <tr><td colspan="7" class="texto-vacio">No hay cuotas pendientes para este préstamo.</td></tr>
+                      <tr><td colspan="7" class="texto-vacio">{{ proyeccionLista(pc) ? 'No hay cuotas pendientes para este préstamo.' : 'Calculando cuotas y pagos…' }}</td></tr>
                     }
                   </tbody>
                 </table>
@@ -297,7 +297,7 @@
               <div class="prestamo-mini-summary">
                 <div class="lms-item">
                   <div class="l">Cuotas que se cancelarían</div>
-                  <div class="v">{{ cuotasCubiertas(pc) }} de {{ pc.cuotas.length }}</div>
+                  <div class="v">{{ proyeccionLista(pc) ? cuotasCubiertas(pc) + ' de ' + cuotasPendientes(pc) : 'calculando…' }}</div>
                 </div>
                 @if (cuotasParciales(pc) > 0) {
                   <div class="lms-item">
