@@ -24,8 +24,14 @@
       <h3 class="titulo">{{ n.titulo }}</h3>
       <div class="datos">
         <span><strong>Área:</strong> {{ etiquetaArea(n.area) }}</span>
-        @if (n.valor != null) {
+        @if (n.monto != null) {
+          <span><strong>Monto:</strong> {{ formatoMonto(n.monto) }}</span>
+        } @else if (n.valor != null) {
           <span><strong>Valor:</strong> {{ formatoMonto(n.valor) }}</span>
+        }
+        @if (n.estadoRevision) {
+          <span class="chip" [class.chip-verde]="n.estadoRevision === 'RESUELTO'" [class.chip-ambar]="n.estadoRevision === 'PENDIENTE_DOCUMENTO'"
+            [class.chip-violeta]="n.estadoRevision === 'PENDIENTE_DECISION'" matTooltip="Estado según la revisión con el cliente">{{ ESTADO_REVISION[n.estadoRevision] || n.estadoRevision }}</span>
         }
         <span><strong>Enviada:</strong> {{ formatoFecha(n.fechaEnvio, true) }}</span>
         <span><strong>Responder hasta:</strong> {{ formatoFecha(n.fechaLimite) }}</span>
@@ -34,7 +40,7 @@
         }
         <span><strong>Archivo:</strong> {{ n.archivo || '—' }}</span>
         @if (n.criterios) {
-          <span><strong>Criterios:</strong> {{ n.criterios }}</span>
+          <span><strong>Criterios:</strong> <app-texto-enlazado [texto]="n.criterios" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></span>
         }
       </div>
 
@@ -82,13 +88,75 @@
     }
 
     <mat-accordion multi>
+      @if (n.porQue || n.registro || n.notaRevision || n.montoNota || n.pedidoGeneral || d.cifras?.length || d.regularizarRevision?.length) {
+        <mat-expansion-panel [expanded]="true">
+          <mat-expansion-panel-header><mat-panel-title><mat-icon>rate_review</mat-icon> Revisión con el cliente</mat-panel-title></mat-expansion-panel-header>
+          <div class="texto-largo revision">
+            @if (n.porQue) {
+              <h4>Por qué importa</h4>
+              <p><app-texto-enlazado [texto]="n.porQue" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
+            }
+            @if (n.registro) {
+              <h4>Qué se registró</h4>
+              <p><app-texto-enlazado [texto]="n.registro" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
+            }
+            @if (n.monto != null || n.montoNota) {
+              <h4>Monto</h4>
+              <p><strong>{{ formatoMonto(n.monto) }}</strong>@if (n.montoNota) { — <app-texto-enlazado [texto]="n.montoNota" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado>}</p>
+            }
+            @if (d.cifras?.length) {
+              <h4>Cifras</h4>
+              <table class="tabla cifras">
+                <tbody>
+                  @for (c of d.cifras; track $index) {
+                    <tr>
+                      @for (v of c; track $index) {
+                        <td [class.num]="esNumero(v)">
+                          @if (esNumero(v)) { {{ formatoMonto($any(v)) }} } @else { <app-texto-enlazado [texto]="$any(v)" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado> }
+                        </td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @if (n.pedidoGeneral) {
+              <h4>Pedido</h4>
+              <p><app-texto-enlazado [texto]="n.pedidoGeneral" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
+            }
+            @if (n.notaRevision) {
+              <h4>Nota</h4>
+              <p class="nota-rev"><app-texto-enlazado [texto]="n.notaRevision" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
+            }
+            @if (d.regularizarRevision?.length) {
+              <h4>Asientos a cuentas por regularizar de esta novedad ({{ d.regularizarRevision?.length }})</h4>
+              <div class="tabla-scroll-corta">
+                <table class="tabla">
+                  <thead><tr><th>Asiento</th><th>Fecha</th><th>Cuenta</th><th class="num">Valor (deudor)</th><th>Lote</th></tr></thead>
+                  <tbody>
+                    @for (a of d.regularizarRevision; track $index) {
+                      <tr>
+                        <td><a class="enlace" (click)="ver('ASIENTO', a.asnt)" matTooltip="Ver el asiento con sus líneas">{{ a.numero }}</a> <span class="tenue">({{ a.asnt }})</span></td>
+                        <td>{{ a.fecha }}</td>
+                        <td><a class="enlace" (click)="ver('CUENTA', a.cuenta)">{{ a.cuenta }}</a></td>
+                        <td class="num">{{ formatoMonto(a.valor) }}</td>
+                        <td class="tenue">{{ a.lote || '—' }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        </mat-expansion-panel>
+      }
       <mat-expansion-panel [expanded]="true">
         <mat-expansion-panel-header><mat-panel-title><mat-icon>search</mat-icon> Qué se encontró y cómo se resolvió</mat-panel-title></mat-expansion-panel-header>
         <div class="texto-largo">
           <h4>Qué se encontró</h4>
-          <pre>{{ n.hallazgo || '—' }}</pre>
+          <div class="pre-texto"><app-texto-enlazado [texto]="n.hallazgo || '—'" [pre]="true" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></div>
           <h4>Cómo se resolvió</h4>
-          <pre>{{ n.resolucion || '—' }}</pre>
+          <div class="pre-texto"><app-texto-enlazado [texto]="n.resolucion || '—'" [pre]="true" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></div>
         </div>
       </mat-expansion-panel>
 
@@ -108,7 +176,14 @@
               <span class="chip" [ngClass]="claseEstadoRequerimiento(r.estado)">{{ estadosRequerimiento[r.estado] }}</span>
               <span class="req-area">{{ etiquetaArea(r.area) }}</span>
               @if (r.referencia) {
-                <span class="req-ref">{{ r.tipoReferencia }} {{ r.referencia }}</span>
+                @if (tipoRef(r.tipoReferencia); as tr) {
+                  <a class="req-ref enlace" (click)="ver(tr, r.referencia)" matTooltip="Abrir la referencia">{{ r.tipoReferencia }} {{ r.referencia }}</a>
+                } @else {
+                  <span class="req-ref">{{ r.tipoReferencia }} {{ r.referencia }}</span>
+                }
+              }
+              @if (r.origen === 'REVISION') {
+                <span class="chip chip-azul" matTooltip="Pedido agregado en la revisión con el cliente">Revisión</span>
               }
               @if (r.valor != null) {
                 <span class="req-ref">{{ formatoMonto(r.valor) }}</span>
@@ -125,12 +200,12 @@
                 <button mat-icon-button (click)="noAplica(r)" matTooltip="Ya no aplica"><mat-icon>block</mat-icon></button>
               }
             </div>
-            <p class="req-desc">{{ r.descripcion }}</p>
+            <p class="req-desc"><app-texto-enlazado [texto]="r.descripcion" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
             @if (r.opciones) {
               <p class="req-sup"><strong>Opciones:</strong> {{ r.opciones }}</p>
             }
             @if (r.supuesto) {
-              <p class="req-sup"><strong>Mientras tanto rige:</strong> {{ r.supuesto }}</p>
+              <p class="req-sup"><strong>Mientras tanto rige:</strong> <app-texto-enlazado [texto]="r.supuesto" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
             }
             @for (rs of item.respuestas; track rs.respuesta.codigo) {
               @let s = rs.respuesta;
@@ -155,10 +230,10 @@
                   }
                 </div>
                 @if (s.texto) {
-                  <p class="resp-texto">{{ s.texto }}</p>
+                  <p class="resp-texto"><app-texto-enlazado [texto]="s.texto" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
                 }
                 @if (s.observacionRevision) {
-                  <p class="resp-obs"><strong>Revisión ({{ s.usuarioRevision }}):</strong> {{ s.observacionRevision }}</p>
+                  <p class="resp-obs"><strong>Revisión ({{ s.usuarioRevision }}):</strong> <app-texto-enlazado [texto]="s.observacionRevision" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></p>
                 }
                 @for (a of rs.adjuntos; track a.codigo) {
                   <div class="adjunto">
@@ -204,7 +279,7 @@
             <tbody>
               @for (c of d.cuentasPorRegularizar; track c.cuenta) {
                 <tr>
-                  <td>{{ c.cuenta }} {{ c.nombre }}</td>
+                  <td><a class="enlace" (click)="ver('CUENTA', c.cuenta)" matTooltip="Ver el mayor de la cuenta en el mes">{{ c.cuenta }}</a> {{ c.nombre }}</td>
                   <td class="num">{{ formatoMonto(c.origen) }}</td>
                   <td class="num">{{ formatoMonto(c.ajuste) }}</td>
                   <td class="num" [class.pendiente]="c.pendiente !== 0"><strong>{{ formatoMonto(c.pendiente) }}</strong></td>
@@ -224,8 +299,8 @@
         </mat-expansion-panel-header>
         @for (v of decisiones(); track v.codigo) {
           <div class="vinculo">
-            <span class="chip chip-violeta">{{ v.numeroDecision }}</span>
-            <span>{{ v.temaDecision }}</span>
+            <a class="chip chip-violeta enlace-chip" (click)="ver('DECISION', v.numeroDecision)" matTooltip="Ver la decisión en el listado de decisiones">{{ v.numeroDecision }}</a>
+            <span><app-texto-enlazado [texto]="v.temaDecision" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></span>
             <span class="espacio"></span>
             <button mat-button (click)="verTextoDecision(v)">Texto para el expediente</button>
           </div>
@@ -233,7 +308,7 @@
         @for (v of relacionadas(); track v.codigo) {
           <div class="vinculo">
             <mat-icon>call_split</mat-icon>
-            <span><strong>{{ v.novedadRelacionada }}</strong> {{ v.tituloRelacionada }} ({{ v.estadoRelacionada }})</span>
+            <span><a class="enlace" (click)="abrirNovedad(v.idNovedadRelacionada)" matTooltip="Abrir la novedad relacionada"><strong>{{ v.novedadRelacionada }}</strong></a> {{ v.tituloRelacionada }} ({{ v.estadoRelacionada }})</span>
           </div>
         }
         @for (v of otrosVinculos(); track v.codigo) {
@@ -285,7 +360,7 @@
                 <td>{{ h.accion }}</td>
                 <td>{{ h.idRequerimiento ? '#' + h.idRequerimiento : '—' }}</td>
                 <td>{{ h.estadoAnterior ?? '—' }} → {{ h.estadoNuevo ?? '—' }}</td>
-                <td>{{ h.motivo }}</td>
+                <td><app-texto-enlazado [texto]="h.motivo" [idEmpresa]="idEmpresa" [anio]="n.anio" [mes]="n.mes" [modulo]="n.modulo"></app-texto-enlazado></td>
                 <td>{{ h.usuario }}</td>
               </tr>
             }
@@ -309,7 +384,10 @@
       <tbody>
         @for (v of lista; track v.codigo) {
           <tr>
-            <td><a class="enlace" (click)="irAsiento(v)" matTooltip="Abrir el asiento">{{ v.numeroAsiento }}</a> <span class="tenue">({{ v.idAsiento }})</span></td>
+            <td>
+              <a class="enlace" (click)="ver('ASIENTO', v.idAsiento)" matTooltip="Ver el asiento con sus líneas">{{ v.numeroAsiento }}</a> <span class="tenue">({{ v.idAsiento }})</span>
+              <button mat-icon-button class="mini" (click)="irAsiento(v)" matTooltip="Abrir en Asientos contables"><mat-icon>open_in_new</mat-icon></button>
+            </td>
             <td>{{ formatoFecha(v.fechaAsiento) }}</td>
             <td>{{ v.moduloOrigenAsiento || '—' }}</td>
             <td class="num">{{ formatoMonto(v.totalDebe) }}</td>
@@ -330,8 +408,8 @@
                   <tbody>
                     @for (l of v.lineas ?? []; track l.idDetalle) {
                       <tr [class.por-regularizar]="l.porRegularizar">
-                        <td>{{ l.cuenta }} {{ l.nombreCuenta }}</td>
-                        <td>{{ l.descripcion }}</td>
+                        <td><a class="enlace" (click)="ver('CUENTA', l.cuenta)">{{ l.cuenta }}</a> {{ l.nombreCuenta }}</td>
+                        <td><app-texto-enlazado [texto]="l.descripcion" [idEmpresa]="idEmpresa" [anio]="novedad()?.anio ?? null" [mes]="novedad()?.mes ?? null" [modulo]="novedad()?.modulo ?? null"></app-texto-enlazado></td>
                         <td class="num">{{ formatoMonto(l.debe) }}</td>
                         <td class="num">{{ formatoMonto(l.haber) }}</td>
                       </tr>

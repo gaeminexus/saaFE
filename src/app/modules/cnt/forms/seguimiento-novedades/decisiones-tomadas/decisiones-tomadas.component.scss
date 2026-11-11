@@ -1,0 +1,16 @@
+@use '../novedades-comun';
+
+.filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0 4px; }
+.campo-texto { flex: 1 1 320px; }
+.lista { display: flex; flex-direction: column; gap: 6px; }
+.decision { border: 1px solid #e2e8f0; border-radius: 6px; background: #fff; }
+.decision.resaltada { border-color: #7c3aed; box-shadow: 0 0 0 2px #ede9fe; }
+.cab { display: flex; align-items: center; gap: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.86rem; }
+.cab:hover { background: #f8fafc; }
+.fecha { color: #475569; white-space: nowrap; }
+.tema { font-weight: 600; color: #1e293b; }
+.cuerpo { padding: 4px 14px 12px 40px; }
+.campos { border-collapse: collapse; font-size: 0.85rem; width: 100%; margin-bottom: 8px; }
+.campos th { text-align: left; color: #475569; font-weight: 600; padding: 3px 12px 3px 0; width: 160px; vertical-align: top; }
+.campos td { padding: 3px 0; }
+h4 { margin: 8px 0 4px; font-size: 0.88rem; color: #1a3d6d; }

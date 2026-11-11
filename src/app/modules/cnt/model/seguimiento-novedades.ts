@@ -38,6 +38,16 @@ export interface NovedadSeguimiento {
   motivoCierre: string | null; // NVDDMTCR
   fechaRegistro: FechaBackend; // NVDDFCRG
   usuarioRegistro: string; // NVDDUSAR
+  // C25-02 — revisión con el cliente (03-trabajo/revision/datos-AAAA-MM.json)
+  porQue?: string | null; // NVDDPRQE
+  registro?: string | null; // NVDDRGST
+  monto?: number | null; // NVDDMNTO
+  montoNota?: string | null; // NVDDMNNT
+  notaRevision?: string | null; // NVDDNTRV
+  estadoRevision?: string | null; // NVDDESRV RESUELTO, PENDIENTE_DOCUMENTO, PENDIENTE_DECISION
+  pedidoGeneral?: string | null; // NVDDPDGN
+  cifras?: string | null; // NVDDCFRS (JSON; el detalle lo trae interpretado)
+  regularizar?: string | null; // NVDDRGLR (JSON)
 }
 
 /** CNT.RQNV */
@@ -57,6 +67,7 @@ export interface RequerimientoNovedad {
   estado: number; // RQNVESTD
   fechaRegistro: FechaBackend; // RQNVFCRG
   usuarioRegistro: string; // RQNVUSAR
+  origen?: string; // RQNVORGN TXT, REVISION, AJUSTE, PANTALLA
 }
 
 /** CNT.RSNV */
@@ -125,6 +136,67 @@ export interface Decision {
   fechaCopiaExpediente: FechaBackend; // DCSNFCEX
   usuarioCopiaExpediente: string | null; // DCSNUSEX
   estado: number; // DCSNESTD
+  titulo?: string | null; // DCSNTTLO
+  resumen?: string | null; // DCSNRSMN
+  razones?: string | null; // DCSNRZNS
+}
+
+/** Fila de GET /dcsn/listado (C25b). */
+export interface FilaDecision {
+  decision: Decision;
+  novedades: { idNovedad: number; mes: string; modulo: string; codigo: string; titulo: string; estado: string; tipo: string; porRespuesta?: boolean }[];
+  totalNovedades: number;
+}
+
+/** Asiento de cuentas por regularizar repartido a una novedad (NVDDRGLR). */
+export interface AsientoRegularizar {
+  asnt: number;
+  numero: string;
+  fecha: string;
+  cuenta: string;
+  valor: number;
+  lote: string | null;
+}
+
+/** CNT.RVNM ya interpretada (GET /nvdd/resumenMes → revision). */
+export interface RevisionMes {
+  codigo: number;
+  version: number;
+  estado: string;
+  versionesHistoricas: number;
+  nombreMes: string | null;
+  corte: string | null;
+  estadoMes: string | null;
+  fechaCierre: string | null;
+  versionCierre: string | null;
+  ejecucionG: number | null;
+  flujo: [string, string][] | null;
+  cuadratura: {
+    filas: { clave: string; control: string; b17: number; g: number | null; diferencia: number | null; registros: number | null }[];
+    notas: Record<string, string>;
+    puentes: { cuenta: string; saldo: number }[];
+  } | null;
+  bancos: { estado?: string; texto?: string; transito?: string[] } | null;
+  observaciones: string[] | null;
+  cuentas: { nombres: Record<string, string>; saldos: { cuenta: string; inicial: number; movimiento: number; final: number }[] } | null;
+  regularizar: { codigo: string; cuenta: string; valor: number; filas: number; idNovedad?: number | null }[] | null;
+  fuentes: string | null;
+  lote: string | null;
+}
+
+/** Ficha de solo lectura de una referencia (GET /nvdd/referencia). */
+export interface FichaReferencia {
+  tipo: string;
+  valor: string;
+  encontrado: boolean;
+  titulo?: string;
+  subtitulo?: string;
+  mensaje?: string | null;
+  campos: { etiqueta: string; valor: unknown; ref?: { tipo: string; valor: string } }[];
+  tablas: { titulo: string; columnas: string[]; refs: Record<string, string>; filas: unknown[][]; total: number }[];
+  ruta?: { etiqueta: string; path: (string | number)[]; queryParams?: Record<string, unknown> };
+  idNovedad?: number;
+  idDecision?: number;
 }
 
 /** Fila de GET /nvdd/bandeja (proyección, sin CLOB). */
@@ -258,6 +330,8 @@ export interface DetalleNovedad {
   cuentasPorRegularizar: CuentaNovedad[];
   historial: HistorialNovedad[];
   c22: { instalado: boolean; mensaje: string };
+  cifras?: unknown[][] | null;
+  regularizarRevision?: AsientoRegularizar[] | null;
 }
 
 export interface CuentaPorRegularizar {
@@ -295,6 +369,7 @@ export interface ResumenMesNovedades {
   pendientesPorArea: Record<string, number>;
   antiguedadPendientes: { hasta15: number; de16a30: number; masDe30: number; vencidos: number };
   cuentasPorRegularizar: CuentasPorRegularizar;
+  revision?: RevisionMes | null;
 }
 
 export interface ReporteActa {

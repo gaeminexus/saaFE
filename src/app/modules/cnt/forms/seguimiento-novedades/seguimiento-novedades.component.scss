@@ -32,3 +32,11 @@ td.titulo { max-width: 520px; }
 .texto-md { white-space: pre-wrap; word-break: break-word; font-size: 0.8rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; max-height: 600px; overflow: auto; }
 .bloqueos { font-size: 0.82rem; color: #92400e; margin: 0 0 8px; }
 @media (max-width: 1100px) { .resumen { grid-template-columns: repeat(2, minmax(200px, 1fr)); } }
+
+// C25b — revisión del mes con el cliente
+.revision-mes { display: block; margin-bottom: 14px; }
+.revision-mes h4 { margin: 12px 0 4px; font-size: 0.9rem; color: #1a3d6d; }
+.rev-datos { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: #334155; }
+.flujo { margin: 4px 0; padding-left: 22px; font-size: 0.85rem; li { margin-bottom: 3px; } }
+.nota-rev { font-size: 0.82rem; color: #334155; margin: 4px 0; }
+.puentes { margin-top: 6px; align-items: center; a.chip { cursor: pointer; } }

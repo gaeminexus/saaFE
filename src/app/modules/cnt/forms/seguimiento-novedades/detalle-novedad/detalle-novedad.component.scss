@@ -36,3 +36,12 @@ mat-panel-title mat-icon { margin-right: 6px; color: #2b6cb0; }
 .aviso-decision { border: 1px solid #c4b5fd; background: #f5f3ff; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; }
 .aviso-decision-titulo { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #5b21b6; }
 .texto-md { white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; background: #fff; padding: 6px 8px; border-radius: 4px; }
+
+// C25b — revisión con el cliente y enlaces
+.revision p { margin: 2px 0 6px; font-size: 0.86rem; line-height: 1.45; }
+.cifras td { font-size: 0.82rem; }
+.nota-rev { color: #475569; font-style: italic; }
+.pre-texto { font-size: 0.82rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-family: ui-monospace, Consolas, monospace; }
+.tabla-scroll-corta { max-height: 320px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+.enlace-chip { cursor: pointer; text-decoration: none; }
+button.mini { width: 28px; height: 28px; padding: 2px; vertical-align: middle; mat-icon { font-size: 16px; width: 16px; height: 16px; } }

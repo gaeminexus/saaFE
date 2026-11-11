@@ -110,6 +110,136 @@
         <p class="nota">{{ r.cuentasPorRegularizar.c22.mensaje }}</p>
       </mat-card>
     </div>
+
+    <!-- C25b: revisión del mes con el cliente (lo mismo que la cabecera del HTML de revisión), CNT.RVNM -->
+    @if (r.revision; as rv) {
+      <mat-accordion class="revision-mes" multi>
+        <mat-expansion-panel [expanded]="true">
+          <mat-expansion-panel-header>
+            <mat-panel-title><mat-icon>rate_review</mat-icon> Revisión de {{ rv.nombreMes || titulo() }} con el cliente</mat-panel-title>
+            <mat-panel-description>
+              {{ rv.estadoMes || '—' }}{{ rv.fechaCierre ? ' el ' + rv.fechaCierre : '' }} · corte {{ rv.corte || '—' }} · versión {{ rv.version }}{{ rv.versionesHistoricas ? ' (' + rv.versionesHistoricas + ' histórica/s)' : '' }}
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="rev-datos">
+            @if (rv.versionCierre) {
+              <span><strong>Cierre:</strong> <app-texto-enlazado [texto]="rv.versionCierre" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></span>
+            }
+            @if (rv.ejecucionG) {
+              <span><strong>Estructuras G:</strong> <a class="enlace" (click)="ver('EJECUCION', rv.ejecucionG)" matTooltip="Ver la ejecución de las estructuras G">ejecución {{ rv.ejecucionG }}</a></span>
+            }
+            @if (rv.bancos?.estado) {
+              <span><strong>Bancos:</strong> {{ rv.bancos?.estado }}</span>
+            }
+          </div>
+
+          @if (rv.flujo?.length) {
+            <h4>Flujo del mes</h4>
+            <ol class="flujo">
+              @for (p of rv.flujo; track $index) {
+                <li><strong>{{ p[0] }}.</strong> <app-texto-enlazado [texto]="p[1]" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></li>
+              }
+            </ol>
+          }
+
+          @if (rv.cuadratura; as cq) {
+            <h4>Cuadratura B17 – estructuras G</h4>
+            @if (cq.filas.length) {
+              <table class="tabla">
+                <thead><tr><th>Control</th><th class="num">B17</th><th class="num">Estructura G</th><th class="num">Diferencia</th><th class="num">Registros</th></tr></thead>
+                <tbody>
+                  @for (c of cq.filas; track c.clave) {
+                    <tr>
+                      <td [matTooltip]="c.control">{{ etiquetaCuadratura(c.clave) }}</td>
+                      <td class="num">{{ formatoMonto(c.b17) }}</td>
+                      <td class="num">{{ formatoMonto(c.g) }}</td>
+                      <td class="num" [class.alerta]="c.diferencia">{{ formatoMonto(c.diferencia) }}</td>
+                      <td class="num">{{ c.registros ?? '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+            @for (nt of entradasTexto(cq.notas); track nt.clave) {
+              <p class="nota-rev"><strong>{{ etiquetaCuadratura(nt.clave) }}:</strong> <app-texto-enlazado [texto]="nt.valor" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></p>
+            }
+            @if (cq.puentes.length) {
+              <div class="chips puentes">
+                <span class="tenue">Cuentas puente al cierre:</span>
+                @for (p of cq.puentes; track p.cuenta) {
+                  <a class="chip" [class.chip-verde]="p.saldo === 0" [class.chip-rojo]="p.saldo !== 0" (click)="ver('CUENTA', p.cuenta)" matTooltip="Ver el mayor de la cuenta">{{ p.cuenta }}: {{ formatoMonto(p.saldo) }}</a>
+                }
+              </div>
+            }
+          }
+
+          @if (rv.bancos; as b) {
+            <h4>Bancos</h4>
+            @if (b.texto) {
+              <p><app-texto-enlazado [texto]="b.texto" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></p>
+            }
+            @if (b.transito?.length) {
+              <ul>
+                @for (x of b.transito; track $index) {
+                  <li><app-texto-enlazado [texto]="x" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></li>
+                }
+              </ul>
+            }
+          }
+
+          @if (rv.cuentas?.saldos?.length) {
+            <h4>Cuentas por regularizar (según el cierre del mes)</h4>
+            <table class="tabla">
+              <thead><tr><th>Cuenta</th><th class="num">Saldo inicial</th><th class="num">Movimiento</th><th class="num">Saldo final</th></tr></thead>
+              <tbody>
+                @for (c of rv.cuentas?.saldos; track c.cuenta) {
+                  <tr>
+                    <td><a class="enlace" (click)="ver('CUENTA', c.cuenta)">{{ c.cuenta }}</a> {{ rv.cuentas?.nombres?.[c.cuenta] }}</td>
+                    <td class="num">{{ formatoMonto(c.inicial) }}</td>
+                    <td class="num">{{ formatoMonto(c.movimiento) }}</td>
+                    <td class="num"><strong>{{ formatoMonto(c.final) }}</strong></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (rv.regularizar?.length) {
+            <h4>Asientos de cuentas por regularizar repartidos por novedad</h4>
+            <table class="tabla">
+              <thead><tr><th>Novedad</th><th>Cuenta</th><th class="num">Líneas</th><th class="num">Valor</th></tr></thead>
+              <tbody>
+                @for (x of rv.regularizar; track $index) {
+                  <tr>
+                    <td>
+                      @if (x.codigo === 'SIN-NOVEDAD') {
+                        <span class="alerta">Sin novedad</span>
+                      } @else {
+                        <a class="enlace" (click)="verNovedad(x.idNovedad, x.codigo)" matTooltip="Abrir la novedad">{{ x.codigo }}</a>
+                      }
+                    </td>
+                    <td><a class="enlace" (click)="ver('CUENTA', x.cuenta)">{{ x.cuenta }}</a> {{ rv.cuentas?.nombres?.[x.cuenta] }}</td>
+                    <td class="num">{{ x.filas }}</td>
+                    <td class="num">{{ formatoMonto(x.valor) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+
+          @if (rv.observaciones?.length) {
+            <h4>Observaciones</h4>
+            <ul>
+              @for (o of rv.observaciones; track $index) {
+                <li><app-texto-enlazado [texto]="o" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></li>
+              }
+            </ul>
+          }
+        </mat-expansion-panel>
+      </mat-accordion>
+    } @else {
+      <p class="nota">Este mes no tiene cargada la revisión con el cliente (CNT.RVNM): se carga con el lote del mes (formato C25-NOVEDADES-2).</p>
+    }
   }
 
   <mat-tab-group [selectedIndex]="pestana()" (selectedIndexChange)="pestana.set($event)" animationDuration="0ms">
@@ -241,7 +371,7 @@
                 <td>{{ r.secuencia }}</td>
                 <td><span class="chip chip-tipo">{{ etiquetaTipo(r.tipo) }}</span></td>
                 <td>{{ etiquetaArea(r.area) }}</td>
-                <td class="titulo">{{ r.descripcion }}</td>
+                <td class="titulo"><app-texto-enlazado [texto]="r.descripcion" [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></td>
                 <td>{{ r.referencia ? r.tipoReferencia + ' ' + r.referencia : '—' }}</td>
                 <td class="num">{{ formatoMonto(r.valor) }}</td>
                 <td><span class="chip" [ngClass]="claseEstadoRequerimiento(r.estado)">{{ estadosRequerimiento[r.estado] }}</span></td>
@@ -288,6 +418,10 @@
           <pre class="texto-md">{{ pedido() }}</pre>
         }
       </div>
+    </mat-tab>
+
+    <mat-tab label="Decisiones">
+      <app-decisiones-tomadas [idEmpresa]="idEmpresa" [anio]="anio()" [mes]="mes()" [seleccion]="decisionSeleccionada()"></app-decisiones-tomadas>
     </mat-tab>
   </mat-tab-group>
 

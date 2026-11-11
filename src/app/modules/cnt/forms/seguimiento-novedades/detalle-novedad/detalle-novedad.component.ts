@@ -29,6 +29,9 @@ import {
 } from '../../../model/seguimiento-novedades';
 import { formatoFecha } from '../../../service/cierre-periodo.service';
 import { SeguimientoNovedadesService } from '../../../service/seguimiento-novedades.service';
+import { Referencia, tipoDeReferenciaRequerimiento } from '../referencias/detector-referencias';
+import { NavegacionReferenciasService } from '../referencias/navegacion-referencias.service';
+import { TextoEnlazadoComponent } from '../referencias/texto-enlazado.component';
 
 /**
  * C25 — Detalle de una novedad: textos tal como se comunicaron, requerimientos con sus respuestas y adjuntos,
@@ -39,7 +42,7 @@ import { SeguimientoNovedadesService } from '../../../service/seguimiento-noveda
 @Component({
   selector: 'app-detalle-novedad',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, TextoEnlazadoComponent],
   templateUrl: './detalle-novedad.component.html',
   styleUrl: './detalle-novedad.component.scss',
 })
@@ -56,6 +59,13 @@ export class DetalleNovedadComponent implements OnChanges {
   private snackBar = inject(MatSnackBar);
   private fileService = inject(FileService);
   private router = inject(Router);
+  private nav = inject(NavegacionReferenciasService);
+
+  readonly ESTADO_REVISION: Record<string, string> = {
+    RESUELTO: 'Resuelta (según la revisión)',
+    PENDIENTE_DOCUMENTO: 'Pendiente de documento',
+    PENDIENTE_DECISION: 'Pendiente de decisión',
+  };
 
   readonly formatoFecha = formatoFecha;
   readonly etiquetaTipo = etiquetaTipo;
@@ -120,6 +130,27 @@ export class DetalleNovedadComponent implements OnChanges {
     const s = new Set(this.lineasAbiertas());
     s.has(v.codigo) ? s.delete(v.codigo) : s.add(v.codigo);
     this.lineasAbiertas.set(s);
+  }
+
+  /** C25b: abre una referencia (ficha de solo lectura, novedad o decisión) con el contexto de esta novedad. */
+  ver(tipo: Referencia['tipo'], valor: string | number | null | undefined): void {
+    const n = this.novedad();
+    if (valor === null || valor === undefined || valor === '') return;
+    this.nav.abrir({ tipo, valor: String(valor) }, { idEmpresa: this.idEmpresa, anio: n?.anio, mes: n?.mes, modulo: n?.modulo });
+  }
+
+  /** Tipo de ficha de la referencia del requerimiento (FILA_EXTRACTO -> FILA...); null si no se puede abrir. */
+  tipoRef(tipoReferencia: string | null): Referencia['tipo'] | null {
+    return tipoDeReferenciaRequerimiento(tipoReferencia);
+  }
+
+  abrirNovedad(id: number | null): void {
+    if (id) this.nav.abrirNovedad(id);
+  }
+
+  /** Celda de cifras: número con formato, texto enlazado. */
+  esNumero(v: unknown): boolean {
+    return typeof v === 'number';
   }
 
   irAsiento(v: VinculoDetalle): void {
