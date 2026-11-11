@@ -791,29 +791,39 @@ export class CruceDeValoresComponent {
     if (!pc || !archivo) return;
     const monto = this.parseMoneda(pc.montoTexto);
     const deudor = this.entidadSeleccionada()?.razonSocial ?? '';
-    const data: ConfirmDialogData = {
-      title: 'Pagar con aportes del garante',
-      message: `Se descontarán ${this.formatMoneda(monto)} de las cuentas individuales de ${garante.nombre} para pagar el préstamo ${pc.prestamo.idAsoprep} de ${deudor}.`,
-      confirmText: 'Descontar y pagar',
-      type: 'warning',
-    };
-    this.dialog
-      .open(ConfirmDialogComponent, { data, width: '520px' })
-      .afterClosed()
-      .subscribe((confirmado) => {
-        if (!confirmado) return;
-        this.registrando.set(true);
-        this.comprobantes
-          .archivar(archivo, this.comprobantes.carpetaDePrestamo(pc.prestamo.codigo), String(pc.prestamo.codigo))
-          .subscribe((resultado) => {
-            if (resultado.error || !resultado.ruta) {
-              this.registrando.set(false);
-              this.snackBar.open(this.comprobantes.mensajeDeFallo(resultado.error ?? ''), 'Cerrar', { duration: 6000 });
-              return;
-            }
-            this.iniciarCruce(idEmpresa, resultado.ruta);
-          });
-      });
+    // Mientras se consulta el comprometido el botón queda deshabilitado (`puedeConfirmar` mira `registrando`).
+    this.registrando.set(true);
+    this.operaciones.compromisoGarante(garante.codigo as number, monto).subscribe((compromiso) => {
+      const data: ConfirmDialogData = {
+        title: 'Pagar con aportes del garante',
+        message: `Se descontarán ${this.formatMoneda(monto)} de las cuentas individuales de ${garante.nombre} para pagar el préstamo ${pc.prestamo.idAsoprep} de ${deudor}.`,
+        confirmText: 'Descontar y pagar',
+        type: 'warning',
+        // El aviso no detiene el pago; si el endpoint falló (`null`), se confirma sin aviso.
+        details: compromiso?.quedaDescubierto && compromiso.mensaje
+          ? [{ label: 'Aviso', value: compromiso.mensaje }]
+          : undefined,
+      };
+      this.dialog
+        .open(ConfirmDialogComponent, { data, width: '520px' })
+        .afterClosed()
+        .subscribe((confirmado) => {
+          if (!confirmado) {
+            this.registrando.set(false);
+            return;
+          }
+          this.comprobantes
+            .archivar(archivo, this.comprobantes.carpetaDePrestamo(pc.prestamo.codigo), String(pc.prestamo.codigo))
+            .subscribe((resultado) => {
+              if (resultado.error || !resultado.ruta) {
+                this.registrando.set(false);
+                this.snackBar.open(this.comprobantes.mensajeDeFallo(resultado.error ?? ''), 'Cerrar', { duration: 6000 });
+                return;
+              }
+              this.iniciarCruce(idEmpresa, resultado.ruta);
+            });
+        });
+    });
   }
 
   private iniciarCruce(idEmpresa: number, rutaRespaldo: string | null): void {

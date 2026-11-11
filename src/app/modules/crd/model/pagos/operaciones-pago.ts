@@ -131,6 +131,21 @@ export interface ResultadoPagoMultiple {
   nombreEntidad: string;
 }
 
+// ===================== GET /prst/compromisoGarante/{idGarante}?monto= =====================
+
+/**
+ * Aviso de comprometido del garante (DISENO-PAGO-CON-APORTES-DEL-GARANTE §G5). Solo lectura: el
+ * aviso NO detiene el pago.
+ */
+export interface CompromisoGarante {
+  saldoAportes: number;
+  capitalComprometido: number;
+  saldoDespues: number;
+  quedaDescubierto: boolean;
+  /** Texto listo para mostrar; `null` si no hay nada que avisar. */
+  mensaje: string | null;
+}
+
 // ===================== §5 POST /prst/pagarConAportes =====================
 
 export interface PagoConAportesRequest {
