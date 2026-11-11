@@ -160,6 +160,13 @@ export class MenuContabilidadComponent {
           idPermiso: Permisos.CNT_CIERRE_DE_PERIODOS,
           route: '/menucontabilidad/procesos/cierre-periodo',
         },
+        {
+          // C25 — 21 caracteres (el menú lateral corta a 24)
+          displayName: 'Seguimiento Novedades',
+          iconName: 'fact_check',
+          idPermiso: Permisos.CNT_SEGUIMIENTO_NOVEDADES,
+          route: '/menucontabilidad/procesos/seguimiento-novedades',
+        },
       ],
     },
     {
