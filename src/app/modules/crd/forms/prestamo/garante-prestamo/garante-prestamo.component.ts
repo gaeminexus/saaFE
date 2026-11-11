@@ -15,15 +15,14 @@ import { GarantePrestamo } from '../../../model/garante-prestamo';
 import { GarantePrestamoService } from '../../../service/garante-prestamo.service';
 import { ParticipeElegido, ParticipeSelectorComponent } from '../../participe-selector/participe-selector.component';
 
-type ModoGarante = 'PARTICIPE' | 'MANUAL';
-
 /** Estados del préstamo en los que el garante se puede agregar, cambiar o anular: PENDIENTE (6) y GENERADO (1). */
 const ESTADOS_EDITABLES = [6, 1];
 
 /**
  * Sección «Garante» de `prestamo-edit` (DISENO-SOLICITUD-V1 §B3/B7). Es opcional: casilla «Tiene garante»;
- * el garante es un partícipe (se busca por cédula o nombre y viaja `idEntidad`) o un tercero con datos a
- * mano (nombre y cédula obligatorios). Solo editable con el préstamo en 6 o 1; después, solo lectura.
+ * el garante es SIEMPRE un partícipe (se busca por cédula o nombre y viaja `idEntidad`). Un garante histórico
+ * sin `idEntidad` (tercero) se muestra en solo lectura con aviso, y se puede anular para agregar otro.
+ * Solo editable con el préstamo en 6 o 1; después, solo lectura.
  * Desmarcar la casilla anula al garante (con confirmación). Los 422 del backend se muestran tal cual.
  */
 @Component({
@@ -48,7 +47,6 @@ export class GarantePrestamoComponent {
   guardando = signal(false);
   error = signal<string | null>(null);
 
-  modo: ModoGarante = 'PARTICIPE';
   idEntidad: number | null = null;
   nombre = '';
   cedula = '';
@@ -73,10 +71,17 @@ export class GarantePrestamoComponent {
       this.editable &&
       this.tieneGarante() &&
       !this.guardando() &&
+      !this.esTercero &&
       this.nombre.trim().length > 0 &&
       this.cedula.trim().length > 0 &&
-      (this.modo === 'MANUAL' || this.idEntidad != null)
+      this.idEntidad != null
     );
+  }
+
+  /** Garante histórico registrado sin `idEntidad`: solo lectura, hay que reemplazarlo por un partícipe. */
+  get esTercero(): boolean {
+    const g = this.garante();
+    return !!g?.codigo && !g.idEntidad;
   }
 
   cargar(idPrestamo: number): void {
@@ -105,6 +110,17 @@ export class GarantePrestamoComponent {
     }
 
     // Desmarcar con un garante guardado = anularlo; hay que confirmar.
+    this.anularConConfirmacion(guardado, false);
+  }
+
+  /** Anula al garante tercero y deja el selector de partícipe listo para agregar otro. */
+  reemplazarTercero(): void {
+    const guardado = this.garante();
+    if (!this.editable || !guardado?.codigo) return;
+    this.anularConConfirmacion(guardado, true);
+  }
+
+  private anularConConfirmacion(guardado: GarantePrestamo, agregarOtro: boolean): void {
     const data: ConfirmDialogData = {
       title: 'Quitar garante',
       message: `Se va a quitar a ${guardado.nombre} como garante del préstamo.`,
@@ -124,19 +140,13 @@ export class GarantePrestamoComponent {
           .subscribe({
             next: () => {
               this.garante.set(null);
-              this.tieneGarante.set(false);
+              this.tieneGarante.set(agregarOtro);
               this.llenarDesde(null);
               this.snackBar.open('Garante quitado', 'Cerrar', { duration: 3000 });
             },
             error: (err) => this.avisarError(err, 'No se pudo quitar el garante'),
           });
       });
-  }
-
-  alCambiarModo(): void {
-    this.idEntidad = null;
-    this.nombre = '';
-    this.cedula = '';
   }
 
   alElegirParticipe(p: ParticipeElegido | null): void {
@@ -150,7 +160,7 @@ export class GarantePrestamoComponent {
     const existente = this.garante();
     const cuerpo: GarantePrestamo = {
       idPrestamo: this.idPrestamo(),
-      idEntidad: this.modo === 'PARTICIPE' ? this.idEntidad : null,
+      idEntidad: this.idEntidad,
       nombre: this.nombre.trim(),
       cedula: this.cedula.trim(),
       direccion: this.direccion.trim() || null,
@@ -174,7 +184,6 @@ export class GarantePrestamoComponent {
   }
 
   private llenarDesde(g: GarantePrestamo | null): void {
-    this.modo = g && !g.idEntidad ? 'MANUAL' : 'PARTICIPE';
     this.idEntidad = g?.idEntidad ?? null;
     this.nombre = g?.nombre ?? '';
     this.cedula = g?.cedula ?? '';

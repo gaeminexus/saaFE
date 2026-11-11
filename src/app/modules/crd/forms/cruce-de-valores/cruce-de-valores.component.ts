@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
@@ -22,12 +23,15 @@ import { PrecancelacionDialogComponent } from '../../dialog/pagos/precancelacion
 import { ReciboOperacionDialogComponent } from '../../dialog/pagos/recibo-operacion-dialog.component';
 import { DetallePrestamo } from '../../model/detalle-prestamo';
 import { Entidad } from '../../model/entidad';
+import { GarantePrestamo } from '../../model/garante-prestamo';
 import { NOMBRE_ESTADO_PRESTAMO, TOLERANCIA_MONTO, admiteOperaciones } from '../../model/pagos/catalogos-pago';
 import { ResultadoPagoCuota, SaldoAporte } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
 import { Prestamo } from '../../model/prestamo';
+import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { DetallePrestamoService } from '../../service/detalle-prestamo.service';
 import { EntidadService } from '../../service/entidad.service';
+import { GarantePrestamoService } from '../../service/garante-prestamo.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { PagoPrestamoService } from '../../service/pago-prestamo.service';
 import { PrestamoService } from '../../service/prestamo.service';
@@ -62,6 +66,8 @@ interface PrestamoCruce {
   idEvento: number | null;
   resultado: ResultadoPagoCuota | null;
   movimientos: MovimientoAporte[];
+  /** De quién salieron los aportes del cruce aplicado (deudor o garante), para el resultado y el comprobante. */
+  aportesDe: string | null;
   /**
    * Tabla de amortización COMPLETA del préstamo (todas las cuotas, no solo las de saldo > 0),
    * para reconstruir `saldoTotalDe()` con el mismo criterio que Cobros Personales. `cuotas` (arriba)
@@ -106,6 +112,8 @@ export class CruceDeValoresComponent {
   private snackBar = inject(MatSnackBar);
   private permisosService = inject(PermisosService);
   private dialog = inject(MatDialog);
+  private garanteService = inject(GarantePrestamoService);
+  private comprobantes = inject(ComprobanteCobroService);
 
   /**
    * Lo realmente cobrado a cada cuota, acumulado desde CRD.PGPR e indexado por
@@ -137,6 +145,19 @@ export class CruceDeValoresComponent {
 
   fechaPago = signal<Date>(new Date());
   observacion = '';
+
+  // ---- pago con los aportes del garante (DISENO-PAGO-CON-APORTES-DEL-GARANTE §G3) ----
+  /** Garante activo partícipe (con `idEntidad`) de cada préstamo, por código de préstamo. */
+  garantesPorPrestamo = signal<Record<number, GarantePrestamo>>({});
+  /**
+   * Si no es `null`, los fondos de la pantalla son los del garante y solo ese préstamo se puede
+   * cruzar: el garante es de un préstamo, así que no se mezcla con los demás en un mismo pozo.
+   */
+  garanteActivo = signal<{ codigoPrestamo: number; garante: GarantePrestamo } | null>(null);
+  /** Autorización firmada del garante: obligatoria con aportes del garante. */
+  respaldoGarante = signal<File | null>(null);
+  errorRespaldoGarante = signal<string | null>(null);
+  readonly aceptaRespaldo = this.comprobantes.extensionesAceptadas;
 
   // Los objetos de prestamosCruce se mutan directamente (monto, nota, estado) en vez de
   // reconstruirse; este contador fuerza a los computed() de abajo a recalcular tras cada mutación.
@@ -177,12 +198,15 @@ export class CruceDeValoresComponent {
 
   prestamosACruzar = computed(() => {
     this.version();
-    return this.prestamosCruce().filter((pc) => this.parseMoneda(pc.montoTexto) > 0.004);
+    return this.prestamosCruce().filter(
+      (pc) => this.parseMoneda(pc.montoTexto) > 0.004 && !this.bloqueadoPorGarante(pc)
+    );
   });
 
   puedeConfirmar = computed(
     () =>
       this.tieneSeleccion() &&
+      (!this.garanteActivo() || this.respaldoGarante() != null) &&
       !this.hayExcesoEnAlgunFondo() &&
       this.fondoRestante() >= -TOLERANCIA_MONTO &&
       !this.registrando()
@@ -279,6 +303,7 @@ export class CruceDeValoresComponent {
     this.cruceRegistrado.set(false);
     this.resumenCruce.set(null);
     this.observacion = '';
+    this.reiniciarFuenteGarante();
 
     this.cargarPrestamos(entidad.codigo);
     this.cargarSaldos(entidad.codigo);
@@ -315,6 +340,7 @@ export class CruceDeValoresComponent {
             idEvento: null,
             resultado: null,
             movimientos: [],
+            aportesDe: null,
             cuotasCompletas: [],
             cuotasCompletasCargadas: false,
             pagosCargados: false,
@@ -324,6 +350,7 @@ export class CruceDeValoresComponent {
           this.cargarCuotas(pc);
           this.cargarCuotasCompletas(pc);
           this.cargarPagosPrestamo(pc);
+          this.cargarGarante(pc);
         });
       },
       error: () => {
@@ -331,6 +358,85 @@ export class CruceDeValoresComponent {
         this.snackBar.open('No se pudieron cargar los préstamos del partícipe.', 'Cerrar', { duration: 4000 });
       },
     });
+  }
+
+  /** Garante activo del préstamo (`GET /grpr/prestamo/{id}`). Solo cuenta si es partícipe; si falla, sin garante. */
+  private cargarGarante(pc: PrestamoCruce): void {
+    this.garanteService.porPrestamo(pc.prestamo.codigo).subscribe({
+      next: (g) => {
+        if (g?.codigo && g.idEntidad && g.estado !== 0) {
+          this.garantesPorPrestamo.update((m) => ({ ...m, [pc.prestamo.codigo]: g }));
+        }
+      },
+      error: () => {},
+    });
+  }
+
+  garanteDe(pc: PrestamoCruce): GarantePrestamo | null {
+    return this.garantesPorPrestamo()[pc.prestamo.codigo] ?? null;
+  }
+
+  bloqueadoPorGarante(pc: PrestamoCruce): boolean {
+    const activo = this.garanteActivo();
+    return !!activo && activo.codigoPrestamo !== pc.prestamo.codigo;
+  }
+
+  usaGarante(pc: PrestamoCruce): boolean {
+    return this.garanteActivo()?.codigoPrestamo === pc.prestamo.codigo;
+  }
+
+  /** Cambia la fuente de los aportes de un préstamo. Los fondos se recargan y los montos se limpian. */
+  elegirFuente(pc: PrestamoCruce, fuente: 'deudor' | 'garante'): void {
+    const entidad = this.entidadSeleccionada();
+    const garante = this.garanteDe(pc);
+    if (!entidad) return;
+    if (fuente === 'garante' && !garante?.idEntidad) return;
+    if ((fuente === 'garante') === this.usaGarante(pc)) return;
+
+    for (const p of this.prestamosCruce()) {
+      p.montoTexto = '';
+      p.nota = null;
+    }
+    this.respaldoGarante.set(null);
+    this.errorRespaldoGarante.set(null);
+    if (fuente === 'garante' && garante) {
+      this.garanteActivo.set({ codigoPrestamo: pc.prestamo.codigo, garante });
+    } else {
+      this.garanteActivo.set(null);
+    }
+    this.fondos = [];
+    this.fondosVersion.update((v) => v + 1);
+    this.recargarSaldos();
+    this.bump();
+  }
+
+  private reiniciarFuenteGarante(): void {
+    this.garantesPorPrestamo.set({});
+    this.garanteActivo.set(null);
+    this.respaldoGarante.set(null);
+    this.errorRespaldoGarante.set(null);
+  }
+
+  /** Recarga los saldos de quien pone los aportes ahora: el garante si está activo, si no el deudor. */
+  private recargarSaldos(): void {
+    const garante = this.garanteActivo()?.garante;
+    const codigo = garante?.idEntidad ?? this.entidadSeleccionada()?.codigo;
+    if (codigo != null) this.cargarSaldos(codigo);
+  }
+
+  alElegirRespaldo(evento: Event): void {
+    const input = evento.target as HTMLInputElement;
+    const archivo = input.files?.[0] ?? null;
+    input.value = '';
+    if (!archivo) return;
+    const problema = this.comprobantes.problemaDelArchivo(archivo);
+    this.errorRespaldoGarante.set(problema);
+    this.respaldoGarante.set(problema ? null : archivo);
+  }
+
+  quitarRespaldo(): void {
+    this.respaldoGarante.set(null);
+    this.errorRespaldoGarante.set(null);
   }
 
   /**
@@ -534,6 +640,7 @@ export class CruceDeValoresComponent {
 
   /** Máximo asignable a este préstamo: su saldo vigente, acotado por lo que queda del fondo compartido. */
   private maxParaPrestamo(pc: PrestamoCruce): number {
+    if (this.bloqueadoPorGarante(pc)) return 0;
     const usadoPorOtros = this.fondoUtilizadoTotal() - this.parseMoneda(pc.montoTexto);
     const presupuesto = this.fondoDisponibleTotal() - usadoPorOtros;
     return Math.max(Math.min(this.saldoTotalDe(pc), presupuesto), 0);
@@ -666,6 +773,50 @@ export class CruceDeValoresComponent {
       return;
     }
 
+    const activo = this.garanteActivo();
+    if (activo) {
+      this.confirmarYCruzarConGarante(activo.garante, idEmpresa);
+      return;
+    }
+    this.iniciarCruce(idEmpresa, null);
+  }
+
+  /**
+   * Con aportes del garante se pide confirmación explícita (DISENO §G3), se archiva la autorización
+   * firmada y recién entonces se envía el pago con `idGarante`.
+   */
+  private confirmarYCruzarConGarante(garante: GarantePrestamo, idEmpresa: number): void {
+    const pc = this.prestamosACruzar()[0];
+    const archivo = this.respaldoGarante();
+    if (!pc || !archivo) return;
+    const monto = this.parseMoneda(pc.montoTexto);
+    const deudor = this.entidadSeleccionada()?.razonSocial ?? '';
+    const data: ConfirmDialogData = {
+      title: 'Pagar con aportes del garante',
+      message: `Se descontarán ${this.formatMoneda(monto)} de las cuentas individuales de ${garante.nombre} para pagar el préstamo ${pc.prestamo.idAsoprep} de ${deudor}.`,
+      confirmText: 'Descontar y pagar',
+      type: 'warning',
+    };
+    this.dialog
+      .open(ConfirmDialogComponent, { data, width: '520px' })
+      .afterClosed()
+      .subscribe((confirmado) => {
+        if (!confirmado) return;
+        this.registrando.set(true);
+        this.comprobantes
+          .archivar(archivo, this.comprobantes.carpetaDePrestamo(pc.prestamo.codigo), String(pc.prestamo.codigo))
+          .subscribe((resultado) => {
+            if (resultado.error || !resultado.ruta) {
+              this.registrando.set(false);
+              this.snackBar.open(this.comprobantes.mensajeDeFallo(resultado.error ?? ''), 'Cerrar', { duration: 6000 });
+              return;
+            }
+            this.iniciarCruce(idEmpresa, resultado.ruta);
+          });
+      });
+  }
+
+  private iniciarCruce(idEmpresa: number, rutaRespaldo: string | null): void {
     this.registrando.set(true);
     this.resumenCruce.set(null);
 
@@ -681,10 +832,11 @@ export class CruceDeValoresComponent {
       pc.idEvento = null;
       pc.resultado = null;
       pc.movimientos = [];
+      pc.aportesDe = null;
     }
     this.bump();
 
-    this.procesarSiguiente(cola, 0, pozo, { exitosos: 0, fallidos: 0 }, idEmpresa);
+    this.procesarSiguiente(cola, 0, pozo, { exitosos: 0, fallidos: 0 }, idEmpresa, rutaRespaldo);
   }
 
   private procesarSiguiente(
@@ -692,7 +844,8 @@ export class CruceDeValoresComponent {
     indice: number,
     pozo: { idTipoAporte: number; nombre: string; restante: number }[],
     conteo: { exitosos: number; fallidos: number },
-    idEmpresa: number
+    idEmpresa: number,
+    rutaRespaldo: string | null = null
   ): void {
     if (indice >= cola.length) {
       this.registrando.set(false);
@@ -722,7 +875,7 @@ export class CruceDeValoresComponent {
       pc.mensaje = 'No quedó saldo de aportes disponible para este préstamo.';
       conteo.fallidos++;
       this.bump();
-      this.procesarSiguiente(cola, indice + 1, pozo, conteo, idEmpresa);
+      this.procesarSiguiente(cola, indice + 1, pozo, conteo, idEmpresa, rutaRespaldo);
       return;
     }
 
@@ -738,6 +891,9 @@ export class CruceDeValoresComponent {
     pc.estado = 'procesando';
     this.bump();
 
+    const activoGarante = this.garanteActivo();
+    const garante = activoGarante && activoGarante.codigoPrestamo === pc.prestamo.codigo ? activoGarante.garante : null;
+
     this.operaciones
       .pagarConAportes({
         idEmpresa,
@@ -746,6 +902,7 @@ export class CruceDeValoresComponent {
         observacion: this.observacion.trim() || null,
         fechaPago: this.operaciones.formatearFecha(this.fechaPago()),
         aportes: desglose,
+        ...(garante ? { idGarante: garante.codigo, rutaDocumentoRespaldo: rutaRespaldo } : {}),
       })
       .subscribe((resp) => {
         if (resp.exito && resp.resultado) {
@@ -754,11 +911,16 @@ export class CruceDeValoresComponent {
           pc.idEvento = resp.resultado.idEvento;
           pc.resultado = resp.resultado;
           pc.movimientos = resp.movimientosAporte ?? [];
+          pc.aportesDe = garante
+            ? `Aportes del garante ${garante.nombre} (C.C. ${garante.cedula})`
+            : `Aportes del deudor ${this.entidadSeleccionada()?.razonSocial ?? ''}`.trim();
           conteo.exitosos++;
         } else {
           pc.estado = 'error';
           pc.mensaje = mensajeDeRespuesta(resp);
           conteo.fallidos++;
+          // La autorización del garante se archivó antes del pago: si el pago no se registró, se limpia.
+          if (garante) this.comprobantes.descartar(rutaRespaldo);
           // La transacción no dejó nada escrito: el dinero reservado vuelve al pozo para que los
           // préstamos siguientes puedan usarlo.
           for (const renglon of desglose) {
@@ -767,7 +929,7 @@ export class CruceDeValoresComponent {
           }
         }
         this.bump();
-        this.procesarSiguiente(cola, indice + 1, pozo, conteo, idEmpresa);
+        this.procesarSiguiente(cola, indice + 1, pozo, conteo, idEmpresa, rutaRespaldo);
       });
   }
 
@@ -782,7 +944,7 @@ export class CruceDeValoresComponent {
 
     const entidad = this.entidadSeleccionada();
     if (!entidad) return;
-    this.cargarSaldos(entidad.codigo);
+    this.recargarSaldos();
     for (const pc of this.prestamosCruce()) {
       this.cargarCuotas(pc);
       this.cargarCuotasCompletas(pc);
@@ -807,6 +969,7 @@ export class CruceDeValoresComponent {
         pago: pc.resultado,
         movimientosAporte: pc.movimientos,
         nombresTipoAporte: nombres,
+        detalleExtra: pc.aportesDe ? [{ label: 'Origen de los aportes', valor: pc.aportesDe }] : undefined,
       },
       width: '880px',
       maxWidth: '96vw',
@@ -821,7 +984,12 @@ export class CruceDeValoresComponent {
     this.limpiarFondos();
     this.observacion = '';
     const entidad = this.entidadSeleccionada();
-    if (entidad) this.cargarPrestamos(entidad.codigo);
+    if (entidad) {
+      // Se vuelve a los aportes del deudor: los fondos en pantalla pueden ser los del garante.
+      this.reiniciarFuenteGarante();
+      this.cargarPrestamos(entidad.codigo);
+      this.cargarSaldos(entidad.codigo);
+    }
   }
 
   // ================= operaciones individuales del préstamo =================
@@ -914,7 +1082,7 @@ export class CruceDeValoresComponent {
         const entidad = this.entidadSeleccionada();
         if (!entidad) return;
         this.cargarPrestamos(entidad.codigo);
-        this.cargarSaldos(entidad.codigo);
+        this.recargarSaldos();
       });
   }
 
@@ -926,7 +1094,7 @@ export class CruceDeValoresComponent {
         const entidad = this.entidadSeleccionada();
         if (entidad) {
           this.cargarPrestamos(entidad.codigo);
-          this.cargarSaldos(entidad.codigo);
+          this.recargarSaldos();
         }
         break;
       }

@@ -143,6 +143,11 @@ export interface PagoConAportesRequest {
   fechaPago?: string | null;
   /** Ruta del comprobante ya subido. Se estampa en todos los `PagoPrestamo` que genere el pago. */
   rutaDocumentoRespaldo?: string | null;
+  /**
+   * PK de `CRD.GRPR`: paga con los aportes del GARANTE del préstamo en vez de los del deudor.
+   * Exige `rutaDocumentoRespaldo` (la autorización firmada del garante). Sin él, aportes del deudor.
+   */
+  idGarante?: number | null;
   /** Al menos un renglón, sin tipos repetidos. El valor total del pago es su suma. */
   aportes: DesgloseAporte[];
 }

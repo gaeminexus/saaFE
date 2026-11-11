@@ -102,6 +102,16 @@
         <span class="count">({{ formatMoneda(saldoDisponibleTotal()) }} en total)</span>
       </div>
 
+      @if (garanteActivo(); as ga) {
+        <div class="alloc-note">
+          <mat-icon>shield_person</mat-icon>
+          <span>
+            Estos son los aportes del <b>garante {{ ga.garante.nombre }}</b> (C.C. {{ ga.garante.cedula }}), no los de
+            {{ entidad.razonSocial }}. Solo se puede cruzar el préstamo al que se le eligió esta fuente.
+          </span>
+        </div>
+      }
+
       @if (cargandoSaldos()) {
         <div class="loading-spinner-container"><mat-spinner diameter="40" color="primary"></mat-spinner></div>
       } @else if (!fondos.length) {
@@ -189,6 +199,9 @@
             <div class="resultado-linea" [class.ok]="pc.estado === 'ok'" [class.error]="pc.estado === 'error'">
               <mat-icon>{{ pc.estado === 'ok' ? 'check_circle' : 'error_outline' }}</mat-icon>
               <span>{{ pc.mensaje }}</span>
+              @if (pc.estado === 'ok' && pc.aportesDe) {
+                <span class="badge">{{ pc.aportesDe }}</span>
+              }
               @if (pc.estado === 'ok' && pc.resultado) {
                 <button mat-button (click)="verComprobante(pc)">Ver comprobante</button>
               }
@@ -198,11 +211,29 @@
           @if (pc.open) {
             <mat-card-content class="prestamo-detail">
 
+              @if (garanteDe(pc); as g) {
+                <div class="alloc-modes">
+                  <mat-radio-group aria-label="Pagar con" [value]="usaGarante(pc) ? 'garante' : 'deudor'"
+                                   (change)="elegirFuente(pc, $event.value)">
+                    <span class="oo-label">Pagar con:</span>
+                    <mat-radio-button value="deudor">aportes del deudor</mat-radio-button>
+                    <mat-radio-button value="garante">aportes del garante {{ g.nombre }}</mat-radio-button>
+                  </mat-radio-group>
+                </div>
+              }
+
+              @if (bloqueadoPorGarante(pc)) {
+                <div class="alloc-note">
+                  <mat-icon>info</mat-icon>
+                  <span>Hay otro préstamo pagándose con aportes del garante: este no se puede cruzar a la vez.</span>
+                </div>
+              }
+
               <div class="alloc-modes">
                 <mat-form-field appearance="outline" class="alloc-monto-field" subscriptSizing="dynamic">
                   <mat-label>Monto a cruzar en este préstamo</mat-label>
                   <span matTextPrefix>$&nbsp;</span>
-                  <input matInput inputmode="decimal" [(ngModel)]="pc.montoTexto"
+                  <input matInput inputmode="decimal" [(ngModel)]="pc.montoTexto" [disabled]="bloqueadoPorGarante(pc)"
                          (blur)="onMontoPrestamoBlur(pc)" placeholder="0.00" />
                 </mat-form-field>
 
@@ -362,6 +393,21 @@
                   <input matInput [(ngModel)]="observacion" maxlength="200" placeholder="Ej.: cruce con cesantía" />
                 </mat-form-field>
               </div>
+
+              @if (garanteActivo(); as ga) {
+                <div class="alloc-note">
+                  <mat-icon>draw</mat-icon>
+                  <span>
+                    <b>Autorización firmada del garante {{ ga.garante.nombre }} (obligatoria).</b>
+                    Pdf o imagen. Sin este archivo no se puede cruzar.
+                    <input type="file" [accept]="aceptaRespaldo" (change)="alElegirRespaldo($event)" />
+                    @if (respaldoGarante(); as r) {
+                      Adjunto: {{ r.name }} <button mat-button type="button" (click)="quitarRespaldo()">Quitar</button>
+                    }
+                    @if (errorRespaldoGarante(); as e) { <br /><b>{{ e }}</b> }
+                  </span>
+                </div>
+              }
 
               @if (prestamosACruzar().length > 1) {
                 <div class="alloc-note">
