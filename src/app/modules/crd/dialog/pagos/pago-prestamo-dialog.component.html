@@ -145,6 +145,11 @@
 
   <!-- ==================== Aportes ==================== -->
   @if (modo() === 'aportes') {
+    @if (garante()) {
+      <app-fuente-aportes-garante [garante]="garante()" [fuente]="fuente()" [archivo]="autorizacion()"
+                                  (fuenteChange)="cambiarFuente($event)" (archivoChange)="autorizacion.set($event)" />
+    }
+
     @if (cargandoSaldos()) {
       <div class="pg-cargando">
         <mat-spinner diameter="32"></mat-spinner>

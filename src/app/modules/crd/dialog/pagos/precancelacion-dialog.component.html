@@ -152,10 +152,17 @@
       </div>
     }
 
+    @if (garante()) {
+      <app-fuente-aportes-garante [garante]="garante()" [fuente]="fuente()" [archivo]="autorizacion()"
+                                  (fuenteChange)="cambiarFuente($event)" (archivoChange)="autorizacion.set($event)" />
+    }
+
     <div class="pg-chips">
-      <button mat-stroked-button (click)="todoEnEfectivo()">
-        <mat-icon>payments</mat-icon> Todo en efectivo
-      </button>
+      @if (!usaGarante()) {
+        <button mat-stroked-button (click)="todoEnEfectivo()">
+          <mat-icon>payments</mat-icon> Todo en efectivo
+        </button>
+      }
       @if (saldos().length) {
         <button mat-stroked-button (click)="usarAportesPrimero()">
           <mat-icon>savings</mat-icon> Usar aportes primero ({{ formatMoneda(saldoAportesTotal()) }} disponible)

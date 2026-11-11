@@ -325,6 +325,11 @@ export interface PrecancelacionRequest {
   fechaAfectacion?: string | null;
   /** Ruta del comprobante ya subido. Se estampa en los pagos que genere la precancelación. */
   rutaDocumentoRespaldo?: string | null;
+  /**
+   * PK de `CRD.GRPR`: la precancelación se paga 100 % con aportes del GARANTE (sin efectivo ni
+   * depósito). Exige `rutaDocumentoRespaldo` (la autorización firmada del garante).
+   */
+  idGarante?: number | null;
 }
 
 export interface ResultadoPrecancelacion {
