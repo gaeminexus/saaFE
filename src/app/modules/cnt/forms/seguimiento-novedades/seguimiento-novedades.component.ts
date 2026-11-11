@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -34,6 +35,10 @@ import {
 import { formatoFecha, nombreMes } from '../../service/cierre-periodo.service';
 import { FiltrosNovedades, SeguimientoNovedadesService } from '../../service/seguimiento-novedades.service';
 import { DetalleNovedadComponent } from './detalle-novedad/detalle-novedad.component';
+import { DecisionesTomadasComponent } from './decisiones-tomadas/decisiones-tomadas.component';
+import { Referencia } from './referencias/detector-referencias';
+import { NavegacionReferenciasService } from './referencias/navegacion-referencias.service';
+import { TextoEnlazadoComponent } from './referencias/texto-enlazado.component';
 
 /**
  * C25 — Seguimiento de novedades (Contabilidad > Procesos > Seguimiento Novedades).
@@ -47,7 +52,7 @@ import { DetalleNovedadComponent } from './detalle-novedad/detalle-novedad.compo
 @Component({
   selector: 'app-seguimiento-novedades',
   standalone: true,
-  imports: [CommonModule, FormsModule, MaterialFormModule, DetalleNovedadComponent],
+  imports: [CommonModule, FormsModule, MaterialFormModule, DetalleNovedadComponent, DecisionesTomadasComponent, TextoEnlazadoComponent],
   templateUrl: './seguimiento-novedades.component.html',
   styleUrl: './seguimiento-novedades.component.scss',
 })
@@ -56,6 +61,12 @@ export class SeguimientoNovedadesComponent implements OnInit {
   private permisos = inject(PermisosService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private nav = inject(NavegacionReferenciasService);
+  private destroyRef = inject(DestroyRef);
+
+  /** Índice de la pestaña Decisiones (C25b). */
+  readonly PESTANA_DECISIONES = 3;
+  decisionSeleccionada = signal<string | null>(null);
 
   readonly modulos = MODULOS_NOVEDAD;
   readonly tipos = TIPOS_NOVEDAD;
@@ -104,6 +115,20 @@ export class SeguimientoNovedadesComponent implements OnInit {
   totalPendientes = computed(() => this.requerimientos().filter((r) => r.estado === 1 || r.estado === 4).length);
 
   ngOnInit(): void {
+    // C25b: toda referencia de la pantalla (textos, fichas, decisiones) abre la novedad o la decisión por aquí
+    this.nav.peticiones.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((p) => {
+      if (p.tipo === 'NOVEDAD') {
+        this.pestana.set(0);
+        this.abrir(p.idNovedad);
+      } else {
+        this.decisionSeleccionada.set(null);
+        setTimeout(() => {
+          this.decisionSeleccionada.set(p.numero);
+          this.pestana.set(this.PESTANA_DECISIONES);
+          document.querySelector('mat-tab-group')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      }
+    });
     if (!this.idEmpresa) {
       this.error.set('No hay empresa seleccionada. Vuelva a iniciar sesión.');
       return;
@@ -168,9 +193,29 @@ export class SeguimientoNovedadesComponent implements OnInit {
     setTimeout(() => document.getElementById('detalle-novedad')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
 
+  /** C25b: abre una referencia de las tablas del resumen (cuenta, ejecución G, novedad del reparto). */
+  ver(tipo: Referencia['tipo'], valor: string | number | null | undefined): void {
+    if (valor === null || valor === undefined || valor === '') return;
+    this.nav.abrir({ tipo, valor: String(valor) }, { idEmpresa: this.idEmpresa, anio: this.anio(), mes: this.mes() });
+  }
+
+  /** Novedad del reparto de cuentas por regularizar: por id si ya está cargada; si no, por código. */
+  verNovedad(idNovedad: number | null | undefined, codigo: string): void {
+    if (idNovedad) this.abrir(idNovedad);
+    else if (codigo !== 'SIN-NOVEDAD') this.ver('NOVEDAD', codigo);
+  }
+
+  etiquetaCuadratura(clave: string): string {
+    return { aportes: 'Aportes: cuenta 21 = G42', cartera: 'Cartera bruta: 13 − 1399 = G48', provision: 'Provisión 1399', sumaControl: 'Suma de control del B17' }[clave] ?? clave;
+  }
+
   formatoMonto(v: number | null | undefined): string {
     if (v === null || v === undefined) return '—';
     return v.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  entradasTexto(o: Record<string, string> | null | undefined): { clave: string; valor: string }[] {
+    return Object.entries(o ?? {}).map(([clave, valor]) => ({ clave, valor }));
   }
 
   entradas(o: Record<string, number> | null | undefined): { clave: string; valor: number }[] {

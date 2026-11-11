@@ -1,0 +1,77 @@
+<div class="filtros">
+  <mat-form-field appearance="outline" class="campo-texto">
+    <mat-label>Buscar en las decisiones (número, tema, texto, razones, evidencia)</mat-label>
+    <input matInput [ngModel]="texto()" (ngModelChange)="texto.set($event)" (keyup.enter)="cargar()" />
+  </mat-form-field>
+  <button mat-stroked-button (click)="cargar()"><mat-icon>search</mat-icon> Buscar</button>
+  <mat-checkbox [checked]="soloConNovedades()" (change)="soloConNovedades.set($event.checked)">Solo las que tienen novedades vinculadas</mat-checkbox>
+  <span class="tenue">{{ visibles().length }} decisiones</span>
+</div>
+
+@if (error()) {
+  <div class="error-banner"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>
+}
+@if (cargando()) {
+  <div class="loading-inline"><mat-spinner diameter="26"></mat-spinner><span>Cargando decisiones…</span></div>
+}
+
+<div class="lista">
+  @for (f of visibles(); track f.decision.codigo) {
+    @let d = f.decision;
+    <div class="decision" [id]="'decision-' + d.numero" [class.resaltada]="seleccion() === d.numero">
+      <div class="cab" (click)="alternar(d.numero)">
+        <mat-icon>{{ abiertas().has(d.numero) ? 'expand_less' : 'expand_more' }}</mat-icon>
+        <span class="chip chip-violeta">{{ d.numero }}</span>
+        <span class="fecha">{{ formatoFecha(d.fecha) }}</span>
+        <span class="tema">{{ d.titulo || d.tema }}</span>
+        <span class="espacio"></span>
+        <span class="tenue">{{ quien(d.tipoDecide) }}</span>
+        <span class="chip" [class.chip-azul]="f.totalNovedades > 0">{{ f.totalNovedades }} novedad(es)</span>
+      </div>
+      @if (abiertas().has(d.numero)) {
+        <div class="cuerpo">
+          <table class="campos">
+            <tbody>
+              <tr><th>Fecha</th><td>{{ formatoFecha(d.fecha) }}</td></tr>
+              <tr><th>Tema</th><td><app-texto-enlazado [texto]="d.tema" [idEmpresa]="idEmpresa()" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></td></tr>
+              @if (d.resumen) {
+                <tr><th>En una frase</th><td><app-texto-enlazado [texto]="d.resumen" [idEmpresa]="idEmpresa()" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></td></tr>
+              }
+              <tr><th>Decisión completa</th><td><app-texto-enlazado [texto]="d.detalle" [pre]="true" [idEmpresa]="idEmpresa()" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></td></tr>
+              @if (d.razones) {
+                <tr><th>Razones</th><td><app-texto-enlazado [texto]="d.razones" [idEmpresa]="idEmpresa()" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></td></tr>
+              }
+              <tr><th>Quién decide</th><td>{{ quien(d.tipoDecide) }}{{ d.cargo ? ' — ' + d.cargo : '' }}</td></tr>
+              <tr><th>Evidencia</th><td><app-texto-enlazado [texto]="d.evidencia || '—'" [idEmpresa]="idEmpresa()" [anio]="anio()" [mes]="mes()"></app-texto-enlazado></td></tr>
+              <tr><th>Origen</th><td>{{ d.origen }}{{ d.fechaCopiaExpediente ? ' · en el expediente desde ' + formatoFecha(d.fechaCopiaExpediente) : '' }}</td></tr>
+            </tbody>
+          </table>
+          <h4>Novedades vinculadas ({{ f.totalNovedades }})</h4>
+          @if (f.novedades.length === 0) {
+            <p class="vacio">Ninguna novedad cargada cita esta decisión.</p>
+          } @else {
+            <table class="tabla">
+              <thead><tr><th>Mes</th><th>Novedad</th><th>Módulo</th><th>Título</th><th>Tipo</th><th>Estado</th></tr></thead>
+              <tbody>
+                @for (n of f.novedades; track n.idNovedad) {
+                  <tr>
+                    <td>{{ n.mes }}</td>
+                    <td><a class="enlace" (click)="abrirNovedad(n.idNovedad)" matTooltip="Abrir la novedad">{{ n.codigo }}</a>{{ n.porRespuesta ? ' (respuesta)' : '' }}</td>
+                    <td>{{ n.modulo }}</td>
+                    <td>{{ n.titulo }}</td>
+                    <td>{{ etiquetaTipo(n.tipo) }}</td>
+                    <td>{{ n.estado }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      }
+    </div>
+  } @empty {
+    @if (!cargando()) {
+      <p class="vacio">No hay decisiones con ese filtro.</p>
+    }
+  }
+</div>

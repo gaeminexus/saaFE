@@ -9,6 +9,8 @@ import {
   CuentasPorRegularizar,
   Decision,
   DetalleNovedad,
+  FichaReferencia,
+  FilaDecision,
   FilaBandejaNovedad,
   FilaRequerimiento,
   ReporteActa,
@@ -54,6 +56,21 @@ export class SeguimientoNovedadesService {
     return this.http
       .get<FilaRequerimiento[]>(`${this.nvdd}/vistaRequerimientos`, { params: this.filtros(idEmpresa, f) })
       .pipe(catchError(this.aTexto));
+  }
+
+  /** C25b: ficha de solo lectura de una referencia citada en la pantalla (asiento, préstamo, entidad, cuenta...). */
+  referencia(idEmpresa: number, tipo: string, valor: string, anio?: number | null, mes?: number | null): Observable<FichaReferencia> {
+    let p = new HttpParams().set('idEmpresa', idEmpresa).set('tipo', tipo).set('valor', valor);
+    if (anio) p = p.set('anio', anio);
+    if (mes) p = p.set('mes', mes);
+    return this.http.get<FichaReferencia>(`${this.nvdd}/referencia`, { params: p }).pipe(catchError(this.aTexto));
+  }
+
+  /** C25b: decisiones tomadas con su ficha y las novedades vinculadas. */
+  listadoDecisiones(idEmpresa: number, texto?: string | null): Observable<FilaDecision[]> {
+    let p = new HttpParams().set('idEmpresa', idEmpresa);
+    if (texto) p = p.set('texto', texto);
+    return this.http.get<FilaDecision[]>(`${this.dcsn}/listado`, { params: p }).pipe(catchError(this.aTexto));
   }
 
   detalle(idNovedad: number): Observable<DetalleNovedad> {

@@ -1,0 +1,9 @@
+@use '../novedades-comun';
+.titulo { display: flex; align-items: center; gap: 6px; }
+.contenido { min-width: 560px; }
+.sub { color: #475569; font-size: 0.85rem; margin-bottom: 8px; }
+.campos { border-collapse: collapse; font-size: 0.85rem; margin-bottom: 10px; width: 100%; }
+.campos th { text-align: left; color: #475569; font-weight: 600; padding: 3px 10px 3px 0; width: 220px; vertical-align: top; }
+.campos td { padding: 3px 0; }
+.tabla-scroll { max-height: 340px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+h4 { margin: 12px 0 4px; font-size: 0.9rem; color: #1a3d6d; }
