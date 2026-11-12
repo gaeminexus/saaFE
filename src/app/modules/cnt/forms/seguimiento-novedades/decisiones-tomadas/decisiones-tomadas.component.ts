@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, effect, inject, input, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MaterialFormModule } from '../../../../../shared/modules/material-form.module';
 import { FilaDecision, etiquetaTipo } from '../../../model/seguimiento-novedades';
@@ -49,16 +49,18 @@ export class DecisionesTomadasComponent {
   private cargadas = false;
 
   constructor() {
+    // Cada efecto depende solo de su entrada. cargar() y enfocar() leen y escriben otras señales (texto, filas,
+    // abiertas): si quedaran rastreadas, el efecto se re-dispararía a sí mismo sin fin (cuelgue al abrir una D-nnn).
     effect(() => {
       const e = this.idEmpresa();
       if (e && !this.cargadas) {
         this.cargadas = true;
-        this.cargar();
+        untracked(() => this.cargar());
       }
     });
     effect(() => {
       const s = this.seleccion();
-      if (s) this.enfocar(s);
+      if (s) untracked(() => this.enfocar(s));
     });
   }
 
