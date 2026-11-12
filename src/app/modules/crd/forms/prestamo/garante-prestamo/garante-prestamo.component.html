@@ -6,10 +6,10 @@
     }
   </h3>
 
-  <mat-checkbox [checked]="tieneGarante()" [disabled]="!editable || cargando() || guardando()" (change)="alCambiarCasilla($event.checked)">
+  <mat-checkbox [checked]="tieneGarante()" [disabled]="(!editable && !otorgado) || cargando() || guardando()" (change)="alCambiarCasilla($event.checked)">
     Tiene garante
   </mat-checkbox>
-  @if (!editable) {
+  @if (!editable && !otorgado) {
     <span class="garante-nota">Solo se puede cambiar con el préstamo pendiente o generado.</span>
   }
 
@@ -18,45 +18,53 @@
   }
 
   @if (tieneGarante()) {
-    @if (editable) {
-      <mat-radio-group class="garante-modo" [(ngModel)]="modo" (change)="alCambiarModo()" name="modoGarante">
-        <mat-radio-button value="PARTICIPE">Es partícipe (buscar por cédula)</mat-radio-button>
-        <mat-radio-button value="MANUAL">Tercero (datos a mano)</mat-radio-button>
-      </mat-radio-group>
-
-      @if (modo === 'PARTICIPE') {
-        <app-participe-selector (elegido)="alElegirParticipe($event)" />
-        @if (idEntidad != null) {
-          <p class="garante-elegido"><b>{{ nombre }}</b> · C.C. {{ cedula }}</p>
-        }
-      } @else {
-        <div class="garante-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Nombre *</mat-label>
-            <input matInput [(ngModel)]="nombre" name="garanteNombre" maxlength="200" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Cédula *</mat-label>
-            <input matInput [(ngModel)]="cedula" name="garanteCedula" maxlength="20" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Dirección</mat-label>
-            <input matInput [(ngModel)]="direccion" name="garanteDireccion" maxlength="300" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Teléfono</mat-label>
-            <input matInput [(ngModel)]="telefono" name="garanteTelefono" maxlength="30" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Correo</mat-label>
-            <input matInput type="email" [(ngModel)]="correo" name="garanteCorreo" maxlength="150" />
-          </mat-form-field>
+    @if (esTercero) {
+      <p class="garante-error">Garante registrado como tercero: reemplácelo por un partícipe.</p>
+      <div class="garante-lectura">
+        <div><span>Nombre</span><strong>{{ nombre }}</strong></div>
+        <div><span>Cédula</span><strong>{{ cedula }}</strong></div>
+        @if (direccion) { <div><span>Dirección</span><strong>{{ direccion }}</strong></div> }
+        @if (telefono) { <div><span>Teléfono</span><strong>{{ telefono }}</strong></div> }
+        @if (correo) { <div><span>Correo</span><strong>{{ correo }}</strong></div> }
+      </div>
+      @if (editable || otorgado) {
+        <div class="garante-acciones">
+          <button mat-stroked-button color="warn" type="button" [disabled]="guardando()" (click)="reemplazarTercero()">
+            <mat-icon>swap_horiz</mat-icon> Anular y agregar otro
+          </button>
         </div>
+      }
+    } @else if (editable) {
+      <app-participe-selector (elegido)="alElegirParticipe($event)" />
+      @if (idEntidad != null) {
+        <p class="garante-elegido"><b>{{ nombre }}</b> · C.C. {{ cedula }}</p>
       }
 
       <div class="garante-acciones">
         <button mat-raised-button color="primary" type="button" [disabled]="!puedeGuardar" (click)="guardar()">
           <mat-icon>save</mat-icon> Guardar garante
+        </button>
+      </div>
+    } @else if (otorgado && !garante()?.codigo) {
+      <p class="garante-nota">
+        El préstamo ya está otorgado: el garante se registra con su autorización firmada; el pagaré no se reimprime.
+      </p>
+      <app-participe-selector (elegido)="alElegirParticipe($event)" />
+      @if (idEntidad != null) {
+        <p class="garante-elegido"><b>{{ nombre }}</b> · C.C. {{ cedula }}</p>
+      }
+      <div class="garante-acciones">
+        <label>Autorización firmada del garante (obligatoria, PDF o imagen):
+          <input type="file" [accept]="aceptaArchivo" (change)="alElegirArchivo($event)" />
+        </label>
+        @if (archivoAutorizacion(); as a) {
+          <span>Adjunto: {{ a.name }} <button mat-button type="button" (click)="quitarArchivo()">Quitar</button></span>
+        }
+        @if (errorArchivo(); as e) { <p class="garante-error">{{ e }}</p> }
+      </div>
+      <div class="garante-acciones">
+        <button mat-raised-button color="primary" type="button" [disabled]="!puedeGuardarOtorgado" (click)="guardarOtorgado()">
+          <mat-icon>save</mat-icon> Guardar garante con autorización
         </button>
       </div>
     } @else {
@@ -66,6 +74,9 @@
         @if (direccion) { <div><span>Dirección</span><strong>{{ direccion }}</strong></div> }
         @if (telefono) { <div><span>Teléfono</span><strong>{{ telefono }}</strong></div> }
         @if (correo) { <div><span>Correo</span><strong>{{ correo }}</strong></div> }
+        @if (autorizacion()) {
+          <div><span>Autorización</span><a href="javascript:void(0)" (click)="verAutorizacion()">Ver autorización</a></div>
+        }
       </div>
     }
   }

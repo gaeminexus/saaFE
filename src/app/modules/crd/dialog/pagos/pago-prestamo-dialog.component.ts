@@ -9,11 +9,14 @@ import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { ResultadoPagoCuota, SaldoAporte, SimulacionPrecancelacion } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, MovimientoAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { GarantePrestamo } from '../../model/garante-prestamo';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { CobroCreditoService } from '../../service/cobro-credito.service';
+import { GarantePrestamoService } from '../../service/garante-prestamo.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { CobroRegistradoDialogComponent } from './cobro-registrado-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
+import { FuenteAportes, FuenteAportesGaranteComponent, confirmarPagoConGarante } from './fuente-aportes-garante.component';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
 import { RespaldoCobroComponent } from './respaldo-cobro.component';
 
@@ -46,7 +49,7 @@ interface RenglonAporte {
 @Component({
   selector: 'app-pago-prestamo-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent],
+  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent, FuenteAportesGaranteComponent],
   templateUrl: './pago-prestamo-dialog.component.html',
   styleUrl: './pago-prestamo-dialog.component.scss',
 })
@@ -55,6 +58,7 @@ export class PagoPrestamoDialogComponent {
   private comprobantes = inject(ComprobanteCobroService);
   private cobroCreditoService = inject(CobroCreditoService);
   private dialog = inject(MatDialog);
+  private garanteService = inject(GarantePrestamoService);
 
   /** Bloque de respaldo. Se renderiza siempre, así que cambiar de modo no pierde lo ya cargado. */
   respaldo = viewChild(RespaldoCobroComponent);
@@ -81,6 +85,15 @@ export class PagoPrestamoDialogComponent {
 
   errorMensaje = signal<string | null>(null);
   errorCodigo = signal<string | null>(null);
+
+  // ---- aportes del garante (DISENO-PAGO-CON-APORTES-DEL-GARANTE §G6) ----
+  /** Garante activo partícipe del préstamo, si lo tiene. */
+  garante = signal<GarantePrestamo | null>(null);
+  fuente = signal<FuenteAportes>('deudor');
+  /** Autorización firmada del garante: obligatoria con aportes del garante. */
+  autorizacion = signal<File | null>(null);
+  usaGarante = computed(() => this.modo() === 'aportes' && this.fuente() === 'garante' && !!this.garante());
+  autorizacionLista = computed(() => !this.usaGarante() || this.autorizacion() != null);
 
   valorEfectivo = computed(() => this.parseMoneda(this.valorTexto()));
 
@@ -133,7 +146,8 @@ export class PagoPrestamoDialogComponent {
       !(this.modo() === 'aportes' && this.hayExcesoEnAlgunAporte()) &&
       this.fechaValida() &&
       this.fechaAfectacionValida() &&
-      this.respaldoListo()
+      this.respaldoListo() &&
+      this.autorizacionLista()
   );
 
   /**
@@ -184,6 +198,30 @@ export class PagoPrestamoDialogComponent {
     this.modo.set(data.modoInicial ?? 'efectivo');
     if (this.modo() === 'aportes') this.cargarSaldos();
     this.simularCancelacion();
+    this.cargarGarante();
+  }
+
+  /** Dato accesorio: si falla, el diálogo sigue pagando solo con aportes del deudor. */
+  private cargarGarante(): void {
+    if (!this.data.idPrestamo) return;
+    this.garanteService.porPrestamo(this.data.idPrestamo).subscribe({
+      next: (g) => {
+        if (g?.codigo && g.idEntidad && g.estado !== 0) this.garante.set(g);
+      },
+      error: () => {},
+    });
+  }
+
+  /** Cambia de quién son los aportes: los saldos se recargan y la autorización se vuelve a pedir. */
+  cambiarFuente(fuente: FuenteAportes): void {
+    if (fuente === this.fuente()) return;
+    this.fuente.set(fuente);
+    this.autorizacion.set(null);
+    this.limpiarError();
+    this.saldos.set([]);
+    this.renglones = [];
+    this.renglonesVersion.update((v) => v + 1);
+    this.cargarSaldos();
   }
 
   /** La fecha de corte cambia la mora: al cambiar la fecha del pago se vuelve a simular. */
@@ -223,7 +261,7 @@ export class PagoPrestamoDialogComponent {
   // ================= saldos de aportes =================
 
   cargarSaldos(): void {
-    const idEntidad = this.data.idEntidad;
+    const idEntidad = this.usaGarante() ? this.garante()?.idEntidad : this.data.idEntidad;
     if (!idEntidad) {
       this.saldos.set([]);
       this.renglones = [];
@@ -302,7 +340,45 @@ export class PagoPrestamoDialogComponent {
       return;
     }
 
+    if (this.usaGarante()) {
+      this.confirmarConGarante();
+      return;
+    }
     this.enviarPagoConAportes();
+  }
+
+  /**
+   * Con aportes del garante: confirmación explícita (§G3) con el aviso de comprometido (§G5, no
+   * detiene), se archiva la autorización firmada y recién entonces se envía el pago con `idGarante`.
+   */
+  private confirmarConGarante(): void {
+    const garante = this.garante();
+    const archivo = this.autorizacion();
+    if (!garante || !archivo) {
+      this.registrando.set(false);
+      return;
+    }
+    confirmarPagoConGarante(this.dialog, this.servicio, {
+      garante,
+      monto: this.montoAPagar(),
+      tituloPrestamo: this.data.titulo,
+      deudor: this.data.participante ?? '',
+    }).subscribe((confirmado) => {
+      if (!confirmado) {
+        this.registrando.set(false);
+        return;
+      }
+      this.comprobantes
+        .archivar(archivo, this.comprobantes.carpetaDePrestamo(this.data.idPrestamo), String(this.data.idPrestamo))
+        .subscribe((resultado) => {
+          if (resultado.error || !resultado.ruta) {
+            this.registrando.set(false);
+            this.manejarError('COMPROBANTE_NO_ARCHIVADO', this.comprobantes.mensajeDeFallo(resultado.error ?? ''));
+            return;
+          }
+          this.enviarPagoConAportes(resultado.ruta, garante);
+        });
+    });
   }
 
   private archivarComprobante(continuar: (ruta: string | null, exito: boolean) => void): void {
@@ -396,9 +472,10 @@ export class PagoPrestamoDialogComponent {
       });
   }
 
-  private enviarPagoConAportes(): void {
+  private enviarPagoConAportes(rutaAutorizacion: string | null = null, garante: GarantePrestamo | null = null): void {
     const idEmpresa = empresaSesionCodigo();
     if (idEmpresa == null) {
+      this.comprobantes.descartar(rutaAutorizacion);
       this.registrando.set(false);
       this.manejarError(undefined, 'No se pudo determinar la empresa de la sesión. Vuelva a iniciar sesión y reintente.');
       return;
@@ -417,12 +494,16 @@ export class PagoPrestamoDialogComponent {
         observacion: this.observacion.trim() || null,
         fechaPago,
         aportes,
+        ...(garante ? { idGarante: garante.codigo, rutaDocumentoRespaldo: rutaAutorizacion } : {}),
       })
       .subscribe((resp) => {
         this.registrando.set(false);
         if (resp.exito && resp.resultado) {
-          this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fechaPago, resp.resultado, resp.movimientosAporte ?? [], null);
+          const origen = garante ? `Aportes del garante ${garante.nombre} (C.C. ${garante.cedula})` : undefined;
+          this.mostrarRecibo('PAGO_APORTES', resp.mensaje, fechaPago, resp.resultado, resp.movimientosAporte ?? [], null, origen);
         } else {
+          // La autorización se archivó antes del pago: si no se registró, se limpia.
+          if (garante) this.comprobantes.descartar(rutaAutorizacion);
           this.manejarError(resp.error, mensajeDeRespuesta(resp));
           if (resp.error === 'SALDO_APORTES_INSUFICIENTE' || resp.error === 'TIPO_APORTE_NO_VIGENTE') {
             this.cargarSaldos();
@@ -454,7 +535,8 @@ export class PagoPrestamoDialogComponent {
     fecha: string | null,
     resultado: ResultadoPagoCuota,
     movimientosAporte: MovimientoAporte[],
-    rutaComprobante: string | null
+    rutaComprobante: string | null,
+    origenAportes?: string
   ): void {
     const nombres: Record<number, string> = {};
     for (const a of this.saldos()) nombres[a.idTipoAporte] = a.nombre;
@@ -465,6 +547,7 @@ export class PagoPrestamoDialogComponent {
           { label: 'Archivado en', valor: rutaComprobante },
         ]
       : [];
+    if (origenAportes) extras.push({ label: 'Origen de los aportes', valor: origenAportes });
 
     this.dialog.open(ReciboOperacionDialogComponent, {
       data: {

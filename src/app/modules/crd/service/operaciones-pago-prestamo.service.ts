@@ -6,6 +6,7 @@ import {
   AbonoCapitalConAportesRequest,
   AbonoCapitalRequest,
   AnulacionRequest,
+  CompromisoGarante,
   PagoConAportesRequest,
   PagoCuotaRequest,
   PagoMultipleRequest,
@@ -71,6 +72,19 @@ export class OperacionesPagoPrestamoService {
     return this.http
       .get<RespuestaPago<SaldoAporte[]>>(url)
       .pipe(catchError((e: HttpErrorResponse) => of(this.normalizarError(e))));
+  }
+
+  /**
+   * Aviso de comprometido del garante antes de pagar con sus aportes: `GET /prst/compromisoGarante/{idGarante}?monto=`.
+   * Nunca falla hacia afuera: si el endpoint responde error, devuelve `null` y el pago se confirma sin aviso.
+   *
+   * @param idGarante PK de `CRD.GRPR`, no el código del partícipe.
+   */
+  compromisoGarante(idGarante: number, monto: number): Observable<CompromisoGarante | null> {
+    const url = `${ServiciosCrd.RS_PRST}/compromisoGarante/${idGarante}`;
+    return this.http
+      .get<CompromisoGarante>(url, { params: new HttpParams().set('monto', monto.toFixed(2)) })
+      .pipe(catchError(() => of(null)));
   }
 
   // ===================== Registro de aporte del socio =====================

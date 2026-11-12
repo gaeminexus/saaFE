@@ -10,11 +10,14 @@ import { usuarioSesion } from '../../../../shared/services/usuario-sesion';
 import { TOLERANCIA_MONTO } from '../../model/pagos/catalogos-pago';
 import { SaldoAporte, SimulacionPrecancelacion } from '../../model/pagos/operaciones-pago';
 import { DesgloseAporte, mensajeDeRespuesta } from '../../model/pagos/respuesta-pago';
+import { GarantePrestamo } from '../../model/garante-prestamo';
 import { ComprobanteCobroService } from '../../service/comprobante-cobro.service';
 import { CobroCreditoService } from '../../service/cobro-credito.service';
+import { GarantePrestamoService } from '../../service/garante-prestamo.service';
 import { OperacionesPagoPrestamoService } from '../../service/operaciones-pago-prestamo.service';
 import { CobroRegistradoDialogComponent } from './cobro-registrado-dialog.component';
 import { ContextoPrestamo, SalidaDialogoPago } from './contexto-prestamo';
+import { FuenteAportes, FuenteAportesGaranteComponent, confirmarPagoConGarante } from './fuente-aportes-garante.component';
 import { ReciboOperacionDialogComponent } from './recibo-operacion-dialog.component';
 import { RespaldoCobroComponent } from './respaldo-cobro.component';
 
@@ -52,7 +55,7 @@ interface RenglonFondo {
 @Component({
   selector: 'app-precancelacion-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent],
+  imports: [CommonModule, FormsModule, MatDialogModule, MaterialFormModule, RespaldoCobroComponent, FuenteAportesGaranteComponent],
   templateUrl: './precancelacion-dialog.component.html',
   styleUrl: './precancelacion-dialog.component.scss',
 })
@@ -62,6 +65,7 @@ export class PrecancelacionDialogComponent {
   private cobroCreditoService = inject(CobroCreditoService);
   private funcionesDatos = inject(FuncionesDatosService);
   private dialog = inject(MatDialog);
+  private garanteService = inject(GarantePrestamoService);
 
   /** Bloque de respaldo. Se renderiza siempre: recalcular no debe perder el comprobante cargado. */
   respaldo = viewChild(RespaldoCobroComponent);
@@ -89,6 +93,16 @@ export class PrecancelacionDialogComponent {
   errorCodigo = signal<string | null>(null);
   /** Se enciende tras un MONTO_NO_COINCIDE: exige una confirmación nueva sobre el monto corregido. */
   montoRecalculado = signal(false);
+
+  // ---- aportes del garante (DISENO-PAGO-CON-APORTES-DEL-GARANTE §G6) ----
+  /** Garante activo partícipe del préstamo, si lo tiene. */
+  garante = signal<GarantePrestamo | null>(null);
+  fuente = signal<FuenteAportes>('deudor');
+  /** Autorización firmada del garante: obligatoria con aportes del garante. */
+  autorizacion = signal<File | null>(null);
+  /** Con garante el reparto es 100 % aportes del garante: no hay renglón de efectivo ni depósito. */
+  usaGarante = computed(() => this.fuente() === 'garante' && !!this.garante());
+  autorizacionLista = computed(() => !this.usaGarante() || this.autorizacion() != null);
 
   /** Renglones del reparto; se mutan directamente, por eso el contador de versión. */
   fondos: RenglonFondo[] = [];
@@ -149,7 +163,8 @@ export class PrecancelacionDialogComponent {
       !this.aplicando() &&
       this.total() > 0.004 &&
       this.fechaAfectacionValida() &&
-      this.respaldoListo()
+      this.respaldoListo() &&
+      this.autorizacionLista()
   );
 
   saldoAportesTotal = computed(() => this.saldos().reduce((s, a) => s + Math.max(a.saldo ?? 0, 0), 0));
@@ -159,6 +174,29 @@ export class PrecancelacionDialogComponent {
     @Inject(MAT_DIALOG_DATA) public data: ContextoPrestamo
   ) {
     this.simular();
+    this.cargarGarante();
+  }
+
+  /** Dato accesorio: si falla, el diálogo sigue precancelando solo con fondos del deudor. */
+  private cargarGarante(): void {
+    if (!this.data.idPrestamo) return;
+    this.garanteService.porPrestamo(this.data.idPrestamo).subscribe({
+      next: (g) => {
+        if (g?.codigo && g.idEntidad && g.estado !== 0) this.garante.set(g);
+      },
+      error: () => {},
+    });
+  }
+
+  /** Cambia de quién son los aportes: se rearma el reparto y se vuelve a pedir la autorización. */
+  cambiarFuente(fuente: FuenteAportes): void {
+    if (fuente === this.fuente()) return;
+    this.fuente.set(fuente);
+    this.autorizacion.set(null);
+    this.errorMensaje.set(null);
+    this.errorCodigo.set(null);
+    this.saldos.set([]);
+    if (this.simulacion()) this.cargarSaldos(true);
   }
 
   // ================= paso 1: simular =================
@@ -201,7 +239,7 @@ export class PrecancelacionDialogComponent {
    * dinero que el socio nunca entregó.
    */
   private cargarSaldos(precargarEfectivo: boolean): void {
-    const idEntidad = this.data.idEntidad;
+    const idEntidad = this.usaGarante() ? this.garante()?.idEntidad : this.data.idEntidad;
     this.construirFondos([], precargarEfectivo);
     if (!idEntidad) return;
 
@@ -222,14 +260,14 @@ export class PrecancelacionDialogComponent {
       precargarEfectivo ? porDefecto : textoPrevio.get(clave) ?? porDefecto;
 
     this.fondos = [
-      {
+      ...(this.usaGarante() ? [] : [{
         clave: 'efectivo',
         nombre: 'Efectivo / transferencia',
         idTipoAporte: null,
         disponible: Number.POSITIVE_INFINITY,
         // Arranca con todo en efectivo: es el caso más común en ventanilla.
         texto: texto('efectivo', this.formatMoneda(this.total())),
-      },
+      }]),
       ...saldos.map((a) => ({
         clave: `aporte-${a.idTipoAporte}`,
         nombre: a.nombre,
@@ -313,12 +351,52 @@ export class PrecancelacionDialogComponent {
     this.errorCodigo.set(null);
     this.aplicando.set(true);
 
+    if (this.usaGarante()) {
+      this.confirmarConGarante();
+      return;
+    }
+
     this.archivarComprobante((ruta, exito) => {
       if (!exito) {
         this.aplicando.set(false);
         return;
       }
       this.enviarPrecancelacion(ruta);
+    });
+  }
+
+  /**
+   * Con aportes del garante: confirmación explícita (§G3) con el aviso de comprometido (§G5, no
+   * detiene), se archiva la autorización firmada y recién entonces se envía `precancelar` con `idGarante`.
+   */
+  private confirmarConGarante(): void {
+    const garante = this.garante();
+    const archivo = this.autorizacion();
+    if (!garante || !archivo) {
+      this.aplicando.set(false);
+      return;
+    }
+    confirmarPagoConGarante(this.dialog, this.servicio, {
+      garante,
+      monto: this.repartido(),
+      tituloPrestamo: this.data.titulo,
+      deudor: this.data.participante ?? '',
+    }).subscribe((confirmado) => {
+      if (!confirmado) {
+        this.aplicando.set(false);
+        return;
+      }
+      this.comprobantes
+        .archivar(archivo, this.comprobantes.carpetaDePrestamo(this.data.idPrestamo), String(this.data.idPrestamo))
+        .subscribe((resultado) => {
+          if (resultado.error || !resultado.ruta) {
+            this.aplicando.set(false);
+            this.errorCodigo.set('COMPROBANTE_NO_ARCHIVADO');
+            this.errorMensaje.set(this.comprobantes.mensajeDeFallo(resultado.error ?? ''));
+            return;
+          }
+          this.enviarPrecancelacion(resultado.ruta);
+        });
     });
   }
 
@@ -387,6 +465,7 @@ export class PrecancelacionDialogComponent {
         fecha,
         fechaAfectacion,
         rutaDocumentoRespaldo,
+        ...(this.usaGarante() ? { idGarante: this.garante()?.codigo } : {}),
       })
       .subscribe((resp) => {
         this.aplicando.set(false);
@@ -403,6 +482,9 @@ export class PrecancelacionDialogComponent {
               precancelacion: resultado,
               nombresTipoAporte: this.nombresTipoAporte(),
               detalleExtra: [
+                ...(this.usaGarante()
+                  ? [{ label: 'Origen de los aportes', valor: `Aportes del garante ${this.garante()?.nombre} (C.C. ${this.garante()?.cedula})` }]
+                  : []),
                 { label: 'Intereses condonados', valor: this.formatMoneda(this.simulacion()?.interesCondonado) },
                 { label: 'Pagado en efectivo', valor: this.formatMoneda(this.parseMoneda(efectivo?.texto)) },
                 ...this.detalleDelRespaldo(rutaDocumentoRespaldo),

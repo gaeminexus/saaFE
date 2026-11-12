@@ -131,6 +131,21 @@ export interface ResultadoPagoMultiple {
   nombreEntidad: string;
 }
 
+// ===================== GET /prst/compromisoGarante/{idGarante}?monto= =====================
+
+/**
+ * Aviso de comprometido del garante (DISENO-PAGO-CON-APORTES-DEL-GARANTE §G5). Solo lectura: el
+ * aviso NO detiene el pago.
+ */
+export interface CompromisoGarante {
+  saldoAportes: number;
+  capitalComprometido: number;
+  saldoDespues: number;
+  quedaDescubierto: boolean;
+  /** Texto listo para mostrar; `null` si no hay nada que avisar. */
+  mensaje: string | null;
+}
+
 // ===================== §5 POST /prst/pagarConAportes =====================
 
 export interface PagoConAportesRequest {
@@ -143,6 +158,11 @@ export interface PagoConAportesRequest {
   fechaPago?: string | null;
   /** Ruta del comprobante ya subido. Se estampa en todos los `PagoPrestamo` que genere el pago. */
   rutaDocumentoRespaldo?: string | null;
+  /**
+   * PK de `CRD.GRPR`: paga con los aportes del GARANTE del préstamo en vez de los del deudor.
+   * Exige `rutaDocumentoRespaldo` (la autorización firmada del garante). Sin él, aportes del deudor.
+   */
+  idGarante?: number | null;
   /** Al menos un renglón, sin tipos repetidos. El valor total del pago es su suma. */
   aportes: DesgloseAporte[];
 }
@@ -305,6 +325,11 @@ export interface PrecancelacionRequest {
   fechaAfectacion?: string | null;
   /** Ruta del comprobante ya subido. Se estampa en los pagos que genere la precancelación. */
   rutaDocumentoRespaldo?: string | null;
+  /**
+   * PK de `CRD.GRPR`: la precancelación se paga 100 % con aportes del GARANTE (sin efectivo ni
+   * depósito). Exige `rutaDocumentoRespaldo` (la autorización firmada del garante).
+   */
+  idGarante?: number | null;
 }
 
 export interface ResultadoPrecancelacion {
