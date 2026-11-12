@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable, catchError, of, throwError } from 'rxjs';
 import { DatosBusqueda } from '../../../shared/model/datos-busqueda/datos-busqueda';
 import { Ejcc } from '../model/ejcc';
+import { ResumenFinancieroCartera } from '../model/resumen-financiero';
 import { ServiciosRpr } from './ws-rpr';
 
 /** Payload para POST /ejcc/ejecutar */
@@ -76,6 +77,15 @@ export class EjccService {
     return this.http
       .post<EjecutarReporteCarteraResponse>(url, request, this.httpOptions)
       .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * C27-E — Resumen Financiero de la ejecución comparado con el balance al corte.
+   * GET /ejcc/resumenFinanciero/{codigo}
+   */
+  resumenFinanciero(codigo: number): Observable<ResumenFinancieroCartera | null> {
+    const url = `${ServiciosRpr.RS_EJCC}/resumenFinanciero/${codigo}`;
+    return this.http.get<ResumenFinancieroCartera>(url).pipe(catchError(this.handleError));
   }
 
   private handleError(error: HttpErrorResponse | any): Observable<null> {

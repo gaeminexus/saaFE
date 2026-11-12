@@ -14,23 +14,23 @@ import { Ejcc } from '../../model/ejcc';
 import { Cprm } from '../../model/cprm';
 import { Cjbm } from '../../model/cjbm';
 import { Ccpm } from '../../model/ccpm';
+import { LineaResumenFinanciero, ResumenFinancieroCartera } from '../../model/resumen-financiero';
 import { DatosBusqueda } from '../../../../shared/model/datos-busqueda/datos-busqueda';
 import { TipoDatosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-datos-busqueda';
 import { TipoComandosBusqueda } from '../../../../shared/model/datos-busqueda/tipo-comandos-busqueda';
 
 type ReporteTipo = 'CPRM' | 'CJBM' | 'CCPM';
 
-interface FilaResumen {
-  concepto:  string;
-  categoria: string;
-  valor:     number;
-}
-
+/** C27-E: grupo del Resumen Financiero; el total sale de la línea de total del backend o de la suma de líneas. */
 interface ResumenGrupo {
   categoria: string;
-  filas:     FilaResumen[];
-  total:     number;
+  filas:     LineaResumenFinanciero[];
+  /** Línea de total del grupo (backend) o suma de las líneas redondeadas */
+  total:     LineaResumenFinanciero;
 }
+
+/** Redondeo a 2 decimales (cada línea ya viene redondeada del backend). */
+const r2 = (n: number): number => Math.round((n + Number.EPSILON) * 100) / 100;
 
 interface ResumenReporte {
   tipo: ReporteTipo;
@@ -93,20 +93,46 @@ export class InformesMensualesCreditoComponent implements OnInit {
   columnasDef    = signal<ColumnaTabla[]>([]);
   errorRegistros = signal<string>('');
 
-  resumenFinanciero = signal<FilaResumen[]>([]);
+  resumenFinanciero = signal<LineaResumenFinanciero[]>([]);
+  /** C27-E: cabecera del resumen (fechas de generación y de cierre, aviso de desactualizada) */
+  resumenCabecera   = signal<ResumenFinancieroCartera | null>(null);
   cargandoResumen   = signal<boolean>(false);
+
+  /** C27-E: líneas comparables con diferencia distinta de cero */
+  lineasConDiferencia = computed<number>(() =>
+    this.resumenFinanciero().filter(l => l.comparable && Math.abs(l.diferencia ?? 0) >= 0.005).length
+  );
 
   resumenGrupos = computed<ResumenGrupo[]>(() => {
     const filas = this.resumenFinanciero();
-    const grupos = new Map<string, ResumenGrupo>();
+    const grupos = new Map<string, { filas: LineaResumenFinanciero[]; total: LineaResumenFinanciero | null }>();
     for (const f of filas) {
-      const key = f.categoria;
-      if (!grupos.has(key)) grupos.set(key, { categoria: key, filas: [], total: 0 });
+      const key = f.grupo;
+      if (!grupos.has(key)) grupos.set(key, { filas: [], total: null });
       const g = grupos.get(key)!;
-      g.filas.push(f);
-      g.total += f.valor;
+      if (f.total) {
+        g.total = f;
+      } else {
+        g.filas.push(f);
+      }
     }
-    return [...grupos.values()];
+    const resultado: ResumenGrupo[] = [];
+    for (const [categoria, g] of grupos.entries()) {
+      let total = g.total;
+      if (!total) {
+        // Sin línea de total del backend: suma de las líneas (ya redondeadas), comparando solo si todas comparan.
+        const comparables = g.filas.length > 0 && g.filas.every(l => l.comparable);
+        const informe = r2(g.filas.reduce((s, l) => s + (l.valorInforme ?? 0), 0));
+        const contable = comparables ? r2(g.filas.reduce((s, l) => s + (l.saldoContable ?? 0), 0)) : null;
+        total = {
+          grupo: categoria, concepto: 'SUBTOTAL', cuenta: null, valorInforme: informe, saldoContable: contable,
+          diferencia: contable !== null ? r2(informe - contable) : null, comparable: comparables,
+          registros: null, nota: null, total: true,
+        };
+      }
+      resultado.push({ categoria, filas: g.filas, total });
+    }
+    return resultado;
   });
 
   resumenes = signal<ResumenReporte[]>([
@@ -356,7 +382,6 @@ export class InformesMensualesCreditoComponent implements OnInit {
 
   private cargarConteos(ejccCodigo: number): void {
     const criterios = this.buildCriterio(ejccCodigo);
-    this.cargandoResumen.set(true);
 
     forkJoin({
       cprm: this.cprmService.selectByCriteria(criterios),
@@ -364,203 +389,65 @@ export class InformesMensualesCreditoComponent implements OnInit {
       ccpm: this.ccpmService.selectByCriteria(criterios),
     }).subscribe({
       next: ({ cprm, cjbm, ccpm }) => {
-        const cprmData = cprm ?? [];
-        const cjbmData = cjbm ?? [];
-        const ccpmData = ccpm ?? [];
-
-        this.actualizarResumen('CPRM', cprmData.length);
-        this.actualizarResumen('CJBM', cjbmData.length);
-        this.actualizarResumen('CCPM', ccpmData.length);
-
-        try {
-          this.calcularResumenFinanciero(ccpmData, cprmData, cjbmData);
-        } catch (e) {
-          console.error('[ResumenFinanciero] Error al calcular resumen:', e);
-        } finally {
-          this.cargandoResumen.set(false);
-        }
+        this.actualizarResumen('CPRM', (cprm ?? []).length);
+        this.actualizarResumen('CJBM', (cjbm ?? []).length);
+        this.actualizarResumen('CCPM', (ccpm ?? []).length);
       },
       error: (err) => {
         console.error('[ResumenFinanciero] Error en forkJoin:', err);
         this.actualizarResumen('CPRM', 0);
         this.actualizarResumen('CJBM', 0);
         this.actualizarResumen('CCPM', 0);
-        this.cargandoResumen.set(false);
       },
     });
+    this.cargarResumenFinanciero(ejccCodigo);
   }
 
-  private calcularResumenFinanciero(ccpm: Ccpm[], cprm: Cprm[], cjbm: Cjbm[]): void {
-    const filas: FilaResumen[] = [];
-
-    // ── Helpers ────────────────────────────────────────────────────
-    const sf = (rows: any[], field: string): number =>
-      rows.reduce((s: number, r: any) => s + (Number(r[field]) || 0), 0);
-
-    /** Filtra CCPM por coincidencia exacta (case-insensitive) del campo tipoCredito */
-    const filtrarTC = (...nombres: string[]): Ccpm[] => {
-      const set = new Set(nombres.map(n => n.toUpperCase()));
-      return ccpm.filter(r => set.has(String(r.tipoCredito ?? '').toUpperCase()));
-    };
-
-    const agregarPorVencer = (cat: string, rows: Ccpm[]): void => {
-      filas.push({ concepto: 'DE 1 A 30 DIAS',       categoria: cat, valor: sf(rows, 'capitalPorVencer1a30') });
-      filas.push({ concepto: 'DE 31 A 90 DIAS',       categoria: cat, valor: sf(rows, 'capitalPorVencer31a90') });
-      filas.push({ concepto: 'DE 91 A 180 DIAS',      categoria: cat, valor: sf(rows, 'capitalPorVencer91a180') });
-      filas.push({ concepto: 'DE 181 A 360 DIAS',     categoria: cat, valor: sf(rows, 'capitalPorVencer181a360') });
-      filas.push({ concepto: 'DE MAS DE 360 DIAS',    categoria: cat, valor: sf(rows, 'capitalPorVencerMas360') });
-    };
-
-    const vencidoRango = (rows: Ccpm[], min: number, max: number | null): number =>
-      rows
-        .filter(r => r.diasMorosidad >= min && (max === null || r.diasMorosidad <= max) && (r.valorVencido ?? 0) > 0)
-        .reduce((s, r) => s + (r.valorVencido ?? 0), 0);
-
-    // ── Filtros por nombre exacto ──────────────────────────────────
-    // Quirografarios: base + emergentes + express + sustituciones
-    const quiro    = filtrarTC(
-      'QUIROGRAFARIO',
-      'QUIROGRAFARIO EXPRESS',
-      'QUIROGRAFARIO SUSTITUCIÓN DE DEUDA BIESS',
-      'QUIROGRAFARIO SUSTITUCIÓN DE DEUDA MERCADO FINANCIERO',
-      'EMERGENTE',
-    );
-    const quiroNov = filtrarTC('QUIROGRAFARIO NOVACION');
-    const quiroRee = filtrarTC('QUIROGRAFARIO RESTRUCTURADO', 'EMERGENTE RESTRUCTURADO');
-
-    // Prendarios
-    const prend    = filtrarTC('PRENDARIO');
-    const prendRee = filtrarTC('PRENDARIO RESTRUCTURADO');
-    const prendNov = filtrarTC('PRENDARIO NOVACION');
-
-    // Hipotecarios
-    const hipo     = filtrarTC('HIPOTECARIO');
-    const hipoRee  = filtrarTC('HIPOTECARIO RESTRUCTURADO');
-    const hipoNov  = filtrarTC('HIPOTECARIO NOVACION');
-
-    // ── Quirografarios Por Vencer ──────────────────────────────────
-    agregarPorVencer('PRESTAMOS QUIROGRAFARIOS POR VENCER', quiro);
-    // ── Quirografarios Novación ────────────────────────────────────
-    agregarPorVencer('PRESTAMOS QUIROGRAFARIOS NOVACION', quiroNov);
-    // ── Quirografarios Reestructurados ─────────────────────────────
-    agregarPorVencer('PRESTAMOS QUIROGRAFARIOS REESTRUCTURADOS', quiroRee);
-    // ── Quirografarios Vencidos ────────────────────────────────────
-    const catQV = 'PRESTAMOS QUIROGRAFARIOS VENCIDOS';
-    const rowsQV = [...quiro, ...quiroRee];
-    filas.push({ concepto: 'DE 1 A 30 DIAS',       categoria: catQV, valor: vencidoRango(rowsQV, 0, 30) });
-    filas.push({ concepto: 'DE 31 A 90 DIAS',       categoria: catQV, valor: vencidoRango(rowsQV, 31, 90) });
-    filas.push({ concepto: 'DE 91 A 180 DIAS',      categoria: catQV, valor: vencidoRango(rowsQV, 91, 180) });
-    filas.push({ concepto: 'DE 181 A 270 DIAS',     categoria: catQV, valor: vencidoRango(rowsQV, 181, 270) });
-    filas.push({ concepto: 'DE MAS DE 270 DIAS',    categoria: catQV, valor: vencidoRango(rowsQV, 271, null) });
-
-    // ── Prendarios Por Vencer ──────────────────────────────────────
-    agregarPorVencer('PRESTAMOS PRENDARIOS POR VENCER', prend);
-    // ── Prendarios Reestructurados ─────────────────────────────────
-    agregarPorVencer('PRESTAMOS PRENDARIOS REESTRUCTURADOS', prendRee);
-    // ── Prendarios Novación ────────────────────────────────────────
-    agregarPorVencer('PRESTAMOS PRENDARIOS NOVACION', prendNov);
-    // ── Prendarios Vencidos ────────────────────────────────────────
-    const catPV = 'PRESTAMOS PRENDARIOS VENCIDOS';
-    const rowsPV = [...prend, ...prendRee];
-    filas.push({ concepto: 'DE 1 A 30 DIAS',       categoria: catPV, valor: vencidoRango(rowsPV, 0, 30) });
-    filas.push({ concepto: 'DE 31 A 90 DIAS',       categoria: catPV, valor: vencidoRango(rowsPV, 31, 90) });
-    filas.push({ concepto: 'DE 91 A 180 DIAS',      categoria: catPV, valor: vencidoRango(rowsPV, 91, 180) });
-    filas.push({ concepto: 'DE 181 A 360 DIAS',     categoria: catPV, valor: vencidoRango(rowsPV, 181, 360) });
-    filas.push({ concepto: 'DE MAS DE 360 DIAS',    categoria: catPV, valor: vencidoRango(rowsPV, 361, null) });
-
-    // ── Hipotecarios Por Vencer ────────────────────────────────────
-    agregarPorVencer('PRESTAMOS HIPOTECARIOS POR VENCER', hipo);
-    // ── Hipotecarios Reestructurados ───────────────────────────────
-    agregarPorVencer('PRESTAMOS HIPOTECARIOS REESTRUCTURADOS', hipoRee);
-    // ── Hipotecarios Novación ──────────────────────────────────────
-    agregarPorVencer('PRESTAMOS HIPOTECARIOS NOVACION', hipoNov);
-    // ── Hipotecarios Vencidos ──────────────────────────────────────
-    const catHV = 'PRESTAMOS HIPOTECARIOS VENCIDOS';
-    const rowsHV = [...hipo, ...hipoRee];
-    filas.push({ concepto: 'DE 1 A 30 DIAS',       categoria: catHV, valor: vencidoRango(rowsHV, 0, 30) });
-    filas.push({ concepto: 'DE 31 A 90 DIAS',       categoria: catHV, valor: vencidoRango(rowsHV, 31, 90) });
-    filas.push({ concepto: 'DE 91 A 270 DIAS',      categoria: catHV, valor: vencidoRango(rowsHV, 91, 270) });
-    filas.push({ concepto: 'DE 271 A 360 DIAS',     categoria: catHV, valor: vencidoRango(rowsHV, 271, 360) });
-    filas.push({ concepto: 'DE 361 A 720 DIAS',     categoria: catHV, valor: vencidoRango(rowsHV, 361, 720) });
-    filas.push({ concepto: 'DE MAS DE 720 DIAS',    categoria: catHV, valor: vencidoRango(rowsHV, 721, null) });
-
-    // ── CXC Intereses (interesOrdinario + interesMora acumulados) ──────────────
-    const catInt = 'CXC Interes Por Tabla de Amortizacion e Interes x Mora';
-    const intQ = sf([...quiro, ...quiroNov, ...quiroRee], 'interesOrdinario') + sf([...quiro, ...quiroNov, ...quiroRee], 'interesMora');
-    const intP = sf([...prend, ...prendRee, ...prendNov], 'interesOrdinario') + sf([...prend, ...prendRee, ...prendNov], 'interesMora');
-    const intH = sf([...hipo,  ...hipoRee,  ...hipoNov],  'interesOrdinario') + sf([...hipo,  ...hipoRee,  ...hipoNov],  'interesMora');
-    filas.push({ concepto: 'Intereses por préstamos quirografarios', categoria: catInt, valor: intQ });
-    filas.push({ concepto: 'Intereses por préstamos prendarios',     categoria: catInt, valor: intP });
-    filas.push({ concepto: 'Intereses por préstamos hipotecarios',   categoria: catInt, valor: intH });
-
-    // ── Seguros ────────────────────────────────────────────────────
-    // Cada concepto se desglosa en vigentes (cuotas con 0 días de mora)
-    // y vencidos (cuotas con más de 0 días de mora).
-    const catSeg = 'Seguros';
-    const rowsSegHipo = [...quiro, ...quiroNov, ...quiroRee, ...hipo, ...hipoRee, ...hipoNov];
-    const rowsSegPrend = [...prend, ...prendRee, ...prendNov];
-    const rowsSegTodos = [...quiro, ...quiroNov, ...quiroRee, ...prend, ...prendRee, ...prendNov, ...hipo, ...hipoRee, ...hipoNov];
-
-    /** Suma `field` sobre las cuotas vigentes (0 días de mora) o vencidas (> 0 días) */
-    const sfMora = (rows: Ccpm[], field: string, vigente: boolean): number =>
-      sf(rows.filter(r => vigente ? (Number(r.diasMorosidad) || 0) === 0
-                                  : (Number(r.diasMorosidad) || 0) > 0), field);
-
-    const agregarSeguro = (concepto: string, rows: Ccpm[], field: string): void => {
-      filas.push({ concepto: `${concepto} vigentes`, categoria: catSeg, valor: sfMora(rows, field, true) });
-      filas.push({ concepto: `${concepto} vencidos`, categoria: catSeg, valor: sfMora(rows, field, false) });
-    };
-
-    // Hipotecarios: valorIncendio de todos EXCEPTO prendarios y prendarios restructurados
-    agregarSeguro('Seguro prestamos hipotecarios', rowsSegHipo, 'valorIncendio');
-    // Prendarios: valorIncendio de prendarios y prendarios restructurados
-    agregarSeguro('Seguro prestamos prendarios', rowsSegPrend, 'valorIncendio');
-    filas.push({ concepto: 'Seguro medico por cobrar vigentes', categoria: catSeg, valor: 0 });
-    filas.push({ concepto: 'Seguro medico por cobrar vencidos', categoria: catSeg, valor: 0 });
-    // Desgravamen: sumatoria de todos los préstamos
-    agregarSeguro('Cuenta por Cobrar Seguro de Desgravamen Participes', rowsSegTodos, 'valorDesgravamen');
-
-    // ── Provisiones Requeridas ─────────────────────────────────────
-    const catPR = 'PROVISIONES INVERSIONES PRIVATIVAS';
-    filas.push({ concepto: 'Por prestamos quirografarios', categoria: catPR, valor: sf([...quiro, ...quiroNov, ...quiroRee], 'provisionRequeridaOriginal') });
-    filas.push({ concepto: 'Por prestamos prendarios',     categoria: catPR, valor: sf([...prend, ...prendRee, ...prendNov], 'provisionRequeridaOriginal') });
-    filas.push({ concepto: 'Por prestamos hipotecarios',   categoria: catPR, valor: sf([...hipo,  ...hipoRee,  ...hipoNov],  'provisionRequeridaOriginal') });
-
-    // ── INGRESOS POR INVERSIONES PRIVATIVAS (interesOrdinarioDelMes + interesMoraDelMes) ────
-    const catPIP = 'INGRESOS POR INVERSIONES PRIVATIVAS';
-    filas.push({ concepto: 'Quirografarios', categoria: catPIP, valor: sf([...quiro, ...quiroNov, ...quiroRee], 'interesOrdinarioDelMes') + sf([...quiro, ...quiroNov, ...quiroRee], 'interesMoraDelMes') });
-    filas.push({ concepto: 'Prendarios',     categoria: catPIP, valor: sf([...prend, ...prendRee, ...prendNov], 'interesOrdinarioDelMes') + sf([...prend, ...prendRee, ...prendNov], 'interesMoraDelMes') });
-    filas.push({ concepto: 'Hipotecarios',   categoria: catPIP, valor: sf([...hipo,  ...hipoRee,  ...hipoNov],  'interesOrdinarioDelMes') + sf([...hipo,  ...hipoRee,  ...hipoNov],  'interesMoraDelMes') });
-
-    // ── Aportes de CPRM agrupados dinámicamente por tipoAporte.nombre ─
-    const aportePorTipo = new Map<string, number>();
-    for (const r of cprm) {
-      const nombre = r.tipoAporte?.nombre ?? '(Sin tipo)';
-      aportePorTipo.set(nombre, (aportePorTipo.get(nombre) ?? 0) + (r.total ?? 0));
-    }
-    const excluirAportes = new Set(['Pensiones Complementarias por Pagar']);
-    for (const [nombre, valor] of aportePorTipo.entries()) {
-      if (excluirAportes.has(nombre)) continue;
-      filas.push({ concepto: nombre, categoria: 'Aportes (por tipo)', valor });
-    }
-
-    this.resumenFinanciero.set(filas);
+  /**
+   * C27-E: el Resumen Financiero lo arma el backend (GET /ejcc/resumenFinanciero/{codigo}) con cada
+   * linea junto al saldo contable de su cuenta y la diferencia. Antes se armaba aqui sumando campos del
+   * CCPM por NOMBRE de producto, con el vencido de cada prestamo en la banda de sus dias maximos, el
+   * interes de la cuota del mes como "por cobrar" y sin redondear las lineas (diagnostico de junio 2025).
+   */
+  private cargarResumenFinanciero(ejccCodigo: number): void {
+    this.cargandoResumen.set(true);
+    this.ejccService.resumenFinanciero(ejccCodigo).subscribe({
+      next: (resumen) => {
+        this.cargandoResumen.set(false);
+        this.resumenCabecera.set(resumen);
+        this.resumenFinanciero.set(resumen?.lineas ?? []);
+      },
+      error: (err: any) => {
+        this.cargandoResumen.set(false);
+        this.resumenCabecera.set(null);
+        this.resumenFinanciero.set([]);
+        this.errorMsg.set("Error al armar el resumen financiero: " + mensajeDeError(err));
+      },
+    });
   }
 
   exportarResumenCSV(): void {
     const grupos = this.resumenGrupos();
     if (!grupos.length) return;
 
+    const n = (v: number | null): string => (v === null || v === undefined ? '' : v.toFixed(2));
     const flatRows: Record<string, string>[] = [];
+    const agregar = (categoria: string, fila: LineaResumenFinanciero): void => {
+      flatRows.push({
+        categoria,
+        concepto:   fila.concepto,
+        cuenta:     fila.cuenta ?? '',
+        informe:    n(fila.valorInforme),
+        contable:   n(fila.saldoContable),
+        diferencia: fila.comparable ? n(fila.diferencia) : '',
+        nota:       fila.nota ?? '',
+      });
+    };
     for (const grupo of grupos) {
       for (const fila of grupo.filas) {
-        flatRows.push({
-          categoria: grupo.categoria,
-          concepto:  fila.concepto,
-          valor:     fila.valor.toFixed(2),
-        });
+        agregar(grupo.categoria, fila);
       }
-      flatRows.push({ categoria: '', concepto: 'SUBTOTAL', valor: grupo.total.toFixed(2) });
+      agregar('', grupo.total);
     }
 
     const mes  = String(this.mesSeleccionado()).padStart(2, '0');
@@ -568,8 +455,8 @@ export class InformesMensualesCreditoComponent implements OnInit {
     this.exportService.exportToCSV(
       flatRows,
       `ResumenFinanciero_${anio}${mes}`,
-      ['Categoría', 'Concepto', 'Valor'],
-      ['categoria', 'concepto', 'valor'],
+      ['Categoría', 'Concepto', 'Cuenta', 'Informe', 'Contabilidad', 'Diferencia', 'Nota'],
+      ['categoria', 'concepto', 'cuenta', 'informe', 'contable', 'diferencia', 'nota'],
     );
   }
 
@@ -587,29 +474,42 @@ export class InformesMensualesCreditoComponent implements OnInit {
     const d = new Date();
     const fecha = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 
-    const fmt = (n: number): string =>
-      n.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = (n: number | null): string =>
+      n === null || n === undefined ? ''
+        : n.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const logoHtml = '<img src="' + LOGO_ASOPREP_BASE64 + '" alt="Logo ASOPREP">';
+    const cabecera = this.resumenCabecera();
+    const avisoHtml = cabecera?.desactualizada && cabecera.aviso
+      ? `<div style="background:#fff3e0;border:1px solid #fb8c00;padding:8px 12px;margin-bottom:12px;border-radius:6px">${cabecera.aviso}</div>`
+      : '';
+
+    const celdas = (fila: LineaResumenFinanciero): string => {
+      const dif = fila.comparable ? fila.diferencia : null;
+      const marca = dif !== null && Math.abs(dif) >= 0.005 ? ' style="color:#c62828;font-weight:700"' : '';
+      return `<td class="col-cuenta">${fila.cuenta ?? ''}</td>
+          <td class="col-valor">${fmt(fila.valorInforme)}</td>
+          <td class="col-valor">${fmt(fila.saldoContable)}</td>
+          <td class="col-valor"${marca}>${fmt(dif)}</td>`;
+    };
 
     let filasTbody = '';
     for (const grupo of grupos) {
       filasTbody += `
         <tr class="fila-grupo">
-          <td colspan="2">${grupo.categoria}</td>
+          <td colspan="5">${grupo.categoria}</td>
         </tr>`;
       for (const fila of grupo.filas) {
-        const esCero = fila.valor === 0;
         filasTbody += `
         <tr class="fila-detalle">
           <td class="col-concepto">${fila.concepto}</td>
-          <td class="col-valor${esCero ? ' val-cero' : ''}">${fmt(fila.valor)}</td>
+          ${celdas(fila)}
         </tr>`;
       }
       filasTbody += `
         <tr class="fila-subtotal">
-          <td class="subtotal-label">SUBTOTAL</td>
-          <td class="subtotal-val">${fmt(grupo.total)}</td>
+          <td class="subtotal-label">${grupo.total.concepto}</td>
+          ${celdas(grupo.total)}
         </tr>`;
     }
 
@@ -736,11 +636,15 @@ export class InformesMensualesCreditoComponent implements OnInit {
     </div>
     <div class="doc-badge">${this.mesNombre()} ${anio}</div>
   </div>
+  ${avisoHtml}
   <table>
     <thead>
       <tr>
         <th class="col-concepto">Concepto</th>
-        <th class="col-valor">Valor</th>
+        <th>Cuenta</th>
+        <th class="col-valor">Informe</th>
+        <th class="col-valor">Contabilidad</th>
+        <th class="col-valor">Diferencia</th>
       </tr>
     </thead>
     <tbody>
@@ -835,6 +739,22 @@ export class InformesMensualesCreditoComponent implements OnInit {
     this.errorRegistros.set('');
     this.resumenes.update(r => r.map(x => ({ ...x, cantidad: null })));
     this.resumenFinanciero.set([]);
+    this.resumenCabecera.set(null);
+  }
+
+  /** C27-E: fecha con hora (LocalDateTime como texto ISO o arreglo [a,m,d,h,mi,...]). */
+  formatFechaHora(v: any): string {
+    if (!v) return '';
+    if (Array.isArray(v) && v.length >= 3) {
+      const [y, m, d, h, mi] = v;
+      const hora = h !== undefined ? ` ${String(h).padStart(2, '0')}:${String(mi ?? 0).padStart(2, '0')}` : '';
+      return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}${hora}`;
+    }
+    if (typeof v === 'string') {
+      const [fecha, hora] = v.split('T');
+      return this.formatFecha(fecha) + (hora ? ' ' + hora.substring(0, 5) : '');
+    }
+    return String(v);
   }
 
   private formatFecha(v: any): string {

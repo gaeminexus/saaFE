@@ -96,7 +96,23 @@
         <mat-icon>event</mat-icon>
         <span class="ejcc-periodo">{{ mesNombre() }} {{ anioSeleccionado() }}</span>
         <span class="ejcc-usuario">Generado por: <strong>{{ ejecucion()!.usuario }}</strong></span>
+        <span class="ejcc-usuario">el <strong>{{ formatFechaHora(ejecucion()!.fechaGeneracion) }}</strong></span>
+        @if (resumenCabecera(); as cab) {
+          @if (cab.fechaCierreContable) {
+            <span class="ejcc-usuario">· Cierre contable: <strong>{{ formatFechaHora(cab.fechaCierreContable) }}</strong></span>
+          }
+          @if (cab.fechaCierreCartera) {
+            <span class="ejcc-usuario">· Cierre de cartera: <strong>{{ formatFechaHora(cab.fechaCierreCartera) }}</strong></span>
+          }
+        }
       </div>
+      <!-- C27-E: aviso de ejecución desactualizada (anterior al cierre del mes o período reabierto) -->
+      @if (resumenCabecera()?.desactualizada) {
+        <div class="aviso-desactualizada">
+          <mat-icon>warning</mat-icon>
+          <span><strong>Informes desactualizados.</strong> {{ resumenCabecera()!.aviso }}</span>
+        </div>
+      }
     }
 
     <!-- Tarjetas de reportes -->
@@ -162,34 +178,64 @@
         }
 
         @if (!cargandoResumen() && resumenGrupos().length > 0) {
+          <!-- C27-E: cada línea con el saldo contable de su cuenta y la diferencia -->
+          <p class="resumen-leyenda">
+            Cada línea se compara con el saldo contable de su cuenta al corte.
+            @if (lineasConDiferencia() > 0) {
+              <span class="dif-marca">{{ lineasConDiferencia() }} línea(s) comparables con diferencia.</span>
+            } @else {
+              <span class="dif-ok">Todas las líneas comparables cuadran con la contabilidad.</span>
+            }
+            Las líneas sin diferencia son informativas (ver la nota de cada una).
+          </p>
           <div class="resumen-tabla-wrap">
             <table class="resumen-tabla">
               <thead>
                 <tr>
                   <th class="col-concepto">Concepto</th>
-                  <th class="col-valor">Valor</th>
+                  <th class="col-cuenta">Cuenta</th>
+                  <th class="col-num">Informe</th>
+                  <th class="col-num">Contabilidad</th>
+                  <th class="col-num">Diferencia</th>
                 </tr>
               </thead>
               <tbody>
                 @for (grupo of resumenGrupos(); track grupo.categoria) {
                   <tr class="fila-grupo">
-                    <td colspan="2" class="grupo-cat">{{ grupo.categoria || '—' }}</td>
+                    <td colspan="5" class="grupo-cat">{{ grupo.categoria || '—' }}</td>
                   </tr>
-                  @for (fila of grupo.filas; track fila.concepto) {
-                    <tr class="fila-detalle">
+                  @for (fila of grupo.filas; track $index) {
+                    <tr class="fila-detalle" [matTooltip]="fila.nota ?? ''">
                       <td class="col-concepto">{{ fila.concepto }}</td>
-                      <td class="col-valor">
-                        @if (fila.valor !== 0) {
-                          {{ fila.valor | number:'1.2-2' }}
+                      <td class="col-cuenta">{{ fila.cuenta ?? '' }}</td>
+                      <td class="col-num">
+                        @if (fila.valorInforme) {
+                          {{ fila.valorInforme | number:'1.2-2' }}
                         } @else {
                           <span class="val-cero">0.00</span>
                         }
                       </td>
+                      <td class="col-num">
+                        @if (fila.saldoContable !== null) { {{ fila.saldoContable | number:'1.2-2' }} }
+                      </td>
+                      <td class="col-num"
+                          [class.dif-marca]="fila.comparable && (fila.diferencia ?? 0) !== 0"
+                          [class.val-cero]="!fila.comparable">
+                        @if (fila.comparable) { {{ fila.diferencia | number:'1.2-2' }} } @else { — }
+                      </td>
                     </tr>
                   }
                   <tr class="fila-subtotal">
-                    <td class="col-concepto subtotal-label">SUBTOTAL</td>
-                    <td class="col-valor subtotal-val">{{ grupo.total | number:'1.2-2' }}</td>
+                    <td class="col-concepto subtotal-label">{{ grupo.total.concepto }}</td>
+                    <td class="col-cuenta">{{ grupo.total.cuenta ?? '' }}</td>
+                    <td class="col-num subtotal-val">{{ grupo.total.valorInforme | number:'1.2-2' }}</td>
+                    <td class="col-num subtotal-val">
+                      @if (grupo.total.saldoContable !== null) { {{ grupo.total.saldoContable | number:'1.2-2' }} }
+                    </td>
+                    <td class="col-num subtotal-val"
+                        [class.dif-marca]="grupo.total.comparable && (grupo.total.diferencia ?? 0) !== 0">
+                      @if (grupo.total.comparable) { {{ grupo.total.diferencia | number:'1.2-2' }} } @else { — }
+                    </td>
                   </tr>
                 }
               </tbody>
