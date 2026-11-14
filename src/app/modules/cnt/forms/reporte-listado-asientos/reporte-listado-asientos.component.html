@@ -156,6 +156,10 @@
         <mat-icon>clear</mat-icon>
         Limpiar Filtros
       </button>
+      <button mat-stroked-button (click)="exportarExcel()" [disabled]="loading() || descargandoExcel()">
+        @if (descargandoExcel()) { <mat-spinner diameter="20"></mat-spinner> } @else { <mat-icon>table_view</mat-icon> }
+        Exportar Excel
+      </button>
     </div>
 
     </mat-expansion-panel>
@@ -172,6 +176,10 @@
             <button mat-raised-button color="accent" (click)="exportarPDF()">
               <mat-icon>picture_as_pdf</mat-icon>
               Exportar PDF
+            </button>
+            <button mat-raised-button color="accent" (click)="exportarExcel()" [disabled]="descargandoExcel()">
+              @if (descargandoExcel()) { <mat-spinner diameter="20"></mat-spinner> } @else { <mat-icon>table_view</mat-icon> }
+              Exportar Excel
             </button>
           </div>
         </div>

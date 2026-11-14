@@ -1,11 +1,26 @@
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, from, of, throwError } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { Asiento, CrearAsiento, EstadoAsiento } from '../model/asiento';
 import { ServiciosCnt } from '../service/ws-cnt';
 import { usuarioSesion } from '../../../shared/services/usuario-sesion';
+
+/** Filtros de `GET /asnt/excel`; fechas ya en `yyyy-MM-dd`. */
+export interface FiltrosExcelAsientos {
+  idEmpresa: number | string;
+  desde: string;
+  hasta: string;
+  idTipo?: number | null;
+  estado?: number | null;
+  categoria?: 'general' | 'sistema' | null;
+}
+
+export interface ArchivoExcelAsientos {
+  blob: Blob;
+  nombreArchivo: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -27,6 +42,54 @@ export class AsientoService {
    */
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Excel de asientos por tipo y rango de fechas: `GET /asnt/excel` (docs/cnt/API-EXCEL-ASIENTOS.md).
+   * `desde`/`hasta` van como `yyyy-MM-dd`. Los errores (400/500) llegan como texto plano dentro de un
+   * `Blob` por el `responseType`; se leen con `.text()` y se relanzan como `Error` con el mensaje del BE.
+   */
+  descargarExcel(filtros: FiltrosExcelAsientos): Observable<ArchivoExcelAsientos> {
+    let params = new HttpParams()
+      .set('idEmpresa', String(filtros.idEmpresa))
+      .set('desde', filtros.desde)
+      .set('hasta', filtros.hasta);
+    if (filtros.idTipo != null) params = params.set('idTipo', String(filtros.idTipo));
+    if (filtros.estado != null) params = params.set('estado', String(filtros.estado));
+    if (filtros.categoria) params = params.set('categoria', filtros.categoria);
+
+    return this.http.get(`${ServiciosCnt.RS_ASNT}/excel`, { params, responseType: 'blob', observe: 'response' }).pipe(
+      map((resp) => {
+        const disposition = resp.headers.get('Content-Disposition') ?? '';
+        const m = /filename="?([^";]+)"?/.exec(disposition);
+        return {
+          blob: resp.body ?? new Blob(),
+          nombreArchivo: m ? m[1].trim() : `asientos_${filtros.desde}_${filtros.hasta}.xlsx`,
+        };
+      }),
+      catchError((e: HttpErrorResponse) => {
+        const cuerpo = e.error;
+        const generico = e.status === 0
+          ? 'No se pudo contactar al servidor. Verifique su conexión e intente nuevamente.'
+          : `Error inesperado del servidor (HTTP ${e.status}).`;
+        const aMensaje = (texto: string): string => {
+          const t = (texto ?? '').trim();
+          if (!t || t.startsWith('<')) return generico;
+          try {
+            const obj = JSON.parse(t);
+            if (obj && typeof obj.mensaje === 'string' && obj.mensaje.trim()) return obj.mensaje;
+          } catch {
+            // Texto plano (contrato: 400/500 son texto plano): se muestra tal cual.
+          }
+          return t;
+        };
+        if (cuerpo instanceof Blob) {
+          return from(cuerpo.text()).pipe(switchMap((t) => throwError(() => new Error(aMensaje(t)))));
+        }
+        const texto = typeof cuerpo === 'string' ? cuerpo : typeof cuerpo?.mensaje === 'string' ? cuerpo.mensaje : '';
+        return throwError(() => new Error(aMensaje(texto)));
+      })
+    );
+  }
 
   /**
    * Obtener todos los asientos - usa POST ya que GET retorna 405

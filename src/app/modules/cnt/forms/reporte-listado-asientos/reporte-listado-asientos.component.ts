@@ -13,6 +13,7 @@ import { DetalleAsientoService } from '../../service/detalle-asiento.service';
 import { TipoAsiento } from '../../model/tipo-asiento';
 import { Asiento } from '../../model/asiento';
 import { DetalleAsiento } from '../../model/detalle-asiento';
+import { guardarArchivo } from '../../../../shared/services/descarga-reporte';
 import { ExportService } from '../../../../shared/services/export.service';
 import { ImprimirAsientoService } from '../../../../shared/services/imprimir-asiento.service';
 import { PermisosService } from '../../../../shared/services/permisos.service';
@@ -65,6 +66,8 @@ export class ReporteListadoAsientosComponent implements OnInit {
   loadingDetalles = signal<Set<number>>(new Set()); // Track loading por asiento
   /** Código del asiento cuyo PDF se está generando con la plantilla oficial (docs/cnt/DISENO-IMPRIMIR-ASIENTO-DESDE-ORIGEN.md). */
   imprimiendoAsiento = signal<number | null>(null);
+  /** Descarga del Excel de asientos (`GET /asnt/excel`) en curso. */
+  descargandoExcel = signal<boolean>(false);
   filtrosExpandidos = signal<boolean>(true); // Panel de filtros expandido/colapsado
   idSucursal: string = '';
   private searchRequestId = 0;
@@ -576,6 +579,44 @@ export class ReporteListadoAsientosComponent implements OnInit {
 
     this.exportService.exportToCSV(datosObjetos, 'Listado_Asientos', headers);
     this.snackBar.open('Archivo CSV generado exitosamente', 'Cerrar', { duration: 3000 });
+  }
+
+  /**
+   * Excel armado por el backend (`GET /asnt/excel`). Manda fechas, categoría, tipo y estado de la pantalla;
+   * número, descripción y usuario no se envían. No depende de haber presionado «Buscar».
+   */
+  exportarExcel(): void {
+    if (this.descargandoExcel()) return;
+    const desde = this.fechaAsientoDesdeControl.value as Date | null;
+    const hasta = this.fechaAsientoHastaControl.value as Date | null;
+    const d = desde ? this.funcionesDatos.formatearFechaParaBackend(desde, TipoFormatoFechaBackend.SOLO_FECHA) : null;
+    const h = hasta ? this.funcionesDatos.formatearFechaParaBackend(hasta, TipoFormatoFechaBackend.SOLO_FECHA) : null;
+    if (!d || !h) {
+      this.snackBar.open('Seleccione fecha desde y hasta para exportar a Excel', 'Cerrar', { duration: 4000 });
+      return;
+    }
+
+    this.descargandoExcel.set(true);
+    this.asientoService
+      .descargarExcel({
+        idEmpresa: this.idSucursal,
+        desde: d,
+        hasta: h,
+        // Sin `categoria`: en la pantalla solo filtra el combo de tipos; Buscar no la manda.
+        idTipo: this.tipoAsientoSeleccionado(),
+        estado: this.estado(),
+      })
+      .subscribe({
+        next: (archivo) => {
+          this.descargandoExcel.set(false);
+          guardarArchivo(archivo.blob, archivo.nombreArchivo);
+          this.snackBar.open('Archivo Excel generado', 'Cerrar', { duration: 3000 });
+        },
+        error: (err: Error) => {
+          this.descargandoExcel.set(false);
+          this.snackBar.open(err.message, 'Cerrar', { duration: 6000, panelClass: ['error-snackbar'] });
+        },
+      });
   }
 
   /**
