@@ -91,6 +91,14 @@ export interface LiquidacionBeneficioSocial {
   valorPagado: number;
   /** LQBSESTD: 1 pendiente, 2 pagada. */
   estado: number;
+  /** LQBSANTC (§7.3): `'S'` si es un décimo tercero pagado por anticipado, `'N'` si no. */
+  anticipado?: 'S' | 'N' | null;
+  /** LQBSFCCR: fecha del cálculo anticipado (`yyyy-MM-dd`). */
+  fechaCalculoAnticipado?: unknown;
+  /** LQBSVLAJ: diferencia aplicada en diciembre o en el finiquito, con signo; `null` = aún no conciliado. */
+  valorAjuste?: number | null;
+  /** LQBSPRAJ: período de nómina donde se aplicó el ajuste, o `null`. */
+  periodoAjuste?: unknown;
 }
 
 /** `GET /odbs/detalle/{id}` (contrato §1.3) — lo que la pantalla muestra al abrir una orden. */
@@ -215,7 +223,15 @@ export interface GenerarLiquidacionesRequest {
   /** Sólo para décimo cuarto: RHH_REGION_DECIMO_CUARTO. Va en la RUTA, no acá — ver el servicio. */
   region?: number;
   usuarioRegistro: string;
+  /** Solo décimo tercero: `true` calcula hasta el 30-nov con roles calculados (§7.1). */
+  anticipado?: boolean;
 }
 
-/** Respuesta de los tres `POST /lqbs/generar*`: el entero crudo, no un objeto `{exito,...}`. */
-export type ResultadoGenerarLiquidaciones = number;
+/**
+ * Respuesta del `POST /lqbs/generarDecimoTercero` y `generarDecimoCuarto` (API-PAGO-BENEFICIOS-SOCIALES §7.2):
+ * ya no es un entero crudo. `omitidosPagados` = liquidaciones PAGADAS o dentro de una orden que NO se recalcularon.
+ */
+export interface ResultadoGenerarLiquidaciones {
+  generados: number;
+  omitidosPagados: number;
+}

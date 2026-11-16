@@ -87,6 +87,8 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
   anios = aniosDisponibles();
   anio = signal<number>(new Date().getFullYear());
   tipoBeneficio = signal<number | null>(null);
+  /** Solo décimo tercero: calcula hasta el 30-nov con roles calculados (API §7). */
+  anticipado = signal<boolean>(false);
   region = signal<number | null>(null);
   regiones = signal<DetalleRubro[]>([]);
 
@@ -164,9 +166,15 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
 
   onTipoBeneficioChange(tipo: number | null): void {
     this.tipoBeneficio.set(tipo);
+    if (tipo !== TipoBeneficioSocial.DECIMO_TERCERO) this.anticipado.set(false);
     if (tipo !== TipoBeneficioSocial.DECIMO_CUARTO) this.region.set(null);
     this.hayCalculoReciente.set(false);
     this.recargar();
+  }
+
+  onAnticipadoChange(valor: boolean): void {
+    this.anticipado.set(valor);
+    this.hayCalculoReciente.set(false);
   }
 
   onRegionChange(region: number | null): void {
@@ -240,6 +248,7 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
       anio: this.anio(),
       region: tipo === TipoBeneficioSocial.DECIMO_CUARTO ? this.region()! : undefined,
       usuarioRegistro: usuarioSesion(),
+      anticipado: tipo === TipoBeneficioSocial.DECIMO_TERCERO && this.anticipado(),
     };
 
     this.calculando.set(true);
@@ -251,10 +260,11 @@ export class PagoBeneficiosSocialesComponent implements OnInit {
           : this.liquidacionService.generarFondosReserva(datos);
 
     llamada.subscribe({
-      next: (generados) => {
+      next: ({ generados, omitidosPagados }) => {
         this.calculando.set(false);
         this.hayCalculoReciente.set(true);
-        this.avisar(`Se calcularon ${generados} liquidación(es).`);
+        const omitidas = omitidosPagados > 0 ? ` ${omitidosPagados} ya pagadas o en orden, no se recalculan.` : '';
+        this.avisar(`Se calcularon ${generados} liquidación(es).${omitidas}`);
         this.recargar();
       },
       error: (err) => {

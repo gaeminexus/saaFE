@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, map, throwError } from 'rxjs';
 import {
   GenerarLiquidacionesRequest,
   ResultadoGenerarLiquidaciones,
@@ -20,16 +20,17 @@ export class LiquidacionBeneficioSocialService {
 
   constructor(private http: HttpClient) {}
 
-  /** POST /lqbs/generarDecimoTercero/{anio}?idEmpresa=&usuarioRegistro= — devuelve el entero crudo generado/actualizado. */
+  /** POST /lqbs/generarDecimoTercero/{anio}?idEmpresa=&usuarioRegistro=[&anticipado=true] — devuelve `{generados, omitidosPagados}` (§7). */
   generarDecimoTercero(datos: GenerarLiquidacionesRequest): Observable<ResultadoGenerarLiquidaciones> {
-    const params = this.paramsBase(datos);
+    const params: Record<string, string> = this.paramsBase(datos);
+    if (datos.anticipado) params['anticipado'] = 'true';
     return this.http
-      .post<ResultadoGenerarLiquidaciones>(
+      .post<ResultadoGenerarLiquidaciones | number>(
         `${ServiciosRhh.RS_LQBS}/generarDecimoTercero/${datos.anio}`,
         null,
         { ...this.httpOptions, params },
       )
-      .pipe(catchError(this.handleError));
+      .pipe(map(this.comoResultado), catchError(this.handleError));
   }
 
   /**
@@ -39,24 +40,29 @@ export class LiquidacionBeneficioSocialService {
   generarDecimoCuarto(datos: GenerarLiquidacionesRequest): Observable<ResultadoGenerarLiquidaciones> {
     const params = this.paramsBase(datos);
     return this.http
-      .post<ResultadoGenerarLiquidaciones>(
+      .post<ResultadoGenerarLiquidaciones | number>(
         `${ServiciosRhh.RS_LQBS}/generarDecimoCuarto/${datos.anio}/${datos.region}`,
         null,
         { ...this.httpOptions, params },
       )
-      .pipe(catchError(this.handleError));
+      .pipe(map(this.comoResultado), catchError(this.handleError));
   }
 
   /** POST /lqbs/generarFondosReserva/{anio}?idEmpresa=&usuarioRegistro= */
   generarFondosReserva(datos: GenerarLiquidacionesRequest): Observable<ResultadoGenerarLiquidaciones> {
     const params = this.paramsBase(datos);
     return this.http
-      .post<ResultadoGenerarLiquidaciones>(
+      .post<ResultadoGenerarLiquidaciones | number>(
         `${ServiciosRhh.RS_LQBS}/generarFondosReserva/${datos.anio}`,
         null,
         { ...this.httpOptions, params },
       )
-      .pipe(catchError(this.handleError));
+      .pipe(map(this.comoResultado), catchError(this.handleError));
+  }
+
+  /** El contrato §7.2 cambia solo tercero y cuarto; si el de fondos de reserva sigue devolviendo el entero crudo, se normaliza. */
+  private comoResultado(r: ResultadoGenerarLiquidaciones | number): ResultadoGenerarLiquidaciones {
+    return typeof r === 'number' ? { generados: r, omitidosPagados: 0 } : { generados: r?.generados ?? 0, omitidosPagados: r?.omitidosPagados ?? 0 };
   }
 
   private paramsBase(datos: GenerarLiquidacionesRequest): { idEmpresa: string; usuarioRegistro: string } {

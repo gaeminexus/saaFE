@@ -51,6 +51,17 @@
         />
       }
 
+      @if (tipoBeneficio() === TipoBeneficioSocial.DECIMO_TERCERO) {
+        <mat-checkbox [checked]="anticipado()" (change)="onAnticipadoChange($event.checked)">
+          Pago anticipado (calcula hasta el 30 de noviembre)
+        </mat-checkbox>
+        @if (anticipado()) {
+          <span class="pista pista-anticipado">
+            Requiere el rol de noviembre calculado. Si cambia algo de noviembre, la diferencia se ajusta en el rol de diciembre. Si el empleado sale antes del 30 de noviembre, lo pagado se descuenta en su liquidación.
+          </span>
+        }
+      }
+
       <div class="pasos-proceso">
         <button
           mat-stroked-button
@@ -275,7 +286,9 @@
 
               <ng-container matColumnDef="situacion">
                 <th mat-header-cell *matHeaderCellDef>Situación</th>
-                <td mat-cell *matCellDef="let d">{{ estadoLiquidacionLabel(d.estado) }}</td>
+                <td mat-cell *matCellDef="let d">{{ estadoLiquidacionLabel(d.estado) }}
+                  @if (d.anticipado === 'S') { <span class="etiqueta-anticipado">Anticipado</span> }
+                </td>
               </ng-container>
 
               <tr mat-header-row *matHeaderRowDef="columnasDetalle"></tr>

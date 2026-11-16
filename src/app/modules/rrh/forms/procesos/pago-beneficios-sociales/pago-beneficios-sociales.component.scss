@@ -36,6 +36,21 @@
     color: $text-muted;
   }
 
+  .pista-anticipado {
+    display: block;
+    flex-basis: 100%;
+  }
+
+  .etiqueta-anticipado {
+    display: inline-block;
+    margin-left: $spacing-xs;
+    padding: 0 $spacing-xs;
+    border-radius: 10px;
+    font-size: $font-size-xs;
+    background: rgba($info-color, 0.15);
+    color: $info-color;
+  }
+
   .pista-orden-viva {
     color: $info-color;
     font-weight: $font-weight-medium;
