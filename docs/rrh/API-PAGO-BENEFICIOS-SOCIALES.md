@@ -492,3 +492,34 @@ base es lo que ya costó el `e2-08` y el `e2-13`.
 
 Hoy acepta `GENERADA` y `ENVIADA_A_TESORERIA`. **Tiene que aceptar también `REVERTIDA`**, o el
 reverso desemboca en otro callejón sin salida.
+
+---
+
+## 7. 🆕 Décimo tercero por anticipado (omen-saa-3, 2026-11-16)
+
+Diseño: `saaBE/docs/logica-negocio/rhh/DISENO-DECIMO-TERCERO-ANTICIPADO.md`. Requiere `rhh/sql/e3-21` antes del WAR.
+
+### 7.1 `POST /rest/lqbs/generarDecimoTercero/{anio}?idEmpresa=&usuarioRegistro=[&anticipado=true]`
+- Sin `anticipado` (o `false`): cálculo de siempre (solo roles cerrados).
+- Con `anticipado=true`: calcula hasta el 30-nov usando los roles **calculados** de los meses que aún no se cierran.
+  Si algún mes de la ventana (dic del año anterior a nov) no está al menos CALCULADO → **500** con el texto
+  «Para pagar el décimo por anticipado los roles de <meses> deben estar calculados». No se genera nada.
+
+### 7.2 Respuesta (cambia para el tercero **y** el cuarto)
+Antes era un entero crudo. Ahora:
+```json
+{ "generados": 42, "omitidosPagados": 3 }
+```
+- `generados`: liquidaciones creadas o recalculadas.
+- `omitidosPagados`: liquidaciones que ya estaban PAGADAS o dentro de una orden y **no se recalcularon** (antes se
+  sobrescribían en silencio). Mostrar «N ya pagadas o en orden, no se recalculan» cuando sea > 0.
+
+### 7.3 Campos nuevos en `LiquidacionBeneficioSocial` (`/lqbs`)
+| Campo JSON | Columna | Nota |
+|---|---|---|
+| `anticipado` | `LQBSANTC` | `'S'` / `'N'` |
+| `fechaCalculoAnticipado` | `LQBSFCCR` | `yyyy-MM-dd` |
+| `valorAjuste` | `LQBSVLAJ` | diferencia aplicada en diciembre o en el finiquito, con signo; `null` = aún no conciliado |
+| `periodoAjuste` | `LQBSPRAJ` | objeto `PeriodoNomina` o `null` |
+
+Trampa del `PUT` (§0): si alguna pantalla hace `PUT /lqbs`, tiene que mandar estos campos tal como llegaron.
