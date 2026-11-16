@@ -38,6 +38,8 @@ import { TipoParticipeService } from '../../../service/tipo-participe.service';
 import { EstadoCivilService } from '../../../service/estado-civil.service';
 import { TipoAporteService } from '../../../service/tipo-aporte.service';
 import { DireccionService } from '../../../service/direccion.service';
+import { CiudadService } from '../../../service/ciudad.service';
+import { Ciudad } from '../../../model/ciudad';
 import { ConyugeService } from '../../../service/conyuge.service';
 import { ReferenciaFamiliarService } from '../../../service/referencia-familiar.service';
 import { ReferenciaPersonalService } from '../../../service/referencia-personal.service';
@@ -88,6 +90,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
   private estadoCivilService = inject(EstadoCivilService);
   private tipoAporteService = inject(TipoAporteService);
   private direccionService = inject(DireccionService);
+  private ciudadService = inject(CiudadService);
   private conyugeService = inject(ConyugeService);
   private referenciaFamiliarService = inject(ReferenciaFamiliarService);
   private referenciaPersonalService = inject(ReferenciaPersonalService);
@@ -117,6 +120,24 @@ export class EntidadParticipeInfoComponent implements OnInit {
   entidadActual = signal<Entidad | null>(null);
   participeActual = signal<Participe | null>(null);
   direccionActual = signal<Direccion | null>(null);
+
+  /** Catálogo CRD.CDDD para el combo «Ciudad» de la pestaña Dirección (ordenado por nombre). */
+  private ciudadesOptions = signal<Ciudad[]>([]);
+  private ciudadTexto = signal<string>('');
+  /** Búsqueda por nombre de la ciudad y de la provincia (dos campos). */
+  ciudadesFiltradas = computed(() => {
+    const t = this.ciudadTexto().trim().toLowerCase();
+    const todas = this.ciudadesOptions();
+    if (!t) return todas;
+    return todas.filter(c =>
+      (c.nombre || '').toLowerCase().includes(t) || (c.provincia?.nombre || '').toLowerCase().includes(t));
+  });
+
+  /** «CIUDAD (PROVINCIA)» */
+  mostrarCiudad = (c: Ciudad | string | null): string => {
+    if (!c || typeof c === 'string') return (c as string) || '';
+    return c.provincia?.nombre ? `${c.nombre} (${c.provincia.nombre})` : c.nombre;
+  };
 
   // Opciones para selects
   filialesOptions = signal<Filial[]>([]);
@@ -235,7 +256,21 @@ export class EntidadParticipeInfoComponent implements OnInit {
   /** Método regular (evaluado en cada CD cycle) para no tener estados transitorios */
   isFormValid(): boolean {
     if (!this.entidadForm || !this.participeForm) return false;
-    return this.entidadForm.valid && this.participeForm.valid;
+    return this.entidadForm.valid && this.participeForm.valid && !this.ciudadFaltante();
+  }
+
+  /** Hay datos de dirección y la ciudad no se eligió del combo (un texto suelto no vale). */
+  ciudadFaltante(): boolean {
+    const d = this.direccionForm?.getRawValue();
+    if (!d) return false;
+    const tieneDatos = !!(d.descripcion || d.callePrincipal || d.calleSecundaria || d.barrio || d.ciudad);
+    const c = d.ciudad as Ciudad | string | null;
+    return tieneDatos && !(c && typeof c === 'object' && c.codigo != null);
+  }
+
+  /** Texto escrito en el combo de ciudad (alimenta el filtro). */
+  onCiudadInput(valor: string): void {
+    this.ciudadTexto.set(valor || '');
   }
 
   // Opciones estáticas
@@ -326,6 +361,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       descripcion: ['', Validators.maxLength(300)],
       referencia: ['', Validators.maxLength(200)],
       barrio: ['', Validators.maxLength(300)],
+      ciudad: [null as Ciudad | string | null],
       callePrincipal: ['', Validators.maxLength(200)],
       calleSecundaria: ['', Validators.maxLength(200)],
       numero: ['', Validators.maxLength(50)],
@@ -442,9 +478,13 @@ export class EntidadParticipeInfoComponent implements OnInit {
       tiposParticipe: this.tipoParticipeService.getAll(),
       estadosCivil: this.estadoCivilService.getAll(),
       tiposAporte: this.tipoAporteService.getAll(),
-      bancoExternos: this.bancoExternoService.getAll()
+      bancoExternos: this.bancoExternoService.getAll(),
+      ciudades: this.ciudadService.getAll()
     }).subscribe({
       next: (data) => {
+        this.ciudadesOptions.set((data.ciudades || [])
+          .filter(c => (c.estado ?? 1) === 1)
+          .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es')));
         this.filialesOptions.set(data.filiales || []);
         this.tiposIdentificacionOptions.set(data.tiposIdentificacion || []);
         this.tiposParticipeOptions.set(data.tiposParticipe || []);
@@ -506,9 +546,9 @@ export class EntidadParticipeInfoComponent implements OnInit {
           this.participeActual.set(data.participe);
           this.cargarDatosEnFormularioParticipe(data.participe);
         }
-        // Dirección principal (porDefecto=1 o primera disponible)
+        // Domicilio vigente (regla única con el BE; ver domicilioVigente)
         const dirs = data.direcciones || [];
-        const dirPrincipal = dirs.find(d => d.porDefecto === 1) || dirs[0] || null;
+        const dirPrincipal = this.domicilioVigente(dirs);
         if (dirPrincipal) {
           this.direccionActual.set(dirPrincipal);
           this.cargarDatosEnFormularioDireccion(dirPrincipal);
@@ -606,12 +646,29 @@ export class EntidadParticipeInfoComponent implements OnInit {
     });
   }
 
+  /** Devuelve la ciudad del catálogo (con provincia) que corresponde a la de la dirección; si aún no cargó, la misma. */
+  private ciudadDeLista(c?: Ciudad | null): Ciudad | null {
+    if (!c) return null;
+    return this.ciudadesOptions().find(x => x.codigo === c.codigo) || c;
+  }
+
+  /**
+   * Domicilio vigente (misma regla del BE, DISENO-DIRECCION-DOMICILIO-UNICA-Y-CIUDAD §2): activa y no de
+   * trabajo; la de porDefecto=1 de menor código; si ninguna está por defecto, la de menor código.
+   */
+  private domicilioVigente(dirs: Direccion[]): Direccion | null {
+    const porCodigo = (a: Direccion, b: Direccion) => (a.codigo ?? 0) - (b.codigo ?? 0);
+    const domicilios = (dirs || []).filter(d => d.trabajo !== 1 && (d.estado ?? 1) === 1).sort(porCodigo);
+    return domicilios.find(d => d.porDefecto === 1) || domicilios[0] || null;
+  }
+
   private cargarDatosEnFormularioDireccion(direccion: Direccion): void {
     this.direccionForm.patchValue({
       codigo: direccion.codigo,
       descripcion: direccion.descripcion || '',
       referencia: direccion.referencia || '',
       barrio: direccion.barrio || '',
+      ciudad: this.ciudadDeLista(direccion.ciudad),
       callePrincipal: (direccion as any).callePrincipal || '',
       calleSecundaria: (direccion as any).calleSecundaria || '',
       numero: (direccion as any).numero || '',
@@ -677,7 +734,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
     // Solo el código: ver el comentario de `prepararDatosParticipe()` — mandar la Entidad
     // completa como FK anidada rompe la deserialización de Jackson (confirmado con un PUT real).
-    const dirData = { ...dirFormValue, barrio: dirFormValue.barrio?.trim() || null, entidad: { codigo: entidad.codigo }, porDefecto: 1, trabajo: 0 };
+    const ciudad = dirFormValue.ciudad as Ciudad;
+    const dirData = { ...dirFormValue, barrio: dirFormValue.barrio?.trim() || null, entidad: { codigo: entidad.codigo }, ciudad: { codigo: ciudad.codigo }, porDefecto: 1, trabajo: 0 };
     const usuario = usuarioSesion();
     const dirObs = dirFormValue.codigo
       ? this.direccionService.update(dirData, usuario)

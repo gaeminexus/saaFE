@@ -551,6 +551,23 @@
                   </mat-form-field>
                 </div>
                 <div class="form-row">
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>Ciudad</mat-label>
+                    <input matInput formControlName="ciudad" [matAutocomplete]="autoCiudad" autocomplete="off"
+                           placeholder="Buscar por ciudad o provincia" (input)="onCiudadInput($any($event.target).value)">
+                    <mat-icon matSuffix>location_city</mat-icon>
+                    <mat-autocomplete #autoCiudad="matAutocomplete" [displayWith]="mostrarCiudad"
+                                      (optionSelected)="onCiudadInput('')">
+                      @for (c of ciudadesFiltradas(); track c.codigo) {
+                        <mat-option [value]="c">{{ mostrarCiudad(c) }}</mat-option>
+                      }
+                    </mat-autocomplete>
+                    @if (ciudadFaltante()) {
+                      <mat-hint class="ciudad-obligatoria">Obligatoria: elija la ciudad de la lista.</mat-hint>
+                    }
+                  </mat-form-field>
+                </div>
+                <div class="form-row">
                   <mat-form-field appearance="outline" class="third-width">
                     <mat-label>Número</mat-label>
                     <input matInput formControlName="numero" maxlength="50">

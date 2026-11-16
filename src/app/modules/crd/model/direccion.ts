@@ -1,5 +1,6 @@
 import { Entidad } from "./entidad";
 import { Parroquia } from "./parroquia";
+import { Ciudad } from "./ciudad";
 
 export interface Direccion {
     codigo: number;           // Código
@@ -21,4 +22,6 @@ export interface Direccion {
     numero: string;           // DRCCNMRO - Número de domicilio
     /** DRCCBRRO - Barrio / Sector, hasta 300 (opcional; Anexo I). */
     barrio?: string | null;
+    /** CDDDCDGO - Ciudad del domicilio (combo; obligatoria al guardar desde la ficha). Al enviar va solo `{ codigo }`. */
+    ciudad?: Ciudad | null;
 }
