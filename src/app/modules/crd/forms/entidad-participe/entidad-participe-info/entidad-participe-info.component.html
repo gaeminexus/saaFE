@@ -37,17 +37,34 @@
         <mat-icon>clear_all</mat-icon>
         Limpiar
       </button>
-      <button mat-raised-button color="accent" (click)="guardar()"
-              [disabled]="!isFormValid() || loading() || saving()">
-        @if (saving()) {
-          <mat-spinner diameter="20"></mat-spinner>
-        } @else {
-          <mat-icon>save</mat-icon>
-        }
-        {{ modoEdicion() ? 'Actualizar' : 'Guardar' }}
-      </button>
+      <span class="guardar-wrapper" [matTooltip]="datosFaltantes().join('\n')"
+            [matTooltipDisabled]="loading() || datosFaltantes().length === 0"
+            matTooltipClass="tooltip-multilinea">
+        <button mat-raised-button color="accent" (click)="guardar()"
+                [disabled]="!isFormValid() || loading() || saving()">
+          @if (saving()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>save</mat-icon>
+          }
+          {{ modoEdicion() ? 'Actualizar' : 'Guardar' }}
+        </button>
+      </span>
     </div>
   </div>
+  @if (!loading() && datosFaltantes().length > 0) {
+    <div class="aviso-datos-faltantes" role="alert">
+      <mat-icon>warning</mat-icon>
+      <div>
+        <strong>Para habilitar «{{ modoEdicion() ? 'Actualizar' : 'Guardar' }}» falta:</strong>
+        <ul>
+          @for (f of datosFaltantes(); track f) {
+            <li>{{ f }}</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
   @if (loading()) {
     <div class="loading-container">
       <mat-spinner></mat-spinner>
@@ -552,16 +569,29 @@
                 </div>
                 <div class="form-row">
                   <mat-form-field appearance="outline" class="full-width">
-                    <mat-label>Ciudad</mat-label>
-                    <input matInput formControlName="ciudad" [matAutocomplete]="autoCiudad" autocomplete="off"
-                           placeholder="Buscar por ciudad o provincia" (input)="onCiudadInput($any($event.target).value)">
-                    <mat-icon matSuffix>location_city</mat-icon>
-                    <mat-autocomplete #autoCiudad="matAutocomplete" [displayWith]="mostrarCiudad"
-                                      (optionSelected)="onCiudadInput('')">
+                    <mat-label>Ciudad *</mat-label>
+                    <mat-select formControlName="ciudad" [compareWith]="compararPorCodigo"
+                                panelClass="select-con-buscador"
+                                (openedChange)="!$event && filtroCiudad.set('')">
+                      <mat-option class="select-search-option"
+                                  (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                                  (click)="$event.stopPropagation()">
+                        <input class="select-search-input" placeholder="Buscar por ciudad o provincia..."
+                               [value]="filtroCiudad()"
+                               (mousedown)="$event.stopPropagation()"
+                               (click)="$event.stopPropagation()"
+                               (keydown)="$event.stopPropagation()"
+                               (input)="filtroCiudad.set($any($event.target).value)" />
+                      </mat-option>
+                      <mat-option [value]="null">-- Seleccionar --</mat-option>
                       @for (c of ciudadesFiltradas(); track c.codigo) {
                         <mat-option [value]="c">{{ mostrarCiudad(c) }}</mat-option>
                       }
-                    </mat-autocomplete>
+                      @if (ciudadesFiltradas().length === 0) {
+                        <mat-option disabled>Sin coincidencias</mat-option>
+                      }
+                    </mat-select>
+                    <mat-icon matSuffix>location_city</mat-icon>
                     @if (ciudadFaltante()) {
                       <mat-hint class="ciudad-obligatoria">Obligatoria: elija la ciudad de la lista.</mat-hint>
                     }

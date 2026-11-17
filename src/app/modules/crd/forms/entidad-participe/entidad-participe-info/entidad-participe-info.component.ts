@@ -123,10 +123,11 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
   /** Catálogo CRD.CDDD para el combo «Ciudad» de la pestaña Dirección (ordenado por nombre). */
   private ciudadesOptions = signal<Ciudad[]>([]);
-  private ciudadTexto = signal<string>('');
+  /** Texto del buscador que vive dentro del combo de ciudades. */
+  filtroCiudad = signal<string>('');
   /** Búsqueda por nombre de la ciudad y de la provincia (dos campos). */
   ciudadesFiltradas = computed(() => {
-    const t = this.ciudadTexto().trim().toLowerCase();
+    const t = this.filtroCiudad().trim().toLowerCase();
     const todas = this.ciudadesOptions();
     if (!t) return todas;
     return todas.filter(c =>
@@ -134,8 +135,8 @@ export class EntidadParticipeInfoComponent implements OnInit {
   });
 
   /** «CIUDAD (PROVINCIA)» */
-  mostrarCiudad = (c: Ciudad | string | null): string => {
-    if (!c || typeof c === 'string') return (c as string) || '';
+  mostrarCiudad = (c: Ciudad | null): string => {
+    if (!c) return '';
     return c.provincia?.nombre ? `${c.nombre} (${c.provincia.nombre})` : c.nombre;
   };
 
@@ -256,21 +257,101 @@ export class EntidadParticipeInfoComponent implements OnInit {
   /** Método regular (evaluado en cada CD cycle) para no tener estados transitorios */
   isFormValid(): boolean {
     if (!this.entidadForm || !this.participeForm) return false;
-    return this.entidadForm.valid && this.participeForm.valid && !this.ciudadFaltante();
+    return this.datosFaltantes().length === 0;
   }
 
-  /** Hay datos de dirección y la ciudad no se eligió del combo (un texto suelto no vale). */
+  /** Hay datos de dirección y la ciudad no se eligió del combo. */
   ciudadFaltante(): boolean {
     const d = this.direccionForm?.getRawValue();
     if (!d) return false;
     const tieneDatos = !!(d.descripcion || d.callePrincipal || d.calleSecundaria || d.barrio || d.ciudad);
-    const c = d.ciudad as Ciudad | string | null;
-    return tieneDatos && !(c && typeof c === 'object' && c.codigo != null);
+    const c = d.ciudad as Ciudad | null;
+    return tieneDatos && !(c?.codigo != null);
   }
 
-  /** Texto escrito en el combo de ciudad (alimenta el filtro). */
-  onCiudadInput(valor: string): void {
-    this.ciudadTexto.set(valor || '');
+  /** Etiqueta visible (mat-label) de cada control, para el aviso de «qué falta». */
+  private readonly etiquetasEntidad: Record<string, string> = {
+    filial: 'Filial',
+    tipoIdentificacion: 'Tipo Identificación',
+    numeroIdentificacion: 'Número de Identificación',
+    razonSocial: 'Razón Social',
+    nombreComercial: 'Nombre Comercial',
+    rolPetroComercial: 'Rol Petro Comercial',
+    fechaNacimiento: 'Fecha de Nacimiento',
+    correoPersonal: 'Correo Personal',
+    correoInstitucional: 'Correo Institucional',
+    telefono: 'Teléfono',
+    movil: 'Móvil',
+    cargasFamiliares: 'Cargas Familiares',
+    sectorPublico: 'Sector Público',
+    idCiudad: 'ID Ciudad',
+    estadoCivil: 'Estado Civil',
+    sexo: 'Sexo',
+    porcentajeSimilitud: 'Porcentaje de similitud',
+  };
+  private readonly etiquetasParticipe: Record<string, string> = {
+    codigoAlterno: 'Código Alterno',
+    tipoParticipante: 'Tipo Partícipe',
+    tipoAporte: 'Tipo Aporte',
+    remuneracionUnificada: 'Remuneración Unificada',
+    fechaIngresoFondo: 'Fecha Ingreso al Fondo',
+    fechaIngresoTrabajo: 'Fecha Ingreso Trabajo',
+    cargoActual: 'Cargo Actual',
+    lugarTrabajo: 'Lugar de Trabajo',
+    unidadAdministrativa: 'Unidad Administrativa',
+    nivelEstudios: 'Nivel de Estudios',
+    ingresoAdicionalMensual: 'Ingreso Adicional Mensual',
+    tituloProfesional: 'Título Profesional',
+    modalidadLaboral: 'Modalidad Laboral',
+    ingresoAdicionalActividad: 'Actividad Ingreso Adicional',
+    fechaSalida: 'Fecha de Salida',
+    motivoSalida: 'Motivo de Salida',
+    fechaFallecimiento: 'Fecha de Fallecimiento',
+    causaFallecimiento: 'Causa de Fallecimiento',
+  };
+
+  /**
+   * Qué impide habilitar «Guardar/Actualizar», uno por problema: «Pestaña: Campo — motivo».
+   * Única fuente de `isFormValid()`: botón y mensaje no pueden desalinearse. Método regular
+   * (se evalúa en cada ciclo), igual que `isFormValid()`.
+   */
+  datosFaltantes(): string[] {
+    const faltantes: string[] = [];
+    const recorrer = (form: FormGroup | undefined, pestana: string, etiquetas: Record<string, string>) => {
+      if (!form) return;
+      const antes = faltantes.length;
+      for (const [nombre, control] of Object.entries(form.controls)) {
+        if (!control.invalid) continue;
+        const etiqueta = etiquetas[nombre];
+        const errores = control.errors || {};
+        const motivos: string[] = [];
+        if (errores['required']) motivos.push('obligatorio');
+        if (errores['maxlength']) {
+          motivos.push(`máximo ${errores['maxlength'].requiredLength} caracteres (tiene ${errores['maxlength'].actualLength})`);
+        }
+        if (errores['minlength']) {
+          motivos.push(`mínimo ${errores['minlength'].requiredLength} caracteres (tiene ${errores['minlength'].actualLength})`);
+        }
+        if (errores['min']) motivos.push(`mínimo ${errores['min'].min}`);
+        if (errores['max']) motivos.push(`máximo ${errores['max'].max}`);
+        if (errores['email'] || errores['pattern']) motivos.push('formato inválido');
+        if (!etiqueta) {
+          faltantes.push(`${pestana}: campo «${nombre}» inválido`);
+        } else {
+          faltantes.push(`${pestana}: ${etiqueta} — ${motivos.length ? motivos.join(', ') : 'inválido'}`);
+        }
+      }
+      // Red de seguridad: un formulario inválido nunca deja la lista vacía.
+      if (form.invalid && faltantes.length === antes) {
+        faltantes.push(`${pestana}: formulario inválido`);
+      }
+    };
+    recorrer(this.entidadForm, 'Entidad', this.etiquetasEntidad);
+    recorrer(this.participeForm, 'Partícipe', this.etiquetasParticipe);
+    if (this.ciudadFaltante()) {
+      faltantes.push('Dirección: Ciudad — elija una ciudad de la lista');
+    }
+    return faltantes;
   }
 
   // Opciones estáticas
@@ -361,7 +442,7 @@ export class EntidadParticipeInfoComponent implements OnInit {
       descripcion: ['', Validators.maxLength(300)],
       referencia: ['', Validators.maxLength(200)],
       barrio: ['', Validators.maxLength(300)],
-      ciudad: [null as Ciudad | string | null],
+      ciudad: [null as Ciudad | null],
       callePrincipal: ['', Validators.maxLength(200)],
       calleSecundaria: ['', Validators.maxLength(200)],
       numero: ['', Validators.maxLength(50)],
@@ -734,7 +815,12 @@ export class EntidadParticipeInfoComponent implements OnInit {
 
     // Solo el código: ver el comentario de `prepararDatosParticipe()` — mandar la Entidad
     // completa como FK anidada rompe la deserialización de Jackson (confirmado con un PUT real).
-    const ciudad = dirFormValue.ciudad as Ciudad;
+    const ciudad = dirFormValue.ciudad as Ciudad | null;
+    if (ciudad?.codigo == null) {
+      // No debería llegar aquí (el botón está deshabilitado sin ciudad), pero nunca se manda ciudad.codigo sobre null.
+      this.saving.set(false);
+      return;
+    }
     const dirData = { ...dirFormValue, barrio: dirFormValue.barrio?.trim() || null, entidad: { codigo: entidad.codigo }, ciudad: { codigo: ciudad.codigo }, porDefecto: 1, trabajo: 0 };
     const usuario = usuarioSesion();
     const dirObs = dirFormValue.codigo
