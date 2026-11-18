@@ -46,6 +46,7 @@ export class SeguimientoNovedadesV2Component implements OnInit {
   readonly meses = MESES.map((n, i) => ({ valor: i + 1, etiqueta: n }));
   readonly anios = [2025, 2026];
   readonly dinero = dinero;
+  readonly abs = Math.abs;
   readonly fecha = fechaCorta;
 
   idEmpresa = parseInt(localStorage.getItem('idSucursal') || '0', 10) || 0;
@@ -122,7 +123,7 @@ export class SeguimientoNovedadesV2Component implements OnInit {
   etiquetaPestana(g: { valor: GrupoNovedad; etiqueta: string }): string {
     const r = this.resumen()?.[g.valor];
     if (!r) return g.etiqueta;
-    if (g.valor === 'POR_REGULARIZAR') return `${g.etiqueta} · ${r.abiertas} abiertas · faltan ${dinero(r.saldo ?? 0)}`;
+    if (g.valor === 'POR_REGULARIZAR') return `${g.etiqueta} · ${r.abiertas} abiertas · ${r.movimientosPendientes ?? 0} movimientos por justificar`;
     if (g.valor === 'INFORMATIVA') return `${g.etiqueta} · ${r.abiertas} por leer`;
     return `${g.etiqueta} · ${r.abiertas} abiertas`;
   }

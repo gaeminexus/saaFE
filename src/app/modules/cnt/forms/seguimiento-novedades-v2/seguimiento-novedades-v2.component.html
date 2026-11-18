@@ -75,10 +75,27 @@
 
   <div class="ayuda">
     {{ grupos[indiceGrupo()].ayuda }}
-    @if (grupo() === 'POR_REGULARIZAR') {
-      <span> En esta vista: {{ totalesGrupo().n }} novedad(es), movimientos por {{ dinero(totalesGrupo().valor) }}, faltan {{ dinero(totalesGrupo().saldo) }}.</span>
-    }
   </div>
+  @if (grupo() === 'POR_REGULARIZAR' && resumen()?.POR_REGULARIZAR?.cuentas?.length) {
+    <table class="tabla cuentas">
+      <thead>
+        <tr><th>Cuenta por regularizar</th><th class="num">Saldo en libros hoy</th><th class="num">Pendiente de justificar</th><th class="num">Ya justificado (sale en el próximo re-proceso)</th><th class="num">Sin novedad que lo explique</th><th class="num">Movimientos pendientes</th></tr>
+      </thead>
+      <tbody>
+        @for (c of resumen()!.POR_REGULARIZAR.cuentas!; track c.cuenta) {
+          <tr>
+            <td>{{ c.cuenta }} {{ c.nombre }}</td>
+            <td class="num">{{ dinero(abs(c.saldoLibros)) }} <span class="sub">{{ c.naturaleza }}</span></td>
+            <td class="num">{{ dinero(abs(c.pendienteNovedades)) }}</td>
+            <td class="num">{{ dinero(abs(c.resueltoEnNovedades)) }}</td>
+            <td class="num" [class.pendiente]="abs(c.sinNovedad) > 0.004">{{ dinero(c.sinNovedad) }}</td>
+            <td class="num">{{ c.movimientosPendientes }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div class="sub nota">El saldo en libros es el neto de la cuenta (débitos menos créditos). Las salidas y entradas pendientes se compensan entre sí, por eso no se suman: el detalle de cada movimiento está en su novedad. «Ya justificado» sigue en la cuenta hasta el próximo re-proceso, que lo registra donde se indicó. «Sin novedad» es lo que hay en la cuenta y ninguna novedad explica todavía.</div>
+  }
 
   @if (grupo() === 'INFORMATIVA') {
     <div class="barra-bloque">

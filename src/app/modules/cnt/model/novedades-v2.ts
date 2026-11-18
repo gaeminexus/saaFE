@@ -88,6 +88,8 @@ export interface ResumenGrupo {
   cerradas: number;
   valor?: number;
   saldo?: number;
+  movimientosPendientes?: number;
+  cuentas?: { cuenta: string; nombre: string; saldoLibros: number; naturaleza: string; pendienteNovedades: number; resueltoEnNovedades: number; sinNovedad: number; movimientosPendientes: number }[];
 }
 
 export type ResumenV2 = Record<GrupoNovedad, ResumenGrupo>;
