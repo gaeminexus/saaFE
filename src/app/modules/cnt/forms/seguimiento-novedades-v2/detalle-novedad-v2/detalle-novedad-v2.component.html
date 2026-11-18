@@ -147,7 +147,12 @@
               <td class="num">{{ dinero(l.valor) }}</td>
               <td class="num" [class.pendiente]="l.saldo > 0.004">{{ dinero(l.saldo) }}</td>
               <td><span class="chip" [class.ok]="l.estado === 3" [class.parcial]="l.estado === 2">{{ l.estadoNombre }}</span></td>
-              <td>
+              <td class="acciones-linea">
+                @if (l.saldo > 0.004 && f.estado !== 'CERRADA') {
+                  <button mat-stroked-button color="primary" class="btn-linea" (click)="justificarLinea(l)" matTooltip="Justificar este movimiento (todo o una parte)">
+                    Justificar
+                  </button>
+                }
                 @if (l.justificaciones.length) {
                   <button mat-icon-button (click)="alternarDetalle(l)" [matTooltip]="abiertas().has(l.codigo) ? 'Ocultar justificaciones' : 'Ver justificaciones'">
                     <mat-icon>{{ abiertas().has(l.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
@@ -174,12 +179,29 @@
                       @if (j.texto) {
                         <div class="sub">{{ j.texto }}</div>
                       }
-                      @for (r of j.reparto; track r.codigo) {
-                        <div class="reparto">
-                          → {{ r.sentido === 'D' ? 'Débito' : 'Crédito' }} {{ r.cuenta }} {{ r.nombreCuenta }}: <strong>{{ dinero(r.valor) }}</strong>
-                          @if (r.idAsoprep) { · préstamo {{ r.idAsoprep }}{{ r.numeroCuota ? ' cuota ' + r.numeroCuota : '' }} }
-                          @if (r.cedula) { · {{ r.cedula }} {{ r.nombre }} }
-                        </div>
+                      @if (j.reparto.length) {
+                        <table class="asiento">
+                          <thead><tr><th>Asiento de regularización</th><th class="num">Debe</th><th class="num">Haber</th></tr></thead>
+                          <tbody>
+                            <tr class="fija">
+                              <td>{{ l.cuentaAfectada }} {{ l.nombreCuentaAfectada }} <span class="sub">(sale de la cuenta por regularizar)</span></td>
+                              <td class="num">{{ l.sentido === 'H' ? dinero(j.monto) : '' }}</td>
+                              <td class="num">{{ l.sentido === 'D' ? dinero(j.monto) : '' }}</td>
+                            </tr>
+                            @for (r of j.reparto; track r.codigo) {
+                              <tr>
+                                <td>
+                                  {{ r.cuenta }} {{ r.nombreCuenta }}
+                                  @if (r.idAsoprep) { <span class="sub"> · préstamo {{ r.idAsoprep }}{{ r.numeroCuota ? ' cuota ' + r.numeroCuota : '' }}</span> }
+                                  @if (r.cedula) { <span class="sub"> · {{ r.cedula }} {{ r.nombre }}</span> }
+                                  @if (r.glosa) { <span class="sub"> · {{ r.glosa }}</span> }
+                                </td>
+                                <td class="num">{{ r.sentido === 'D' ? dinero(r.valor) : '' }}</td>
+                                <td class="num">{{ r.sentido === 'H' ? dinero(r.valor) : '' }}</td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
                       }
                       @for (a of j.adjuntos; track a.codigo) {
                         <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>

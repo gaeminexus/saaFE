@@ -58,3 +58,10 @@ tr.hecha td { color: #6b7280; }
 .historial { font-size: 13px; padding: 2px 0; }
 .error { color: #b3261e; background: #fdecea; padding: 8px; border-radius: 4px; }
 .participe { font-weight: 600; color: #1f3a60; }
+.acciones-linea { white-space: nowrap; text-align: right; }
+.btn-linea { height: 30px; line-height: 28px; font-size: 12.5px; }
+.asiento { border-collapse: collapse; font-size: 12.5px; margin: 4px 0 4px 8px; min-width: 520px; }
+.asiento th { text-align: left; background: #f3f6fa; padding: 3px 8px; border-bottom: 1px solid #d0d7e2; font-weight: 600; }
+.asiento td { padding: 3px 8px; border-bottom: 1px solid #edf0f4; }
+.asiento .num { text-align: right; white-space: nowrap; width: 110px; }
+.asiento tr.fija td { background: #f7f9fc; }

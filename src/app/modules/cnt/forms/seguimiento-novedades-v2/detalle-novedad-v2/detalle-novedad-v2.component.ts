@@ -204,6 +204,13 @@ export class DetalleNovedadV2Component implements OnChanges {
     this.abrirJustificar({ modo: 'lineas', lineas, todasLasLineas: d.lineas });
   }
 
+  /** Botón de cada fila: justifica ese movimiento solo, sin marcarlo ni volver a la barra de la sección. */
+  justificarLinea(l: LineaV2): void {
+    const d = this.detalle();
+    if (!d || l.saldo <= 0.004) return;
+    this.abrirJustificar({ modo: 'lineas', lineas: [l], todasLasLineas: d.lineas });
+  }
+
   responder(p: PedidoV2): void {
     this.abrirJustificar({ modo: 'pedido', pedido: p, detalleOrigen: this.detalle()?.detalleOrigen || [] });
   }
