@@ -134,10 +134,13 @@
               <td>{{ l.secuencia }}</td>
               <td>{{ fecha(l.fechaBanco || l.fecha) }}</td>
               <td>
+                @if (l.cedula) {
+                  <div class="participe">{{ l.nombre }} · cédula {{ l.cedula }}{{ l.codigoParticipe ? ' · código ' + l.codigoParticipe : '' }}</div>
+                }
                 <div>{{ l.descripcion }}</div>
                 <div class="sub">
                   {{ l.cuentaMovimiento ? l.cuentaMovimiento + ' ' + l.nombreCuentaMovimiento + ' · ' : '' }}hoy en {{ l.cuentaAfectada }}
-                  @if (l.idAsoprep) { · préstamo {{ l.idAsoprep }} · {{ l.cedula }} {{ l.nombre }} }
+                  @if (l.idAsoprep) { · préstamo {{ l.idAsoprep }} }
                 </div>
               </td>
               <td>{{ l.tipoMovimiento }}</td>

@@ -3,6 +3,8 @@ import { Component, Inject, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
+import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 import { FileService } from '../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import {
@@ -23,6 +25,8 @@ import {
 } from '../../model/novedades-v2';
 import { NovedadesV2Service } from '../../service/novedades-v2.service';
 import { SeguimientoNovedadesService } from '../../service/seguimiento-novedades.service';
+
+const CUENTAS_POR_REGULARIZAR = ['1.4.90.90.05', '1.4.90.90.06', '1.4.90.90.07', '1.4.90.90.08', '1.4.90.90.09', '2.3.90.90.05', '2.3.90.90.08', '2.3.90.90.09'];
 
 /** Qué se justifica o responde. */
 export interface JustificarV2Data {
@@ -74,6 +78,7 @@ interface FilaReparto {
           @if (lineas().length === 1) {
             <div class="mov">
               <strong>{{ lineas()[0].tipoMovimiento }} del {{ fecha(lineas()[0].fechaBanco || lineas()[0].fecha) }}</strong> ·
+              @if (lineas()[0].cedula) { {{ lineas()[0].nombre }} (cédula {{ lineas()[0].cedula }}) · }
               {{ lineas()[0].descripcion }}
             </div>
             <div class="sub">
@@ -233,17 +238,23 @@ interface FilaReparto {
           <div class="sub">
             Hoy el valor está en una cuenta por regularizar. Indique la cuenta o cuentas donde debe quedar y cuánto en cada una
             (por ejemplo, un gasto y su IVA). Es lo que el re-proceso registrará en lugar de la cuenta por regularizar.
+            Solo se aceptan cuentas de movimiento del plan de cuentas: si la que necesita no existe, primero debe crearla
+            Contabilidad en <a href="/menucontabilidad/plan-cuentas" target="_blank" rel="noopener">Parametrización › Plan de cuentas</a>.
           </div>
           @for (r of reparto(); track $index; let i = $index) {
             <div class="fila-reparto">
               <mat-form-field appearance="outline" class="cuenta">
-                <mat-label>Cuenta contable</mat-label>
+                <mat-label>Cuenta del plan de cuentas (escriba código o nombre)</mat-label>
                 <input matInput [(ngModel)]="r.textoCuenta" (ngModelChange)="buscarCuenta(r)" [matAutocomplete]="autoCuenta" />
+                <button mat-icon-button matSuffix type="button" (click)="elegirDelPlan(r)" matTooltip="Elegir del plan de cuentas"><mat-icon>account_tree</mat-icon></button>
                 <mat-autocomplete #autoCuenta="matAutocomplete" (optionSelected)="r.cuenta = $event.option.value; r.textoCuenta = textoCuenta($event.option.value)">
                   @for (c of r.opcionesCuenta; track c.codigo) {
                     <mat-option [value]="c">{{ c.cuenta }} · {{ c.nombre }}</mat-option>
                   }
                 </mat-autocomplete>
+                @if (!r.cuenta && r.textoCuenta) {
+                  <mat-hint class="falta">Elija una cuenta de la lista o del plan de cuentas.</mat-hint>
+                }
               </mat-form-field>
               <mat-form-field appearance="outline" class="valor">
                 <mat-label>Valor</mat-label>
@@ -396,6 +407,7 @@ export class JustificarNovedadV2DialogComponent {
   private servicio = inject(NovedadesV2Service);
   private servicioV1 = inject(SeguimientoNovedadesService);
   private fileService = inject(FileService);
+  private dialog = inject(MatDialog);
 
   readonly Math = Math;
   readonly dinero = dinero;
@@ -520,6 +532,27 @@ export class JustificarNovedadV2DialogComponent {
 
   quitarReparto(i: number): void {
     this.reparto.set(this.reparto().filter((_, k) => k !== i));
+  }
+
+  /** Elegir la cuenta en el selector del plan de cuentas (solo cuentas de movimiento; nunca una por regularizar). */
+  elegirDelPlan(r: FilaReparto): void {
+    this.dialog
+      .open(PlanCuentaSelectorDialogComponent, {
+        width: '900px',
+        maxHeight: '85vh',
+        data: { titulo: 'Cuenta a la que va el valor', mostrarSoloMovimiento: true },
+      })
+      .afterClosed()
+      .subscribe((pc: any) => {
+        if (!pc) return;
+        if (CUENTAS_POR_REGULARIZAR.includes(pc.cuentaContable)) {
+          this.error.set('La cuenta ' + pc.cuentaContable + ' es una cuenta por regularizar: elija la cuenta donde debe quedar el valor.');
+          return;
+        }
+        r.cuenta = { codigo: pc.codigo, cuenta: pc.cuentaContable, nombre: pc.nombre };
+        r.textoCuenta = this.textoCuenta(r.cuenta);
+        this.error.set(null);
+      });
   }
 
   textoCuenta(c: CuentaContableV2): string {

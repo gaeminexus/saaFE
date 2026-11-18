@@ -170,6 +170,7 @@ export interface LineaV2 {
   idAsoprep: number | null;
   cedula: string | null;
   nombre: string | null;
+  codigoParticipe: string | null;
   justificaciones: JustificacionV2[];
 }
 
