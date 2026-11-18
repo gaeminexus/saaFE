@@ -26,7 +26,9 @@ import {
 import { NovedadesV2Service } from '../../service/novedades-v2.service';
 import { SeguimientoNovedadesService } from '../../service/seguimiento-novedades.service';
 
-const CUENTAS_POR_REGULARIZAR = ['1.4.90.90.05', '1.4.90.90.06', '1.4.90.90.07', '1.4.90.90.08', '1.4.90.90.09', '2.3.90.90.05', '2.3.90.90.08', '2.3.90.90.09'];
+const r2 = (x: number): number => Math.round(x * 100) / 100;
+
+const CUENTAS_POR_REGULARIZAR =['1.4.90.90.05', '1.4.90.90.06', '1.4.90.90.07', '1.4.90.90.08', '1.4.90.90.09', '2.3.90.90.05', '2.3.90.90.08', '2.3.90.90.09'];
 
 /** Qué se justifica o responde. */
 export interface JustificarV2Data {
@@ -47,8 +49,9 @@ interface FilaReparto {
   cuenta: CuentaContableV2 | null;
   textoCuenta: string;
   opcionesCuenta: CuentaContableV2[];
-  valor: number | null;
-  sentido: 'D' | 'H';
+  /** Una fila va al debe o al haber, nunca a los dos. */
+  debe: number | null;
+  haber: number | null;
   conPrestamo: boolean;
   prestamo: PrestamoV2 | null;
   textoPrestamo: string;
@@ -96,10 +99,10 @@ interface FilaReparto {
         </div>
 
         @if (lineas().length === 1) {
-          <mat-form-field appearance="outline" class="ancho-medio">
+          <mat-form-field appearance="outline" class="monto">
             <mat-label>Monto a justificar</mat-label>
             <input matInput type="number" step="0.01" [(ngModel)]="monto" (ngModelChange)="ajustarRepartoUnico()" />
-            <mat-hint>Puede justificar una parte: el resto queda pendiente.</mat-hint>
+            <mat-hint>Puede justificar solo una parte (por ejemplo 8.000 de 12.000): el resto queda pendiente en la cuenta por regularizar.</mat-hint>
           </mat-form-field>
         }
 
@@ -216,7 +219,7 @@ interface FilaReparto {
               </mat-form-field>
               <div class="sub">La decisión necesita su constancia (acta o correo) adjunta:</div>
               <button mat-stroked-button type="button" (click)="archivoDecision.click()" [disabled]="subiendo()"><mat-icon>attach_file</mat-icon> Adjuntar constancia</button>
-              <input #archivoDecision type="file" hidden (change)="subir($event, 'decision')" />
+              <input #archivoDecision type="file" hidden [accept]="formatosRespaldo" (change)="subir($event, 'decision')" />
               @for (a of constancias(); track a.url) {
                 <span class="adjunto">{{ a.nombreArchivo }}</span>
               }
@@ -230,17 +233,36 @@ interface FilaReparto {
 
       <!-- ===== Reparto a cuentas ===== -->
       @if (pideReparto()) {
-        <div class="seccion">¿A qué cuenta(s) contable(s) va el valor? {{ data.modo === 'pedido' ? '' : '' }}</div>
+        <div class="seccion">{{ data.modo === 'lineas' ? 'Detalle del asiento: cómo debe quedar' : '¿A qué cuenta(s) contable(s) va el valor?' }}</div>
         @if (data.modo === 'pedido') {
           <mat-checkbox [(ngModel)]="conRepartoPedido">La respuesta mueve un valor (indicar cuentas)</mat-checkbox>
         }
         @if (data.modo === 'lineas' || conRepartoPedido) {
           <div class="sub">
-            Hoy el valor está en una cuenta por regularizar. Indique la cuenta o cuentas donde debe quedar y cuánto en cada una
-            (por ejemplo, un gasto y su IVA). Es lo que el re-proceso registrará en lugar de la cuenta por regularizar.
+            @if (data.modo === 'lineas') {
+              Escriba el asiento de lo que justifica. La primera línea la pone el sistema: saca de la cuenta por regularizar el
+              monto que justifica. Agregue las demás cuentas, cada una al debe o al haber; el asiento tiene que cuadrar
+              (total del debe = total del haber). Es lo que el re-proceso registrará en lugar de la cuenta por regularizar.
+            } @else {
+              Indique la cuenta o cuentas donde debe quedar el valor y cuánto en cada una.
+            }
             Solo se aceptan cuentas de movimiento del plan de cuentas: si la que necesita no existe, primero debe crearla
             Contabilidad en <a href="/menucontabilidad/plan-cuentas" target="_blank" rel="noopener">Parametrización › Plan de cuentas</a>.
           </div>
+          <div class="cab-asiento">
+            <span class="c-cuenta">Cuenta</span><span class="c-valor">Debe</span><span class="c-valor">Haber</span><span class="c-quitar"></span>
+          </div>
+          @if (data.modo === 'lineas' && lineas().length) {
+            <div class="fila-fija">
+              <span class="c-cuenta">
+                {{ lineas()[0].cuentaAfectada }} {{ lineas()[0].nombreCuentaAfectada }}
+                <span class="sub">· sale de la cuenta por regularizar (lo pone el sistema)</span>
+              </span>
+              <span class="c-valor num">{{ sentidoLinea() === 'H' ? dinero(totalAJustificar()) : '' }}</span>
+              <span class="c-valor num">{{ sentidoLinea() === 'D' ? dinero(totalAJustificar()) : '' }}</span>
+              <span class="c-quitar"></span>
+            </div>
+          }
           @for (r of reparto(); track $index; let i = $index) {
             <div class="fila-reparto">
               <mat-form-field appearance="outline" class="cuenta">
@@ -257,15 +279,12 @@ interface FilaReparto {
                 }
               </mat-form-field>
               <mat-form-field appearance="outline" class="valor">
-                <mat-label>Valor</mat-label>
-                <input matInput type="number" step="0.01" [(ngModel)]="r.valor" />
+                <mat-label>Debe</mat-label>
+                <input matInput type="number" step="0.01" min="0" [(ngModel)]="r.debe" (ngModelChange)="soloUnLado(r, 'D')" />
               </mat-form-field>
-              <mat-form-field appearance="outline" class="sentido">
-                <mat-label>Va al</mat-label>
-                <mat-select [(ngModel)]="r.sentido">
-                  <mat-option value="D">Débito</mat-option>
-                  <mat-option value="H">Crédito</mat-option>
-                </mat-select>
+              <mat-form-field appearance="outline" class="valor">
+                <mat-label>Haber</mat-label>
+                <input matInput type="number" step="0.01" min="0" [(ngModel)]="r.haber" (ngModelChange)="soloUnLado(r, 'H')" />
               </mat-form-field>
               <button mat-icon-button type="button" (click)="quitarReparto(i)" [disabled]="reparto().length === 1" matTooltip="Quitar esta cuenta"><mat-icon>delete</mat-icon></button>
               <mat-checkbox [(ngModel)]="r.conPrestamo" class="chk">Es de un préstamo o partícipe</mat-checkbox>
@@ -308,9 +327,16 @@ interface FilaReparto {
           }
           <div class="pie-reparto">
             <button mat-stroked-button type="button" (click)="agregarReparto()"><mat-icon>add</mat-icon> Otra cuenta</button>
-            <span [class.falta]="Math.abs(faltaRepartir()) > 0.004">
-              Total {{ dinero(totalAJustificar()) }} · repartido {{ dinero(repartido()) }} · <strong>falta repartir {{ dinero(faltaRepartir()) }}</strong>
-            </span>
+            @if (data.modo === 'lineas') {
+              <span [class.falta]="Math.abs(diferencia()) > 0.004" [class.cuadra]="Math.abs(diferencia()) <= 0.004">
+                Debe {{ dinero(totalDebe()) }} · Haber {{ dinero(totalHaber()) }} ·
+                <strong>{{ Math.abs(diferencia()) <= 0.004 ? 'El asiento cuadra' : 'Diferencia ' + dinero(Math.abs(diferencia())) }}</strong>
+              </span>
+            } @else {
+              <span [class.falta]="Math.abs(faltaRepartir()) > 0.004">
+                Total {{ dinero(totalAJustificar()) }} · repartido {{ dinero(repartido()) }} · <strong>falta repartir {{ dinero(faltaRepartir()) }}</strong>
+              </span>
+            }
           </div>
           @if (data.modo === 'pedido') {
             <mat-form-field appearance="outline" class="ancho-medio">
@@ -343,7 +369,8 @@ interface FilaReparto {
           </mat-form-field>
         </div>
         <button mat-stroked-button type="button" (click)="archivo.click()" [disabled]="subiendo()"><mat-icon>attach_file</mat-icon> Adjuntar archivo</button>
-        <input #archivo type="file" hidden (change)="subir($event, 'respaldo')" />
+        <input #archivo type="file" hidden [accept]="formatosRespaldo" (change)="subir($event, 'respaldo')" />
+        <span class="sub"> PDF, Excel (.xls, .xlsx), Word o imagen.</span>
         @if (subiendo()) {
           <span class="sub"> Subiendo…</span>
         }
@@ -381,11 +408,19 @@ interface FilaReparto {
       .efectos > div.elegido { background: #e3efff; border-left: 3px solid #1f5fbf; }
       .ancho { width: 100%; }
       .ancho-medio { width: 260px; margin-right: 10px; }
+      .monto { width: 100%; max-width: 700px; margin-bottom: 8px; }
       .fila { display: flex; flex-wrap: wrap; }
       .fila-reparto { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-bottom: 1px dashed #d0d7e2; padding: 6px 0; }
       .fila-reparto .cuenta { flex: 1 1 340px; }
-      .fila-reparto .valor { width: 150px; }
-      .fila-reparto .sentido { width: 120px; }
+      .fila-reparto .valor { width: 140px; }
+      .cab-asiento, .fila-fija { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .cab-asiento { font-weight: 600; color: #3d4652; border-bottom: 1px solid #d0d7e2; padding: 6px 0 4px; margin-top: 6px; }
+      .fila-fija { background: #f7f9fc; padding: 10px 0; border-bottom: 1px dashed #d0d7e2; }
+      .c-cuenta { flex: 1 1 340px; }
+      .c-valor { width: 140px; }
+      .c-valor.num { text-align: right; padding-right: 12px; font-weight: 600; }
+      .c-quitar { width: 40px; }
+      .cuadra { color: #1e6b34; }
       .fila-reparto .extra { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
       .pie-reparto { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; }
       .falta { color: #b3261e; }
@@ -413,6 +448,8 @@ export class JustificarNovedadV2DialogComponent {
   readonly dinero = dinero;
   readonly fecha = fechaCorta;
   readonly tiposDocumento = TIPOS_DOCUMENTO_V2;
+  /** Lo que acepta el servidor (FileService.EXTENSIONES_PERMITIDAS), con PDF y Excel primero. */
+  readonly formatosRespaldo = '.pdf,.xls,.xlsx,.doc,.docx,.jpg,.jpeg,.png,.txt,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
   lineas = signal<LineaV2[]>([]);
   monto: number | null = null;
@@ -499,11 +536,37 @@ export class JustificarNovedadV2DialogComponent {
   }
 
   repartido(): number {
-    return Math.round(this.reparto().reduce((s, r) => s + (Number(r.valor) || 0), 0) * 100) / 100;
+    return r2(this.reparto().reduce((s, r) => s + (Number(r.debe) || 0) + (Number(r.haber) || 0), 0));
   }
 
   faltaRepartir(): number {
-    return Math.round((this.totalAJustificar() - this.repartido()) * 100) / 100;
+    return r2(this.totalAJustificar() - this.repartido());
+  }
+
+  /** Sentido del movimiento en la cuenta por regularizar (D salida, H entrada). */
+  sentidoLinea(): 'D' | 'H' {
+    return (this.lineas()[0]?.sentido as 'D' | 'H') || 'D';
+  }
+
+  /** Total del debe del asiento, con la línea de la cuenta por regularizar (justificación de movimientos). */
+  totalDebe(): number {
+    const filas = this.reparto().reduce((s, r) => s + (Number(r.debe) || 0), 0);
+    return r2(filas + (this.data.modo === 'lineas' && this.sentidoLinea() === 'H' ? this.totalAJustificar() : 0));
+  }
+
+  totalHaber(): number {
+    const filas = this.reparto().reduce((s, r) => s + (Number(r.haber) || 0), 0);
+    return r2(filas + (this.data.modo === 'lineas' && this.sentidoLinea() === 'D' ? this.totalAJustificar() : 0));
+  }
+
+  diferencia(): number {
+    return r2(this.totalDebe() - this.totalHaber());
+  }
+
+  /** Al escribir en un lado se borra el otro: una fila va al debe o al haber. */
+  soloUnLado(r: FilaReparto, lado: 'D' | 'H'): void {
+    if (lado === 'D' && (Number(r.debe) || 0) > 0) r.haber = null;
+    if (lado === 'H' && (Number(r.haber) || 0) > 0) r.debe = null;
   }
 
   opcionesEleccion(): string[] {
@@ -514,18 +577,30 @@ export class JustificarNovedadV2DialogComponent {
 
   private filaReparto(valor: number | null, sentido: 'D' | 'H'): FilaReparto {
     return {
-      cuenta: null, textoCuenta: '', opcionesCuenta: [], valor, sentido, conPrestamo: false, prestamo: null, textoPrestamo: '',
+      cuenta: null, textoCuenta: '', opcionesCuenta: [], debe: sentido === 'D' ? valor : null, haber: sentido === 'H' ? valor : null,
+      conPrestamo: false, prestamo: null, textoPrestamo: '',
       opcionesPrestamo: [], cuotas: [], idCuota: null, participe: null, textoParticipe: '', opcionesParticipe: [], glosa: '',
     };
   }
 
+  /** Con una sola fila, su valor sigue al monto a justificar (el asiento queda cuadrado). */
   ajustarRepartoUnico(): void {
     const r = this.reparto();
-    if (r.length === 1) r[0].valor = this.monto;
+    if (r.length !== 1) return;
+    if ((Number(r[0].haber) || 0) > 0) r[0].haber = this.monto;
+    else r[0].debe = this.monto;
   }
 
+  /** La fila nueva propone lo que falta para cuadrar, en el lado que lo cuadra. */
   agregarReparto(): void {
-    const sentido = this.reparto()[0]?.sentido || 'D';
+    if (this.data.modo === 'lineas') {
+      const dif = this.diferencia();
+      const fila = Math.abs(dif) <= 0.004 ? this.filaReparto(null, this.sentidoLinea()) : this.filaReparto(Math.abs(dif), dif > 0 ? 'H' : 'D');
+      this.reparto.set([...this.reparto(), fila]);
+      return;
+    }
+    const primera = this.reparto()[0];
+    const sentido: 'D' | 'H' = primera && (Number(primera.haber) || 0) > 0 ? 'H' : 'D';
     const falta = this.faltaRepartir();
     this.reparto.set([...this.reparto(), this.filaReparto(falta > 0 ? falta : null, sentido)]);
   }
@@ -690,8 +765,16 @@ export class JustificarNovedadV2DialogComponent {
     const faltas: string[] = [];
     const conReparto = this.pideReparto() && (this.data.modo === 'lineas' || this.conRepartoPedido);
     if (conReparto) {
-      if (this.reparto().some((r) => !r.cuenta)) faltas.push('elegir la cuenta de cada fila del reparto (de la lista)');
-      if (Math.abs(this.faltaRepartir()) > 0.004) faltas.push(`repartir todo el valor (falta ${dinero(this.faltaRepartir())})`);
+      if (this.reparto().some((r) => !r.cuenta)) faltas.push('elegir la cuenta de cada fila del asiento (de la lista)');
+      if (this.reparto().some((r) => ((Number(r.debe) || 0) > 0) === ((Number(r.haber) || 0) > 0))) {
+        faltas.push('poner el valor de cada fila en el debe o en el haber (uno de los dos)');
+      }
+      if (this.data.modo === 'lineas') {
+        if (!((this.totalAJustificar() || 0) > 0)) faltas.push('indicar el monto a justificar');
+        if (Math.abs(this.diferencia()) > 0.004) faltas.push(`cuadrar el asiento (debe ${dinero(this.totalDebe())}, haber ${dinero(this.totalHaber())})`);
+      } else if (Math.abs(this.faltaRepartir()) > 0.004) {
+        faltas.push(`repartir todo el valor (falta ${dinero(this.faltaRepartir())})`);
+      }
     }
     if (this.pideDecision() && !this.decision()) faltas.push('elegir la decisión de ASOPREP');
     if (this.data.modo === 'lineas' && this.tipo === 'CRUCE' && !this.idLineaCruce) faltas.push('elegir el movimiento con el que se compensa');
@@ -714,8 +797,8 @@ export class JustificarNovedadV2DialogComponent {
       reparto: conReparto
         ? this.reparto().map((r) => ({
             idCuenta: r.cuenta!.codigo,
-            valor: Number(r.valor),
-            sentido: r.sentido,
+            valor: (Number(r.debe) || 0) > 0 ? Number(r.debe) : Number(r.haber),
+            sentido: (Number(r.debe) || 0) > 0 ? ('D' as const) : ('H' as const),
             idPrestamo: r.conPrestamo ? r.prestamo?.codigo ?? null : null,
             idCuota: r.conPrestamo ? r.idCuota : null,
             idEntidad: r.conPrestamo && !r.prestamo ? r.participe?.codigo ?? null : null,
