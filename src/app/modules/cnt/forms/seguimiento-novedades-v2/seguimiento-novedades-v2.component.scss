@@ -1,0 +1,34 @@
+.pantalla { padding: 12px 16px; }
+.encabezado { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+.encabezado h1 { margin: 0 0 4px; font-size: 22px; color: #1f3a60; }
+.v2 { background: #1f5fbf; color: #fff; font-size: 12px; border-radius: 4px; padding: 1px 6px; vertical-align: middle; }
+.sub { color: #5b6573; font-size: 12.5px; }
+.filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filtros mat-form-field { width: 160px; }
+.filtros .texto { width: 320px; }
+.ayuda { margin: 8px 0; color: #3d4652; font-size: 13.5px; }
+.barra-bloque { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 6px; }
+.tabla-contenedor { overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tabla th { text-align: left; background: #f3f6fa; padding: 7px 6px; border-bottom: 1px solid #d0d7e2; position: sticky; top: 0; z-index: 1; }
+.tabla td { padding: 7px 6px; border-bottom: 1px solid #edf0f4; vertical-align: top; }
+.tabla tbody tr:not(.fila-detalle) { cursor: pointer; }
+.tabla tbody tr:not(.fila-detalle):hover { background: #f5f8fc; }
+.tabla tr.elegida { background: #e9f1ff !important; }
+.tabla tr.cerrada td { color: #6b7280; }
+.tabla .num { text-align: right; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.titulo { font-weight: 500; }
+.paso { font-size: 12.5px; color: #3d4652; max-width: 340px; }
+.pendiente { color: #9b1c1c; font-weight: 600; }
+.fila-detalle > td { background: #fbfcfe; border: 2px solid #1f5fbf; padding: 12px; cursor: default; }
+.estado { padding: 2px 9px; border-radius: 11px; font-size: 12px; background: #eef1f5; white-space: nowrap; }
+.estado.PENDIENTE { background: #fde8e8; color: #9b1c1c; }
+.estado.EN_PROCESO { background: #fff4d6; color: #7a5400; }
+.estado.LISTA { background: #e3efff; color: #1f5fbf; }
+.estado.CERRADA { background: #e3f6e8; color: #1e6b34; }
+.estado.POR_CONOCER { background: #eef1f5; color: #3d4652; }
+.vacio { text-align: center; padding: 18px; }
+.error { color: #b3261e; background: #fdecea; padding: 8px; border-radius: 4px; margin: 8px 0; }
+.tabla.cuentas { margin: 4px 0 6px; max-width: 1100px; }
+.nota { margin-bottom: 10px; }

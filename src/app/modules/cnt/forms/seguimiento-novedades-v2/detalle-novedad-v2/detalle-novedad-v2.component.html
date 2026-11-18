@@ -1,0 +1,321 @@
+@if (cargando() && !detalle()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+}
+@if (error()) {
+  <div class="error">{{ error() }}</div>
+}
+@if (detalle(); as d) {
+  @let f = d.fila;
+  <div class="cabecera">
+    <div>
+      <div class="meta">{{ f.periodo }} · {{ f.codigoNovedad }} · {{ f.areaNombre }}</div>
+      <h2>{{ d.textos.titulo }}</h2>
+    </div>
+    <div class="derecha">
+      <span class="estado" [class]="'estado ' + f.estado">{{ f.estadoNombre }}</span>
+      <button mat-icon-button (click)="cerrarPanel.emit()" matTooltip="Cerrar el detalle"><mat-icon>close</mat-icon></button>
+    </div>
+  </div>
+
+  <!-- Barra de pasos -->
+  <div class="pasos">
+    <div class="paso" [class.hecho]="paso() > 1" [class.actual]="paso() === 1">
+      <span class="n">1</span>
+      {{ f.grupo === 'POR_REGULARIZAR' ? 'Justificar cada movimiento' : f.grupo === 'PEDIDO' ? 'Responder los pedidos' : 'Leer la novedad' }}
+    </div>
+    <div class="paso" [class.hecho]="paso() > 2" [class.actual]="paso() === 2">
+      <span class="n">2</span> {{ f.grupo === 'INFORMATIVA' ? 'Darla por conocida' : 'Revisar y cerrar' }}
+    </div>
+    <div class="paso" [class.actual]="paso() === 3"><span class="n">3</span> {{ f.grupo === 'INFORMATIVA' ? 'Conocida' : 'Cerrada' }}</div>
+  </div>
+
+  <!-- Siguiente paso -->
+  <div class="banner" [class.lista]="f.puedeCerrar && f.estado !== 'CERRADA'" [class.cerrada]="f.estado === 'CERRADA'">
+    <div>
+      <div class="etiqueta">{{ f.estado === 'CERRADA' ? 'Estado' : 'Siguiente paso' }}</div>
+      <div class="texto">{{ f.siguientePaso }}</div>
+      @if (f.estado === 'CERRADA' && f.comentarioCierre) {
+        <div class="sub">{{ f.comentarioCierre }}</div>
+      }
+    </div>
+    <button mat-flat-button [color]="f.estado === 'CERRADA' ? undefined : 'primary'" (click)="siguientePaso()">{{ textoBotonPaso() }}</button>
+  </div>
+
+  <!-- Qué pasó / por qué / cuánto / qué hacer -->
+  <div class="bloques">
+    <section>
+      <h3>¿Qué pasó?</h3>
+      <p class="texto-largo">{{ d.textos.quePaso }}</p>
+      @if (d.textos.quePasoEsTecnico) {
+        <div class="sub">Texto técnico del re-proceso: la explicación en lenguaje del usuario se está completando.</div>
+      }
+    </section>
+    <section>
+      <h3>¿Por qué se lo mostramos?</h3>
+      @if (d.textos.porQue) {
+        <p class="texto-largo">{{ d.textos.porQue }}</p>
+      }
+      @for (dc of d.decisiones; track dc.codigo) {
+        <div class="decision">
+          <strong>{{ dc.titulo }}</strong> <span class="numero">({{ dc.numero }})</span>
+          @if (dc.resumen) {
+            <div class="sub">{{ dc.resumen }}</div>
+          }
+        </div>
+      } @empty {
+        @if (!d.textos.porQue) {
+          <p class="sub">Sin reglas citadas.</p>
+        }
+      }
+      @if (d.textos.registro) {
+        <p class="texto-largo"><strong>Qué se registró mientras tanto:</strong> {{ d.textos.registro }}</p>
+      }
+    </section>
+    @if (d.cuentas.length || f.grupo === 'PEDIDO') {
+      <section>
+        <h3>¿Cuánto afecta?</h3>
+        @if (d.cuentas.length) {
+          <table class="tabla">
+            <thead>
+              <tr><th>Cuenta por regularizar</th><th>Movimientos</th><th class="num">Valor</th><th class="num">Falta justificar</th></tr>
+            </thead>
+            <tbody>
+              @for (c of d.cuentas; track c.cuenta + c.sentido) {
+                <tr>
+                  <td>{{ c.cuenta }} {{ c.nombre }} · <span class="sub">{{ c.sentidoNombre }}</span></td>
+                  <td>{{ c.movimientos }}</td>
+                  <td class="num">{{ dinero(c.valor) }}</td>
+                  <td class="num" [class.pendiente]="c.saldo > 0">{{ dinero(c.saldo) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p>{{ f.valorNovedad ? 'Monto citado en la novedad: ' + dinero(f.valorNovedad) : 'Sin monto: no mueve las cuentas por regularizar.' }}</p>
+        }
+      </section>
+    }
+    <section class="que-hacer">
+      <h3>Lo que necesitamos de usted</h3>
+      <p class="texto-largo">{{ d.textos.queHacer }}</p>
+    </section>
+  </div>
+
+  <!-- Movimientos (líneas) -->
+  @if (d.lineas.length) {
+    <section class="seccion">
+      <div class="titulo-seccion">
+        <h3>Movimientos ({{ f.lineasJustificadas }} de {{ f.lineas }} justificados · faltan {{ dinero(f.saldo) }})</h3>
+        <div class="acciones">
+          <mat-checkbox [checked]="soloPendientes()" (change)="soloPendientes.set($event.checked)">Solo pendientes</mat-checkbox>
+          <button mat-button [matMenuTriggerFor]="menuSel" [disabled]="f.estado === 'CERRADA'">Marcar…</button>
+          <mat-menu #menuSel="matMenu">
+            <button mat-menu-item (click)="seleccionarPendientes('D')">Todas las salidas pendientes</button>
+            <button mat-menu-item (click)="seleccionarPendientes('H')">Todas las entradas pendientes</button>
+            <button mat-menu-item (click)="limpiarSeleccion()">Ninguno</button>
+          </mat-menu>
+          <button mat-flat-button color="primary" (click)="justificar()" [disabled]="!seleccion().size || f.estado === 'CERRADA'">
+            Justificar {{ seleccion().size ? seleccion().size + ' (' + dinero(totalSeleccionado()) + ')' : '' }}
+          </button>
+        </div>
+      </div>
+      <table class="tabla lineas">
+        <thead>
+          <tr><th></th><th>N.º</th><th>Fecha</th><th>Movimiento</th><th>Tipo</th><th class="num">Valor</th><th class="num">Falta</th><th>Estado</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (l of lineasVisibles(); track l.codigo) {
+            <tr [class.marcada]="seleccion().has(l.codigo)" [class.hecha]="l.saldo <= 0.004">
+              <td>
+                @if (l.saldo > 0.004 && f.estado !== 'CERRADA') {
+                  <mat-checkbox [checked]="seleccion().has(l.codigo)" (change)="alternar(l)"></mat-checkbox>
+                }
+              </td>
+              <td>{{ l.secuencia }}</td>
+              <td>{{ fecha(l.fechaBanco || l.fecha) }}</td>
+              <td>
+                @if (l.cedula) {
+                  <div class="participe">{{ l.nombre }} · cédula {{ l.cedula }}{{ l.codigoParticipe ? ' · código ' + l.codigoParticipe : '' }}</div>
+                }
+                <div>{{ l.descripcion }}</div>
+                <div class="sub">
+                  {{ l.cuentaMovimiento ? l.cuentaMovimiento + ' ' + l.nombreCuentaMovimiento + ' · ' : '' }}hoy en {{ l.cuentaAfectada }}
+                  @if (l.idAsoprep) { · préstamo {{ l.idAsoprep }} }
+                </div>
+              </td>
+              <td>{{ l.tipoMovimiento }}</td>
+              <td class="num">{{ dinero(l.valor) }}</td>
+              <td class="num" [class.pendiente]="l.saldo > 0.004">{{ dinero(l.saldo) }}</td>
+              <td><span class="chip" [class.ok]="l.estado === 3" [class.parcial]="l.estado === 2">{{ l.estadoNombre }}</span></td>
+              <td>
+                @if (l.justificaciones.length) {
+                  <button mat-icon-button (click)="alternarDetalle(l)" [matTooltip]="abiertas().has(l.codigo) ? 'Ocultar justificaciones' : 'Ver justificaciones'">
+                    <mat-icon>{{ abiertas().has(l.codigo) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </button>
+                }
+              </td>
+            </tr>
+            @if (abiertas().has(l.codigo)) {
+              <tr class="detalle-linea">
+                <td colspan="9">
+                  @for (j of l.justificaciones; track j.codigo) {
+                    <div class="justificacion" [class.anulada]="!j.vigente">
+                      <div>
+                        <strong>{{ dinero(j.monto) }}</strong> · {{ j.tipoNombre }}
+                        @if (j.tituloDecision) { · decisión «{{ j.tituloDecision }}» }
+                        @if (j.numeroDocumento) { · {{ j.tipoDocumento }} {{ j.numeroDocumento }} }
+                        @if (j.fechaHecho) { · {{ fecha(j.fechaHecho) }} }
+                        @if (j.cruceCon) { · compensa el {{ j.cruceCon }} }
+                        <span class="sub"> — {{ j.usuarioRegistro }}, {{ fecha(j.fechaRegistro) }}</span>
+                        @if (!j.vigente) {
+                          <span class="sub"> · ANULADA por {{ j.usuarioAnulacion }}: {{ j.motivoAnulacion }}</span>
+                        }
+                      </div>
+                      @if (j.texto) {
+                        <div class="sub">{{ j.texto }}</div>
+                      }
+                      @for (r of j.reparto; track r.codigo) {
+                        <div class="reparto">
+                          → {{ r.sentido === 'D' ? 'Débito' : 'Crédito' }} {{ r.cuenta }} {{ r.nombreCuenta }}: <strong>{{ dinero(r.valor) }}</strong>
+                          @if (r.idAsoprep) { · préstamo {{ r.idAsoprep }}{{ r.numeroCuota ? ' cuota ' + r.numeroCuota : '' }} }
+                          @if (r.cedula) { · {{ r.cedula }} {{ r.nombre }} }
+                        </div>
+                      }
+                      @for (a of j.adjuntos; track a.codigo) {
+                        <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>
+                      }
+                      @if (j.vigente && f.estado !== 'CERRADA') {
+                        <button mat-button color="warn" (click)="anularJustificacion(j)">Anular</button>
+                      }
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          } @empty {
+            <tr><td colspan="9" class="sub">No quedan movimientos pendientes. Desmarque «Solo pendientes» para ver todos.</td></tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+
+  <!-- Pedidos -->
+  @if (d.pedidos.length) {
+    <section class="seccion">
+      <h3>Pedidos ({{ f.pedidosAtendidos }} de {{ f.pedidos }} respondidos)</h3>
+      @if (f.grupo === 'POR_REGULARIZAR') {
+        <div class="sub">Esta novedad se resuelve justificando los movimientos; los pedidos quedan atendidos al cerrarla.</div>
+      }
+      @for (p of d.pedidos; track p.codigo) {
+        <div class="pedido" [class.atendido]="p.atendido">
+          <div class="cab-pedido">
+            <div>
+              <span class="chip" [class.ok]="p.atendido">{{ p.estadoNombre }}</span>
+              <strong>{{ p.tipoNombre }}</strong> · {{ p.areaNombre }}
+            </div>
+            @if (!p.atendido && f.estado !== 'CERRADA' && f.grupo !== 'POR_REGULARIZAR') {
+              <button mat-flat-button color="primary" (click)="responder(p)">Responder</button>
+            }
+          </div>
+          <p class="texto-largo">{{ p.descripcion }}</p>
+          @if (p.supuesto) {
+            <div class="sub">Mientras no responda: {{ p.supuesto }}</div>
+          }
+          @if (p.efectoSi || p.efectoNo) {
+            <div class="efectos">
+              @if (p.efectoSi) { <div><strong>Si responde SÍ:</strong> {{ p.efectoSi }}</div> }
+              @if (p.efectoNo) { <div><strong>Si responde NO:</strong> {{ p.efectoNo }}</div> }
+            </div>
+          }
+          @for (r of p.respuestas; track r.respuesta.codigo) {
+            <div class="justificacion" [class.anulada]="!r.vigente">
+              <div>
+                <strong>Respuesta</strong>
+                @if (r.respuesta.opcion) { · {{ r.respuesta.opcion === 'NO_EXISTE' ? 'el documento no existe' : r.respuesta.opcion }} }
+                @if (r.tituloDecision) { · decisión «{{ r.tituloDecision }}» }
+                @if (r.respuesta.monto) { · {{ dinero(r.respuesta.monto) }} }
+                @if (r.respuesta.numeroDocumento) { · {{ r.respuesta.tipoDocumento }} {{ r.respuesta.numeroDocumento }} }
+                <span class="sub"> — {{ r.respuesta.usuarioRegistro }}, {{ fecha(r.respuesta.fecha) }}{{ r.vigente ? '' : ' · ANULADA' }}</span>
+              </div>
+              @if (r.respuesta.texto) {
+                <div class="sub">{{ r.respuesta.texto }}</div>
+              }
+              @for (x of r.reparto; track x.codigo) {
+                <div class="reparto">
+                  → {{ x.sentido === 'D' ? 'Débito' : 'Crédito' }} {{ x.cuenta }} {{ x.nombreCuenta }}: <strong>{{ dinero(x.valor) }}</strong>
+                  @if (x.idAsoprep) { · préstamo {{ x.idAsoprep }}{{ x.numeroCuota ? ' cuota ' + x.numeroCuota : '' }} }
+                  @if (x.cedula) { · {{ x.cedula }} {{ x.nombre }} }
+                </div>
+              }
+              @for (a of r.adjuntos; track a.codigo) {
+                <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>
+              }
+              @if (r.vigente && f.estado !== 'CERRADA') {
+                <button mat-button color="warn" (click)="anularRespuesta(r.respuesta.codigo)">Anular</button>
+              }
+            </div>
+          }
+        </div>
+      }
+    </section>
+  }
+
+  <!-- Detalle de origen -->
+  @if (bloquesOrigen().length) {
+    <section class="seccion">
+      <h3>Detalle de origen</h3>
+      @for (b of bloquesOrigen(); track b.grupo) {
+        <mat-expansion-panel class="bloque">
+          <mat-expansion-panel-header>
+            <mat-panel-title>{{ b.grupo }}</mat-panel-title>
+            <mat-panel-description>
+              {{ b.filas.length }} fila(s){{ b.prestamos ? ' · ' + b.prestamos + ' préstamo(s)' : '' }}{{ b.resumenEstados && b.resumenEstados !== b.filas.length + ' —' ? ' · hoy: ' + b.resumenEstados : '' }}
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+          <div class="acciones-bloque"><button mat-stroked-button (click)="exportarOrigen(b)"><mat-icon>download</mat-icon> Exportar a Excel</button></div>
+          <div class="scroll">
+            <table class="tabla">
+              <thead>
+                <tr>
+                  <th>Préstamo</th><th>Partícipe</th><th>Cuota</th><th>Fecha</th><th>Fecha 2</th><th>Antes</th><th>Después</th><th>Hoy</th>
+                  <th class="num">Valor</th><th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (x of b.filas; track x.codigo) {
+                  <tr>
+                    <td>{{ x.idAsoprep ?? '' }}</td>
+                    <td>{{ x.cedula }} {{ x.nombre }}{{ x.codigoParticipe ? ' · ' + x.codigoParticipe : '' }}</td>
+                    <td>{{ x.numeroCuota ?? '' }}</td>
+                    <td>{{ fecha(x.fecha1) }}</td>
+                    <td>{{ fecha(x.fecha2) }}</td>
+                    <td>{{ x.estadoAntes }}</td>
+                    <td>{{ x.estadoDespues }}</td>
+                    <td>{{ x.estadoHoy }}</td>
+                    <td class="num">{{ x.valor1 !== null ? dinero(x.valor1) : '' }}</td>
+                    <td>{{ x.descripcion }}{{ x.numeroAsiento ? ' · asiento ' + x.numeroAsiento : '' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </mat-expansion-panel>
+      }
+    </section>
+  }
+
+  <!-- Historial y trazabilidad -->
+  <mat-expansion-panel class="bloque">
+    <mat-expansion-panel-header><mat-panel-title>Historial ({{ d.historial.length }})</mat-panel-title></mat-expansion-panel-header>
+    @for (h of d.historial; track h.codigo) {
+      <div class="historial"><span class="sub">{{ fecha(h.fecha) }} · {{ h.usuario }}</span> — {{ h.motivo || h.accion }}</div>
+    }
+  </mat-expansion-panel>
+  <mat-expansion-panel class="bloque">
+    <mat-expansion-panel-header><mat-panel-title>Texto técnico del re-proceso (GAEMII)</mat-panel-title></mat-expansion-panel-header>
+    <p class="texto-largo">{{ d.textos.textoTecnico }}</p>
+    <p class="texto-largo">{{ d.textos.resolucionTecnica }}</p>
+    <p class="sub">Criterios: {{ d.textos.criterios }} · Fuentes: {{ d.textos.fuentes }}</p>
+  </mat-expansion-panel>
+}
