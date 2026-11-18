@@ -115,7 +115,7 @@ interface FilaReparto {
                 <mat-option [value]="c.codigo">{{ fecha(c.fechaBanco || c.fecha) }} · {{ c.descripcion }} · falta {{ dinero(c.saldo) }}</mat-option>
               }
             </mat-select>
-            <mat-hint>Una salida y una entrada de la misma cuenta se anulan entre sí: no hace falta repartir.</mat-hint>
+            <mat-hint>Una salida y una entrada que se anulan entre sí (por ejemplo, una transferencia y su devolución): no hace falta repartir.</mat-hint>
           </mat-form-field>
         }
       } @else if (data.pedido; as p) {
@@ -443,7 +443,7 @@ export class JustificarNovedadV2DialogComponent {
     const l = this.lineas()[0];
     if (!l) return [];
     return (this.data.todasLasLineas || []).filter(
-      (c) => c.codigo !== l.codigo && c.idCuentaAfectada === l.idCuentaAfectada && c.sentido !== l.sentido && c.saldo > 0.004,
+      (c) => c.codigo !== l.codigo && c.sentido !== l.sentido && c.saldo > 0.004,
     );
   });
 
