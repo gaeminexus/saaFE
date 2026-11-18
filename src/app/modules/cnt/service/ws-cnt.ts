@@ -73,5 +73,8 @@ export class ServiciosCnt {
   public static RS_DCSN = `${API_URL}/dcsn`;
   public static RS_HSNV = `${API_URL}/hsnv`;
 
+  // C34 — Seguimiento de novedades v2 (saaBE rama cuadre/c34-novedades-v2)
+  public static RS_NVDD2 = `${API_URL}/nvdd2`;
+
 
 }

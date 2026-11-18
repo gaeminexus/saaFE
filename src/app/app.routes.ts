@@ -138,6 +138,14 @@ export const routes: Routes = [
         data: { title: 'Seguimiento Novedades' },
       },
       {
+        // C34 — seguimiento de novedades v2 (pantalla aparte para comparar con la v1)
+        path: 'procesos/seguimiento-novedades-v2',
+        loadComponent: () =>
+          import('./modules/cnt/forms/seguimiento-novedades-v2/seguimiento-novedades-v2.component').then((m) => m.SeguimientoNovedadesV2Component),
+        canActivate: [authGuard],
+        data: { title: 'Seguimiento Novedades v2' },
+      },
+      {
         path: 'listado-asientos',
         loadComponent: () => import('./modules/cnt/forms/listado-asientos/listado-asientos.component').then((m) => m.ListadoAsientosComponent),
         canActivate: [authGuard],

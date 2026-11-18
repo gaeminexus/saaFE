@@ -167,6 +167,13 @@ export class MenuContabilidadComponent {
           idPermiso: Permisos.CNT_SEGUIMIENTO_NOVEDADES,
           route: '/menucontabilidad/procesos/seguimiento-novedades',
         },
+        {
+          // C34 — 24 caracteres (el menú lateral corta a 24); mismo permiso que la v1
+          displayName: 'Seguimiento Novedades v2',
+          iconName: 'task_alt',
+          idPermiso: Permisos.CNT_SEGUIMIENTO_NOVEDADES,
+          route: '/menucontabilidad/procesos/seguimiento-novedades-v2',
+        },
       ],
     },
     {

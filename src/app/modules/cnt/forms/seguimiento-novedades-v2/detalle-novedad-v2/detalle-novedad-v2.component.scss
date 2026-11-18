@@ -1,0 +1,59 @@
+:host { display: block; }
+.cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.cabecera h2 { margin: 2px 0 8px; font-size: 19px; color: #1f3a60; }
+.meta { color: #5b6573; font-size: 13px; }
+.derecha { display: flex; align-items: center; gap: 6px; }
+.estado { padding: 3px 10px; border-radius: 12px; font-size: 12.5px; background: #eef1f5; white-space: nowrap; }
+.estado.PENDIENTE { background: #fde8e8; color: #9b1c1c; }
+.estado.EN_PROCESO { background: #fff4d6; color: #7a5400; }
+.estado.LISTA { background: #e3efff; color: #1f5fbf; }
+.estado.CERRADA { background: #e3f6e8; color: #1e6b34; }
+.estado.POR_CONOCER { background: #eef1f5; color: #3d4652; }
+.pasos { display: flex; gap: 6px; margin: 6px 0 10px; }
+.paso { flex: 1; padding: 6px 10px; border-radius: 4px; background: #f3f4f6; color: #6b7280; font-size: 13px; }
+.paso .n { display: inline-block; width: 20px; height: 20px; border-radius: 50%; background: #d1d5db; color: #fff; text-align: center; line-height: 20px; margin-right: 4px; font-size: 12px; }
+.paso.actual { background: #e3efff; color: #1f3a60; font-weight: 600; }
+.paso.actual .n { background: #1f5fbf; }
+.paso.hecho { color: #1e6b34; }
+.paso.hecho .n { background: #1e6b34; }
+.banner { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-radius: 6px; padding: 10px 14px; background: #fff7e0; border-left: 4px solid #e0a800; margin-bottom: 12px; }
+.banner.lista { background: #e3efff; border-left-color: #1f5fbf; }
+.banner.cerrada { background: #e3f6e8; border-left-color: #1e6b34; }
+.banner .etiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #5b6573; }
+.banner .texto { font-size: 15px; font-weight: 600; }
+.bloques { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 10px; }
+.bloques section { border: 1px solid #e2e6ec; border-radius: 6px; padding: 8px 12px; background: #fff; }
+.bloques h3, .seccion h3 { margin: 4px 0 6px; font-size: 15px; color: #1f3a60; }
+.que-hacer { border-color: #1f5fbf !important; background: #f5f9ff !important; }
+.texto-largo { white-space: pre-line; margin: 4px 0; }
+.sub { color: #5b6573; font-size: 12.5px; }
+.numero { color: #7b8794; font-size: 12px; }
+.decision { margin: 4px 0; }
+.seccion { margin-top: 14px; }
+.titulo-seccion { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.acciones { display: flex; align-items: center; gap: 8px; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla th { text-align: left; background: #f3f6fa; padding: 6px; border-bottom: 1px solid #d0d7e2; }
+.tabla td { padding: 5px 6px; border-bottom: 1px solid #edf0f4; vertical-align: top; }
+.tabla .num { text-align: right; white-space: nowrap; }
+.pendiente { color: #9b1c1c; font-weight: 600; }
+tr.marcada { background: #eef4ff; }
+tr.hecha td { color: #6b7280; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 10px; background: #fde8e8; color: #9b1c1c; font-size: 12px; margin-right: 6px; }
+.chip.ok { background: #e3f6e8; color: #1e6b34; }
+.chip.parcial { background: #fff4d6; color: #7a5400; }
+.detalle-linea td { background: #fafbfd; }
+.justificacion { border-left: 3px solid #1f5fbf; padding: 4px 10px; margin: 4px 0; }
+.justificacion.anulada { border-left-color: #b0b7c3; opacity: .7; text-decoration: line-through; }
+.reparto { font-size: 13px; margin-left: 8px; }
+.adjunto { font-size: 12.5px; }
+.pedido { border: 1px solid #e2e6ec; border-radius: 6px; padding: 8px 12px; margin: 6px 0; }
+.pedido.atendido { background: #f6fbf7; }
+.cab-pedido { display: flex; justify-content: space-between; align-items: center; }
+.efectos { font-size: 13px; display: flex; flex-direction: column; gap: 3px; margin: 4px 0; }
+.efectos > div { background: #f3f4f6; padding: 4px 8px; border-radius: 4px; }
+.bloque { margin-top: 8px; }
+.acciones-bloque { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.scroll { max-height: 420px; overflow: auto; }
+.historial { font-size: 13px; padding: 2px 0; }
+.error { color: #b3261e; background: #fdecea; padding: 8px; border-radius: 4px; }

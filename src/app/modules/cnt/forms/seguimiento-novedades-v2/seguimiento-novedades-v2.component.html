@@ -1,0 +1,153 @@
+<div class="pantalla">
+  <div class="encabezado">
+    <div>
+      <h1>Seguimiento de Novedades <span class="v2">v2</span></h1>
+      <div class="sub">
+        Cada novedad explica qué pasó, cuánto afecta y qué necesitamos de usted. Las que mueven cuentas por regularizar se
+        justifican movimiento por movimiento indicando a qué cuenta va cada valor; al cerrarlas, el próximo re-proceso las
+        registra así.
+      </div>
+    </div>
+    <button mat-stroked-button [matMenuTriggerFor]="menuExportar"><mat-icon>download</mat-icon> Exportar respuestas</button>
+    <mat-menu #menuExportar="matMenu">
+      <button mat-menu-item (click)="exportar('asoprep')">Excel (con cédula y nombre)</button>
+      <button mat-menu-item (click)="exportar('reproceso')">Para el re-proceso (JSON, solo números internos)</button>
+    </mat-menu>
+  </div>
+
+  <div class="filtros">
+    <mat-form-field appearance="outline">
+      <mat-label>Año</mat-label>
+      <mat-select [(ngModel)]="anio" (selectionChange)="buscar()">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (a of anios; track a) {
+          <mat-option [value]="a">{{ a }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Mes</mat-label>
+      <mat-select [(ngModel)]="mes" (selectionChange)="buscar()">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (m of meses; track m.valor) {
+          <mat-option [value]="m.valor">{{ m.etiqueta }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Área</mat-label>
+      <mat-select [(ngModel)]="area" (selectionChange)="buscar()">
+        <mat-option [value]="null">Todas</mat-option>
+        @for (a of areas; track a.valor) {
+          <mat-option [value]="a.valor">{{ a.etiqueta }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Estado</mat-label>
+      <mat-select [(ngModel)]="estado" (selectionChange)="buscar()">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (e of estados; track e.valor) {
+          <mat-option [value]="e.valor">{{ e.etiqueta }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="texto">
+      <mat-label>Buscar (título, código, préstamo, cédula, nombre)</mat-label>
+      <input matInput [(ngModel)]="texto" (keyup.enter)="buscar()" />
+    </mat-form-field>
+    <button mat-flat-button color="primary" (click)="buscar()"><mat-icon>search</mat-icon> Buscar</button>
+    <button mat-button (click)="limpiar()">Limpiar</button>
+  </div>
+
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
+  }
+
+  <mat-tab-group [selectedIndex]="indiceGrupo()" (selectedIndexChange)="cambiarPestana($event)" animationDuration="0ms">
+    @for (g of grupos; track g.valor) {
+      <mat-tab [label]="etiquetaPestana(g)"></mat-tab>
+    }
+  </mat-tab-group>
+  @if (cargando()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+
+  <div class="ayuda">
+    {{ grupos[indiceGrupo()].ayuda }}
+    @if (grupo() === 'POR_REGULARIZAR') {
+      <span> En esta vista: {{ totalesGrupo().n }} novedad(es), movimientos por {{ dinero(totalesGrupo().valor) }}, faltan {{ dinero(totalesGrupo().saldo) }}.</span>
+    }
+  </div>
+
+  @if (grupo() === 'INFORMATIVA') {
+    <div class="barra-bloque">
+      <button mat-button (click)="marcarTodas()">Marcar / desmarcar todas las abiertas</button>
+      <button mat-flat-button color="primary" [disabled]="!marcadas().size" (click)="darPorConocidas()">
+        Dar por conocidas {{ marcadas().size ? '(' + marcadas().size + ')' : '' }}
+      </button>
+    </div>
+  }
+
+  <div class="tabla-contenedor">
+    <table class="tabla">
+      <thead>
+        <tr>
+          @if (grupo() === 'INFORMATIVA') { <th></th> }
+          <th>Mes</th>
+          <th>Novedad</th>
+          <th>Área</th>
+          @if (grupo() === 'POR_REGULARIZAR') {
+            <th>Movimientos</th><th class="num">Valor</th><th class="num">Falta justificar</th>
+          }
+          @if (grupo() === 'PEDIDO') { <th>Pedidos</th> }
+          <th>Estado</th>
+          <th>Siguiente paso</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (f of filasGrupo(); track f.codigo) {
+          <tr (click)="abrir(f)" [class.elegida]="seleccionada() === f.codigo" [class.cerrada]="f.estado === 'CERRADA'">
+            @if (grupo() === 'INFORMATIVA') {
+              <td (click)="$event.stopPropagation()">
+                @if (f.estado !== 'CERRADA') {
+                  <mat-checkbox [checked]="marcadas().has(f.codigo)" (change)="alternarMarca(f)"></mat-checkbox>
+                }
+              </td>
+            }
+            <td class="nowrap">{{ f.periodo }}</td>
+            <td>
+              <div class="titulo">{{ f.titulo }}</div>
+              <div class="sub">{{ f.codigoNovedad }}</div>
+            </td>
+            <td>{{ f.areaNombre }}</td>
+            @if (grupo() === 'POR_REGULARIZAR') {
+              <td class="nowrap">{{ f.lineasJustificadas }} de {{ f.lineas }}</td>
+              <td class="num">{{ dinero(f.valor) }}</td>
+              <td class="num" [class.pendiente]="f.saldo > 0.004">{{ dinero(f.saldo) }}</td>
+            }
+            @if (grupo() === 'PEDIDO') {
+              <td class="nowrap">{{ f.pedidosAtendidos }} de {{ f.pedidos }}</td>
+            }
+            <td><span [class]="'estado ' + f.estado">{{ f.estadoNombre }}</span></td>
+            <td class="paso">{{ f.siguientePaso }}</td>
+          </tr>
+          @if (seleccionada() === f.codigo) {
+            <tr class="fila-detalle">
+              <td [attr.colspan]="grupo() === 'POR_REGULARIZAR' ? 8 : grupo() === 'PEDIDO' ? 6 : 6">
+                <app-detalle-novedad-v2
+                  [idNovedad]="f.codigo"
+                  [idEmpresa]="idEmpresa"
+                  (actualizada)="actualizarFila($event)"
+                  (cerrarPanel)="seleccionada.set(null)"
+                ></app-detalle-novedad-v2>
+              </td>
+            </tr>
+          }
+        } @empty {
+          <tr><td colspan="8" class="sub vacio">{{ cargando() ? 'Cargando…' : 'No hay novedades con estos filtros.' }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
