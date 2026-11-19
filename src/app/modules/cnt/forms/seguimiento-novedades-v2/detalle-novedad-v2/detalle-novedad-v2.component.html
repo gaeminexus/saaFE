@@ -416,7 +416,7 @@
       }
     </ul>
     @if (h.tratamientoNombre) {
-      <div class="sub">Diferencia entre el dinero y el valor: {{ dinero(Math.abs(h.valorDiferencia || 0)) }} — {{ h.tratamientoNombre }}.</div>
+      <div class="sub">Diferencia entre el dinero y el valor: {{ dinero(Math.abs(h.valorDiferencia || 0)) }} — {{ h.tratamientoNombre }}{{ h.nombreTipoAporteDiferencia ? ' (' + h.nombreTipoAporteDiferencia + ')' : '' }}.</div>
     }
     @if (repartoCalculado(h); as rc) {
       <details class="reparto-calc">
