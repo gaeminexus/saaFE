@@ -11,13 +11,20 @@ import {
   JustificarV2Data,
 } from '../../../dialog/justificar-novedad-v2-dialog/justificar-novedad-v2-dialog.component';
 import { MotivoV2DialogComponent, MotivoV2Data } from '../../../dialog/justificar-novedad-v2-dialog/motivo-v2-dialog.component';
+import { HechoCreditoV2DialogComponent, HechoCreditoV2Data } from '../../../dialog/hecho-credito-v2-dialog/hecho-credito-v2-dialog.component';
+import { NotaNovedadV2DialogComponent, NotaNovedadV2Data } from '../../../dialog/nota-novedad-v2-dialog/nota-novedad-v2-dialog.component';
+import { PermisosService } from '../../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../../shared/model/permisos';
 import {
   AdjuntoV2,
   DetalleNovedadV2,
   DetalleOrigenV2,
   FilaNovedadV2,
+  HechoV2,
   JustificacionV2,
+  CalculoHechoV2,
   LineaV2,
+  NotaV2,
   PedidoV2,
   ResultadoAccionV2,
   dinero,
@@ -55,9 +62,11 @@ export class DetalleNovedadV2Component implements OnChanges {
   private snack = inject(MatSnackBar);
   private exportService = inject(ExportService);
   private fileService = inject(FileService);
+  private permisos = inject(PermisosService);
 
   readonly dinero = dinero;
   readonly fecha = fechaCorta;
+  readonly Math = Math;
 
   detalle = signal<DetalleNovedadV2 | null>(null);
   cargando = signal(false);
@@ -233,6 +242,64 @@ export class DetalleNovedadV2Component implements OnChanges {
       });
   }
 
+  /** C34d: resolver con un hecho de crédito (desde un movimiento, un pedido o la sección). */
+  hechoCredito(linea?: LineaV2, pedido?: PedidoV2, nota?: NotaV2): void {
+    const f = this.fila();
+    if (!f) return;
+    this.permisos.ejecutarSiPermitido(
+      Permisos.CNT_SN_RESPONDER_REQUERIMIENTO,
+      () => {
+        const data: HechoCreditoV2Data = { idEmpresa: this.idEmpresa, idNovedad: f.codigo, rutaSubida: this.rutaSubida(), linea, pedido, nota };
+        this.dialog
+          .open(HechoCreditoV2DialogComponent, { data, width: '1100px', maxWidth: '97vw', maxHeight: '94vh' })
+          .afterClosed()
+          .subscribe((r?: ResultadoAccionV2) => {
+            if (r) this.despues(r);
+          });
+      },
+      (m) => this.falla(m || 'No tiene permiso para responder novedades.'),
+    );
+  }
+
+  /** C34d: respuesta escrita de ASOPREP, sin cuentas. */
+  escribirNota(): void {
+    const f = this.fila();
+    if (!f) return;
+    const data: NotaNovedadV2Data = { idNovedad: f.codigo, codigoNovedad: f.codigoNovedad, rutaSubida: this.rutaSubida() };
+    this.dialog
+      .open(NotaNovedadV2DialogComponent, { data, width: '760px', maxWidth: '96vw' })
+      .afterClosed()
+      .subscribe((r?: ResultadoAccionV2) => {
+        if (r) this.despues(r);
+      });
+  }
+
+  anularNota(n: NotaV2): void {
+    this.pedirTexto({ titulo: 'Anular la respuesta', explicacion: 'La respuesta queda anulada en el historial.', etiqueta: 'Motivo', obligatorio: true, boton: 'Anular' })
+      .subscribe((t) => t !== null && this.servicio.anularNota(n.codigo, t).subscribe({ next: (r) => this.despues(r), error: (e) => this.falla(e) }));
+  }
+
+  /** Reparto por mes guardado en el hecho (precancelación o cruce mensual con precancelación). */
+  repartoCalculado(h: HechoV2): CalculoHechoV2 | null {
+    if (!h.detalleCalculado) return null;
+    try {
+      return JSON.parse(h.detalleCalculado) as CalculoHechoV2;
+    } catch {
+      return null;
+    }
+  }
+
+  anularHecho(h: HechoV2): void {
+    const otros = h.resuelve.length + h.atiende.length;
+    this.pedirTexto({
+      titulo: 'Anular el hecho de crédito',
+      explicacion: `Se anula el hecho N.º ${h.codigo} completo: ${otros} movimiento(s) y pedido(s) que resolvía vuelven a quedar pendientes y sus orígenes quedan libres. Queda en el historial.`,
+      etiqueta: 'Motivo',
+      obligatorio: true,
+      boton: 'Anular el hecho',
+    }).subscribe((t) => t !== null && this.servicio.anularHecho(h.codigo, t).subscribe({ next: (r) => this.despues(r), error: (e) => this.falla(e) }));
+  }
+
   anularJustificacion(j: JustificacionV2): void {
     this.pedirTexto({
       titulo: 'Anular justificación',
@@ -294,6 +361,7 @@ export class DetalleNovedadV2Component implements OnChanges {
   private despues(r: ResultadoAccionV2): void {
     this.snack.open(r.mensaje, 'Cerrar', { duration: 4000 });
     if (r.fila) this.actualizada.emit(r.fila);
+    for (const x of r.filas || []) this.actualizada.emit(x);
     this.seleccion.set(new Set());
     this.cargar();
   }

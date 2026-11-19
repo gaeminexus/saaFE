@@ -123,8 +123,10 @@ export interface RepartoV2 {
 export interface JustificacionV2 {
   codigo: number;
   monto: number;
-  tipo: 'RESPALDO' | 'DECISION' | 'CRUCE';
+  tipo: 'RESPALDO' | 'DECISION' | 'CRUCE' | 'HECHO';
   tipoNombre: string;
+  /** C34d: hecho de crédito que resuelve el movimiento. */
+  hecho?: HechoV2 | null;
   idLineaCruce: number | null;
   cruceCon?: string;
   fechaHecho: string | null;
@@ -170,6 +172,9 @@ export interface LineaV2 {
   nombreCuentaMovimiento: string | null;
   idPrestamo: number | null;
   idAsoprep: number | null;
+  /** C34d: operación que menciona el texto del movimiento (para abrir el hecho de crédito con ella puesta). */
+  idPrestamoSugerido?: number | null;
+  idAsoprepSugerido?: number | null;
   cedula: string | null;
   nombre: string | null;
   codigoParticipe: string | null;
@@ -193,6 +198,8 @@ export interface RespuestaV2 {
   vigente: boolean;
   numeroDecision?: string;
   tituloDecision?: string;
+  /** C34d: hecho de crédito con que se atendió el pedido. */
+  hecho?: HechoV2 | null;
   reparto: RepartoV2[];
   adjuntos: AdjuntoV2[];
 }
@@ -283,6 +290,8 @@ export interface DetalleNovedadV2 {
   detalleOrigen: DetalleOrigenV2[];
   decisiones: DecisionV2[];
   historial: { codigo: number; accion: string; motivo: string | null; fecha: string; usuario: string }[];
+  /** C34d: respuestas escritas de ASOPREP (sin cuentas). */
+  notas?: NotaV2[];
 }
 
 export interface CuentaContableV2 {
@@ -367,4 +376,143 @@ export function fechaCorta(v: any): string {
   const s = String(v);
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+}
+
+// ---------------------------------------------------------------- C34d: hechos de crédito
+
+export type TipoHecho = 'ABONO_CAPITAL' | 'PAGO_CUOTAS' | 'PRECANCELACION' | 'REAPERTURA_CUOTAS' | 'PARTICIPE_DEBE' | 'SERIE_PRECANCELACION';
+export type TratamientoDiferencia = 'NO_SE_DEBITA' | 'SE_DEVUELVE' | 'PARTICIPE_DEBE';
+/** Tipos cuyo valor calcula el SAA con su tabla (D-123). */
+export const TIPOS_CALCULADOS: TipoHecho[] = ['PRECANCELACION', 'SERIE_PRECANCELACION'];
+export type TipoOrigen = 'EXTRACTO' | 'APORTE' | 'PENDIENTE' | 'SIN_DINERO';
+
+export const TIPOS_HECHO: { valor: TipoHecho; etiqueta: string; ayuda: string }[] = [
+  { valor: 'ABONO_CAPITAL', etiqueta: 'Abono a capital', ayuda: 'El partícipe abonó a capital; la tabla se recalcula desde la cuota indicada.' },
+  { valor: 'PAGO_CUOTAS', etiqueta: 'Pago de cuotas', ayuda: 'El dinero pagó una o varias cuotas.' },
+  { valor: 'PRECANCELACION', etiqueta: 'Precancelación', ayuda: 'El préstamo se canceló por completo en esa fecha. El valor lo calcula el sistema con la tabla (capital pendiente y, si indica un mes desde, las cuotas pendientes desde ese mes).' },
+  { valor: 'SERIE_PRECANCELACION', etiqueta: 'Cruce mensual de cuotas y precancelación', ayuda: 'Las cuotas se cruzaron mes a mes con la cuenta individual desde un mes y en la fecha se precanceló el saldo. El sistema reparte el valor por mes según la tabla.' },
+  { valor: 'REAPERTURA_CUOTAS', etiqueta: 'Reapertura de cuotas', ayuda: 'Cuotas marcadas pagadas sin dinero que deben volver a cobrarse.' },
+  { valor: 'PARTICIPE_DEBE', etiqueta: 'El partícipe debe', ayuda: 'No hubo dinero: el valor queda como deuda del partícipe.' },
+];
+
+/** Movimiento que puede ser origen del dinero (buscador de orígenes). */
+export interface OrigenCandidatoV2 {
+  fuente: 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
+  fuenteNombre: string;
+  id: number;
+  clave: string;
+  fecha: any;
+  valor: number;
+  sentido: 'Entrada' | 'Salida';
+  descripcion: string;
+  aplicadoHoy: string;
+  idEntidad: number | null;
+  entidad: string | null;
+  relacion: string | null;
+  usado: number;
+  disponible: number;
+  puntaje?: number;
+  novedad?: string;
+  secuencia?: number;
+}
+
+export interface OrigenHechoV2 {
+  tipo: TipoOrigen;
+  tipoNombre: string;
+  idFilaExtracto: number | null;
+  idAporte: number | null;
+  idLinea: number | null;
+  valor: number;
+  estabaComo: string | null;
+  enRealidadEs: string | null;
+  idEntidadAnterior: number | null;
+  texto: string | null;
+}
+
+export interface HechoV2 {
+  codigo: number;
+  idPrestamo: number;
+  idAsoprep: number | null;
+  titular?: string;
+  tipo: TipoHecho;
+  tipoNombre: string;
+  fecha: any;
+  valor: number;
+  numeroCuota?: number | null;
+  texto: string | null;
+  tipoDocumento: string | null;
+  numeroDocumento: string | null;
+  vigente: boolean;
+  usuarioRegistro: string;
+  fechaRegistro: any;
+  motivoAnulacion: string | null;
+  mesDesde?: any;
+  tratamientoDiferencia?: TratamientoDiferencia | null;
+  tratamientoNombre?: string | null;
+  valorDiferencia?: number | null;
+  /** Reparto calculado por mes (JSON de CalculoHechoV2). */
+  detalleCalculado?: string | null;
+  origenes: OrigenHechoV2[];
+  resuelve: { idLinea: number; novedad: string; movimiento: number; monto: number; asiento: string | null }[];
+  atiende: { idPedido: number; novedad: string; pedido: number; soloEstaOperacion?: boolean }[];
+  adjuntos: AdjuntoV2[];
+}
+
+export interface CandidatosHechoV2 {
+  idPrestamo: number;
+  idAsoprep: number | null;
+  titular: string;
+  valorCuota: number | null;
+  lineas: (OrigenCandidatoV2 & { idNovedad: number })[];
+  pedidos: { codigo: number; idNovedad: number; novedad: string; secuencia: number; tipoNombre: string; descripcion: string }[];
+}
+
+/** Cuerpo para registrar un hecho (HechoCreditoDto del backend). */
+export interface HechoEntradaV2 {
+  idEmpresa: number;
+  idPrestamo: number;
+  tipo: TipoHecho;
+  fecha: string;
+  valor: number;
+  idCuota?: number | null;
+  texto?: string | null;
+  tipoDocumento?: string | null;
+  numeroDocumento?: string | null;
+  origenes: { tipo: TipoOrigen; idFilaExtracto?: number | null; idAporte?: number | null; idLinea?: number | null; valor: number; conceptoReal?: string | null; texto?: string | null }[];
+  lineas: number[];
+  pedidos: number[];
+  pedidosParciales?: number[];
+  desde?: string | null;
+  tratamientoDiferencia?: TratamientoDiferencia | null;
+  idNota?: number | null;
+  adjuntos: AdjuntoEntradaV2[];
+}
+
+/** Valor de una precancelación o de un hecho en serie calculado con la tabla del SAA, repartido por mes. */
+export interface CalculoHechoV2 {
+  idPrestamo: number;
+  idAsoprep: number | null;
+  tipo: TipoHecho;
+  desde: string | null;
+  fecha: string;
+  filas: { mes: string; idCuota: number | null; numeroCuota: number | null; vencimiento: string; capital: number; interes: number; valor: number; concepto: string }[];
+  numeroCuotas: number;
+  totalCuotas: number;
+  saldoCapital: number;
+  valor: number;
+  fuente: string;
+  simulador?: number;
+}
+
+/** Respuesta escrita de ASOPREP en una novedad (sin cuentas). */
+export interface NotaV2 {
+  codigo: number;
+  texto: string;
+  vigente: boolean;
+  usuarioRegistro: string;
+  fechaRegistro: any;
+  idHecho: number | null;
+  usuarioAnulacion: string | null;
+  motivoAnulacion: string | null;
+  adjuntos: AdjuntoV2[];
 }

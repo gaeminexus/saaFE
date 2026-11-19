@@ -6,6 +6,8 @@ import { MaterialFormModule } from '../../../../shared/modules/material-form.mod
 import { PlanCuentaSelectorDialogComponent } from '../../../../shared/components/plan-cuenta-selector-dialog/plan-cuenta-selector-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { FileService } from '../../../../shared/services/file.service';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import {
   AccionV2,
@@ -231,7 +233,17 @@ interface FilaReparto {
         <button mat-button type="button" (click)="mostrarDecision = true"><mat-icon>gavel</mat-icon> Agregar una decisión de ASOPREP</button>
       }
 
-      <!-- ===== Reparto a cuentas ===== -->
+      <!-- ===== Reparto a cuentas (solo Contabilidad: permiso REGISTRAR AJUSTE) ===== -->
+      @if (data.modo === 'lineas' && tipo !== 'CRUCE') {
+        @if (puedeAsiento()) {
+          <mat-checkbox [(ngModel)]="conAsiento" class="chk-asiento">Indicar cómo debe quedar el asiento (Contabilidad)</mat-checkbox>
+        } @else {
+          <div class="sub nota-asiento">
+            El asiento lo indica Contabilidad. Si el movimiento es de un préstamo (un abono, un pago, una precancelación), ciérrelo con
+            el botón «Hecho de crédito» del movimiento: no hace falta indicar cuentas.
+          </div>
+        }
+      }
       @if (pideReparto()) {
         <div class="seccion">{{ data.modo === 'lineas' ? 'Detalle del asiento: cómo debe quedar' : '¿A qué cuenta(s) contable(s) va el valor?' }}</div>
         @if (data.modo === 'pedido') {
@@ -409,6 +421,8 @@ interface FilaReparto {
       .ancho { width: 100%; }
       .ancho-medio { width: 260px; margin-right: 10px; }
       .monto { width: 100%; max-width: 700px; margin-bottom: 8px; }
+      .chk-asiento { display: block; margin-top: 12px; }
+      .nota-asiento { margin-top: 12px; background: #f3f6fa; padding: 6px 10px; border-radius: 4px; }
       .fila { display: flex; flex-wrap: wrap; }
       .fila-reparto { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-bottom: 1px dashed #d0d7e2; padding: 6px 0; }
       .fila-reparto .cuenta { flex: 1 1 340px; }
@@ -443,6 +457,11 @@ export class JustificarNovedadV2DialogComponent {
   private servicioV1 = inject(SeguimientoNovedadesService);
   private fileService = inject(FileService);
   private dialog = inject(MatDialog);
+  private permisos = inject(PermisosService);
+
+  /** C34d: el detalle del asiento (reparto a cuentas) es de Contabilidad: permiso 1569 REGISTRAR AJUSTE. */
+  puedeAsiento = signal(false);
+  conAsiento = true;
 
   readonly Math = Math;
   readonly dinero = dinero;
@@ -516,6 +535,7 @@ export class JustificarNovedadV2DialogComponent {
       this.prestamosDetalle.set([...grupos.values()]);
     }
     this.buscarDecisiones(true);
+    this.permisos.verificar(Permisos.CNT_SN_REGISTRAR_AJUSTE).subscribe((r) => this.puedeAsiento.set(!!r.permitido));
   }
 
   // ---------------------------------------------------------------- reglas de la pantalla
@@ -527,7 +547,8 @@ export class JustificarNovedadV2DialogComponent {
   }
 
   pideReparto(): boolean {
-    return this.data.modo === 'lineas' ? this.tipo !== 'CRUCE' : true;
+    if (!this.puedeAsiento()) return false;
+    return this.data.modo === 'lineas' ? this.tipo !== 'CRUCE' && this.conAsiento : true;
   }
 
   totalAJustificar(): number {
