@@ -114,6 +114,9 @@
             <button mat-menu-item (click)="seleccionarPendientes('H')">Todas las entradas pendientes</button>
             <button mat-menu-item (click)="limpiarSeleccion()">Ninguno</button>
           </mat-menu>
+          <button mat-stroked-button color="primary" (click)="hechoCredito()" [disabled]="f.estado === 'CERRADA'" matTooltip="Crédito: indicar qué pasó con un préstamo y de dónde salió el dinero, sin cuentas contables">
+            <mat-icon>account_balance_wallet</mat-icon> Hecho de crédito
+          </button>
           <button mat-flat-button color="primary" (click)="justificar()" [disabled]="!seleccion().size || f.estado === 'CERRADA'">
             Justificar {{ seleccion().size ? seleccion().size + ' (' + dinero(totalSeleccionado()) + ')' : '' }}
           </button>
@@ -152,6 +155,9 @@
                   <button mat-stroked-button color="primary" class="btn-linea" (click)="justificarLinea(l)" matTooltip="Justificar este movimiento (todo o una parte)">
                     Justificar
                   </button>
+                  <button mat-icon-button color="primary" (click)="hechoCredito(l)" matTooltip="Resolver con un hecho de crédito (préstamo y origen del dinero)">
+                    <mat-icon>account_balance_wallet</mat-icon>
+                  </button>
                 }
                 @if (l.justificaciones.length) {
                   <button mat-icon-button (click)="alternarDetalle(l)" [matTooltip]="abiertas().has(l.codigo) ? 'Ocultar justificaciones' : 'Ver justificaciones'">
@@ -176,7 +182,9 @@
                           <span class="sub"> · ANULADA por {{ j.usuarioAnulacion }}: {{ j.motivoAnulacion }}</span>
                         }
                       </div>
-                      @if (j.texto) {
+                      @if (j.hecho) {
+                        <ng-container *ngTemplateOutlet="bloqueHecho; context: { $implicit: j.hecho }"></ng-container>
+                      } @else if (j.texto) {
                         <div class="sub">{{ j.texto }}</div>
                       }
                       @if (j.reparto.length) {
@@ -207,7 +215,11 @@
                         <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>
                       }
                       @if (j.vigente && f.estado !== 'CERRADA') {
-                        <button mat-button color="warn" (click)="anularJustificacion(j)">Anular</button>
+                        @if (j.hecho) {
+                          <button mat-button color="warn" (click)="anularHecho(j.hecho)">Anular el hecho</button>
+                        } @else {
+                          <button mat-button color="warn" (click)="anularJustificacion(j)">Anular</button>
+                        }
                       }
                     </div>
                   }
@@ -237,7 +249,12 @@
               <strong>{{ p.tipoNombre }}</strong> · {{ p.areaNombre }}
             </div>
             @if (!p.atendido && f.estado !== 'CERRADA' && f.grupo !== 'POR_REGULARIZAR') {
-              <button mat-flat-button color="primary" (click)="responder(p)">Responder</button>
+              <span>
+                <button mat-stroked-button color="primary" (click)="hechoCredito(undefined, p)" matTooltip="Responder con un hecho de crédito">
+                  <mat-icon>account_balance_wallet</mat-icon> Hecho de crédito
+                </button>
+                <button mat-flat-button color="primary" (click)="responder(p)">Responder</button>
+              </span>
             }
           </div>
           <p class="texto-largo">{{ p.descripcion }}</p>
@@ -260,7 +277,9 @@
                 @if (r.respuesta.numeroDocumento) { · {{ r.respuesta.tipoDocumento }} {{ r.respuesta.numeroDocumento }} }
                 <span class="sub"> — {{ r.respuesta.usuarioRegistro }}, {{ fecha(r.respuesta.fecha) }}{{ r.vigente ? '' : ' · ANULADA' }}</span>
               </div>
-              @if (r.respuesta.texto) {
+              @if (r.hecho) {
+                <ng-container *ngTemplateOutlet="bloqueHecho; context: { $implicit: r.hecho }"></ng-container>
+              } @else if (r.respuesta.texto) {
                 <div class="sub">{{ r.respuesta.texto }}</div>
               }
               @for (x of r.reparto; track x.codigo) {
@@ -274,7 +293,11 @@
                 <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>
               }
               @if (r.vigente && f.estado !== 'CERRADA') {
-                <button mat-button color="warn" (click)="anularRespuesta(r.respuesta.codigo)">Anular</button>
+                @if (r.hecho) {
+                  <button mat-button color="warn" (click)="anularHecho(r.hecho)">Anular el hecho</button>
+                } @else {
+                  <button mat-button color="warn" (click)="anularRespuesta(r.respuesta.codigo)">Anular</button>
+                }
               }
             </div>
           }
@@ -341,3 +364,38 @@
     <p class="sub">Criterios: {{ d.textos.criterios }} · Fuentes: {{ d.textos.fuentes }}</p>
   </mat-expansion-panel>
 }
+
+<!-- C34d: resumen de un hecho de crédito -->
+<ng-template #bloqueHecho let-h>
+  <div class="hecho">
+    <div>
+      <mat-icon class="icono-hecho">account_balance_wallet</mat-icon>
+      <strong>Hecho de crédito N.º {{ h.codigo }}:</strong> {{ h.tipoNombre }} de {{ dinero(h.valor) }} del {{ fecha(h.fecha) }} ·
+      operación {{ h.idAsoprep }}{{ h.titular ? ' de ' + h.titular : '' }}
+      @if (h.numeroCuota) { · recalcula desde la cuota {{ h.numeroCuota }} }
+      @if (!h.vigente) { <span class="sub"> · ANULADO: {{ h.motivoAnulacion }}</span> }
+    </div>
+    <div class="sub">Origen del dinero:</div>
+    <ul class="origenes">
+      @for (o of h.origenes; track $index) {
+        <li>
+          <strong>{{ o.tipoNombre }}</strong> {{ dinero(o.valor) }}
+          @if (o.estabaComo) { · hoy: {{ o.estabaComo }} }
+          @if (o.enRealidadEs) { · en realidad: <strong>{{ o.enRealidadEs }}</strong> }
+          @if (o.texto) { · {{ o.texto }} }
+        </li>
+      }
+    </ul>
+    @if (h.resuelve.length + h.atiende.length > 1) {
+      <div class="sub">
+        Resuelve también:
+        @for (x of h.resuelve; track x.idLinea) { {{ x.novedad }} mov. {{ x.movimiento }}; }
+        @for (x of h.atiende; track x.idPedido) { {{ x.novedad }} pedido {{ x.pedido }}; }
+      </div>
+    }
+    @if (h.texto) { <div class="sub">{{ h.texto }}</div> }
+    @for (a of h.adjuntos; track a.codigo) {
+      <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>
+    }
+  </div>
+</ng-template>

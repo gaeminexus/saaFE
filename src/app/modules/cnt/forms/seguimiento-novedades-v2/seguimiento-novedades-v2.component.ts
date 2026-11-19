@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { forkJoin } from 'rxjs';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { ExportService } from '../../../../shared/services/export.service';
 import { MotivoV2DialogComponent } from '../../dialog/justificar-novedad-v2-dialog/motivo-v2-dialog.component';
@@ -182,15 +183,19 @@ export class SeguimientoNovedadesV2Component implements OnInit {
   // ---------------------------------------------------------------- exportar
 
   exportar(formato: 'asoprep' | 'reproceso'): void {
-    this.servicio.exportar(this.idEmpresa, this.anio, this.mes, formato).subscribe({
-      next: (filas) => {
-        if (!filas.length) {
-          this.snack.open('Todavía no hay respuestas ni justificaciones registradas para exportar.', 'Cerrar', { duration: 5000 });
-          return;
-        }
-        const sufijo = (this.anio ? '_' + this.anio : '') + (this.mes ? '-' + String(this.mes).padStart(2, '0') : '');
-        if (formato === 'reproceso') {
-          const blob = new Blob([JSON.stringify({ formato: 'C34-RESPUESTAS-1', generado: new Date().toISOString(), filas }, null, 1)], {
+    if (formato === 'reproceso') {
+      // C34d: el JSON para la v8 lleva también los hechos de crédito (operación, tipo, fecha, valor, orígenes y qué resuelven).
+      forkJoin({
+        filas: this.servicio.exportar(this.idEmpresa, this.anio, this.mes, formato),
+        hechos: this.servicio.exportarHechos(this.idEmpresa),
+      }).subscribe({
+        next: ({ filas, hechos }) => {
+          if (!filas.length && !hechos.length) {
+            this.snack.open('Todavía no hay respuestas, justificaciones ni hechos de crédito para exportar.', 'Cerrar', { duration: 5000 });
+            return;
+          }
+          const sufijo = (this.anio ? '_' + this.anio : '') + (this.mes ? '-' + String(this.mes).padStart(2, '0') : '');
+          const blob = new Blob([JSON.stringify({ formato: 'C34-RESPUESTAS-2', generado: new Date().toISOString(), filas, hechos }, null, 1)], {
             type: 'application/json',
           });
           const a = document.createElement('a');
@@ -198,8 +203,18 @@ export class SeguimientoNovedadesV2Component implements OnInit {
           a.download = `respuestas-novedades${sufijo}.json`;
           a.click();
           URL.revokeObjectURL(a.href);
+        },
+        error: (e) => this.snack.open(String(e), 'Cerrar', { duration: 8000 }),
+      });
+      return;
+    }
+    this.servicio.exportar(this.idEmpresa, this.anio, this.mes, formato).subscribe({
+      next: (filas) => {
+        if (!filas.length) {
+          this.snack.open('Todavía no hay respuestas ni justificaciones registradas para exportar.', 'Cerrar', { duration: 5000 });
           return;
         }
+        const sufijo = (this.anio ? '_' + this.anio : '') + (this.mes ? '-' + String(this.mes).padStart(2, '0') : '');
         const columnas: [string, string][] = [
           ['periodo', 'Mes'], ['novedad', 'Novedad'], ['origen', 'Origen'], ['numero', 'N.º movimiento / pedido'], ['asiento', 'Asiento'],
           ['fecha', 'Fecha'], ['cuentaPorRegularizar', 'Cuenta por regularizar'], ['valorMovimiento', 'Valor del movimiento'],

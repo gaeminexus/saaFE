@@ -123,8 +123,10 @@ export interface RepartoV2 {
 export interface JustificacionV2 {
   codigo: number;
   monto: number;
-  tipo: 'RESPALDO' | 'DECISION' | 'CRUCE';
+  tipo: 'RESPALDO' | 'DECISION' | 'CRUCE' | 'HECHO';
   tipoNombre: string;
+  /** C34d: hecho de crédito que resuelve el movimiento. */
+  hecho?: HechoV2 | null;
   idLineaCruce: number | null;
   cruceCon?: string;
   fechaHecho: string | null;
@@ -170,6 +172,9 @@ export interface LineaV2 {
   nombreCuentaMovimiento: string | null;
   idPrestamo: number | null;
   idAsoprep: number | null;
+  /** C34d: operación que menciona el texto del movimiento (para abrir el hecho de crédito con ella puesta). */
+  idPrestamoSugerido?: number | null;
+  idAsoprepSugerido?: number | null;
   cedula: string | null;
   nombre: string | null;
   codigoParticipe: string | null;
@@ -193,6 +198,8 @@ export interface RespuestaV2 {
   vigente: boolean;
   numeroDecision?: string;
   tituloDecision?: string;
+  /** C34d: hecho de crédito con que se atendió el pedido. */
+  hecho?: HechoV2 | null;
   reparto: RepartoV2[];
   adjuntos: AdjuntoV2[];
 }
@@ -367,4 +374,100 @@ export function fechaCorta(v: any): string {
   const s = String(v);
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+}
+
+// ---------------------------------------------------------------- C34d: hechos de crédito
+
+export type TipoHecho = 'ABONO_CAPITAL' | 'PAGO_CUOTAS' | 'PRECANCELACION' | 'REAPERTURA_CUOTAS' | 'PARTICIPE_DEBE';
+export type TipoOrigen = 'EXTRACTO' | 'APORTE' | 'PENDIENTE' | 'SIN_DINERO';
+
+export const TIPOS_HECHO: { valor: TipoHecho; etiqueta: string; ayuda: string }[] = [
+  { valor: 'ABONO_CAPITAL', etiqueta: 'Abono a capital', ayuda: 'El partícipe abonó a capital; la tabla se recalcula desde la cuota indicada.' },
+  { valor: 'PAGO_CUOTAS', etiqueta: 'Pago de cuotas', ayuda: 'El dinero pagó una o varias cuotas.' },
+  { valor: 'PRECANCELACION', etiqueta: 'Precancelación', ayuda: 'El préstamo se canceló por completo con este pago.' },
+  { valor: 'REAPERTURA_CUOTAS', etiqueta: 'Reapertura de cuotas', ayuda: 'Cuotas marcadas pagadas sin dinero que deben volver a cobrarse.' },
+  { valor: 'PARTICIPE_DEBE', etiqueta: 'El partícipe debe', ayuda: 'No hubo dinero: el valor queda como deuda del partícipe.' },
+];
+
+/** Movimiento que puede ser origen del dinero (buscador de orígenes). */
+export interface OrigenCandidatoV2 {
+  fuente: 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
+  fuenteNombre: string;
+  id: number;
+  clave: string;
+  fecha: any;
+  valor: number;
+  sentido: 'Entrada' | 'Salida';
+  descripcion: string;
+  aplicadoHoy: string;
+  idEntidad: number | null;
+  entidad: string | null;
+  relacion: string | null;
+  usado: number;
+  disponible: number;
+  puntaje?: number;
+  novedad?: string;
+  secuencia?: number;
+}
+
+export interface OrigenHechoV2 {
+  tipo: TipoOrigen;
+  tipoNombre: string;
+  idFilaExtracto: number | null;
+  idAporte: number | null;
+  idLinea: number | null;
+  valor: number;
+  estabaComo: string | null;
+  enRealidadEs: string | null;
+  idEntidadAnterior: number | null;
+  texto: string | null;
+}
+
+export interface HechoV2 {
+  codigo: number;
+  idPrestamo: number;
+  idAsoprep: number | null;
+  titular?: string;
+  tipo: TipoHecho;
+  tipoNombre: string;
+  fecha: any;
+  valor: number;
+  numeroCuota?: number | null;
+  texto: string | null;
+  tipoDocumento: string | null;
+  numeroDocumento: string | null;
+  vigente: boolean;
+  usuarioRegistro: string;
+  fechaRegistro: any;
+  motivoAnulacion: string | null;
+  origenes: OrigenHechoV2[];
+  resuelve: { idLinea: number; novedad: string; movimiento: number; monto: number; asiento: string | null }[];
+  atiende: { idPedido: number; novedad: string; pedido: number }[];
+  adjuntos: AdjuntoV2[];
+}
+
+export interface CandidatosHechoV2 {
+  idPrestamo: number;
+  idAsoprep: number | null;
+  titular: string;
+  valorCuota: number | null;
+  lineas: (OrigenCandidatoV2 & { idNovedad: number })[];
+  pedidos: { codigo: number; idNovedad: number; novedad: string; secuencia: number; tipoNombre: string; descripcion: string }[];
+}
+
+/** Cuerpo para registrar un hecho (HechoCreditoDto del backend). */
+export interface HechoEntradaV2 {
+  idEmpresa: number;
+  idPrestamo: number;
+  tipo: TipoHecho;
+  fecha: string;
+  valor: number;
+  idCuota?: number | null;
+  texto?: string | null;
+  tipoDocumento?: string | null;
+  numeroDocumento?: string | null;
+  origenes: { tipo: TipoOrigen; idFilaExtracto?: number | null; idAporte?: number | null; idLinea?: number | null; valor: number; conceptoReal?: string | null; texto?: string | null }[];
+  lineas: number[];
+  pedidos: number[];
+  adjuntos: AdjuntoEntradaV2[];
 }

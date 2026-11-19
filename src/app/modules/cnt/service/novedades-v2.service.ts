@@ -6,6 +6,9 @@ import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import {
   AccionV2,
+  CandidatosHechoV2,
+  HechoEntradaV2,
+  OrigenCandidatoV2,
   CuentaContableV2,
   CuotaV2,
   DecisionV2,
@@ -106,6 +109,28 @@ export class NovedadesV2Service {
 
   exportar(idEmpresa: number, anio: number | null, mes: number | null, formato: 'asoprep' | 'reproceso'): Observable<any[]> {
     return this.http.get<any[]>(`${this.url}/exportar`, { params: this.params({ idEmpresa, anio, mes, formato }) }).pipe(catchError(this.aTexto));
+  }
+
+  // ---- C34d: hechos de crédito
+
+  origenes(idEmpresa: number, f: { fuente: string; idPrestamo?: number | null; idEntidad?: number | null; texto?: string | null; desde?: string | null; hasta?: string | null; valor?: number | null; fecha?: string | null }): Observable<OrigenCandidatoV2[]> {
+    return this.http.get<OrigenCandidatoV2[]>(`${this.url}/origenes`, { params: this.params({ idEmpresa, ...f }) }).pipe(catchError(this.aTexto));
+  }
+
+  candidatosHecho(idEmpresa: number, idPrestamo: number): Observable<CandidatosHechoV2> {
+    return this.http.get<CandidatosHechoV2>(`${this.url}/hechos/candidatos`, { params: this.params({ idEmpresa, idPrestamo }) }).pipe(catchError(this.aTexto));
+  }
+
+  registrarHecho(h: HechoEntradaV2): Observable<ResultadoAccionV2 & { idHecho: number }> {
+    return this.http.post<ResultadoAccionV2 & { idHecho: number }>(`${this.url}/hechos`, { ...h, usuario: usuarioSesion() }).pipe(catchError(this.aTexto));
+  }
+
+  anularHecho(idHecho: number, motivo: string): Observable<ResultadoAccionV2> {
+    return this.http.post<ResultadoAccionV2>(`${this.url}/hechos/${idHecho}/anular`, { motivo, usuario: usuarioSesion() }).pipe(catchError(this.aTexto));
+  }
+
+  exportarHechos(idEmpresa: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.url}/exportar/hechos`, { params: this.params({ idEmpresa }) }).pipe(catchError(this.aTexto));
   }
 
   private conUsuario(a: AccionV2): AccionV2 & { usuario: string } {
