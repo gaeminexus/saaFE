@@ -1,0 +1,107 @@
+.reportes-mes {
+  margin-top: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rm-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e0e0e0;
+
+  .rm-titulo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 15px;
+    mat-icon { font-size: 20px; height: 20px; width: 20px; }
+  }
+
+  .rm-flex-sep { flex: 1; }
+}
+
+.msg-info,
+.msg-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 16px 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.msg-info { background: #e3f2fd; color: #0d47a1; }
+.msg-error { background: #fce4ec; color: #b71c1c; }
+
+.rp-tabla-scroll {
+  overflow-x: auto;
+}
+
+.rm-tabla {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+
+  th {
+    background: #f9fafb;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 2px solid #ddd;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #555;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+  }
+
+  tr:hover td { background: #fafafa; }
+}
+
+.rm-nombre { font-weight: 600; }
+.rm-origen { font-size: 11px; color: #777; margin-top: 2px; }
+.rm-salida { font-size: 12px; color: #444; max-width: 240px; }
+.rm-estado-celda { max-width: 420px; }
+
+.rm-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  mat-icon { font-size: 16px; height: 16px; width: 16px; }
+
+  &.rm-disponible { background: #e8f5e9; color: #2e7d32; }
+  &.rm-preliminar { background: #fff3e0; color: #e65100; }
+  &.rm-no-disponible { background: #fce4ec; color: #b71c1c; }
+  &.rm-sin-revisar,
+  &.rm-revisando { background: #f5f5f5; color: #546e7a; }
+}
+
+.rm-motivo {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #555;
+}
+
+.rm-acciones {
+  white-space: nowrap;
+
+  button { margin: 0 6px 6px 0; }
+}
