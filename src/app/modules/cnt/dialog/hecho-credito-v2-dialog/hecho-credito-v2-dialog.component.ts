@@ -224,8 +224,26 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
           } @else {
             <strong>Faltan {{ dinero(diferencia()) }}.</strong> Agregue el origen que falta o indique:
             <mat-radio-group [(ngModel)]="tratamiento" class="radios">
+              <mat-radio-button value="CRUCE_APORTES">Se cruza con los aportes del partícipe</mat-radio-button>
               <mat-radio-button value="PARTICIPE_DEBE">El partícipe lo debe</mat-radio-button>
             </mat-radio-group>
+            @if (tratamiento === 'CRUCE_APORTES') {
+              <mat-form-field appearance="outline" class="medio tipo-aporte">
+                <mat-label>¿Con qué aporte se cruza?</mat-label>
+                <mat-select [(ngModel)]="tipoAporteDiferencia">
+                  @for (a of candidatos()?.saldosAportes || []; track a.idTipoAporte) {
+                    <mat-option [value]="a.idTipoAporte">{{ a.nombre }} · saldo hoy {{ dinero(a.saldo) }}</mat-option>
+                  }
+                </mat-select>
+                <mat-hint>El próximo re-proceso debita los {{ dinero(diferencia()) }} de esa cuenta en la fecha del hecho.</mat-hint>
+              </mat-form-field>
+              @if (saldoAporteElegido() !== null && saldoAporteElegido()! < diferencia() - 0.004) {
+                <div class="aviso-saldo">El saldo de hoy de ese aporte ({{ dinero(saldoAporteElegido()) }}) es menor que lo que falta: revise con Crédito.</div>
+              }
+              @if (!(candidatos()?.saldosAportes || []).length) {
+                <div class="aviso-saldo">El partícipe no tiene saldo en su cuenta individual hoy.</div>
+              }
+            }
           }
         </div>
       }
@@ -436,7 +454,9 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
       .tratamiento { background: #fff7e0; border-left: 3px solid #e0a800; padding: 6px 10px; margin: 4px 0 8px; font-size: 13px; }
       .radios { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
       .pedido-fila { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-      .pedido-fila .modo { width: 210px; }
+      .pedido-fila .modo { width: 210px; flex: 0 0 210px; }
+      .tipo-aporte { margin-top: 6px; width: 420px; }
+      .aviso-saldo { color: #7a5400; margin-top: 4px; }
       .otra { align-items: center; margin-top: 4px; }
     `,
   ],
@@ -493,6 +513,13 @@ export class HechoCreditoV2DialogComponent {
   calculo = signal<CalculoHechoV2 | null>(null);
   calculando = signal(false);
   tratamiento: TratamientoDiferencia | null = null;
+  /** Tipo de aporte con que se cruza la diferencia que falta (CRUCE_APORTES). */
+  tipoAporteDiferencia: number | null = null;
+
+  saldoAporteElegido(): number | null {
+    const a = (this.candidatos()?.saldosAportes || []).find((x) => x.idTipoAporte === this.tipoAporteDiferencia);
+    return a ? a.saldo : null;
+  }
 
   /** Movimientos y pedidos agregados de otras novedades por su código. */
   codigoOtra = '';
@@ -893,7 +920,8 @@ export class HechoCreditoV2DialogComponent {
     const dif = this.diferencia();
     if (this.calculado() && !this.calculo()) faltas.push('que el sistema calcule el valor (operación, fecha' + (this.tipo === 'SERIE_PRECANCELACION' ? ' y mes desde' : '') + ')');
     if (this.origenes().length && dif < -0.004 && this.tratamiento !== 'NO_SE_DEBITA' && this.tratamiento !== 'SE_DEVUELVE') faltas.push(`qué pasa con los ${dinero(-dif)} que sobran`);
-    if (this.origenes().length && dif > 0.004 && this.tratamiento !== 'PARTICIPE_DEBE') faltas.push(`completar los orígenes o indicar que el partícipe debe los ${dinero(dif)} que faltan`);
+    if (this.origenes().length && dif > 0.004 && this.tratamiento !== 'PARTICIPE_DEBE' && this.tratamiento !== 'CRUCE_APORTES') faltas.push(`completar los orígenes o indicar qué pasa con los ${dinero(dif)} que faltan`);
+    if (this.origenes().length && dif > 0.004 && this.tratamiento === 'CRUCE_APORTES' && !this.tipoAporteDiferencia) faltas.push('con qué aporte del partícipe se cruza lo que falta');
     const lineas = [...this.lineasMarcadas()].filter((id) => !this.esOrigen(id));
     const pedidos = [...this.pedidosMarcados()];
     const parciales = [...this.pedidosParciales()];
@@ -928,6 +956,7 @@ export class HechoCreditoV2DialogComponent {
         pedidosParciales: parciales,
         desde: this.mesDesde ? this.mesDesde + '-01' : null,
         tratamientoDiferencia: Math.abs(dif) > 0.004 ? this.tratamiento : null,
+        tipoAporteDiferencia: Math.abs(dif) > 0.004 && this.tratamiento === 'CRUCE_APORTES' ? this.tipoAporteDiferencia : null,
         idNota: this.data.nota?.codigo ?? null,
         adjuntos: this.adjuntos(),
       })

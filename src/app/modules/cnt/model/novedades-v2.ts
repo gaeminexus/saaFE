@@ -381,7 +381,7 @@ export function fechaCorta(v: any): string {
 // ---------------------------------------------------------------- C34d: hechos de crédito
 
 export type TipoHecho = 'ABONO_CAPITAL' | 'PAGO_CUOTAS' | 'PRECANCELACION' | 'REAPERTURA_CUOTAS' | 'PARTICIPE_DEBE' | 'SERIE_PRECANCELACION';
-export type TratamientoDiferencia = 'NO_SE_DEBITA' | 'SE_DEVUELVE' | 'PARTICIPE_DEBE';
+export type TratamientoDiferencia = 'NO_SE_DEBITA' | 'SE_DEVUELVE' | 'PARTICIPE_DEBE' | 'CRUCE_APORTES';
 /** Tipos cuyo valor calcula el SAA con su tabla (D-123). */
 export const TIPOS_CALCULADOS: TipoHecho[] = ['PRECANCELACION', 'SERIE_PRECANCELACION'];
 export type TipoOrigen = 'EXTRACTO' | 'APORTE' | 'PENDIENTE' | 'SIN_DINERO';
@@ -450,6 +450,8 @@ export interface HechoV2 {
   tratamientoDiferencia?: TratamientoDiferencia | null;
   tratamientoNombre?: string | null;
   valorDiferencia?: number | null;
+  tipoAporteDiferencia?: number | null;
+  nombreTipoAporteDiferencia?: string | null;
   /** Reparto calculado por mes (JSON de CalculoHechoV2). */
   detalleCalculado?: string | null;
   origenes: OrigenHechoV2[];
@@ -463,6 +465,8 @@ export interface CandidatosHechoV2 {
   idAsoprep: number | null;
   titular: string;
   valorCuota: number | null;
+  /** C34-07c: saldo de hoy de la cuenta individual del titular por tipo de aporte. */
+  saldosAportes?: { idTipoAporte: number; nombre: string; saldo: number }[];
   lineas: (OrigenCandidatoV2 & { idNovedad: number })[];
   pedidos: { codigo: number; idNovedad: number; novedad: string; secuencia: number; tipoNombre: string; descripcion: string }[];
 }
@@ -484,6 +488,7 @@ export interface HechoEntradaV2 {
   pedidosParciales?: number[];
   desde?: string | null;
   tratamientoDiferencia?: TratamientoDiferencia | null;
+  tipoAporteDiferencia?: number | null;
   idNota?: number | null;
   adjuntos: AdjuntoEntradaV2[];
 }
