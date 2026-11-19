@@ -418,6 +418,15 @@
     @if (h.tratamientoNombre) {
       <div class="sub">Diferencia entre el dinero y el valor: {{ dinero(Math.abs(h.valorDiferencia || 0)) }} — {{ h.tratamientoNombre }}{{ h.nombreTipoAporteDiferencia ? ' (' + h.nombreTipoAporteDiferencia + ')' : '' }}.</div>
     }
+    @if (cuotasDelHecho(h); as cq) {
+      <div class="sub">Cuotas que paga: {{ cq.numeros }} (se debían {{ dinero(cq.total) }} a la fecha, calculado por el SAA).</div>
+    }
+    @if (condonacionDe(h); as cd) {
+      <div class="sub">
+        Se condonan {{ dinero(cd.totalCondonado) }}: {{ cd.texto }}{{ h.tituloDecision ? ' · autoriza la decisión «' + h.tituloDecision + '»' : '' }}
+        · cuenta: parametrización de la condonación del SAA{{ cd.cuentaAlRegistrar?.cuenta ? ' (al registrar: ' + cd.cuentaAlRegistrar?.cuenta + ')' : '' }}.
+      </div>
+    }
     @if (repartoCalculado(h); as rc) {
       <details class="reparto-calc">
         <summary class="sub">Reparto por mes que aplica el re-proceso ({{ rc.filas.length }} registros)</summary>

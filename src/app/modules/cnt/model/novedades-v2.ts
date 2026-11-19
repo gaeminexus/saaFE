@@ -381,7 +381,7 @@ export function fechaCorta(v: any): string {
 // ---------------------------------------------------------------- C34d: hechos de crédito
 
 export type TipoHecho = 'ABONO_CAPITAL' | 'PAGO_CUOTAS' | 'PRECANCELACION' | 'REAPERTURA_CUOTAS' | 'PARTICIPE_DEBE' | 'SERIE_PRECANCELACION';
-export type TratamientoDiferencia = 'NO_SE_DEBITA' | 'SE_DEVUELVE' | 'PARTICIPE_DEBE' | 'CRUCE_APORTES';
+export type TratamientoDiferencia = 'NO_SE_DEBITA' | 'SE_DEVUELVE' | 'PARTICIPE_DEBE' | 'CRUCE_APORTES' | 'CONDONACION';
 /** Tipos cuyo valor calcula el SAA con su tabla (D-123). */
 export const TIPOS_CALCULADOS: TipoHecho[] = ['PRECANCELACION', 'SERIE_PRECANCELACION'];
 export type TipoOrigen = 'EXTRACTO' | 'APORTE' | 'PENDIENTE' | 'SIN_DINERO';
@@ -452,6 +452,11 @@ export interface HechoV2 {
   valorDiferencia?: number | null;
   tipoAporteDiferencia?: number | null;
   nombreTipoAporteDiferencia?: string | null;
+  /** C34-07d: condonación del faltante (JSON por cuota y concepto). */
+  condonacion?: string | null;
+  idDecision?: number | null;
+  numeroDecision?: string | null;
+  tituloDecision?: string | null;
   /** Reparto calculado por mes (JSON de CalculoHechoV2). */
   detalleCalculado?: string | null;
   origenes: OrigenHechoV2[];
@@ -489,6 +494,9 @@ export interface HechoEntradaV2 {
   desde?: string | null;
   tratamientoDiferencia?: TratamientoDiferencia | null;
   tipoAporteDiferencia?: number | null;
+  cuotas?: number[];
+  conceptosCondonados?: string[];
+  idDecision?: number | null;
   idNota?: number | null;
   adjuntos: AdjuntoEntradaV2[];
 }
@@ -520,4 +528,12 @@ export interface NotaV2 {
   usuarioAnulacion: string | null;
   motivoAnulacion: string | null;
   adjuntos: AdjuntoV2[];
+}
+
+/** C34d §10: lo adeudado por cuota y concepto de un hecho, a su fecha, calculado por el SAA. */
+export interface ComponentesHechoV2 {
+  fecha: string;
+  filas: { idCuota: number | null; numeroCuota: number | null; vencimiento: string | null; concepto?: string; SEGURO: number; DESGRAVAMEN: number; MORA: number; INTERES: number; CAPITAL: number; total: number }[];
+  totales: Record<string, number>;
+  total: number;
 }

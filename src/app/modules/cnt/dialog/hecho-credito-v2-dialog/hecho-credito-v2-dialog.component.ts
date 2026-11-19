@@ -5,11 +5,15 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
 import { FileService } from '../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
+import { PermisosService } from '../../../../shared/services/permisos.service';
+import { Permisos } from '../../../../shared/model/permisos';
 import {
   AdjuntoEntradaV2,
   CalculoHechoV2,
   CandidatosHechoV2,
+  ComponentesHechoV2,
   CuotaV2,
+  DecisionV2,
   LineaV2,
   NotaV2,
   OrigenCandidatoV2,
@@ -126,13 +130,28 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
           <div class="valor-calculado">
             Valor que calcula el SAA: <strong>{{ calculando() ? 'calculando…' : valor ? dinero(valor) : '—' }}</strong>
           </div>
+        } @else if (tipo === 'PAGO_CUOTAS' && cuotasPago.length) {
+          <div class="valor-calculado">
+            Valor que calcula el SAA: <strong>{{ calculando() ? 'calculando…' : valor ? dinero(valor) : '—' }}</strong>
+          </div>
         } @else {
           <mat-form-field appearance="outline" class="corto">
             <mat-label>Valor del hecho</mat-label>
             <input matInput type="number" step="0.01" min="0" [(ngModel)]="valor" />
           </mat-form-field>
         }
-        @if (cuotas().length) {
+        @if (tipo === 'PAGO_CUOTAS' && cuotas().length) {
+          <mat-form-field appearance="outline" class="medio">
+            <mat-label>Cuotas que paga</mat-label>
+            <mat-select multiple [(ngModel)]="cuotasPago" (selectionChange)="recalcularComponentes()">
+              @for (c of cuotas(); track c.codigo) {
+                <mat-option [value]="c.codigo">Cuota {{ c.numero }} · vence {{ fecha(c.vencimiento) }} · {{ c.estado }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>El SAA calcula su valor y su mora a la fecha del hecho.</mat-hint>
+          </mat-form-field>
+        }
+        @if (cuotas().length && tipo !== 'PAGO_CUOTAS') {
           <mat-form-field appearance="outline" class="medio">
             <mat-label>Recalcular desde la cuota (opcional)</mat-label>
             <mat-select [(ngModel)]="idCuota">
@@ -158,6 +177,23 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
             </tbody>
           </table>
           <div class="sub">{{ c.fuente }}.{{ c.simulador ? ' Simulador de precancelación (estado de hoy): ' + dinero(c.simulador) + '.' : '' }}</div>
+        </div>
+      }
+
+      @if (tipo === 'PAGO_CUOTAS' && componentes(); as cp) {
+        <div class="calculo">
+          <div class="sub">Lo que se debía de cada cuota al {{ fecha(cp.fecha) }} (tabla del préstamo y mora a esa fecha):</div>
+          <table class="tabla compacta">
+            <thead><tr><th>Cuota</th><th>Vence</th><th class="num">Seguro</th><th class="num">Desgrav.</th><th class="num">Mora</th><th class="num">Interés</th><th class="num">Capital</th><th class="num">Total</th></tr></thead>
+            <tbody>
+              @for (x of cp.filas; track $index) {
+                <tr><td>{{ x.numeroCuota }}</td><td class="nowrap">{{ fecha(x.vencimiento) }}</td><td class="num">{{ dinero(x.SEGURO) }}</td><td class="num">{{ dinero(x.DESGRAVAMEN) }}</td>
+                  <td class="num">{{ dinero(x.MORA) }}</td><td class="num">{{ dinero(x.INTERES) }}</td><td class="num">{{ dinero(x.CAPITAL) }}</td><td class="num">{{ dinero(x.total) }}</td></tr>
+              }
+              <tr class="total"><td></td><td>Total</td><td class="num">{{ dinero(cp.totales['SEGURO']) }}</td><td class="num">{{ dinero(cp.totales['DESGRAVAMEN']) }}</td><td class="num">{{ dinero(cp.totales['MORA']) }}</td>
+                <td class="num">{{ dinero(cp.totales['INTERES']) }}</td><td class="num">{{ dinero(cp.totales['CAPITAL']) }}</td><td class="num">{{ dinero(cp.total) }}</td></tr>
+            </tbody>
+          </table>
         </div>
       }
 
@@ -225,6 +261,9 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
             <strong>Faltan {{ dinero(diferencia()) }}.</strong> Agregue el origen que falta o indique:
             <mat-radio-group [(ngModel)]="tratamiento" class="radios">
               <mat-radio-button value="CRUCE_APORTES">Se cruza con los aportes del partícipe</mat-radio-button>
+              @if (puedeCondonar()) {
+                <mat-radio-button value="CONDONACION">Se condona</mat-radio-button>
+              }
               <mat-radio-button value="PARTICIPE_DEBE">El partícipe lo debe</mat-radio-button>
             </mat-radio-group>
             @if (tratamiento === 'CRUCE_APORTES') {
@@ -243,6 +282,50 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
               @if (!(candidatos()?.saldosAportes || []).length) {
                 <div class="aviso-saldo">El partícipe no tiene saldo en su cuenta individual hoy.</div>
               }
+            }
+            @if (tratamiento === 'CONDONACION') {
+              <div class="condonacion">
+                <div class="sub">¿Qué se condona? Desgravamen y seguro no se condonan: el dinero los paga primero.</div>
+                <div class="fila">
+                  @for (k of conceptosCondonables; track k.valor) {
+                    <mat-checkbox [checked]="conceptosCond().has(k.valor)" (change)="alternarConcepto(k.valor)">{{ k.etiqueta }}</mat-checkbox>
+                  }
+                </div>
+                @if (!componentes()) {
+                  <div class="aviso-saldo">Para condonar, indique qué cuotas paga (pago de cuotas) o use una precancelación o un cruce mensual con precancelación: el SAA calcula los conceptos de esas cuotas.</div>
+                } @else if (repartoLocal(); as rl) {
+                  @if (rl.faltaNoCondonable > 0.004) {
+                    <div class="aviso-saldo">El dinero no alcanza para lo que no se condona: faltan {{ dinero(rl.faltaNoCondonable) }}. Marque más conceptos o use otra opción.</div>
+                  } @else {
+                    <table class="tabla compacta reparto-cond">
+                      <thead><tr><th>Concepto</th><th class="num">Se debía</th><th class="num">Se paga</th><th class="num">Se condona</th></tr></thead>
+                      <tbody>
+                        @for (r of rl.porConcepto; track r.concepto) {
+                          <tr><td>{{ r.etiqueta }}</td><td class="num">{{ dinero(r.adeudado) }}</td><td class="num">{{ dinero(r.pagado) }}</td><td class="num">{{ dinero(r.condonado) }}</td></tr>
+                        }
+                        <tr class="total"><td>Total</td><td class="num">{{ dinero(rl.adeudado) }}</td><td class="num">{{ dinero(rl.pagado) }}</td><td class="num">{{ dinero(rl.condonado) }}</td></tr>
+                      </tbody>
+                    </table>
+                    <div class="sub">El gasto va a la cuenta de la parametrización de la condonación del SAA; si Contabilidad la cambia, el hecho la sigue.</div>
+                  }
+                }
+                @if (decisionCond(); as d) {
+                  <div class="decision-elegida">Autoriza: <strong>{{ d.titulo }}</strong> <span class="sub">({{ d.numero }})</span>
+                    <button mat-button type="button" (click)="decisionCond.set(null)">Cambiar</button></div>
+                } @else {
+                  <mat-form-field appearance="outline" class="ancho">
+                    <mat-label>Decisión de ASOPREP que autoriza la condonación (búsquela por lo que dice)</mat-label>
+                    <input matInput [(ngModel)]="textoDecision" (ngModelChange)="buscarDecisiones()" />
+                  </mat-form-field>
+                  <div class="decisiones">
+                    @for (d of decisiones(); track d.codigo) {
+                      <button type="button" class="decision" (click)="decisionCond.set(d)"><strong>{{ d.titulo }}</strong> <span class="sub">({{ d.numero }})</span></button>
+                    }
+                  </div>
+                  <div class="sub">Si la decisión todavía no existe, regístrela desde «Justificar» con su constancia.</div>
+                }
+                <div class="sub">Adjunte el acta o la autorización en el paso 4: es obligatorio.</div>
+              </div>
             }
           }
         </div>
@@ -457,6 +540,12 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
       .pedido-fila .modo { width: 210px; flex: 0 0 210px; }
       .tipo-aporte { margin-top: 6px; width: 420px; }
       .aviso-saldo { color: #7a5400; margin-top: 4px; }
+      .condonacion { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+      .reparto-cond { max-width: 520px; }
+      .decision-elegida { border-left: 3px solid #1f5fbf; background: #eef4ff; padding: 4px 10px; }
+      .decisiones { max-height: 160px; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
+      .decision { text-align: left; border: 1px solid #d0d7e2; border-radius: 4px; background: #fff; padding: 4px 8px; cursor: pointer; font-size: 12.5px; }
+      .decision:hover { background: #eef4ff; }
       .otra { align-items: center; margin-top: 4px; }
     `,
   ],
@@ -516,6 +605,22 @@ export class HechoCreditoV2DialogComponent {
   /** Tipo de aporte con que se cruza la diferencia que falta (CRUCE_APORTES). */
   tipoAporteDiferencia: number | null = null;
 
+  /** C34d §10: cuotas que paga un hecho de pago de cuotas (el SAA calcula su valor y su mora a la fecha). */
+  cuotasPago: number[] = [];
+  componentes = signal<ComponentesHechoV2 | null>(null);
+  /** Permiso 1488 (condonación de valores) para ver «Se condona». */
+  puedeCondonar = signal(false);
+  readonly conceptosCondonables = [
+    { valor: 'MORA', etiqueta: 'Mora' },
+    { valor: 'INTERES', etiqueta: 'Interés' },
+    { valor: 'CAPITAL', etiqueta: 'Capital' },
+  ];
+  conceptosCond = signal<Set<string>>(new Set<string>(['MORA', 'INTERES']));
+  decisionCond = signal<DecisionV2 | null>(null);
+  textoDecision = '';
+  decisiones = signal<DecisionV2[]>([]);
+  private permisos = inject(PermisosService);
+
   saldoAporteElegido(): number | null {
     const a = (this.candidatos()?.saldosAportes || []).find((x) => x.idTipoAporte === this.tipoAporteDiferencia);
     return a ? a.saldo : null;
@@ -553,6 +658,7 @@ export class HechoCreditoV2DialogComponent {
     }
     if (data.pedido) this.pedidosMarcados.set(new Set([data.pedido.codigo]));
     if (data.nota) this.texto = data.nota.texto;
+    this.permisos.verificar(Permisos.CRD_CONDONACION_DE_VALORES).subscribe((r) => this.puedeCondonar.set(!!r.permitido));
   }
 
   calculado(): boolean {
@@ -564,6 +670,8 @@ export class HechoCreditoV2DialogComponent {
     const p = this.prestamo();
     if (!this.calculado()) {
       this.calculo.set(null);
+      if (this.tipo === 'PAGO_CUOTAS') this.recalcularComponentes();
+      else this.componentes.set(null);
       return;
     }
     if (!p || !this.fechaHecho || (this.tipo === 'SERIE_PRECANCELACION' && !this.mesDesde)) {
@@ -578,6 +686,10 @@ export class HechoCreditoV2DialogComponent {
         this.calculando.set(false);
         this.calculo.set(c);
         this.valor = c.valor;
+        this.servicio.componentesHecho(p.codigo, this.tipo, null, this.mesDesde ? this.mesDesde + '-01' : null, this.fechaHecho).subscribe({
+          next: (cp) => this.componentes.set(cp),
+          error: () => this.componentes.set(null),
+        });
       },
       error: (e) => {
         this.calculando.set(false);
@@ -586,6 +698,83 @@ export class HechoCreditoV2DialogComponent {
         this.error.set(String(e));
       },
     });
+  }
+
+  /** Pago de cuotas: el SAA calcula el valor y los conceptos de las cuotas elegidas a la fecha del hecho. */
+  recalcularComponentes(): void {
+    const p = this.prestamo();
+    if (this.tipo !== 'PAGO_CUOTAS' || !p || !this.fechaHecho || !this.cuotasPago.length) {
+      this.componentes.set(null);
+      return;
+    }
+    this.calculando.set(true);
+    this.servicio.componentesHecho(p.codigo, 'PAGO_CUOTAS', this.cuotasPago, null, this.fechaHecho).subscribe({
+      next: (cp) => {
+        this.calculando.set(false);
+        this.componentes.set(cp);
+        this.valor = cp.total;
+      },
+      error: (e) => {
+        this.calculando.set(false);
+        this.componentes.set(null);
+        this.error.set(String(e));
+      },
+    });
+  }
+
+  alternarConcepto(k: string): void {
+    const s = new Set(this.conceptosCond());
+    s.has(k) ? s.delete(k) : s.add(k);
+    this.conceptosCond.set(s);
+  }
+
+  buscarDecisiones(): void {
+    const t = (this.textoDecision || '').trim();
+    this.demorar('decisiones', () =>
+      this.servicio.buscarDecisiones(this.data.idEmpresa, this.data.idNovedad, t).subscribe({ next: (d) => this.decisiones.set(d.slice(0, 15)) }),
+    );
+  }
+
+  /**
+   * Vista previa de la condonación (el servidor la recalcula al guardar): el dinero paga primero, cuota por cuota en el orden
+   * del SAA, lo que no se condona; lo que queda de los conceptos marcados es lo condonado.
+   */
+  repartoLocal(): { faltaNoCondonable: number; porConcepto: { concepto: string; etiqueta: string; adeudado: number; pagado: number; condonado: number }[]; adeudado: number; pagado: number; condonado: number } | null {
+    const cp = this.componentes();
+    if (!cp) return null;
+    const orden = ['SEGURO', 'DESGRAVAMEN', 'MORA', 'INTERES', 'CAPITAL'];
+    const etiquetas: Record<string, string> = { SEGURO: 'Seguro', DESGRAVAMEN: 'Desgravamen', MORA: 'Mora', INTERES: 'Interés', CAPITAL: 'Capital' };
+    const marcados = this.conceptosCond();
+    const pagado: Record<string, number>[] = cp.filas.map(() => ({}));
+    let resto = r2(this.sumaOrigenes());
+    let faltaNoCondonable = 0;
+    for (const pasada of [0, 1]) {
+      cp.filas.forEach((f: any, i) => {
+        for (const k of orden) {
+          if ((pasada === 0) === marcados.has(k)) continue;
+          const pago = r2(Math.min(resto, (f[k] || 0) - (pagado[i][k] || 0)));
+          pagado[i][k] = r2((pagado[i][k] || 0) + pago);
+          resto = r2(resto - pago);
+        }
+      });
+      if (pasada === 0) {
+        cp.filas.forEach((f: any, i) => {
+          for (const k of orden) if (!marcados.has(k)) faltaNoCondonable += (f[k] || 0) - (pagado[i][k] || 0);
+        });
+      }
+    }
+    const porConcepto = orden.map((k) => {
+      const adeudado = r2(cp.filas.reduce((s: number, f: any) => s + (f[k] || 0), 0));
+      const pag = r2(pagado.reduce((s, p) => s + (p[k] || 0), 0));
+      return { concepto: k, etiqueta: etiquetas[k], adeudado, pagado: pag, condonado: marcados.has(k) ? r2(adeudado - pag) : 0 };
+    });
+    return {
+      faltaNoCondonable: r2(faltaNoCondonable),
+      porConcepto,
+      adeudado: r2(porConcepto.reduce((s, x) => s + x.adeudado, 0)),
+      pagado: r2(porConcepto.reduce((s, x) => s + x.pagado, 0)),
+      condonado: r2(porConcepto.reduce((s, x) => s + x.condonado, 0)),
+    };
   }
 
   modoPedido(id: number): string {
@@ -920,7 +1109,15 @@ export class HechoCreditoV2DialogComponent {
     const dif = this.diferencia();
     if (this.calculado() && !this.calculo()) faltas.push('que el sistema calcule el valor (operación, fecha' + (this.tipo === 'SERIE_PRECANCELACION' ? ' y mes desde' : '') + ')');
     if (this.origenes().length && dif < -0.004 && this.tratamiento !== 'NO_SE_DEBITA' && this.tratamiento !== 'SE_DEVUELVE') faltas.push(`qué pasa con los ${dinero(-dif)} que sobran`);
-    if (this.origenes().length && dif > 0.004 && this.tratamiento !== 'PARTICIPE_DEBE' && this.tratamiento !== 'CRUCE_APORTES') faltas.push(`completar los orígenes o indicar qué pasa con los ${dinero(dif)} que faltan`);
+    if (this.origenes().length && dif > 0.004 && this.tratamiento === 'CONDONACION') {
+      const rl = this.repartoLocal();
+      if (!this.conceptosCond().size) faltas.push('qué se condona (mora, interés o capital)');
+      if (!rl) faltas.push('las cuotas del hecho, para que el SAA calcule lo que se condona');
+      else if (rl.faltaNoCondonable > 0.004) faltas.push(`dinero para lo que no se condona (faltan ${dinero(rl.faltaNoCondonable)})`);
+      if (!this.decisionCond()) faltas.push('la decisión de ASOPREP que autoriza la condonación');
+      if (!this.adjuntos().length) faltas.push('el acta o la autorización de la condonación (adjunto)');
+    }
+    if (this.origenes().length && dif > 0.004 && this.tratamiento !== 'PARTICIPE_DEBE' && this.tratamiento !== 'CRUCE_APORTES' && this.tratamiento !== 'CONDONACION') faltas.push(`completar los orígenes o indicar qué pasa con los ${dinero(dif)} que faltan`);
     if (this.origenes().length && dif > 0.004 && this.tratamiento === 'CRUCE_APORTES' && !this.tipoAporteDiferencia) faltas.push('con qué aporte del partícipe se cruza lo que falta');
     const lineas = [...this.lineasMarcadas()].filter((id) => !this.esOrigen(id));
     const pedidos = [...this.pedidosMarcados()];
@@ -957,6 +1154,9 @@ export class HechoCreditoV2DialogComponent {
         desde: this.mesDesde ? this.mesDesde + '-01' : null,
         tratamientoDiferencia: Math.abs(dif) > 0.004 ? this.tratamiento : null,
         tipoAporteDiferencia: Math.abs(dif) > 0.004 && this.tratamiento === 'CRUCE_APORTES' ? this.tipoAporteDiferencia : null,
+        cuotas: this.tipo === 'PAGO_CUOTAS' ? this.cuotasPago : [],
+        conceptosCondonados: Math.abs(dif) > 0.004 && this.tratamiento === 'CONDONACION' ? [...this.conceptosCond()] : [],
+        idDecision: Math.abs(dif) > 0.004 && this.tratamiento === 'CONDONACION' ? this.decisionCond()?.codigo ?? null : null,
         idNota: this.data.nota?.codigo ?? null,
         adjuntos: this.adjuntos(),
       })

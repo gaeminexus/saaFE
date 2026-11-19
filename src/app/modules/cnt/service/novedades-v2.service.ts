@@ -7,6 +7,7 @@ import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import {
   AccionV2,
   CalculoHechoV2,
+  ComponentesHechoV2,
   CandidatosHechoV2,
   HechoEntradaV2,
   OrigenCandidatoV2,
@@ -136,6 +137,10 @@ export class NovedadesV2Service {
 
   calcularHecho(idPrestamo: number, tipo: string, desde: string | null, fecha: string): Observable<CalculoHechoV2> {
     return this.http.get<CalculoHechoV2>(this.url + "/hechos/calcular", { params: this.params({ idPrestamo, tipo, desde, fecha }) }).pipe(catchError(this.aTexto));
+  }
+
+  componentesHecho(idPrestamo: number, tipo: string, cuotas: number[] | null, desde: string | null, fecha: string): Observable<ComponentesHechoV2> {
+    return this.http.get<ComponentesHechoV2>(this.url + "/hechos/componentes", { params: this.params({ idPrestamo, tipo, cuotas: cuotas && cuotas.length ? cuotas.join(",") : null, desde, fecha }) }).pipe(catchError(this.aTexto));
   }
 
   registrarNota(idNovedad: number, texto: string, adjuntos: any[]): Observable<ResultadoAccionV2> {

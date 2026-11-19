@@ -279,11 +279,40 @@ export class DetalleNovedadV2Component implements OnChanges {
       .subscribe((t) => t !== null && this.servicio.anularNota(n.codigo, t).subscribe({ next: (r) => this.despues(r), error: (e) => this.falla(e) }));
   }
 
+  /** C34d §10: cuotas que paga un hecho de pago de cuotas, con lo que se debía de cada una a la fecha. */
+  cuotasDelHecho(h: HechoV2): { numeros: string; total: number } | null {
+    if (!h.detalleCalculado) return null;
+    try {
+      const c = JSON.parse(h.detalleCalculado);
+      if (!c || !c.totales || !Array.isArray(c.filas)) return null;
+      return { numeros: c.filas.map((f: { numeroCuota: number }) => f.numeroCuota).join(', '), total: c.total };
+    } catch {
+      return null;
+    }
+  }
+
+  /** C34d §10: resumen de la condonación guardada en el hecho. */
+  condonacionDe(h: HechoV2): { totalCondonado: number; texto: string; cuentaAlRegistrar?: { cuenta?: string } } | null {
+    if (!h.condonacion) return null;
+    try {
+      const c = JSON.parse(h.condonacion);
+      const nombres: Record<string, string> = { MORA: 'mora', INTERES: 'interés', CAPITAL: 'capital' };
+      const partes = Object.entries(c.condonadoPorConcepto || {})
+        .filter(([, v]) => (v as number) > 0.004)
+        .map(([k, v]) => `${nombres[k] || k} ${dinero(v as number)}`);
+      return { totalCondonado: c.totalCondonado, texto: partes.join(', '), cuentaAlRegistrar: c.cuentaAlRegistrar };
+    } catch {
+      return null;
+    }
+  }
+
   /** Reparto por mes guardado en el hecho (precancelación o cruce mensual con precancelación). */
   repartoCalculado(h: HechoV2): CalculoHechoV2 | null {
     if (!h.detalleCalculado) return null;
     try {
-      return JSON.parse(h.detalleCalculado) as CalculoHechoV2;
+      const c = JSON.parse(h.detalleCalculado);
+      // C34d §10: en el pago de cuotas el detalle es lo adeudado por cuota y concepto (componentes), no un reparto por mes.
+      return c && c.totales ? null : (c as CalculoHechoV2);
     } catch {
       return null;
     }
