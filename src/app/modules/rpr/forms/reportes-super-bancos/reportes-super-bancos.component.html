@@ -1,7 +1,7 @@
 <mat-card class="super-bancos-card">
   <mat-card-header>
     <mat-card-title>Reportes para la Superintendencia de Bancos</mat-card-title>
-    <mat-card-subtitle>Generación de reportes G40 – G51</mat-card-subtitle>
+    <mat-card-subtitle>Generación de las G40 – G51 y descarga de todos los reportes del mes (B17, estados financieros, comparativo, flujo)</mat-card-subtitle>
   </mat-card-header>
 
   <mat-card-content>
@@ -207,5 +207,12 @@
         }
       </div>
     }
+
+    <!-- C36: todos los reportes del mes para la Superintendencia y ASOPREP -->
+    <app-reportes-del-mes
+      [mes]="mesSeleccionado()"
+      [anio]="anioSeleccionado()"
+      [estadoG]="estadoG()"
+      [archivosG]="proveedorArchivosG" />
   </mat-card-content>
 </mat-card>

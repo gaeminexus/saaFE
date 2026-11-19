@@ -1,0 +1,100 @@
+<section class="reportes-mes">
+  <div class="rm-header">
+    <span class="rm-titulo">
+      <mat-icon>folder_zip</mat-icon>
+      Todos los reportes del mes
+    </span>
+    <span class="rm-flex-sep"></span>
+    <button mat-stroked-button color="accent"
+            (click)="revisar()"
+            [disabled]="descargando() !== ''">
+      <mat-icon>fact_check</mat-icon>
+      Revisar reportes del mes
+    </button>
+    <button mat-flat-button color="primary"
+            (click)="descargarTodos()"
+            [disabled]="!puedeDescargarTodos()"
+            matTooltip="Descarga uno tras otro los archivos de los reportes disponibles o preliminares. No es un .zip: el proyecto no tiene librería de compresión y no se agregan dependencias.">
+      @if (descargando() === 'TODOS') {
+        <mat-spinner diameter="18" style="display:inline-block;margin-right:6px"></mat-spinner>
+      } @else {
+        <mat-icon>download</mat-icon>
+      }
+      Descargar todos (archivos sueltos)
+    </button>
+  </div>
+
+  @if (desactualizado()) {
+    <div class="msg-info">
+      <mat-icon>info</mat-icon>
+      <span>Cambió el mes o el año: pulse «Revisar reportes del mes» para ver los estados del período elegido.</span>
+    </div>
+  }
+
+  @if (progresoTodos()) {
+    <div class="msg-info">
+      <mat-icon>downloading</mat-icon>
+      <span>{{ progresoTodos() }}</span>
+    </div>
+  }
+
+  @for (e of erroresTodos(); track $index) {
+    <div class="msg-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ e }}</span>
+    </div>
+  }
+
+  <div class="rp-tabla-scroll">
+    <table class="rm-tabla">
+      <thead>
+        <tr>
+          <th>Reporte</th>
+          <th>Periodicidad</th>
+          <th>Salida pedida</th>
+          <th>Estado en el SAA</th>
+          <th>Descargar</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (f of filas(); track f.clave) {
+          <tr>
+            <td>
+              <div class="rm-nombre">{{ f.nombre }}</div>
+              <div class="rm-origen">{{ f.origen }}</div>
+            </td>
+            <td>{{ f.periodicidad }}</td>
+            <td class="rm-salida">{{ f.salida }}</td>
+            <td class="rm-estado-celda">
+              <span class="rm-estado" [ngClass]="'rm-' + f.estado">
+                @if (f.estado === 'revisando') {
+                  <mat-spinner diameter="14"></mat-spinner>
+                } @else {
+                  <mat-icon>{{ iconoEstado[f.estado] }}</mat-icon>
+                }
+                {{ etiquetaEstado[f.estado] }}
+              </span>
+              @if (f.motivo) {
+                <div class="rm-motivo">{{ f.motivo }}</div>
+              }
+            </td>
+            <td class="rm-acciones">
+              @for (d of f.descargas; track d.etiqueta) {
+                <button mat-stroked-button color="primary"
+                        (click)="descargar(f, d)"
+                        [disabled]="!descargable(f) || desactualizado() || descargando() !== ''">
+                  @if (descargando() === f.clave + ':' + d.etiqueta) {
+                    <mat-spinner diameter="16" style="display:inline-block;margin-right:4px"></mat-spinner>
+                  } @else {
+                    <mat-icon>{{ d.icono }}</mat-icon>
+                  }
+                  {{ d.etiqueta }}
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</section>

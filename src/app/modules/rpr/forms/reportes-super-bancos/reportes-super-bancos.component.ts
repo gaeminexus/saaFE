@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, computed } from '@angular/core';
 import { forkJoin, Observable, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { MaterialFormModule } from '../../../../shared/modules/material-form.module';
@@ -26,11 +26,14 @@ import { DetalleEjecucionReporte } from '../../model/detalle-ejecucion-reporte';
 import { EjecucionReporte } from '../../model/ejecucion-reporte';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../../../shared/basics/confirm-dialog/confirm-dialog.component';
+import { guardarArchivo } from '../../../../shared/services/descarga-reporte';
+import { ArchivoReporte } from './archivo-reporte';
+import { EstadoG, ReportesDelMesComponent } from './reportes-del-mes/reportes-del-mes.component';
 
 @Component({
   selector: 'app-reportes-super-bancos',
   standalone: true,
-  imports: [CommonModule, MaterialFormModule],
+  imports: [CommonModule, MaterialFormModule, ReportesDelMesComponent],
   templateUrl: './reportes-super-bancos.component.html',
   styleUrls: ['./reportes-super-bancos.component.scss'],
 })
@@ -99,6 +102,39 @@ export class ReportesSuperBancosComponent implements OnInit {
 
   puedeReintentar    = computed(() => this.ejecucion()?.estado === 2);
   descargandoTodos    = signal<boolean>(false);
+
+  /** C36: sección "Todos los reportes del mes" (B17, estados, comparativo, flujo, G). */
+  @ViewChild(ReportesDelMesComponent) reportesDelMes?: ReportesDelMesComponent;
+
+  /** Mes ("m-aaaa") al que pertenecen los `detalles()` cargados. */
+  private periodoDetalles = signal<string>('');
+
+  /** Estado de las G40–G51 del mes elegido para la sección C36. */
+  estadoG = computed<EstadoG>(() => {
+    if (this.cargandoDetalle() || this.ejecutando()) {
+      return { estado: 'revisando', motivo: '' };
+    }
+    const dets = this.detalles();
+    if (dets.length === 0 || this.periodoDetalles() !== this.clavePeriodo()) {
+      return this.mensajeInfo().startsWith('No se encontraron ejecuciones')
+        ? { estado: 'no-disponible', motivo: 'El mes no tiene ejecución de las G40–G51: genérelas (exige el mes de cartera cerrado).' }
+        : { estado: 'sin-revisar', motivo: 'Pulse «Consultar» (o genere las G) para el mes elegido.' };
+    }
+    const registros = dets.reduce((s, d) => s + (d.cantidadRegistros ?? 0), 0);
+    const conNovedad = dets.filter((d) => d.estado !== 1).map((d) => d.tipoReporte);
+    const ej = this.ejecucion();
+    const id = ej?.codigo ?? dets.find((d) => d.ejecucionReporte?.codigo)?.ejecucionReporte?.codigo ?? '—';
+    if (conNovedad.length) {
+      return {
+        estado: 'preliminar',
+        motivo: `Ejecución ${id}: ${conNovedad.join(', ')} con novedades o pendientes; revise antes de presentar. ${registros} registros.`,
+      };
+    }
+    return { estado: 'disponible', motivo: `Ejecución ${id} completa, ${registros} registros. Los .txt los arma esta pantalla.` };
+  });
+
+  /** Los .txt de las G40–G51 del mes, para la sección C36. */
+  readonly proveedorArchivosG = (): Observable<ArchivoReporte[]> => this.archivosGDelMes();
 
   /** True cuando el período seleccionado coincide exactamente con el siguiente período a generar */
   esPeriodoPermitido = computed(() => {
@@ -232,6 +268,9 @@ export class ReportesSuperBancosComponent implements OnInit {
     this.detalleSeleccionado.set(null);
     this.registrosG.set([]);
     this.columnasG.set([]);
+
+    // C36: con "Consultar" también se revisan los demás reportes del mes (B17, estados, flujo).
+    this.reportesDelMes?.revisar();
 
     this.cargandoDetalle.set(true);
     this.ejecucionService.getByMesAnio(this.mesSeleccionado(), this.anioSeleccionado()).subscribe({
@@ -368,6 +407,7 @@ export class ReportesSuperBancosComponent implements OnInit {
   ] as const;
 
   private cargarDetalle(idEjecucion: number): void {
+    this.periodoDetalles.set(this.clavePeriodo());
     this.cargandoDetalle.set(true);
     this.detalleService.getByEjecucion(idEjecucion).subscribe({
       next: (data) => {
@@ -530,16 +570,39 @@ export class ReportesSuperBancosComponent implements OnInit {
     return String(v);
   }
 
-  descargarTodosTxt(): void {
-    const dets = this.detalles();
-    if (dets.length === 0) return;
-
-    this.descargandoTodos.set(true);
+  /**
+   * El .txt de una G: cabecera `Gnn TAB 3968 TAB dd/mm/aaaa TAB líneas` y una línea por registro, CRLF.
+   * Misma regla que antes de C36; solo se sacó a un método para que la sección "Todos los reportes del mes"
+   * use exactamente el mismo archivo.
+   */
+  private construirTxtG(tipoReporte: string, rows: any[], cols: string[]): ArchivoReporte {
     const mes  = this.mesSeleccionado();
     const anio = this.anioSeleccionado();
     const lastDay     = new Date(anio, mes, 0).getDate();
     const fechaCierre = `${String(lastDay).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
+    const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
+    const totalConCabecera = rows.length + 1;
 
+    const lines: string[] = [];
+    lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
+    for (const row of rows) {
+      lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
+    }
+
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
+    const periodicidad = tipoReporte === 'G40' ? 'S' : 'M';
+    const fechaNombre  = `${String(lastDay).padStart(2, '0')}${String(mes).padStart(2, '0')}${anio}`;
+    return { nombre: `${tipoReporte}${periodicidad}3968${fechaNombre}.txt`, blob };
+  }
+
+  /** Los 12 .txt de las G40–G51 de la ejecución cargada (consulta los registros de cada G). */
+  archivosGDelMes(): Observable<ArchivoReporte[]> {
+    const dets = this.detalles();
+    if (dets.length === 0 || this.periodoDetalles() !== this.clavePeriodo()) {
+      return new Observable<ArchivoReporte[]>((s) =>
+        s.error(new Error('Consulte o genere primero las G del mes elegido.')),
+      );
+    }
     const requests = dets.map(detalle => {
       if ((detalle.cantidadRegistros ?? 0) === 0) {
         return of({ detalle, rows: [] as any[] });
@@ -556,36 +619,22 @@ export class ReportesSuperBancosComponent implements OnInit {
       if (!fn) return of({ detalle, rows: [] as any[] });
       return fn([criterio]).pipe(map(rows => ({ detalle, rows: rows ?? [] })));
     });
+    return forkJoin(requests).pipe(
+      map(results => results.map(({ detalle, rows }) =>
+        this.construirTxtG(detalle.tipoReporte, rows, this.columnasMap[detalle.tipoReporte] ?? []),
+      )),
+    );
+  }
 
-    forkJoin(requests).subscribe({
-      next: (results) => {
+  descargarTodosTxt(): void {
+    const dets = this.detalles();
+    if (dets.length === 0) return;
+
+    this.descargandoTodos.set(true);
+    this.archivosGDelMes().subscribe({
+      next: (archivos) => {
         this.descargandoTodos.set(false);
-        results.forEach(({ detalle, rows }, index) => {
-          setTimeout(() => {
-            const { tipoReporte } = detalle;
-            const cols        = this.columnasMap[tipoReporte] ?? [];
-            const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
-            const totalConCabecera = rows.length + 1;
-
-            const lines: string[] = [];
-            lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
-            for (const row of rows) {
-              lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
-            }
-
-            const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
-            const url  = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            const periodicidad = tipoReporte === 'G40' ? 'S' : 'M';
-            const fechaNombre  = `${String(lastDay).padStart(2, '0')}${String(mes).padStart(2, '0')}${anio}`;
-            link.href     = url;
-            link.download = `${tipoReporte}${periodicidad}3968${fechaNombre}.txt`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }, index * 300);
-        });
+        archivos.forEach((a, index) => setTimeout(() => guardarArchivo(a.blob, a.nombre), index * 300));
       },
       error: () => {
         this.descargandoTodos.set(false);
@@ -597,33 +646,8 @@ export class ReportesSuperBancosComponent implements OnInit {
   descargarTxt(): void {
     const detalle = this.detalleSeleccionado();
     if (!detalle) return;
-    const { tipoReporte } = detalle;
-    const mes  = this.mesSeleccionado();
-    const anio = this.anioSeleccionado();
-
-    const lastDay     = new Date(anio, mes, 0).getDate();
-    const fechaCierre = `${String(lastDay).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${anio}`;
-
-    const rows = this.registrosG();
-    const cols = this.columnasG();
-    const totalConCabecera = rows.length + 1;
-    const numericCols = this.numericColsMap[tipoReporte] ?? new Set<string>();
-
-    const lines: string[] = [];
-    lines.push([tipoReporte, '3968', fechaCierre, String(totalConCabecera)].join('\t'));
-    for (const row of rows) {
-      lines.push(cols.map(c => this.formatValTxt(row[c], numericCols.has(c), c)).join('	'));
-    }
-
-    const blob = new Blob([lines.join('\r\n')], { type: 'text/plain;charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const periodicidad = tipoReporte === 'G40' ? 'S' : 'M';
-    const fechaNombre  = `${String(lastDay).padStart(2, '0')}${String(mes).padStart(2, '0')}${anio}`;
-    link.href     = url;
-    link.download = `${tipoReporte}${periodicidad}3968${fechaNombre}.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const archivo = this.construirTxtG(detalle.tipoReporte, this.registrosG(), this.columnasG());
+    guardarArchivo(archivo.blob, archivo.nombre);
   }
 
   mesNombre(): string {
