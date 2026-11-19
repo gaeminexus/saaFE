@@ -17,6 +17,11 @@ import {
   SolicitudEstructura,
 } from '../../../service/estructura-reporte.service';
 import {
+  FlujoEfectivoService,
+  ResultadoFlujoEfectivo,
+  SolicitudFlujoEfectivo,
+} from '../../../service/flujo-efectivo.service';
+import {
   ArchivoReporte,
   corteParaNombre,
   csvDeFilas,
@@ -74,6 +79,10 @@ const SUBCUENTAS_COMPARATIVO = ['150210', '150299', '190205', '190290', '190299'
  * estados financieros oficiales y comparativo. Cada uno muestra si está disponible, preliminar o no disponible en
  * el SAA y por qué. Sin librería de .zip en el proyecto, "Descargar todos" entrega los archivos sueltos uno tras
  * otro (ver cuadreSuper `03-trabajo/cambios-saa/C36-REPORTES-SUPER-EN-PANTALLA.md`).
+ *
+ * C38 — El estado de flujos de efectivo (mes y acumulado), el flujo de caja real (BIESS) y el comparativo con el
+ * formato de ASOPREP salen de `/flef` (saaBE `FlujoEfectivoRest`), con PRELIMINAR / DEFINITIVO como el B17
+ * (cuadreSuper `03-trabajo/cambios-saa/C38-FLUJO-Y-COMPARATIVO.md`).
  */
 @Component({
   selector: 'app-reportes-del-mes',
@@ -85,6 +94,7 @@ const SUBCUENTAS_COMPARATIVO = ['150210', '150299', '190205', '190290', '190299'
 export class ReportesDelMesComponent {
   private estructuraService = inject(EstructuraReporteService);
   private estadoOficialService = inject(EstadoFinancieroOficialService);
+  private flujoService = inject(FlujoEfectivoService);
   private appState = inject(AppStateService);
 
   /** Mes (1–12) y año elegidos en la pantalla. */
@@ -120,6 +130,8 @@ export class ReportesDelMesComponent {
 
   /** B17 del mes: true = el mes no está cerrado y se pide con `preliminar: true`. */
   private b17Preliminar = false;
+  /** Flujo de efectivo, flujo de caja y comparativo con formato (C38, `/flef`): igual que el B17. */
+  private flefPreliminar = false;
   /** Descarta respuestas de una revisión anterior (cambio de mes a mitad de camino). */
   private turno = 0;
 
@@ -155,7 +167,7 @@ export class ReportesDelMesComponent {
     this.erroresTodos.set([]);
     this.progresoTodos.set('');
     this.filasBase.set(this.armarFilas());
-    for (const c of ['B17', 'FLC', 'ESF', 'ER', 'CMP']) {
+    for (const c of ['B17', 'FLE', 'FLC', 'ESF', 'ER', 'CMP']) {
       this.actualizar(c, { estado: 'revisando', motivo: '' });
     }
 
@@ -191,25 +203,58 @@ export class ReportesDelMesComponent {
         },
       });
 
-    // Flujo de caja (estructura FLC, semilla provisional C19-03).
-    this.estructuraService.generar(this.solicitudFlc()).subscribe({
-      next: (r) => {
-        if (turno !== this.turno) return;
-        const fc91 = r.lineas?.find((l) => l.codigo === 'FC91');
-        const control = fc91 ? ` Control FC91 (saldo final − fondos disponibles 1.1) = ${this.numero(fc91.valor)}.` : '';
-        this.actualizar('FLC', {
-          estado: 'preliminar',
-          motivo:
-            'Definición provisional (C19-03): solo las 9 reglas de la columna O del formato, sobre el movimiento de ' +
-            'cuentas de resultado, no sobre la caja; las filas de aportes, préstamos y prestaciones salen en 0. ' +
-            `Sirve de borrador, no para presentar.${control}`,
-        });
-      },
-      error: (err) => {
-        if (turno !== this.turno) return;
-        this.actualizar('FLC', { estado: 'no-disponible', motivo: mensajeDeError(err, 'No se pudo generar el flujo de caja.') });
-      },
-    });
+    // Estado de flujos de efectivo (indirecto) y flujo de caja (directo, BIESS) del mes: /flef (C38). Como el B17:
+    // primero definitivo; si el mes no está cerrado, preliminar.
+    this.flefPreliminar = false;
+    this.flujoService
+      .generar(this.solicitudFlujo('MES', false, true))
+      .pipe(
+        map((r: ResultadoFlujoEfectivo) => ({ r, aviso: '' })),
+        catchError((err) => {
+          const msg = mensajeDeError(err, 'No se pudo generar el flujo de efectivo.');
+          if (/REPORTE_MES_NO_CERRADO/.test(msg)) {
+            return this.flujoService
+              .generar(this.solicitudFlujo('MES', true, true))
+              .pipe(map((r) => ({ r, aviso: msg.replace(/^REPORTE_MES_NO_CERRADO:\s*/, '') })));
+          }
+          return throwError(() => err);
+        }),
+      )
+      .subscribe({
+        next: ({ r, aviso }) => {
+          if (turno !== this.turno) return;
+          this.flefPreliminar = r.preliminar;
+          const estado: EstadoReporte = r.preliminar ? 'preliminar' : 'disponible';
+          const linea = (c: string) => r.lineas?.find((l) => l.codigo === c)?.valor ?? 0;
+          const resumen = (controles: { estado: string }[]) => {
+            const err = controles.filter((c) => c.estado === 'ERROR').length;
+            const adv = controles.filter((c) => c.estado === 'ADVERTENCIA').length;
+            return `${controles.length - err - adv} controles OK, ${adv} advertencia(s), ${err} error(es)`;
+          };
+          const pre = r.preliminar ? `PRELIMINAR (mes sin cerrar, no presentable). ${aviso} ` : 'Mes cerrado. ';
+          this.actualizar('FLE', {
+            estado,
+            motivo:
+              `${pre}Caja inicial ${this.numero(linea('FE50'))} + flujo neto ${this.numero(linea('FE48'))} = ` +
+              `${this.numero(linea('FE51'))}; ${resumen(r.controles ?? [])}. El acumulado del año sale contra el 31-dic ` +
+              'anterior (en 2025, contra el arranque del 31-may-2025).',
+          });
+          const meses = r.flujoCaja ?? [];
+          const ctl = meses.flatMap((m) => m.controles ?? []);
+          this.actualizar('FLC', {
+            estado,
+            motivo:
+              `${pre}Método directo por la caja (contrapartidas de 1.1 y cuentas puente), ${resumen(ctl)}. ` +
+              'El Excel trae una columna por mes del año hasta el corte.',
+          });
+        },
+        error: (err) => {
+          if (turno !== this.turno) return;
+          const motivo = mensajeDeError(err, 'No se pudo generar el flujo de efectivo.');
+          this.actualizar('FLE', { estado: 'no-disponible', motivo: `${motivo} (¿falta correr la semilla C38-01?)` });
+          this.actualizar('FLC', { estado: 'no-disponible', motivo: `${motivo} (¿falta correr la semilla C38-01?)` });
+        },
+      });
 
     // Estados oficiales y comparativo: el encabezado trae la leyenda DEFINITIVO / PRELIMINAR.
     const estados: [string, SolicitudEstadoFinanciero][] = [
@@ -223,7 +268,7 @@ export class ReportesDelMesComponent {
           if (turno !== this.turno) return;
           const definitivo = (e.leyenda ?? '').toUpperCase().startsWith('DEFINITIVO');
           const extra = clave === 'CMP'
-            ? ' Formato del SAA (plan de cuentas hasta 4 dígitos, diciembre anterior vs mes); el CSV trae los códigos del B17 como el formato de ASOPREP.'
+            ? ' «Excel formato» = el de ASOPREP (códigos del B17, /flef/comparativoExcel); «Excel SAA» y PDF = estado del SAA por plan de cuentas (/esfo).'
             : '';
           this.actualizar(clave, definitivo
             ? { estado: 'disponible', motivo: `${e.titulo} ${e.periodo}: DEFINITIVO (período contable cerrado).${extra}` }
@@ -386,6 +431,41 @@ export class ReportesDelMesComponent {
       );
   }
 
+  /** Estado de flujos de efectivo con el formato de ASOPREP (`/flef/excel`, C38): del mes o acumulado del año. */
+  private archivoFlujoEfectivo(periodo: 'MES' | 'ACUMULADO'): Observable<ArchivoReporte[]> {
+    const s: SolicitudFlujoEfectivo = { ...this.solicitudFlujo(periodo, this.flefPreliminar, false), reporte: 'INDIRECTO' };
+    return this.flujoService.excel(s).pipe(
+      map((resp) => {
+        if (!resp.body) throw new Error('El backend no devolvió el Excel del flujo de efectivo.');
+        const alt = `FLUJO_EFECTIVO_${this.periodoNombre()}_${periodo}${this.flefPreliminar ? '_PRELIMINAR' : ''}.xlsx`;
+        return [{ nombre: nombreDeRespuesta(resp, alt), blob: resp.body }];
+      }),
+    );
+  }
+
+  /** Flujo de caja real con el formato BIESS (`/flef/excel` DIRECTO): una columna por mes del año hasta el corte. */
+  private archivoFlujoCaja(): Observable<ArchivoReporte[]> {
+    const s: SolicitudFlujoEfectivo = { ...this.solicitudFlujo('ACUMULADO', this.flefPreliminar, true), reporte: 'DIRECTO' };
+    return this.flujoService.excel(s).pipe(
+      map((resp) => {
+        if (!resp.body) throw new Error('El backend no devolvió el Excel del flujo de caja.');
+        const alt = `FLUJO_CAJA_${this.periodoNombre()}_ACUMULADO${this.flefPreliminar ? '_PRELIMINAR' : ''}.xlsx`;
+        return [{ nombre: nombreDeRespuesta(resp, alt), blob: resp.body }];
+      }),
+    );
+  }
+
+  /** Comparativo con el formato de ASOPREP (`/flef/comparativoExcel`, códigos del B17). */
+  private archivoComparativoFormato(): Observable<ArchivoReporte[]> {
+    return this.flujoService.comparativoExcel(this.solicitudFlujo('MES', this.flefPreliminar, false)).pipe(
+      map((resp) => {
+        if (!resp.body) throw new Error('El backend no devolvió el Excel del comparativo.');
+        const alt = `COMPARATIVO_${this.periodoNombre()}${this.flefPreliminar ? '_PRELIMINAR' : ''}.xlsx`;
+        return [{ nombre: nombreDeRespuesta(resp, alt), blob: resp.body }];
+      }),
+    );
+  }
+
   private archivosDeG(): Observable<ArchivoReporte[]> {
     const fn = this.archivosG();
     return fn ? fn() : throwError(() => new Error('Consulte o genere primero las G del mes.'));
@@ -426,6 +506,10 @@ export class ReportesDelMesComponent {
 
   private solicitudB17(preliminar: boolean): SolicitudEstructura {
     return { empresa: this.empresa(), codigoEstructura: 'B17', fechaCorte: this.fechaCorte(), preliminar };
+  }
+
+  private solicitudFlujo(periodo: 'MES' | 'ACUMULADO', preliminar: boolean, incluirDirecto: boolean): SolicitudFlujoEfectivo {
+    return { empresa: this.empresa(), anio: this.anio(), mes: this.mes(), periodo, preliminar, incluirDirecto };
   }
 
   private solicitudFlc(): SolicitudEstructura {
@@ -495,28 +579,33 @@ export class ReportesDelMesComponent {
       {
         clave: 'CMP', nombre: 'Balance comparativo (diciembre anterior vs mes)', periodicidad: 'Mensual',
         salida: 'Excel con el formato de ASOPREP (COMPARATIVO_01_2026_FORMATO.xlsx)',
-        origen: 'POST /esfo/imprimir (CIERRE_ANIO_ANTERIOR) y POST /esrp/generar (B17 con fechaComparacion)',
+        origen: 'POST /flef/comparativoExcel (B17, formato ASOPREP) y POST /esfo/imprimir (CIERRE_ANIO_ANTERIOR)',
         ...sinRevisar,
         descargas: [
-          { etiqueta: 'Excel', icono: 'grid_on', enTodo: true, obtener: () => this.archivoEstado(this.solicitudComparativo(), 'EXCEL', 'BALANCE_COMPARATIVO') },
+          { etiqueta: 'Excel formato', icono: 'grid_on', enTodo: true, obtener: () => this.archivoComparativoFormato() },
+          { etiqueta: 'Excel SAA', icono: 'grid_on', enTodo: false, obtener: () => this.archivoEstado(this.solicitudComparativo(), 'EXCEL', 'BALANCE_COMPARATIVO') },
           { etiqueta: 'PDF', icono: 'picture_as_pdf', enTodo: false, obtener: () => this.archivoEstado(this.solicitudComparativo(), 'PDF', 'BALANCE_COMPARATIVO') },
-          { etiqueta: 'CSV B17', icono: 'table_view', enTodo: true, obtener: () => this.archivoComparativoB17() },
+          { etiqueta: 'CSV B17', icono: 'table_view', enTodo: false, obtener: () => this.archivoComparativoB17() },
         ],
       },
       {
-        clave: 'FLC', nombre: 'Flujo de caja (formato BIESS)', periodicidad: 'Mensual',
-        salida: 'Excel con el formato de ASOPREP (FLUJO DE CAJA_12_2025_FORMATO.xlsx)', origen: 'POST /esrp/generar (estructura FLC)',
+        clave: 'FLE', nombre: 'Estado de flujos de efectivo (indirecto)', periodicidad: 'Mensual y acumulado del año',
+        salida: 'Excel con el formato de ASOPREP (FLUJO DE EFECTIVO_ENE_2026 FORMATO.xlsx mensual; FLUJO EFECTIVO_12_2025.xlsx acumulado)',
+        origen: 'POST /flef/excel (INDIRECTO, periodo MES o ACUMULADO)',
         ...sinRevisar,
-        descargas: [{ etiqueta: 'CSV borrador', icono: 'table_view', enTodo: true, obtener: () => this.archivoFlc() }],
+        descargas: [
+          { etiqueta: 'Excel mes', icono: 'grid_on', enTodo: true, obtener: () => this.archivoFlujoEfectivo('MES') },
+          { etiqueta: 'Excel acumulado', icono: 'grid_on', enTodo: true, obtener: () => this.archivoFlujoEfectivo('ACUMULADO') },
+        ],
       },
       {
-        clave: 'FLE', nombre: 'Estado de flujos de efectivo (indirecto)', periodicidad: 'Mensual',
-        salida: 'Excel con el formato de ASOPREP (FLUJO DE EFECTIVO_ENE_2026 FORMATO.xlsx)', origen: 'No existe en el SAA',
-        estado: 'no-disponible',
-        motivo:
-          'El backend no lo genera. Hoy sale del script del expediente (03-trabajo/flujo-efectivo). Propuesta de ' +
-          'endpoint en C36-REPORTES-SUPER-EN-PANTALLA.md, pendiente de aprobación.',
-        descargas: [],
+        clave: 'FLC', nombre: 'Flujo de caja real (formato BIESS, directo)', periodicidad: 'Mensual (columnas por mes)',
+        salida: 'Excel con el formato de ASOPREP (FLUJO DE CAJA_12_2025_FORMATO.xlsx)', origen: 'POST /flef/excel (DIRECTO, acumulado del año)',
+        ...sinRevisar,
+        descargas: [
+          { etiqueta: 'Excel', icono: 'grid_on', enTodo: true, obtener: () => this.archivoFlujoCaja() },
+          { etiqueta: 'CSV FLC provisional', icono: 'table_view', enTodo: false, obtener: () => this.archivoFlc() },
+        ],
       },
       {
         clave: 'Q01', nombre: 'Q01 Quejas', periodicidad: 'Mensual',
