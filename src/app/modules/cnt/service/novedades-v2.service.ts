@@ -6,6 +6,7 @@ import { usuarioSesion } from '../../../shared/services/usuario-sesion';
 import { mensajeDeError } from '../../../shared/utils/mensaje-error.util';
 import {
   AccionV2,
+  CalculoHechoV2,
   CandidatosHechoV2,
   HechoEntradaV2,
   OrigenCandidatoV2,
@@ -131,6 +132,18 @@ export class NovedadesV2Service {
 
   exportarHechos(idEmpresa: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.url}/exportar/hechos`, { params: this.params({ idEmpresa }) }).pipe(catchError(this.aTexto));
+  }
+
+  calcularHecho(idPrestamo: number, tipo: string, desde: string | null, fecha: string): Observable<CalculoHechoV2> {
+    return this.http.get<CalculoHechoV2>(this.url + "/hechos/calcular", { params: this.params({ idPrestamo, tipo, desde, fecha }) }).pipe(catchError(this.aTexto));
+  }
+
+  registrarNota(idNovedad: number, texto: string, adjuntos: any[]): Observable<ResultadoAccionV2> {
+    return this.http.post<ResultadoAccionV2>(this.url + "/" + idNovedad + "/notas", this.conUsuario({ texto, adjuntos })).pipe(catchError(this.aTexto));
+  }
+
+  anularNota(idNota: number, motivo: string): Observable<ResultadoAccionV2> {
+    return this.http.post<ResultadoAccionV2>(this.url + "/notas/" + idNota + "/anular", this.conUsuario({ motivo })).pipe(catchError(this.aTexto));
   }
 
   private conUsuario(a: AccionV2): AccionV2 & { usuario: string } {

@@ -101,6 +101,34 @@
     </section>
   </div>
 
+  <!-- C34d: respuesta escrita de ASOPREP (sin cuentas) -->
+  <section class="seccion">
+    <div class="titulo-seccion">
+      <h3>Respuesta de ASOPREP</h3>
+      <button mat-stroked-button color="primary" (click)="escribirNota()"><mat-icon>edit_note</mat-icon> Escribir respuesta</button>
+    </div>
+    <div class="sub">Para dejar escrito qué pasó en realidad, sin elegir cuentas contables. No cambia saldos ni estados: después se registra como hecho de crédito o justificación.</div>
+    @for (n of d.notas || []; track n.codigo) {
+      <div class="nota" [class.anulada]="!n.vigente">
+        <div class="texto-largo">{{ n.texto }}</div>
+        <div class="sub">
+          {{ n.usuarioRegistro }}, {{ fecha(n.fechaRegistro) }}
+          @if (n.idHecho) { · convertida en el hecho de crédito N.º {{ n.idHecho }} }
+          @if (!n.vigente) { · ANULADA por {{ n.usuarioAnulacion }}: {{ n.motivoAnulacion }} }
+        </div>
+        @for (a of n.adjuntos; track a.codigo) {
+          <button mat-button class="adjunto" (click)="descargar(a)"><mat-icon>attach_file</mat-icon>{{ a.nombreArchivo }}</button>
+        }
+        @if (n.vigente) {
+          @if (!n.idHecho && f.estado !== 'CERRADA') {
+            <button mat-button color="primary" (click)="hechoCredito(undefined, undefined, n)"><mat-icon>account_balance_wallet</mat-icon> Convertir en hecho de crédito</button>
+          }
+          <button mat-button color="warn" (click)="anularNota(n)">Anular</button>
+        }
+      </div>
+    }
+  </section>
+
   <!-- Movimientos (líneas) -->
   @if (d.lineas.length) {
     <section class="seccion">
@@ -239,7 +267,7 @@
     <section class="seccion">
       <h3>Pedidos ({{ f.pedidosAtendidos }} de {{ f.pedidos }} respondidos)</h3>
       @if (f.grupo === 'POR_REGULARIZAR') {
-        <div class="sub">Esta novedad se resuelve justificando los movimientos; los pedidos quedan atendidos al cerrarla.</div>
+        <div class="sub">Esta novedad se resuelve justificando los movimientos (o con un hecho de crédito). Puede responder el pedido aquí mismo; si no, queda atendido al cerrarla.</div>
       }
       @for (p of d.pedidos; track p.codigo) {
         <div class="pedido" [class.atendido]="p.atendido">
@@ -248,7 +276,7 @@
               <span class="chip" [class.ok]="p.atendido">{{ p.estadoNombre }}</span>
               <strong>{{ p.tipoNombre }}</strong> · {{ p.areaNombre }}
             </div>
-            @if (!p.atendido && f.estado !== 'CERRADA' && f.grupo !== 'POR_REGULARIZAR') {
+            @if (!p.atendido && f.estado !== 'CERRADA') {
               <span>
                 <button mat-stroked-button color="primary" (click)="hechoCredito(undefined, p)" matTooltip="Responder con un hecho de crédito">
                   <mat-icon>account_balance_wallet</mat-icon> Hecho de crédito
@@ -271,7 +299,7 @@
             <div class="justificacion" [class.anulada]="!r.vigente">
               <div>
                 <strong>Respuesta</strong>
-                @if (r.respuesta.opcion) { · {{ r.respuesta.opcion === 'NO_EXISTE' ? 'el documento no existe' : r.respuesta.opcion }} }
+                @if (r.respuesta.opcion) { · {{ r.respuesta.opcion === 'NO_EXISTE' ? 'el documento no existe' : r.respuesta.opcion === 'PARCIAL' ? 'solo para esta operación' : r.respuesta.opcion }} }
                 @if (r.tituloDecision) { · decisión «{{ r.tituloDecision }}» }
                 @if (r.respuesta.monto) { · {{ dinero(r.respuesta.monto) }} }
                 @if (r.respuesta.numeroDocumento) { · {{ r.respuesta.tipoDocumento }} {{ r.respuesta.numeroDocumento }} }
@@ -372,6 +400,7 @@
       <mat-icon class="icono-hecho">account_balance_wallet</mat-icon>
       <strong>Hecho de crédito N.º {{ h.codigo }}:</strong> {{ h.tipoNombre }} de {{ dinero(h.valor) }} del {{ fecha(h.fecha) }} ·
       operación {{ h.idAsoprep }}{{ h.titular ? ' de ' + h.titular : '' }}
+      @if (h.mesDesde) { · {{ h.tipo === 'SERIE_PRECANCELACION' ? 'cuotas cruzadas desde' : 'cuotas pendientes desde' }} {{ fecha(h.mesDesde).slice(3) }} }
       @if (h.numeroCuota) { · recalcula desde la cuota {{ h.numeroCuota }} }
       @if (!h.vigente) { <span class="sub"> · ANULADO: {{ h.motivoAnulacion }}</span> }
     </div>
@@ -386,6 +415,24 @@
         </li>
       }
     </ul>
+    @if (h.tratamientoNombre) {
+      <div class="sub">Diferencia entre el dinero y el valor: {{ dinero(Math.abs(h.valorDiferencia || 0)) }} — {{ h.tratamientoNombre }}.</div>
+    }
+    @if (repartoCalculado(h); as rc) {
+      <details class="reparto-calc">
+        <summary class="sub">Reparto por mes que aplica el re-proceso ({{ rc.filas.length }} registros)</summary>
+        <table class="asiento">
+          <tbody>
+            @for (x of rc.filas; track $index) {
+              <tr><td class="nowrap">{{ x.mes }}</td><td>{{ x.concepto }}</td><td class="num">{{ dinero(x.valor) }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </details>
+    }
+    @for (x of h.atiende; track x.idPedido) {
+      @if (x.soloEstaOperacion) { <div class="sub">Atiende el pedido {{ x.pedido }} de {{ x.novedad }} solo para esta operación (el pedido sigue pendiente para las demás).</div> }
+    }
     @if (h.resuelve.length + h.atiende.length > 1) {
       <div class="sub">
         Resuelve también:

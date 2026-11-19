@@ -7,17 +7,21 @@ import { FileService } from '../../../../shared/services/file.service';
 import { mensajeDeError } from '../../../../shared/utils/mensaje-error.util';
 import {
   AdjuntoEntradaV2,
+  CalculoHechoV2,
   CandidatosHechoV2,
   CuotaV2,
   LineaV2,
+  NotaV2,
   OrigenCandidatoV2,
   ParticipeV2,
   PedidoV2,
   PrestamoV2,
   ResultadoAccionV2,
   TIPOS_DOCUMENTO_V2,
+  TIPOS_CALCULADOS,
   TIPOS_HECHO,
   TipoHecho,
+  TratamientoDiferencia,
   dinero,
   fechaCorta,
 } from '../../model/novedades-v2';
@@ -33,6 +37,8 @@ export interface HechoCreditoV2Data {
   rutaSubida: string;
   linea?: LineaV2;
   pedido?: PedidoV2;
+  /** Respuesta escrita de ASOPREP que se convierte en este hecho. */
+  nota?: NotaV2;
 }
 
 /** Origen elegido (fila de la tabla «Origen del dinero»). */
@@ -101,7 +107,7 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
       <div class="fila">
         <mat-form-field appearance="outline" class="medio">
           <mat-label>¿Qué pasó?</mat-label>
-          <mat-select [(ngModel)]="tipo">
+          <mat-select [(ngModel)]="tipo" (selectionChange)="recalcular()">
             @for (t of tiposHecho; track t.valor) {
               <mat-option [value]="t.valor">{{ t.etiqueta }}</mat-option>
             }
@@ -109,13 +115,23 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
           <mat-hint>{{ ayudaTipo() }}</mat-hint>
         </mat-form-field>
         <mat-form-field appearance="outline" class="corto">
-          <mat-label>Fecha real</mat-label>
-          <input matInput type="date" [(ngModel)]="fechaHecho" />
+          <mat-label>{{ calculado() ? 'Fecha de la precancelación' : 'Fecha real' }}</mat-label>
+          <input matInput type="date" [(ngModel)]="fechaHecho" (ngModelChange)="recalcular()" />
         </mat-form-field>
-        <mat-form-field appearance="outline" class="corto">
-          <mat-label>Valor del hecho</mat-label>
-          <input matInput type="number" step="0.01" min="0" [(ngModel)]="valor" />
-        </mat-form-field>
+        @if (calculado()) {
+          <mat-form-field appearance="outline" class="corto">
+            <mat-label>{{ tipo === 'SERIE_PRECANCELACION' ? 'Cruce desde el mes' : 'Cuotas pendientes desde (opcional)' }}</mat-label>
+            <input matInput type="month" [(ngModel)]="mesDesde" (ngModelChange)="recalcular()" />
+          </mat-form-field>
+          <div class="valor-calculado">
+            Valor que calcula el SAA: <strong>{{ calculando() ? 'calculando…' : valor ? dinero(valor) : '—' }}</strong>
+          </div>
+        } @else {
+          <mat-form-field appearance="outline" class="corto">
+            <mat-label>Valor del hecho</mat-label>
+            <input matInput type="number" step="0.01" min="0" [(ngModel)]="valor" />
+          </mat-form-field>
+        }
         @if (cuotas().length) {
           <mat-form-field appearance="outline" class="medio">
             <mat-label>Recalcular desde la cuota (opcional)</mat-label>
@@ -128,6 +144,22 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
           </mat-form-field>
         }
       </div>
+
+      @if (calculado() && calculo(); as c) {
+        <div class="calculo">
+          <div class="sub">Reparto por mes según la tabla del préstamo ({{ c.numeroCuotas }} cuota(s) por {{ dinero(c.totalCuotas) }} y saldo de capital {{ dinero(c.saldoCapital) }}):</div>
+          <table class="tabla compacta">
+            <thead><tr><th>Mes</th><th>Qué se registra</th><th class="num">Valor</th></tr></thead>
+            <tbody>
+              @for (x of c.filas; track $index) {
+                <tr><td class="nowrap">{{ x.mes }}</td><td>{{ x.concepto }}</td><td class="num">{{ dinero(x.valor) }}</td></tr>
+              }
+              <tr class="total"><td></td><td>Total</td><td class="num">{{ dinero(c.valor) }}</td></tr>
+            </tbody>
+          </table>
+          <div class="sub">{{ c.fuente }}.{{ c.simulador ? ' Simulador de precancelación (estado de hoy): ' + dinero(c.simulador) + '.' : '' }}</div>
+        </div>
+      }
 
       <!-- 2. Origen del dinero -->
       <div class="seccion"><span class="n">2</span> ¿De dónde salió el dinero?</div>
@@ -178,9 +210,25 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
         </span>
         <span [class.falta]="Math.abs(diferencia()) > 0.004" [class.cuadra]="origenes().length && Math.abs(diferencia()) <= 0.004">
           Hecho {{ dinero(valor || 0) }} · orígenes {{ dinero(sumaOrigenes()) }} ·
-          <strong>{{ Math.abs(diferencia()) <= 0.004 ? 'cuadra' : 'diferencia ' + dinero(diferencia()) }}</strong>
+          <strong>{{ Math.abs(diferencia()) <= 0.004 ? 'cuadra' : diferencia() > 0 ? 'faltan ' + dinero(diferencia()) : 'sobran ' + dinero(-diferencia()) }}</strong>
         </span>
       </div>
+      @if (origenes().length && Math.abs(diferencia()) > 0.004) {
+        <div class="tratamiento">
+          @if (diferencia() < 0) {
+            <strong>Sobran {{ dinero(-diferencia()) }}. ¿Qué pasa con lo que sobra?</strong>
+            <mat-radio-group [(ngModel)]="tratamiento" class="radios">
+              <mat-radio-button value="NO_SE_DEBITA">No se debita: queda en la cuenta individual</mat-radio-button>
+              <mat-radio-button value="SE_DEVUELVE">Se devuelve al partícipe</mat-radio-button>
+            </mat-radio-group>
+          } @else {
+            <strong>Faltan {{ dinero(diferencia()) }}.</strong> Agregue el origen que falta o indique:
+            <mat-radio-group [(ngModel)]="tratamiento" class="radios">
+              <mat-radio-button value="PARTICIPE_DEBE">El partícipe lo debe</mat-radio-button>
+            </mat-radio-group>
+          }
+        </div>
+      }
 
       @if (buscadorAbierto()) {
         <div class="buscador">
@@ -282,14 +330,28 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
               @if (esOrigen(l.id)) { <span class="sub"> (es origen del dinero)</span> }
             </mat-checkbox>
           }
-          @for (p of candidatos()?.pedidos || []; track p.codigo) {
-            <mat-checkbox [checked]="pedidosMarcados().has(p.codigo)" (change)="alternarPedido(p.codigo)">
-              <strong>{{ p.novedad }}</strong> · pedido {{ p.secuencia }} ({{ p.tipoNombre }}) · {{ p.descripcion }}
-            </mat-checkbox>
+          @for (p of pedidosCandidatos(); track p.codigo) {
+            <div class="pedido-fila">
+              <mat-form-field appearance="outline" class="modo">
+                <mat-select [ngModel]="modoPedido(p.codigo)" (ngModelChange)="cambiarModoPedido(p.codigo, $event)">
+                  <mat-option value="">No lo atiende</mat-option>
+                  <mat-option value="COMPLETO">Lo atiende completo</mat-option>
+                  <mat-option value="PARCIAL">Solo para esta operación</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <span><strong>{{ p.novedad }}</strong> · pedido {{ p.secuencia }} ({{ p.tipoNombre }}) · {{ p.descripcion }}</span>
+            </div>
           }
-          @if (!lineasCandidatas().length && !(candidatos()?.pedidos || []).length) {
+          @if (!lineasCandidatas().length && !pedidosCandidatos().length) {
             <div class="sub">No hay otros movimientos ni pedidos abiertos de esta operación.</div>
           }
+        </div>
+        <div class="fila otra">
+          <mat-form-field appearance="outline" class="corto">
+            <mat-label>Otra novedad (código)</mat-label>
+            <input matInput [(ngModel)]="codigoOtra" placeholder="2507-01" (keyup.enter)="agregarOtraNovedad()" />
+          </mat-form-field>
+          <button mat-button type="button" (click)="agregarOtraNovedad()"><mat-icon>add</mat-icon> Traer sus movimientos y pedidos</button>
         </div>
       }
 
@@ -366,6 +428,16 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
       .lista { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow: auto; margin-top: 4px; }
       .adjunto { display: inline-flex; align-items: center; margin-left: 8px; font-size: 13px; }
       .error { color: #b3261e; background: #fdecea; padding: 8px; border-radius: 4px; margin-top: 8px; white-space: pre-line; }
+      .valor-calculado { align-self: center; font-size: 13.5px; padding: 0 6px; }
+      .calculo { border: 1px solid #d0d7e2; border-radius: 6px; padding: 6px 10px; background: #fbfcfe; margin: 4px 0 8px; }
+      .calculo .tabla { max-width: 720px; }
+      .tabla.compacta td, .tabla.compacta th { padding: 2px 6px; }
+      .tabla tr.total td { font-weight: 600; border-top: 1px solid #d0d7e2; }
+      .tratamiento { background: #fff7e0; border-left: 3px solid #e0a800; padding: 6px 10px; margin: 4px 0 8px; font-size: 13px; }
+      .radios { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+      .pedido-fila { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      .pedido-fila .modo { width: 210px; }
+      .otra { align-items: center; margin-top: 4px; }
     `,
   ],
 })
@@ -413,6 +485,19 @@ export class HechoCreditoV2DialogComponent {
 
   lineasMarcadas = signal<Set<number>>(new Set<number>());
   pedidosMarcados = signal<Set<number>>(new Set<number>());
+  /** Pedidos que el hecho atiende solo para esta operación (el pedido sigue pendiente para las demás). */
+  pedidosParciales = signal<Set<number>>(new Set<number>());
+
+  /** D-123: valor calculado por el SAA (precancelación y cruce mensual con precancelación). */
+  mesDesde = '';
+  calculo = signal<CalculoHechoV2 | null>(null);
+  calculando = signal(false);
+  tratamiento: TratamientoDiferencia | null = null;
+
+  /** Movimientos y pedidos agregados de otras novedades por su código. */
+  codigoOtra = '';
+  extrasLineas = signal<(OrigenCandidatoV2 & { idNovedad: number })[]>([]);
+  extrasPedidos = signal<{ codigo: number; idNovedad: number; novedad: string; secuencia: number; tipoNombre: string; descripcion: string }[]>([]);
 
   tipoDocumento = 'COMPROBANTE';
   numeroDocumento = '';
@@ -440,6 +525,97 @@ export class HechoCreditoV2DialogComponent {
       }
     }
     if (data.pedido) this.pedidosMarcados.set(new Set([data.pedido.codigo]));
+    if (data.nota) this.texto = data.nota.texto;
+  }
+
+  calculado(): boolean {
+    return TIPOS_CALCULADOS.includes(this.tipo);
+  }
+
+  /** Pide al SAA el valor y su reparto por mes (tabla del préstamo). */
+  recalcular(): void {
+    const p = this.prestamo();
+    if (!this.calculado()) {
+      this.calculo.set(null);
+      return;
+    }
+    if (!p || !this.fechaHecho || (this.tipo === 'SERIE_PRECANCELACION' && !this.mesDesde)) {
+      this.calculo.set(null);
+      this.valor = null;
+      return;
+    }
+    this.calculando.set(true);
+    this.error.set(null);
+    this.servicio.calcularHecho(p.codigo, this.tipo, this.mesDesde ? this.mesDesde + '-01' : null, this.fechaHecho).subscribe({
+      next: (c) => {
+        this.calculando.set(false);
+        this.calculo.set(c);
+        this.valor = c.valor;
+      },
+      error: (e) => {
+        this.calculando.set(false);
+        this.calculo.set(null);
+        this.valor = null;
+        this.error.set(String(e));
+      },
+    });
+  }
+
+  modoPedido(id: number): string {
+    return this.pedidosParciales().has(id) ? 'PARCIAL' : this.pedidosMarcados().has(id) ? 'COMPLETO' : '';
+  }
+
+  cambiarModoPedido(id: number, modo: string): void {
+    const c = new Set(this.pedidosMarcados());
+    const pa = new Set(this.pedidosParciales());
+    c.delete(id);
+    pa.delete(id);
+    if (modo === 'COMPLETO') c.add(id);
+    if (modo === 'PARCIAL') pa.add(id);
+    this.pedidosMarcados.set(c);
+    this.pedidosParciales.set(pa);
+  }
+
+  pedidosCandidatos = computed(() => {
+    const lista = [...(this.candidatos()?.pedidos || [])];
+    for (const p of this.extrasPedidos()) if (!lista.some((x) => x.codigo === p.codigo)) lista.push(p);
+    const dp = this.data.pedido;
+    if (dp && !lista.some((x) => x.codigo === dp.codigo)) {
+      lista.unshift({ codigo: dp.codigo, idNovedad: this.data.idNovedad, novedad: 'esta novedad', secuencia: dp.secuencia, tipoNombre: dp.tipoNombre, descripcion: dp.descripcion });
+    }
+    return lista;
+  });
+
+  /** Trae los movimientos y pedidos abiertos de otra novedad, por su código (p. ej. 2507-01). */
+  agregarOtraNovedad(): void {
+    const cod = (this.codigoOtra || '').trim();
+    if (!cod) return;
+    this.servicio.bandeja(this.data.idEmpresa, { texto: cod }).subscribe({
+      next: (filas) => {
+        const f = filas.find((x) => x.codigoNovedad === cod) || filas[0];
+        if (!f) {
+          this.error.set('No se encontró la novedad ' + cod + '.');
+          return;
+        }
+        this.servicio.detalle(f.codigo).subscribe({
+          next: (d) => {
+            const ls = d.lineas.filter((l) => l.saldo > 0.004).map((l) => ({
+              fuente: 'PENDIENTE' as const, fuenteNombre: '', id: l.codigo, clave: 'PENDIENTE:' + l.codigo, fecha: l.fechaBanco || l.fecha, valor: l.saldo,
+              sentido: (l.sentido === 'D' ? 'Salida' : 'Entrada') as 'Entrada' | 'Salida', descripcion: l.descripcion || '', aplicadoHoy: '', idEntidad: null,
+              entidad: null, relacion: null, usado: 0, disponible: l.saldo, novedad: f.codigoNovedad, secuencia: l.secuencia, idNovedad: f.codigo,
+            }));
+            this.extrasLineas.set([...this.extrasLineas().filter((x) => x.idNovedad !== f.codigo), ...ls]);
+            const ps = d.pedidos.filter((p) => !p.atendido).map((p) => ({
+              codigo: p.codigo, idNovedad: f.codigo, novedad: f.codigoNovedad, secuencia: p.secuencia, tipoNombre: p.tipoNombre, descripcion: p.descripcion,
+            }));
+            this.extrasPedidos.set([...this.extrasPedidos().filter((x) => x.idNovedad !== f.codigo), ...ps]);
+            this.codigoOtra = '';
+          },
+          error: (e) => this.error.set(String(e)),
+        });
+      },
+      error: (e) => this.error.set(String(e)),
+    });
   }
 
   // ---------------------------------------------------------------- utilidades
@@ -474,6 +650,7 @@ export class HechoCreditoV2DialogComponent {
       next: (c) => this.candidatos.set(c),
       error: (e) => this.error.set(String(e)),
     });
+    this.recalcular();
   }
 
   cambiarPrestamo(): void {
@@ -620,6 +797,7 @@ export class HechoCreditoV2DialogComponent {
   lineasCandidatas = computed(() => {
     const c = this.candidatos();
     const lista = [...(c?.lineas || [])];
+    for (const x of this.extrasLineas()) if (!lista.some((y) => y.id === x.id)) lista.push(x);
     const l = this.data.linea;
     if (l && !lista.some((x) => x.id === l.codigo)) {
       lista.unshift({
@@ -712,10 +890,14 @@ export class HechoCreditoV2DialogComponent {
     if (this.origenes().some((o) => !((Number(o.valor) || 0) > 0))) faltas.push('el valor de cada origen');
     if (this.origenes().some((o) => o.disponible !== null && (Number(o.valor) || 0) > o.disponible + 0.004)) faltas.push('que ningún origen pase de lo disponible');
     if (this.origenes().some((o) => o.fuente === 'SIN_DINERO' && !o.texto.trim())) faltas.push('la explicación de lo que el partícipe queda debiendo');
-    if (this.origenes().length && Math.abs(this.diferencia()) > 0.004) faltas.push(`que los orígenes sumen el valor del hecho (diferencia ${dinero(this.diferencia())})`);
+    const dif = this.diferencia();
+    if (this.calculado() && !this.calculo()) faltas.push('que el sistema calcule el valor (operación, fecha' + (this.tipo === 'SERIE_PRECANCELACION' ? ' y mes desde' : '') + ')');
+    if (this.origenes().length && dif < -0.004 && this.tratamiento !== 'NO_SE_DEBITA' && this.tratamiento !== 'SE_DEVUELVE') faltas.push(`qué pasa con los ${dinero(-dif)} que sobran`);
+    if (this.origenes().length && dif > 0.004 && this.tratamiento !== 'PARTICIPE_DEBE') faltas.push(`completar los orígenes o indicar que el partícipe debe los ${dinero(dif)} que faltan`);
     const lineas = [...this.lineasMarcadas()].filter((id) => !this.esOrigen(id));
     const pedidos = [...this.pedidosMarcados()];
-    if (!lineas.length && !pedidos.length && !this.origenes().some((o) => o.fuente === 'PENDIENTE')) faltas.push('marcar qué resuelve el hecho');
+    const parciales = [...this.pedidosParciales()];
+    if (!lineas.length && !pedidos.length && !parciales.length && !this.origenes().some((o) => o.fuente === 'PENDIENTE')) faltas.push('marcar qué resuelve el hecho');
     if (faltas.length) {
       this.error.set('Falta: ' + faltas.join('; ') + '.');
       return;
@@ -743,6 +925,10 @@ export class HechoCreditoV2DialogComponent {
         })),
         lineas,
         pedidos,
+        pedidosParciales: parciales,
+        desde: this.mesDesde ? this.mesDesde + '-01' : null,
+        tratamientoDiferencia: Math.abs(dif) > 0.004 ? this.tratamiento : null,
+        idNota: this.data.nota?.codigo ?? null,
         adjuntos: this.adjuntos(),
       })
       .subscribe({

@@ -68,3 +68,6 @@ tr.hecha td { color: #6b7280; }
 .hecho { background: #f4f9f1; border: 1px solid #cfe5c6; border-radius: 6px; padding: 6px 10px; margin: 4px 0; font-size: 13px; }
 .icono-hecho { font-size: 16px; height: 16px; width: 16px; vertical-align: text-bottom; color: #1e6b34; }
 .origenes { margin: 2px 0 4px; padding-left: 18px; }
+.nota { border-left: 3px solid #1f5fbf; background: #f7f9fc; padding: 6px 10px; margin: 6px 0; }
+.nota.anulada { opacity: .6; border-left-color: #b0b7c3; }
+.reparto-calc { margin: 2px 0; }

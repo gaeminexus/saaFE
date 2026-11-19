@@ -290,6 +290,8 @@ export interface DetalleNovedadV2 {
   detalleOrigen: DetalleOrigenV2[];
   decisiones: DecisionV2[];
   historial: { codigo: number; accion: string; motivo: string | null; fecha: string; usuario: string }[];
+  /** C34d: respuestas escritas de ASOPREP (sin cuentas). */
+  notas?: NotaV2[];
 }
 
 export interface CuentaContableV2 {
@@ -378,13 +380,17 @@ export function fechaCorta(v: any): string {
 
 // ---------------------------------------------------------------- C34d: hechos de crédito
 
-export type TipoHecho = 'ABONO_CAPITAL' | 'PAGO_CUOTAS' | 'PRECANCELACION' | 'REAPERTURA_CUOTAS' | 'PARTICIPE_DEBE';
+export type TipoHecho = 'ABONO_CAPITAL' | 'PAGO_CUOTAS' | 'PRECANCELACION' | 'REAPERTURA_CUOTAS' | 'PARTICIPE_DEBE' | 'SERIE_PRECANCELACION';
+export type TratamientoDiferencia = 'NO_SE_DEBITA' | 'SE_DEVUELVE' | 'PARTICIPE_DEBE';
+/** Tipos cuyo valor calcula el SAA con su tabla (D-123). */
+export const TIPOS_CALCULADOS: TipoHecho[] = ['PRECANCELACION', 'SERIE_PRECANCELACION'];
 export type TipoOrigen = 'EXTRACTO' | 'APORTE' | 'PENDIENTE' | 'SIN_DINERO';
 
 export const TIPOS_HECHO: { valor: TipoHecho; etiqueta: string; ayuda: string }[] = [
   { valor: 'ABONO_CAPITAL', etiqueta: 'Abono a capital', ayuda: 'El partícipe abonó a capital; la tabla se recalcula desde la cuota indicada.' },
   { valor: 'PAGO_CUOTAS', etiqueta: 'Pago de cuotas', ayuda: 'El dinero pagó una o varias cuotas.' },
-  { valor: 'PRECANCELACION', etiqueta: 'Precancelación', ayuda: 'El préstamo se canceló por completo con este pago.' },
+  { valor: 'PRECANCELACION', etiqueta: 'Precancelación', ayuda: 'El préstamo se canceló por completo en esa fecha. El valor lo calcula el sistema con la tabla (capital pendiente y, si indica un mes desde, las cuotas pendientes desde ese mes).' },
+  { valor: 'SERIE_PRECANCELACION', etiqueta: 'Cruce mensual de cuotas y precancelación', ayuda: 'Las cuotas se cruzaron mes a mes con la cuenta individual desde un mes y en la fecha se precanceló el saldo. El sistema reparte el valor por mes según la tabla.' },
   { valor: 'REAPERTURA_CUOTAS', etiqueta: 'Reapertura de cuotas', ayuda: 'Cuotas marcadas pagadas sin dinero que deben volver a cobrarse.' },
   { valor: 'PARTICIPE_DEBE', etiqueta: 'El partícipe debe', ayuda: 'No hubo dinero: el valor queda como deuda del partícipe.' },
 ];
@@ -440,9 +446,15 @@ export interface HechoV2 {
   usuarioRegistro: string;
   fechaRegistro: any;
   motivoAnulacion: string | null;
+  mesDesde?: any;
+  tratamientoDiferencia?: TratamientoDiferencia | null;
+  tratamientoNombre?: string | null;
+  valorDiferencia?: number | null;
+  /** Reparto calculado por mes (JSON de CalculoHechoV2). */
+  detalleCalculado?: string | null;
   origenes: OrigenHechoV2[];
   resuelve: { idLinea: number; novedad: string; movimiento: number; monto: number; asiento: string | null }[];
-  atiende: { idPedido: number; novedad: string; pedido: number }[];
+  atiende: { idPedido: number; novedad: string; pedido: number; soloEstaOperacion?: boolean }[];
   adjuntos: AdjuntoV2[];
 }
 
@@ -469,5 +481,38 @@ export interface HechoEntradaV2 {
   origenes: { tipo: TipoOrigen; idFilaExtracto?: number | null; idAporte?: number | null; idLinea?: number | null; valor: number; conceptoReal?: string | null; texto?: string | null }[];
   lineas: number[];
   pedidos: number[];
+  pedidosParciales?: number[];
+  desde?: string | null;
+  tratamientoDiferencia?: TratamientoDiferencia | null;
+  idNota?: number | null;
   adjuntos: AdjuntoEntradaV2[];
+}
+
+/** Valor de una precancelación o de un hecho en serie calculado con la tabla del SAA, repartido por mes. */
+export interface CalculoHechoV2 {
+  idPrestamo: number;
+  idAsoprep: number | null;
+  tipo: TipoHecho;
+  desde: string | null;
+  fecha: string;
+  filas: { mes: string; idCuota: number | null; numeroCuota: number | null; vencimiento: string; capital: number; interes: number; valor: number; concepto: string }[];
+  numeroCuotas: number;
+  totalCuotas: number;
+  saldoCapital: number;
+  valor: number;
+  fuente: string;
+  simulador?: number;
+}
+
+/** Respuesta escrita de ASOPREP en una novedad (sin cuentas). */
+export interface NotaV2 {
+  codigo: number;
+  texto: string;
+  vigente: boolean;
+  usuarioRegistro: string;
+  fechaRegistro: any;
+  idHecho: number | null;
+  usuarioAnulacion: string | null;
+  motivoAnulacion: string | null;
+  adjuntos: AdjuntoV2[];
 }
