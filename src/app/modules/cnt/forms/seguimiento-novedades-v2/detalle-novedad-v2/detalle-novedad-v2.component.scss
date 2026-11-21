@@ -42,6 +42,7 @@ tr.hecha td { color: #6b7280; }
 .chip { display: inline-block; padding: 1px 8px; border-radius: 10px; background: #fde8e8; color: #9b1c1c; font-size: 12px; margin-right: 6px; }
 .chip.ok { background: #e3f6e8; color: #1e6b34; }
 .chip.parcial { background: #fff4d6; color: #7a5400; }
+.chip.regla { background: #e8eefc; color: #1f4fa3; }
 .detalle-linea td { background: #fafbfd; }
 .justificacion { border-left: 3px solid #1f5fbf; padding: 4px 10px; margin: 4px 0; }
 .justificacion.anulada { border-left-color: #b0b7c3; opacity: .7; text-decoration: line-through; }

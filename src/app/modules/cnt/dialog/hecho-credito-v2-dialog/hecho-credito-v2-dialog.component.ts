@@ -83,7 +83,12 @@ type Pestana = 'SUGERIDOS' | 'EXTRACTO' | 'APORTE' | 'PENDIENTE';
       @if (data.linea; as l) {
         <div class="caja">
           <strong>Desde el movimiento {{ l.secuencia }}</strong> · {{ l.tipoMovimiento }} del {{ fecha(l.fechaBanco || l.fecha) }} ·
-          {{ l.descripcion }} · falta {{ dinero(l.saldo) }}
+          {{ l.descripcion }} ·
+          @if (l.saldo > 0.004) {
+            falta {{ dinero(l.saldo) }}
+          } @else {
+            hoy resuelto por la regla D-125: si registra este hecho, el hecho la reemplaza ({{ dinero(l.valor) }})
+          }
         </div>
       } @else if (data.pedido; as p) {
         <div class="caja"><strong>Desde el pedido:</strong> {{ p.descripcion }}</div>

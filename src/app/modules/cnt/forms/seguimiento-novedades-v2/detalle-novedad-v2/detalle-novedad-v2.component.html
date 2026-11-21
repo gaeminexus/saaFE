@@ -177,13 +177,23 @@
               <td>{{ l.tipoMovimiento }}</td>
               <td class="num">{{ dinero(l.valor) }}</td>
               <td class="num" [class.pendiente]="l.saldo > 0.004">{{ dinero(l.saldo) }}</td>
-              <td><span class="chip" [class.ok]="l.estado === 3" [class.parcial]="l.estado === 2">{{ l.estadoNombre }}</span></td>
+              <td>
+                <span class="chip" [class.ok]="l.estado === 3" [class.parcial]="l.estado === 2">{{ l.estadoNombre }}</span>
+                @if (porRegla(l)) {
+                  <span class="chip regla" matTooltip="Decidido por la regla D-125: el próximo re-proceso aplica el depósito a las cuotas del partícipe con la prelación de la carga Petro. Si es una excepción, regístrelo con un hecho de crédito: el hecho manda.">regla D-125</span>
+                }
+              </td>
               <td class="acciones-linea">
                 @if (l.saldo > 0.004 && f.estado !== 'CERRADA') {
                   <button mat-stroked-button color="primary" class="btn-linea" (click)="justificarLinea(l)" matTooltip="Justificar este movimiento (todo o una parte)">
                     Justificar
                   </button>
                   <button mat-icon-button color="primary" (click)="hechoCredito(l)" matTooltip="Resolver con un hecho de crédito (préstamo y origen del dinero)">
+                    <mat-icon>account_balance_wallet</mat-icon>
+                  </button>
+                }
+                @if (porRegla(l) && f.estado !== 'CERRADA') {
+                  <button mat-icon-button color="primary" (click)="hechoCredito(l)" matTooltip="Excepción a D-125: resolver con un hecho de crédito (el hecho reemplaza a la regla)">
                     <mat-icon>account_balance_wallet</mat-icon>
                   </button>
                 }

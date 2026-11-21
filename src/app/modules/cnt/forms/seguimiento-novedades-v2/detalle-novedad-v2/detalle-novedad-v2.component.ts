@@ -291,6 +291,12 @@ export class DetalleNovedadV2Component implements OnChanges {
     }
   }
 
+  /** D-125: movimiento resuelto solo por la regla (justificaciones vigentes de la decisión D-125); un hecho de crédito la reemplaza. */
+  porRegla(l: LineaV2): boolean {
+    const v = (l.justificaciones || []).filter((j) => j.vigente);
+    return l.saldo <= 0.004 && v.length > 0 && v.every((j) => j.tipo === 'DECISION' && j.numeroDecision === 'D-125');
+  }
+
   /** C34d §10: resumen de la condonación guardada en el hecho. */
   condonacionDe(h: HechoV2): { totalCondonado: number; texto: string; cuentaAlRegistrar?: { cuenta?: string } } | null {
     if (!h.condonacion) return null;
