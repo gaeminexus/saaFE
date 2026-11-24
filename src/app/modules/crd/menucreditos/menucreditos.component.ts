@@ -208,6 +208,13 @@ export class MenucreditosComponent {
           idPermiso: Permisos.CRD_REPORTE_VALORES_INSOLUTOS,
           route: '/menucreditos/repote-valores-insolutos',
         },
+        {
+          // 21 caracteres: el menú lateral corta a 24 y un texto más largo desaparece entero.
+          displayName: 'Préstamos Cancelados',
+          iconName: 'task_alt',
+          idPermiso: Permisos.CRD_PRESTAMOS_CONSULTA,
+          route: '/menucreditos/reporte-prestamos-cancelados',
+        },
         // "Asignación de Seguros" retirado (lote U4): simulaba la asignación, no existe backend de pólizas.
         // No borrar: el componente y el permiso se conservan.
         // {

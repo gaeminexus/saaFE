@@ -293,7 +293,7 @@ cualquier columna**:
 ## 8. Pantalla (FE)
 
 - Ruta `/menucreditos/reporte-prestamos-cancelados`, menú **Créditos › Préstamos**, después de «Repote Valores
-  Insolutos», con el texto «Reporte Préstamos Cancelados» y `idPermiso: Permisos.CRD_PRESTAMOS_CONSULTA` (el mismo de
+  Insolutos», con el texto «Préstamos Cancelados» (el menú lateral corta a 24 caracteres: `docs/patrones/NOMBRES-DE-MENU-LATERAL.md` de saaFE) y `idPermiso: Permisos.CRD_PRESTAMOS_CONSULTA` (el mismo de
   «Consulta»: quien consulta préstamos puede ver este reporte; **no se crea un nodo de permiso nuevo**).
 - Filtros: desde, hasta (obligatorios; por defecto el mes en curso), producto, filial, estados (multi), formas (multi).
 - Resultado: tarjetas del `resumenPorForma` + `totales`; tabla paginada y ordenable con: Fecha canc., N° oper.,

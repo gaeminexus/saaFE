@@ -53,6 +53,8 @@ export class ServiciosCrd {
   public static RS_FRCN = `${API_URL}/frcn`;
   /** Consola de pruebas de Security Data (docs/logica-negocio/crd/DISENO-PANTALLA-PRUEBAS-SECURITY-DATA.md del BE). */
   public static RS_SDPR = `${API_URL}/sdpr`;
+  /** Reporte de préstamos cancelados: pantalla, PDF y CSV (docs/crd/API-REPORTE-PRESTAMOS-CANCELADOS.md). Ruta de reporte, no es tabla. */
+  public static RS_PRCN = `${API_URL}/prcn`;
   public static RS_ADTR = `${API_URL}/adtr`;
   public static RS_CXCP = `${API_URL}/cxcp`;
   public static RS_BPRF = `${API_URL}/bprf`;

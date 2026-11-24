@@ -1410,6 +1410,11 @@ export const routes: Routes = [
         canActivate: [authGuard],
       },
       {
+        path: 'reporte-prestamos-cancelados',
+        loadComponent: () => import('./modules/crd/forms/prestamo/reporte-prestamos-cancelados/reporte-prestamos-cancelados.component').then((m) => m.ReportePrestamosCanceladosComponent),
+        canActivate: [authGuard],
+      },
+      {
         path: 'cuota-consulta',
         loadComponent: () => import('./modules/crd/forms/prestamo/cuota-consulta/cuota-consulta.component').then((m) => m.CuotaConsultaComponent),
         canActivate: [authGuard],

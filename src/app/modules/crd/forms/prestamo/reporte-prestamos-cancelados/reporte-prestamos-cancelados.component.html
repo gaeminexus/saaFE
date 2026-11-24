@@ -1,0 +1,224 @@
+<div class="reporte-container">
+  <div class="page-header">
+    <mat-icon class="header-icon">task_alt</mat-icon>
+    <div class="header-text">
+      <h1>Reporte de Préstamos Cancelados</h1>
+      <p class="subtitle">Préstamos cancelados en un rango de fechas, con la forma de cancelación y los valores pagados</p>
+    </div>
+  </div>
+
+  <mat-card class="filtros-card">
+    <mat-card-content>
+      <form [formGroup]="filtrosForm" (ngSubmit)="consultar()">
+        <div class="filtros-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha desde</mat-label>
+            <input matInput type="date" formControlName="fechaDesde" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Fecha hasta</mat-label>
+            <input matInput type="date" formControlName="fechaHasta" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Producto</mat-label>
+            <input matInput formControlName="producto" [matAutocomplete]="autoProducto" placeholder="Nombre o código" />
+            @if (filtrosForm.controls.producto.value) {
+              <button matSuffix mat-icon-button type="button" aria-label="Quitar producto" (click)="filtrosForm.controls.producto.setValue(null)">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+            <mat-autocomplete #autoProducto="matAutocomplete" [displayWith]="mostrarProducto">
+              @for (p of productosFiltrados; track p.codigo) {
+                <mat-option [value]="p">{{ p.nombre }}@if (p.codigoSBS) { <small> · SBS {{ p.codigoSBS }}</small> }</mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Filial</mat-label>
+            <input matInput formControlName="filial" [matAutocomplete]="autoFilial" placeholder="Nombre o código" />
+            @if (filtrosForm.controls.filial.value) {
+              <button matSuffix mat-icon-button type="button" aria-label="Quitar filial" (click)="filtrosForm.controls.filial.setValue(null)">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+            <mat-autocomplete #autoFilial="matAutocomplete" [displayWith]="mostrarFilial">
+              @for (f of filialesFiltradas; track f.codigo) {
+                <mat-option [value]="f">{{ f.nombre }}@if (f.codigoAlterno) { <small> · {{ f.codigoAlterno }}</small> }</mat-option>
+              }
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Estados</mat-label>
+            <mat-select formControlName="estados" multiple>
+              @for (e of estados; track e.codigo) {
+                <mat-option [value]="e.codigo">{{ e.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Formas de cancelación</mat-label>
+            <mat-select formControlName="formas" multiple>
+              @for (f of formas; track f.codigo) {
+                <mat-option [value]="f.codigo">{{ f.descripcion }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="acciones">
+          <button mat-flat-button color="primary" type="submit" [disabled]="loading() || filtrosForm.invalid">
+            <mat-icon>search</mat-icon> Consultar
+          </button>
+          <button mat-stroked-button type="button" (click)="limpiar()" [disabled]="loading()">
+            <mat-icon>clear</mat-icon> Limpiar
+          </button>
+          <span class="espaciador"></span>
+          <button mat-stroked-button type="button" (click)="descargarPdf()" [disabled]="loading() || generandoPdf() || !hayResultado">
+            <mat-icon>picture_as_pdf</mat-icon> {{ generandoPdf() ? 'Generando…' : 'PDF' }}
+          </button>
+          <button mat-stroked-button type="button" (click)="exportarCsv()" [disabled]="loading() || !hayResultado">
+            <mat-icon>download</mat-icon> CSV
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  @if (loading()) {
+    <div class="estado"><mat-spinner diameter="48"></mat-spinner></div>
+  }
+
+  @if (error() && !loading()) {
+    <div class="estado mensaje-error" role="alert">{{ error() }}</div>
+  }
+
+  @if (reporte(); as r) {
+    @if (!loading()) {
+      @if (r.canceladosSinFecha > 0) {
+        <div class="aviso" role="status">
+          <mat-icon>warning</mat-icon>
+          {{ r.canceladosSinFecha }} préstamo(s) cancelado(s) no tienen fecha de cancelación registrada: no se pueden ubicar en el rango
+          y no aparecen en la lista.
+        </div>
+      }
+
+      <div class="tarjetas">
+        <div class="tarjeta total">
+          <span class="tarjeta-titulo">Total</span>
+          <span class="tarjeta-cantidad">{{ r.totales.cantidad }}</span>
+          <span class="tarjeta-linea">Monto otorgado: {{ r.totales.montoSolicitado | number: '1.2-2' }}</span>
+          <span class="tarjeta-linea">Total pagado: {{ r.totales.totalPagado | number: '1.2-2' }}</span>
+          <span class="tarjeta-linea">Capital: {{ r.totales.totalCapitalPagado | number: '1.2-2' }}</span>
+          <span class="tarjeta-linea">Interés: {{ r.totales.totalInteresPagado | number: '1.2-2' }}</span>
+          <span class="tarjeta-linea">Mora: {{ r.totales.totalMoraPagada | number: '1.2-2' }}</span>
+          <span class="tarjeta-linea">Condonado: {{ r.totales.totalCondonado | number: '1.2-2' }}</span>
+        </div>
+        @for (f of r.resumenPorForma; track f.forma) {
+          <div class="tarjeta">
+            <span class="tarjeta-titulo">{{ f.descripcion }}</span>
+            <span class="tarjeta-cantidad">{{ f.cantidad }}</span>
+            <span class="tarjeta-linea">Monto otorgado: {{ f.montoSolicitado | number: '1.2-2' }}</span>
+            <span class="tarjeta-linea">Total pagado: {{ f.totalPagado | number: '1.2-2' }}</span>
+            <span class="tarjeta-linea">Capital: {{ f.totalCapitalPagado | number: '1.2-2' }}</span>
+            <span class="tarjeta-linea">Interés: {{ f.totalInteresPagado | number: '1.2-2' }}</span>
+            <span class="tarjeta-linea">Mora: {{ f.totalMoraPagada | number: '1.2-2' }}</span>
+            <span class="tarjeta-linea">Condonado: {{ f.totalCondonado | number: '1.2-2' }}</span>
+          </div>
+        }
+      </div>
+
+      @if (!r.filas?.length) {
+        <div class="estado">Sin préstamos cancelados en el rango.</div>
+      } @else {
+        <mat-card>
+          <mat-card-content>
+            <div class="tabla-wrapper">
+              <table mat-table [dataSource]="dataSource" matSort class="tabla">
+                <ng-container matColumnDef="fechaCancelacion">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Fecha canc.</th>
+                  <td mat-cell *matCellDef="let f">{{ f.fechaCancelacion }}</td>
+                </ng-container>
+                <ng-container matColumnDef="numeroOperacion">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>N° oper.</th>
+                  <td mat-cell *matCellDef="let f">{{ f.numeroOperacion }}</td>
+                </ng-container>
+                <ng-container matColumnDef="cedula">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Cédula</th>
+                  <td mat-cell *matCellDef="let f">{{ f.cedula }}</td>
+                </ng-container>
+                <ng-container matColumnDef="nombreSocio">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Socio</th>
+                  <td mat-cell *matCellDef="let f">{{ f.nombreSocio }}</td>
+                </ng-container>
+                <ng-container matColumnDef="producto">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Producto</th>
+                  <td mat-cell *matCellDef="let f">{{ f.producto }}</td>
+                </ng-container>
+                <ng-container matColumnDef="estado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Estado</th>
+                  <td mat-cell *matCellDef="let f">{{ f.estado }}</td>
+                </ng-container>
+                <ng-container matColumnDef="formaDescripcion">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Forma</th>
+                  <td mat-cell *matCellDef="let f">
+                    {{ f.formaDescripcion }}
+                    @if (f.observacionReporte) {
+                      <mat-icon class="icono-advertencia" [matTooltip]="f.observacionReporte">warning</mat-icon>
+                    }
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="canal">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Origen del dinero</th>
+                  <td mat-cell *matCellDef="let f">{{ f.canal }}</td>
+                </ng-container>
+                <ng-container matColumnDef="montoSolicitado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Monto</th>
+                  <td mat-cell *matCellDef="let f" class="num">{{ f.montoSolicitado | number: '1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="totalPagado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Total pagado</th>
+                  <td mat-cell *matCellDef="let f" class="num">{{ f.totalPagado | number: '1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="totalCapitalPagado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Capital</th>
+                  <td mat-cell *matCellDef="let f" class="num">{{ f.totalCapitalPagado | number: '1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="totalInteresPagado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Interés</th>
+                  <td mat-cell *matCellDef="let f" class="num">{{ f.totalInteresPagado | number: '1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="totalMoraPagada">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Mora</th>
+                  <td mat-cell *matCellDef="let f" class="num">{{ f.totalMoraPagada | number: '1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="valorCondonado">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header class="num">Condonado</th>
+                  <td mat-cell *matCellDef="let f" class="num">{{ f.valorCondonado | number: '1.2-2' }}</td>
+                </ng-container>
+                <ng-container matColumnDef="prestamoNuevo">
+                  <th mat-header-cell *matHeaderCellDef mat-sort-header>Préstamo nuevo</th>
+                  <td mat-cell *matCellDef="let f">{{ f.numeroOperacionNuevo ?? f.idPrestamoNuevo }}</td>
+                </ng-container>
+                <ng-container matColumnDef="acciones">
+                  <th mat-header-cell *matHeaderCellDef></th>
+                  <td mat-cell *matCellDef="let f">
+                    <button mat-button type="button" (click)="verDetalle(f)"><mat-icon>visibility</mat-icon> Ver detalle</button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+              </table>
+            </div>
+            <mat-paginator [pageSizeOptions]="[25, 50, 100, 200]" [pageSize]="50" showFirstLastButtons></mat-paginator>
+          </mat-card-content>
+        </mat-card>
+      }
+    }
+  }
+</div>
