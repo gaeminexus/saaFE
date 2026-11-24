@@ -120,6 +120,7 @@ PDF con el encabezado y «Sin préstamos cancelados en el rango» (no un PDF en 
   ninguna fecha (§3). No están en `filas` (no se pueden ubicar en un rango); se informan para que no desaparezcan.
 - `filas` ordenadas por `fechaCancelacion` ascendente y luego `numeroOperacion`.
 - `resumenPorForma`: una entrada por forma con al menos una fila, en el orden de la tabla de §4.
+- `totales` es del mismo tipo que una entrada de `resumenPorForma` (`ResumenFormaCancelacion`): trae `forma` y `descripcion` en null. El FE no los lee.
 
 ---
 
