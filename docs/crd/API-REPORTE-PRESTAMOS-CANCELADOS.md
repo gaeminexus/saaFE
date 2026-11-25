@@ -241,7 +241,7 @@ Si hay un EVPR `NOVACION`/`REESTRUCTURACION` vigente en un préstamo 3/4, se ign
 | 47 | `idEvento` | Evento | Long | `EVPRCDGO` (null en carga/migración) |
 | 48 | `idCobro` | Cobro | Long | `CBCRCDGO` por `DCBC.EVPRCDGO` (o `ACCN.CBCRCDGO`) |
 | 49 | `idCargaArchivo` | Carga Petro/ARCH | Long | `PGPR.CRARCDGO` |
-| 50 | `idAsiento` | Asiento | Long | `EVPRNMAS` si no es null; si no, `CBCRASN2` del cobro; si no, `PGPRASNT` |
+| 50 | `idAsiento` | Asiento | Long | `EVPRNMAS` si no es null; si no, `CBCRASN2` del cobro; si no, `PGPRASNT`. Desde el lote 1c, en un acuerdo de condonación es el asiento de la condonación; el del cobro queda en `CBCRASN2` |
 | 51 | `idPrestamoNuevo` | Código préstamo nuevo | Long | F: el `PRSTCDGO` con `PRSTPROR` = este; D: el N de la marca |
 | 52 | `numeroOperacionNuevo` | N° operación nuevo | Long | `PRSTIDAS` del nuevo |
 | 53 | `montoPrestamoNuevo` | Monto préstamo nuevo | Double | `PRSTMNSL` del nuevo |
